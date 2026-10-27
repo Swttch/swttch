@@ -24,6 +24,15 @@ const BASE_CONFIG: MermaidConfig = {
     startOnLoad: false,
     securityLevel: 'strict',
     fontFamily: 'inherit',
+    // The webview applies the UI zoom setting as CSS `zoom` on <html>. mermaid
+    // sizes an HTML label's box from getBoundingClientRect, which Chromium
+    // reports already multiplied by that zoom, while the label itself lays out
+    // at its normal size. At zoom 0.9 every box is 10% too narrow and the end
+    // of each label is cut off ("informativ", "erro"). SVG text is measured in
+    // the SVG's own units, which the zoom does not touch, so labels are drawn
+    // as SVG text instead of HTML.
+    htmlLabels: false,
+    flowchart: { htmlLabels: false },
 };
 
 // `.dark` on <html> is the theme the webview is showing right now (set by

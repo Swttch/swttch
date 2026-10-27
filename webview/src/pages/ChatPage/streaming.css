@@ -353,6 +353,31 @@
   right: 1rem;
 }
 
+/*
+  The zoom panel is `z-10`. Without a stacking context of its own, that value
+  competes with the rest of the chat, so the panel floated above the sticky user
+  message bubble (`z-[1]`) when a diagram scrolled under it. `isolation` keeps
+  the panel's z-index inside the diagram.
+*/
+[data-streamdown="mermaid-block"] {
+  isolation: isolate;
+}
+
+/*
+  The inline diagram's own wrapper is a flex item that shrinks to its content,
+  and the SVG inside is `width: 100%` of that wrapper, so the two sized each other
+  down to about half the diagram's real size (a 516px chart drawn 270px wide,
+  its text hard to read). Giving the wrapper the full width lets the SVG take the
+  size mermaid computed for it, capped by the SVG's own `max-width`.
+*/
+[data-streamdown="mermaid-block"] .flex-1 > .flex.justify-center {
+  width: 100%;
+}
+
+[data-streamdown="mermaid-block"] .flex-1 > .flex.justify-center > svg {
+  width: 100%;
+}
+
 [data-streamdown="mermaid-block"] [class*="[&_svg]:h-auto"] svg {
   height: auto;
 }
