@@ -1316,4 +1316,60 @@ describe('SessionContext', () => {
       expect(modeMessages()).toEqual([]);
     });
   });
+
+  // #610 — "just created here" lasts until the user leaves that session. The mark
+  // exists so the first send is not wiped by a reset or an empty load; it was
+  // never lifted, so coming back to the session later was still treated as the
+  // moment of creation: nothing was cleared, nothing was loaded, and the
+  // conversation of whichever session the user had come from stayed on screen.
+  describe('isNewlyCreatedSession - 만든 세션을 떠난 뒤', () => {
+    async function createThenLeave() {
+      mockSessionsIndex.mockResolvedValue({ sessions: mockSessionDtos });
+      let capturedCtx: ReturnType<typeof useSessionContext> | null = null;
+      // A fresh element each time: re-rendering the very same element object is
+      // skipped by React, so the path the mocked navigate changed would go unseen.
+      const tree = () => (
+        <SessionProvider>
+          <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+        </SessionProvider>
+      );
+      const view = render(tree());
+      await act(async () => { await capturedCtx?.loadSessions(); });
+
+      act(() => { capturedCtx?.addNewSession('created-here', 'Hello'); });
+      view.rerender(tree());
+      await waitFor(() => expect(capturedCtx?.currentSessionId).toBe('created-here'));
+
+      return {
+        ctx: () => capturedCtx!,
+        leaveTo: async (sessionId: string) => {
+          act(() => { capturedCtx?.switchSession(sessionId); });
+          view.rerender(tree());
+          await waitFor(() => expect(capturedCtx?.currentSessionId).toBe(sessionId));
+        },
+      };
+    }
+
+    it('만든 직후 그 세션에 머무는 동안은 표시가 유지된다', async () => {
+      const { ctx } = await createThenLeave();
+
+      expect(ctx().isNewlyCreatedSession('created-here')).toBe(true);
+    });
+
+    it('다른 세션으로 이동하면 만든 세션의 표시가 풀린다', async () => {
+      const { ctx, leaveTo } = await createThenLeave();
+
+      await leaveTo('session-1');
+
+      expect(ctx().isNewlyCreatedSession('created-here')).toBe(false);
+    });
+
+    it('이동해 도착한 세션은 만든 세션으로 취급되지 않는다', async () => {
+      const { ctx, leaveTo } = await createThenLeave();
+
+      await leaveTo('session-1');
+
+      expect(ctx().isNewlyCreatedSession('session-1')).toBe(false);
+    });
+  });
 });
