@@ -2316,8 +2316,38 @@ class ClaudeCodePanel(
         // A stage left by an earlier load would still be painted under the error.
         browserLayers?.let { remove(it) }
 
-        val staleBackendDetected = backendService.hasStaleBackend(project.basePath ?: "")
+        renderBackendError(errorMessage, diagnostics, staleBackendDetected = false)
 
+        // Looking for a leftover backend runs an external command (netstat / lsof). That must
+        // never happen on the EDT: the call waits on the process-creation lock other IDE work
+        // holds and reads a command's output, and 17 field reports froze the IDE for 22-393
+        // seconds right here (issue #613). The error is already on screen; the leftover-backend
+        // wording and its Reboot button are swapped in when the answer arrives.
+        val shownPanel = errorPanel
+        val basePath = project.basePath ?: ""
+        scope.launch {
+            val kind = withContext(Dispatchers.IO) { backendService.staleBackendKind(basePath) }
+            if (kind == com.github.yhk1038.claudecodegui.bridge.BackendRebooter.StaleKind.NONE) return@launch
+            // Our own backend whose owner is gone needs no one's consent: reboot it. The budget
+            // caps this at two automatic reboots per project, so a failure a reboot cannot fix
+            // ends at the button below instead of looping (issue #613).
+            val rebootNow = kind == com.github.yhk1038.claudecodegui.bridge.BackendRebooter.StaleKind.ABANDONED &&
+                backendService.tryTakeAutoReboot(basePath)
+            javax.swing.SwingUtilities.invokeLater {
+                // Skip when the user already moved on (Retry, Reboot) and the panel is gone.
+                if (errorPanel !== shownPanel) return@invokeLater
+                if (rebootNow) {
+                    logger.info("Leftover backend of an earlier run is abandoned; rebooting it without asking")
+                    rebootBackend()
+                    return@invokeLater
+                }
+                shownPanel?.let { remove(it) }
+                renderBackendError(errorMessage, diagnostics, staleBackendDetected = true)
+            }
+        }
+    }
+
+    private fun renderBackendError(errorMessage: String, diagnostics: String?, staleBackendDetected: Boolean) {
         errorPanel = JPanel(BorderLayout(0, 12)).apply {
             border = javax.swing.BorderFactory.createEmptyBorder(40, 40, 40, 40)
 

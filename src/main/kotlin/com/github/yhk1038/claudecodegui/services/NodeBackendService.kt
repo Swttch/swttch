@@ -1,5 +1,6 @@
 package com.github.yhk1038.claudecodegui.services
 
+import com.github.yhk1038.claudecodegui.bridge.AutoRebootBudget
 import com.github.yhk1038.claudecodegui.bridge.BackendRebooter
 import com.github.yhk1038.claudecodegui.bridge.ClipboardContents
 import com.github.yhk1038.claudecodegui.bridge.ExtractedResources
@@ -786,15 +787,26 @@ class NodeBackendService : Disposable {
         backends[projectBasePath]?.lastKnownPort()
 
     /**
-     * True when something this IDE session does not own is holding [projectBasePath]'s backend
-     * port — the condition for offering the user a reboot (issue #308).
+     * What, if anything, this IDE session does not own is holding [projectBasePath]'s backend
+     * port: the condition for offering the user a reboot (issue #308), and for rebooting without
+     * asking when the holder is our own abandoned backend (issue #613).
+     *
+     * Runs external commands, so callers must stay off the EDT.
      */
-    fun hasStaleBackend(projectBasePath: String): Boolean {
-        val port = reclaimablePortOf(projectBasePath) ?: return false
+    fun staleBackendKind(projectBasePath: String): BackendRebooter.StaleKind {
+        val port = reclaimablePortOf(projectBasePath) ?: return BackendRebooter.StaleKind.NONE
         // A backend we own and that is running is not stale, however the port reads.
-        if (backends[projectBasePath]?.lifecycleOrNull() == NodeProcessManager.Lifecycle.RUNNING) return false
-        return rebooter.hasStaleBackend(port)
+        if (backends[projectBasePath]?.lifecycleOrNull() == NodeProcessManager.Lifecycle.RUNNING) {
+            return BackendRebooter.StaleKind.NONE
+        }
+        return rebooter.staleKind(port)
     }
+
+    private val autoRebootBudgets = ConcurrentHashMap<String, AutoRebootBudget>()
+
+    /** Spends one of [projectBasePath]'s automatic reboots. See [AutoRebootBudget]. */
+    fun tryTakeAutoReboot(projectBasePath: String): Boolean =
+        autoRebootBudgets.computeIfAbsent(projectBasePath) { AutoRebootBudget() }.tryTake()
 
     /**
      * Clear a leftover backend process holding [projectBasePath]'s port, then restart through

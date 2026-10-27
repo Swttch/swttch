@@ -37,8 +37,23 @@ class StaleBackendReclaimer(
     private val isWindows: Boolean = System.getProperty("os.name").startsWith("Windows", true),
     /** Wall-clock sleep between "is it gone yet" polls. Injectable for tests. */
     private val sleep: (Long) -> Unit = { Thread.sleep(it) },
+    /** Command line and live parent of a pid, or null when it cannot be read. Injectable for tests. */
+    private val describeProcess: (Long) -> ProcessFacts? = ::defaultDescribeProcess,
 ) {
     private val logger = Logger.getInstance(StaleBackendReclaimer::class.java)
+
+    /** What [isOurAbandonedBackend] needs to know about a process. */
+    data class ProcessFacts(val commandLine: String?, val executable: String?, val parentPid: Long?)
+
+    /**
+     * True when every pid in [pids] is our own backend with no live owner other than this IDE.
+     * Anything unreadable counts as "no": an unknown process is never terminated unasked.
+     */
+    fun canReclaimWithoutAsking(pids: List<Long>, selfPid: Long = ProcessHandle.current().pid()): Boolean =
+        pids.isNotEmpty() && pids.all { pid ->
+            val facts = describeProcess(pid) ?: return@all false
+            isOurAbandonedBackend(facts.commandLine, facts.executable, facts.parentPid, selfPid)
+        }
 
     /** Outcome of a reclaim attempt, so callers can decide whether restarting is safe. */
     sealed interface Result {
@@ -105,8 +120,10 @@ class StaleBackendReclaimer(
      */
     fun listeningPids(port: Int, selfPid: Long = ProcessHandle.current().pid()): List<Long> {
         val raw = if (isWindows) {
-            runCommand(listOf("cmd", "/c", "netstat -ano | findstr :$port | findstr LISTENING"))
-                ?.let(::pidsFromNetstat)
+            // The port is matched in pidsFromNetstat, not by findstr: `findstr :5939` also hits
+            // a listener on :59398, and a wrong match here is a wrong process to terminate.
+            runCommand(listOf("cmd", "/c", "netstat -ano | findstr LISTENING"))
+                ?.let { pidsFromNetstat(it, port) }
         } else {
             runCommand(listOf("lsof", "-ti", ":$port", "-sTCP:LISTEN"))
         }
@@ -123,12 +140,60 @@ class StaleBackendReclaimer(
          * Parse the PID column out of `netstat -ano` rows (the last whitespace-separated field),
          * yielding one pid per line for [selectKillablePids].
          */
-        fun pidsFromNetstat(output: String): String =
+        fun pidsFromNetstat(output: String, port: Int? = null): String =
             output.lineSequence()
                 .map { it.trim() }
                 .filter { it.isNotEmpty() }
-                .mapNotNull { line -> line.split(Regex("\\s+")).lastOrNull() }
+                .map { line -> line.split(Regex("\\s+")) }
+                // Column 2 is the local address. Matching its port exactly keeps :5939 from
+                // claiming a listener on :59398.
+                .filter { cols -> port == null || (cols.size >= 2 && cols[1].endsWith(":$port")) }
+                .mapNotNull { cols -> cols.lastOrNull() }
                 .joinToString("\n")
+
+        /**
+         * True when a process on the backend's port is OUR backend and its owner is gone or is
+         * this very IDE, so reclaiming it needs no one's consent (issue #613).
+         *
+         * Why the owner matters: a backend whose IDE is still alive is somebody's live session,
+         * for example the same folder open in a second IDE. Terminating that one breaks a chat the
+         * user is using, so it stays a decision for the user (the Reboot button).
+         *
+         * "Ours" is judged from the command line when the OS gives one. Windows does not: measured
+         * on Windows 11, `ProcessHandle.info().commandLine()` is empty even for a same-user
+         * process, while the executable path and the parent are readable. There the executable
+         * must be `node`. That is enough because the caller only asks about the exact port this
+         * IDE's own backend last bound, so a stranger would have to be a node process that took
+         * that very port and then lost its parent.
+         *
+         * @param parentPid the pid of the live parent, or null when the parent no longer exists
+         */
+        fun isOurAbandonedBackend(commandLine: String?, executable: String?, parentPid: Long?, selfPid: Long): Boolean {
+            val isOurs = if (commandLine != null) {
+                // The path is version-scoped (system/plugins/claude-code-gui/<version>/backend/backend.mjs),
+                // so a leftover from an earlier plugin version must match too.
+                commandLine.contains("backend.mjs", ignoreCase = true) &&
+                    commandLine.contains("claude-code-gui", ignoreCase = true)
+            } else {
+                executable?.substringAfterLast('\\')?.substringAfterLast('/')
+                    ?.lowercase() in setOf("node", "node.exe")
+            }
+            val ownerGone = parentPid == null || parentPid <= 1L
+            return isOurs && (ownerGone || parentPid == selfPid)
+        }
+
+        private fun defaultDescribeProcess(pid: Long): ProcessFacts? = try {
+            val handle = ProcessHandle.of(pid).orElse(null)
+            handle?.let {
+                ProcessFacts(
+                    commandLine = it.info().commandLine().orElse(null),
+                    executable = it.info().command().orElse(null),
+                    parentPid = it.parent().orElse(null)?.pid(),
+                )
+            }
+        } catch (e: Exception) {
+            null
+        }
 
         /**
          * Valid, de-duplicated, positive pids from raw command output, excluding [selfPid].
@@ -147,13 +212,27 @@ class StaleBackendReclaimer(
             return seen.toList()
         }
 
-        private fun defaultRunCommand(command: List<String>): String? = try {
+        private fun defaultRunCommand(command: List<String>): String? =
+            runBounded(command, TimeUnit.SECONDS.toMillis(COMMAND_TIMEOUT_SECONDS))
+
+        /** Runs [command] and returns stdout, or null when it fails or outlives [timeoutMs]. */
+        internal fun runBounded(command: List<String>, timeoutMs: Long): String? = try {
             val proc = ProcessBuilder(command).redirectErrorStream(false).start()
-            val output = proc.inputStream.bufferedReader().readText()
-            // lsof / findstr exit non-zero when nothing matches; that is a normal "none found",
-            // so the exit code is deliberately not treated as an error here.
-            if (!proc.waitFor(COMMAND_TIMEOUT_SECONDS, TimeUnit.SECONDS)) proc.destroyForcibly()
-            output
+            // The read itself is what has to be bounded. Reading to EOF before `waitFor` made the
+            // timeout below unreachable: a netstat that never finished kept the caller blocked for
+            // as long as it ran (issue #613 saw 22-81 seconds on the EDT).
+            var output: String? = null
+            val reader = Thread({ output = proc.inputStream.bufferedReader().readText() }, "stale-backend-probe")
+                .apply { isDaemon = true; start() }
+            reader.join(timeoutMs)
+            if (reader.isAlive) {
+                proc.destroyForcibly()
+                null
+            } else {
+                // lsof / findstr exit non-zero when nothing matches; that is a normal "none found",
+                // so the exit code is deliberately not treated as an error here.
+                output
+            }
         } catch (e: Exception) {
             // A missing lsof/netstat must not break backend startup — it only means we cannot
             // detect a leftover process, which is exactly the state we were in before this class.
