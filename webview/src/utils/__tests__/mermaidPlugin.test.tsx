@@ -80,6 +80,14 @@ describe('mermaid diagrams in a reply (issue #556)', () => {
     );
   });
 
+  it('draws labels as SVG text, since the UI zoom on <html> shrinks the width mermaid measures for HTML labels', async () => {
+    await renderReply();
+
+    expect(mermaidApi.initialize).toHaveBeenCalledWith(
+      expect.objectContaining({ htmlLabels: false, flowchart: { htmlLabels: false } }),
+    );
+  });
+
   it('uses the dark mermaid theme while the IDE is dark', async () => {
     document.documentElement.classList.add('dark');
     await renderReply();
