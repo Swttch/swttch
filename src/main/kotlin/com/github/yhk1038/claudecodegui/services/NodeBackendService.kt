@@ -795,8 +795,12 @@ class NodeBackendService : Disposable {
      */
     fun staleBackendKind(projectBasePath: String): BackendRebooter.StaleKind {
         val port = reclaimablePortOf(projectBasePath) ?: return BackendRebooter.StaleKind.NONE
-        // A backend we own and that is running is not stale, however the port reads.
-        if (backends[projectBasePath]?.lifecycleOrNull() == NodeProcessManager.Lifecycle.RUNNING) {
+        // A backend we own and that is running is not stale, however the port reads. Neither is
+        // one that is still starting: the panel's start timeout can fire while a slow start is
+        // still under way, and that start may already hold the port before it announces it. Taking
+        // it for an abandoned leftover would have it rebooted out from under itself (issue #613).
+        val lifecycle = backends[projectBasePath]?.lifecycleOrNull()
+        if (lifecycle == NodeProcessManager.Lifecycle.RUNNING || lifecycle == NodeProcessManager.Lifecycle.STARTING) {
             return BackendRebooter.StaleKind.NONE
         }
         return rebooter.staleKind(port)
