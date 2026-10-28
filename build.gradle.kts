@@ -188,71 +188,14 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
-            <h3>0.34.9 - Find in chat, mermaid diagrams, Artifact preview panes, and commit message generation</h3>
+            <h3>0.35.0 - Session switching and streaming fixes, plus effort and mermaid fixes</h3>
             <ul>
-                <li>Add search within chat across the whole session (#531, reported by @0vvland)</li>
-                <li>Add rendering of mermaid code in replies as diagrams (#556, reported by @brtbrt)</li>
-                <li>Add preview panes for Artifacts and files inside the IDE, with element selection, like Claude Code Desktop (#593)</li>
-                <li>Add commit message generation for the selected changes (#597 by @ylz4647)</li>
-                <li>Fix the Effort slider sticking on Low when the settings file cannot be read, and explain why it cannot be read (#595, reported by @i-kulbitski)</li>
-                <li>Keep Effort levels per model and add an Auto step (#604, reported by @gromran)</li>
-                <li>Fix chat tabs closed by a plugin update not coming back (#603, reported by @HawkOnPK)</li>
-            </ul>
-            <h3>0.34.8 - Fix copying on Linux, add /slides, and skip alerts for the session you are viewing</h3>
-            <ul>
-                <li>Fix text copied in chat not reaching the editor or other apps on Linux (Wayland) (#589 by @mikemikimike, reported by @stefano-beyondoc)</li>
-                <li>Add the /slides command and Artifact tools like the terminal, and show Artifacts as cards (#591, reported by @Lundis)</li>
-                <li>Fix the banner and unread badge showing for a session you are already viewing in the tool window (#592, reported by @ThomLaurent)</li>
-            </ul>
-            <h3>0.34.7 - Delete folder-less projects, link click fixes, and a context badge fix</h3>
-            <ul>
-                <li>Add deleting a project whose folder is missing from the badge next to its name (#578)</li>
-                <li>Fix clicking an external link in chat opening it inside the chat tab instead of the browser (#580 by @1798972)</li>
-                <li>Add a reason when a local file link cannot be opened, and a right-click menu for links (#587, reported by @Lundis)</li>
-                <li>Fix the context badge dropping to 0 after every turn behind a LiteLLM gateway (#588, reported by @djaf77)</li>
-                <li>Fix slow chat restore when hooks print large output (#586)</li>
-            </ul>
-            <h3>0.34.6 - Manage queued messages, automatic session titles, and Windows fixes</h3>
-            <ul>
-                <li>Add merging, reordering and sending queued follow-up messages right away (#569 by @sgueniot-ua)</li>
-                <li>Add automatic session titles, and save a renamed session as its name in Claude Code too (#574, reported by @itachi-8733)</li>
-                <li>Fix chat not starting on Windows where PowerShell is blocked (#570 by @pluem4898, reported by @zserhiy)</li>
-                <li>Explain why a feature fails when it needs PowerShell and PowerShell is blocked (#575)</li>
-                <li>Fix black console windows flashing on Windows (#576, reported by @ylz4647)</li>
-                <li>Fix the usage battery showing a negative percentage over the limit (#577, reported by @itachi-8733)</li>
-            </ul>
-            <h3>0.34.5 - Fix WSL projects being reported as missing their folder</h3>
-            <ul>
-                <li>Fix every WSL project being reported as "project folder no longer exists" (#561, reported by @OutOfControl64)</li>
-            </ul>
-            <h3>0.34.4 -Clearer messages for missing project folders, a fix for ~ in the config folder setting, and sleep prevention errors shown in the right place</h3>
-            <ul>
-                <li>Fix the settings screen reporting "signed out" when CLAUDE_CONFIG_DIR starts with ~ (#538, reported by @pvieito)</li>
-                <li>Fix a file access warning that stayed on screen for projects whose folder is gone (#542, reported by @marcelser)</li>
-                <li>Show a clear message instead of an unknown error when sending to a project whose folder is gone, and add a "Folder not found" tag in the project list (#542)</li>
-                <li>Show Prevent Sleep errors under the Prevent Sleep switch instead of in the tunnel error panel (#554, reported by @Sherkhan7)</li>
-            </ul>
-            <h3>0.34.3 - /btw improvements, a spinner verbs setting, and a scrolling fix while streaming</h3>
-            <ul>
-                <li>Show /btw questions and answers in their own window instead of the chat (#551 by @sgueniot-ua)</li>
-                <li>Make the streaming indicator follow the spinnerVerbs setting from Claude Code, and add it to the settings screen (#548, reported by @derbewn)</li>
-                <li>Fix scrolling up being difficult (#530, reported by @hollandjake)</li>
-                <li>Show background agent work only in its task card, not in the main conversation (#535, reported by @CraftedFury)</li>
-                <li>Fix the default for follow-up messages sent while working, and show inherited settings in the project tab (#547, reported by @itachi-8733)</li>
-            </ul>
-            <h3>0.34.1 - Better file attachments, and a fix for the flickering user message</h3>
-            <ul>
-                <li>Add attaching any file type, with icons, previews and reordering (#532)</li>
-                <li>Fix a pinned user message flickering while the chat follows the bottom (#533)</li>
-            </ul>
-            <h3>0.34.0 -Reconnect Remote Development, guide for stalled screens, context usage, and a + menu</h3>
-            <ul>
-                <li>Fix panels not connecting under Remote Development, and show why when they cannot (#473, reported by @alexandrezia)</li>
-                <li>Add a guide for screens that do not load or connect, and restart a backend that was left behind (#526, reported by @thiago-f-medeiros)</li>
-                <li>Add used/total to the context badge, and cut the percentage off instead of rounding it up (#328, #490, reported by @CraftedFury)</li>
-                <li>Add one + menu in place of the attach and slash buttons (#527)</li>
-                <li>Move Effort to the model panel, with keyboard control (#527)</li>
-                <li>Fix Effort changes not reaching the running CLI (#527, #474 reported by @AlfredQin)</li>
+                <li>Fix an in-progress session dying when the panel connection drops while streaming (#605, reported by @alvin-rosterfy)</li>
+                <li>Fix a returned-to session showing the previous conversation (#610, reported by @Zach0126)</li>
+                <li>Fix empty replies from gateway models (#609, reported by @Zach0126)</li>
+                <li>Fix the Max effort pick not staying on the slider (#616, reported by @junightCode)</li>
+                <li>Fix mermaid diagram labels being clipped and diagrams rendering too small (#556, reported by @brtbrt)</li>
+                <li>Fix the IDE freezing on the backend start-failure screen (#613)</li>
             </ul>
         """.trimIndent()
     }
