@@ -6,6 +6,12 @@ import { disableIdleShutdown } from '../config/environment';
 import { Claude } from '../core/claude';
 
 const SESSION_CLEANUP_GRACE_MS = 30_000;
+/**
+ * How long a CLI that was mid-turn may stay silent before a session with no client
+ * stops counting as "still working". Sized for one long model request with nothing
+ * streamed back yet; a turn quieter than this has hung, and nobody is watching it.
+ */
+const TURN_SILENCE_LIMIT_MS = 5 * 60_000;
 const IDLE_SHUTDOWN_GRACE_MS = 60_000;
 /**
  * How long an editor-context payload stays valid while waiting for a webview to
@@ -56,6 +62,14 @@ interface SessionRecord {
    * dying under it.
    */
   activity: SessionActivity;
+  /**
+   * Whether the CLI's own output says a turn is in flight: the first event after a
+   * `result` opens one, the next `result` closes it. Unlike [activity] this needs no
+   * screen to be attached, so it still answers once the last tab has gone (issue #605).
+   */
+  cliTurnOpen: boolean;
+  /** When the CLI last emitted an event, for judging a turn that went quiet. */
+  lastCliEventAt: number;
   /**
    * Permission mode the LIVE process was actually spawned with. `--permission-mode`
    * only applies at spawn, so a mode the user picks afterwards cannot reach a running
@@ -564,6 +578,11 @@ export class ConnectionManager {
       }
     }
 
+    if (type === MessageType.CLI_EVENT) {
+      session.lastCliEventAt = Date.now();
+      session.cliTurnOpen = payload.type !== 'result';
+    }
+
     const message: IPCMessage = {
       type,
       payload,
@@ -741,10 +760,27 @@ export class ConnectionManager {
       this.cleanupTimers.delete(sessionId);
       const currentSession = this.sessionRegistry.get(sessionId);
       if (currentSession && currentSession.subscribers.size === 0) {
+        if (this.isMidTurn(currentSession)) {
+          // The screen is gone, not the work: a CLI still producing its turn is not an
+          // orphan. Look again after another grace period; the turn's `result` (or
+          // its silence) is what ends the wait, so this cannot postpone it forever.
+          console.error(
+            '[node-backend]',
+            `Session ${sessionId} has no subscribers but its CLI is mid-turn; keeping it for now`,
+          );
+          this.scheduleSessionCleanup(sessionId);
+          return;
+        }
         this.cleanupSession(sessionId);
       }
     }, SESSION_CLEANUP_GRACE_MS);
     this.cleanupTimers.set(sessionId, timer);
+  }
+
+  /** A live CLI that is part-way through a turn and has not gone quiet for too long. */
+  private isMidTurn(session: SessionRecord): boolean {
+    if (!session.process || !session.cliTurnOpen) return false;
+    return Date.now() - session.lastCliEventAt < TURN_SILENCE_LIMIT_MS;
   }
 
   /**
@@ -1019,6 +1055,8 @@ export class ConnectionManager {
         buffer: '',
         workingDir: workingDir ?? '',
         activity: SessionActivity.Idle,
+        cliTurnOpen: false,
+        lastCliEventAt: 0,
         inputMode: null,
         effortLevel: null,
         effortPick: null,
@@ -1037,7 +1075,10 @@ export class ConnectionManager {
     session.process = proc;
     // The recorded permission mode describes the LIVE process, so it dies with it.
     // Leaving a stale mode behind would make the next spawn look like a no-op change.
-    if (!proc) session.inputMode = null;
+    if (!proc) {
+      session.inputMode = null;
+      session.cliTurnOpen = false;
+    }
     // Same for the pinned effort level: `--effort` pins the process it launched, so
     // once that process is gone nothing is pinned any more.
     if (!proc) session.effortLevel = null;

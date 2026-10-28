@@ -135,6 +135,14 @@ class ClaudeCodePanel(
 
     private val logger = Logger.getInstance(ClaudeCodePanel::class.java)
 
+    /**
+     * The path the page is showing now, as the browser last reported it. [initialPath] is only
+     * where the panel started; a page loaded again after the user moved to a conversation has
+     * to return to that conversation, not to the start (issue #605).
+     */
+    @Volatile
+    private var shownPath: String? = null
+
     // Fills the Linux PRIMARY selection with what the webview reports as selected (#513).
     private val systemSelectionWriter = SystemSelectionWriter()
     private val systemClipboardReader = SystemClipboardReader()
@@ -1170,6 +1178,7 @@ class ClaudeCodePanel(
                 if (url != null && frame?.isMain == true) {
                     try {
                         val uri = java.net.URI(url)
+                        shownPath = uri.path
                         holder!!.onPathChanged?.invoke(uri.path)
                     } catch (_: Exception) { /* ignore malformed URLs */ }
                 }
@@ -2178,7 +2187,7 @@ class ClaudeCodePanel(
         clientPort.fallback?.let { retryForwardingLater(port, it) }
         val url = buildWebViewUrl(
             port = clientPort.port,
-            pathSegment = initialPath ?: "/sessions/new",
+            pathSegment = shownPath ?: initialPath ?: "/sessions/new",
             workingDir = project.basePath,
             panelId = panelId,
             isBright = com.intellij.ui.JBColor.isBright(),
