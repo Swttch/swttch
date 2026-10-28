@@ -133,6 +133,11 @@ interface ChatStreamContextType {
   // this is what the model actually ran at.
   appliedEffort: string | null;
   clearAppliedEffort: () => void;
+  // A level the user picked that the settings file cannot hold (`max`, or any level for a model whose
+  // concrete name is unknown). The backend keeps it for this session only, so the slider has to remember
+  // it too, or it falls back to the stored level the moment the pick is acknowledged (#616).
+  effortPick: { model: string | null; level: string } | null;
+  rememberEffortPick: (model: string | null, level: string) => void;
 
   // Pagination
   hasMoreOlder: boolean;
@@ -447,7 +452,16 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   // when the user changes it; when a reply arrives, this is what it really ran at, and
   // that wins over what was asked for until the user moves the slider again.
   const [appliedEffort, setAppliedEffort] = useState<string | null>(null);
-  const clearAppliedEffort = useCallback(() => setAppliedEffort(null), []);
+  const [effortPick, setEffortPick] = useState<{ model: string | null; level: string } | null>(null);
+  // Moving the slider again retires both: the reply's level and the pick that was only held for the session.
+  const clearAppliedEffort = useCallback(() => {
+    setAppliedEffort(null);
+    setEffortPick(null);
+  }, []);
+  const rememberEffortPick = useCallback(
+    (model: string | null, level: string) => setEffortPick({ model, level }),
+    [],
+  );
 
   // Matched on sessionId, since a push for a session this connection has left must not
   // repaint the one it is showing now.
@@ -465,6 +479,16 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   // Another session's last reply says nothing about this one.
   useEffect(() => {
     setAppliedEffort(null);
+  }, [session.currentSessionId]);
+
+  // The pick lives as long as the session it was made in. A chat that has sent nothing has no session, and
+  // its first message creates one (null to an id): that is the same chat, so the pick stays. Leaving for
+  // another session ends it.
+  const lastEffortSessionIdRef = useRef<string | null>(session.currentSessionId ?? null);
+  useEffect(() => {
+    const previous = lastEffortSessionIdRef.current;
+    lastEffortSessionIdRef.current = session.currentSessionId ?? null;
+    if (previous !== null) setEffortPick(null);
   }, [session.currentSessionId]);
 
   // Whether a live QUEUED_MESSAGES_CHANGED push has already landed for the
@@ -904,6 +928,8 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     applyContextWindow: chatStream.applyContextWindow,
     appliedEffort,
     clearAppliedEffort,
+    effortPick,
+    rememberEffortPick,
 
     // Pagination
     hasMoreOlder,
@@ -922,6 +948,8 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     chatStream.applyContextWindow,
     appliedEffort,
     clearAppliedEffort,
+    effortPick,
+    rememberEffortPick,
     chatStreamResetStreamState,
     chatStreamClearMessages,
     chatStreamLoadMessages,

@@ -18,8 +18,11 @@ const send = vi.fn(async (type: string, payload: unknown): Promise<{ status: str
 });
 const clearAppliedEffort = vi.fn(() => { calls.push(['clearApplied']); });
 
+const rememberEffortPick = vi.fn((model: string | null, level: string) => { calls.push(['remember', model, level]); });
+
 let settings: Record<string, unknown> = {};
 let appliedEffort: string | null = null;
+let effortPick: { model: string | null; level: string } | null = null;
 
 const sonnet = ModelInfo.from({
   value: 'sonnet',
@@ -42,7 +45,7 @@ vi.mock('@/contexts/CliConfigContext', () => ({
 }));
 vi.mock('@/hooks/useCurrentModel', () => ({ useCurrentModel: () => 'sonnet' }));
 vi.mock('@/contexts/ChatStreamContext', () => ({
-  useChatStreamContext: () => ({ appliedEffort, clearAppliedEffort }),
+  useChatStreamContext: () => ({ appliedEffort, clearAppliedEffort, effortPick, rememberEffortPick }),
 }));
 vi.mock('@/hooks/useBridge', () => ({ useBridge: () => ({ send }) }));
 
@@ -55,7 +58,49 @@ beforeEach(() => {
   vi.clearAllMocks();
   settings = { modelSettings: { [SONNET]: { effortLevel: 'medium' } } };
   appliedEffort = null;
+  effortPick = null;
   catalog = [sonnet];
+});
+
+// #616: `max` cannot be stored, so the backend holds it for the session and acknowledges `persisted: false`.
+// The slider fell back to the stored level at that moment and showed the previous level instead of Max.
+describe('a level that lasts for the session only', () => {
+  it('is remembered for the current model when the backend acknowledges it as not stored', async () => {
+    send.mockResolvedValueOnce({ status: 'ok', persisted: false } as { status: string });
+    const { result } = renderHook(() => useEffort());
+    await act(async () => { await result.current.setLevel('max'); });
+
+    expect(calls).toContainEqual(['remember', 'sonnet', 'max']);
+  });
+
+  it('is not remembered when the level was stored, nor for Auto', async () => {
+    send.mockResolvedValueOnce({ status: 'ok', persisted: true } as { status: string });
+    const { result } = renderHook(() => useEffort());
+    await act(async () => { await result.current.setLevel('high'); });
+    await act(async () => { await result.current.setLevel('auto'); });
+
+    expect(rememberEffortPick).not.toHaveBeenCalled();
+  });
+
+  it('is shown ahead of the stored level of the model it was picked for', () => {
+    settings = { modelSettings: { [SONNET]: { effortLevel: 'low' } } };
+    effortPick = { model: 'sonnet', level: 'max' };
+    const { result } = renderHook(() => useEffort());
+    expect(result.current.current).toBe('max');
+    expect(result.current.def.label).toBe('Max');
+  });
+
+  it('is not shown for another model', () => {
+    settings = { modelSettings: { [SONNET]: { effortLevel: 'low' } } };
+    effortPick = { model: 'opus', level: 'max' };
+    expect(renderHook(() => useEffort()).result.current.current).toBe('low');
+  });
+
+  it('yields to what the last reply ran at', () => {
+    appliedEffort = 'high';
+    effortPick = { model: 'sonnet', level: 'max' };
+    expect(renderHook(() => useEffort()).result.current.current).toBe('high');
+  });
 });
 
 describe('changing the level', () => {

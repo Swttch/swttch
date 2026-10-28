@@ -74,7 +74,7 @@ export function useEffort(): UseEffortReturn {
   const { settings, updateSetting, clearSaveError, reportSaveError } = useClaudeSettings();
   const { controlResponse } = useCliConfig();
   const currentModel = useCurrentModel();
-  const { appliedEffort, clearAppliedEffort } = useChatStreamContext();
+  const { appliedEffort, clearAppliedEffort, effortPick, rememberEffortPick } = useChatStreamContext();
   const { send } = useBridge();
 
   const { supportsEffort, levels } = getModelEffortConfig(controlResponse, currentModel);
@@ -85,7 +85,10 @@ export function useEffort(): UseEffortReturn {
   // The stored level is this model's own entry, or the top-level `effortLevel` of a user who has no
   // per-model level anywhere (what every older version of the slider wrote). See storedEffortLevel.
   const storedLevel = storedEffortLevel(settings.modelSettings, settings.effortLevel, effortModel);
-  const current = parseEffortLevel(reportedLevel ?? storedLevel, levels);
+  // A level the settings file cannot hold (`max`) lasts for the session only, and is what the user asked for
+  // until a reply says what it ran at. Without it the slider falls back to the stored level (#616).
+  const pickedLevel = effortPick && effortPick.model === (currentModel ?? null) ? effortPick.level : null;
+  const current = parseEffortLevel(reportedLevel ?? pickedLevel ?? storedLevel, levels);
 
   const ultracodeAvailable =
     supportsEffort && isUltracodeAvailable(levels, settings.disableWorkflows);
@@ -110,19 +113,23 @@ export function useEffort(): UseEffortReturn {
       const inheritLegacy = typeof change.effortLevel === 'string' && effortModel
         ? modelsToKeepLegacyEffort(controlResponse, settings.modelSettings, settings.effortLevel, effortModel)
         : [];
-      const ack = await send<{ status?: string; error?: string }>(MessageType.SET_EFFORT, {
+      const ack = await send<{ status?: string; error?: string; persisted?: boolean }>(MessageType.SET_EFFORT, {
         ...change,
         model: effortModel,
         ...(inheritLegacy.length > 0 && { inheritLegacy }),
       });
       if (ack?.status === 'error') throw new Error(ack.error || 'Could not save the effort level');
       clearSaveError?.();
+      // Acknowledged but not stored: the pick holds for this session only, so the slider keeps showing it.
+      if (typeof change.effortLevel === 'string' && ack?.persisted === false) {
+        rememberEffortPick?.(currentModel ?? null, change.effortLevel);
+      }
     } catch (error) {
       // The same banner a refused `updateSetting` fills: a settings file that cannot be read says why (#595).
       reportSaveError?.(error);
       throw error;
     }
-  }, [send, effortModel, controlResponse, settings.modelSettings, settings.effortLevel, clearSaveError, reportSaveError]);
+  }, [send, effortModel, currentModel, controlResponse, settings.modelSettings, settings.effortLevel, clearSaveError, reportSaveError, rememberEffortPick]);
 
   const enableUltracode = useCallback(async () => {
     if (!ultracodeAvailable) return;
@@ -149,14 +156,14 @@ export function useEffort(): UseEffortReturn {
 
   const cycle = useCallback(() => {
     if (!supportsEffort) return;
-    const step = nextEffortStep(reportedLevel ?? storedLevel, ultracodeEnabled, levels, ultracodeAvailable);
+    const step = nextEffortStep(reportedLevel ?? pickedLevel ?? storedLevel, ultracodeEnabled, levels, ultracodeAvailable);
     // Fire and forget: a failed save leaves the slider where it was.
     if (step.kind === 'ultracode') {
       void enableUltracode().catch(() => undefined);
     } else {
       void setLevel(step.key).catch(() => undefined);
     }
-  }, [supportsEffort, reportedLevel, storedLevel, ultracodeEnabled, levels, ultracodeAvailable, enableUltracode, setLevel]);
+  }, [supportsEffort, reportedLevel, pickedLevel, storedLevel, ultracodeEnabled, levels, ultracodeAvailable, enableUltracode, setLevel]);
 
   return {
     supportsEffort,
