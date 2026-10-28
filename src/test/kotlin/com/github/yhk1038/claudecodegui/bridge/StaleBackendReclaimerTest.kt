@@ -55,6 +55,71 @@ class StaleBackendReclaimerTest {
         assertEquals("", StaleBackendReclaimer.pidsFromNetstat("\n   \n"))
     }
 
+    @Test
+    fun `netstat parsing matches the port exactly (issue 613)`() {
+        // findstr :5939 would also hit :59398, and the wrong pid would be terminated.
+        val output = """
+              TCP    127.0.0.1:59398        0.0.0.0:0              LISTENING       1111
+              TCP    127.0.0.1:5939         0.0.0.0:0              LISTENING       2222
+              TCP    [::1]:5939             [::]:0                 LISTENING       3333
+              TCP    0.0.0.0:15939          0.0.0.0:0              LISTENING       4444
+        """.trimIndent()
+        assertEquals("2222\n3333", StaleBackendReclaimer.pidsFromNetstat(output, port = 5939))
+    }
+
+    // ── isOurAbandonedBackend (issue #613) ──────────────────────────────────
+
+    private val ourCmd = """node.exe C:\x\plugins\claude-code-gui\0.34.8\backend\backend.mjs"""
+
+    @Test
+    fun `our backend with no live parent is abandoned`() {
+        assertTrue(StaleBackendReclaimer.isOurAbandonedBackend(ourCmd, executable = null, parentPid = null, selfPid = 10))
+    }
+
+    @Test
+    fun `our backend reparented to init is abandoned`() {
+        assertTrue(StaleBackendReclaimer.isOurAbandonedBackend(ourCmd, executable = null, parentPid = 1, selfPid = 10))
+    }
+
+    @Test
+    fun `our backend spawned by this IDE is ours to reclaim`() {
+        assertTrue(StaleBackendReclaimer.isOurAbandonedBackend(ourCmd, executable = null, parentPid = 10, selfPid = 10))
+    }
+
+    @Test
+    fun `our backend owned by another live process is left to the user`() {
+        assertFalse(StaleBackendReclaimer.isOurAbandonedBackend(ourCmd, executable = null, parentPid = 99, selfPid = 10))
+    }
+
+    @Test
+    fun `a process that is not our backend is never reclaimed unasked`() {
+        assertFalse(StaleBackendReclaimer.isOurAbandonedBackend("""node.exe C:\other\server.js""", null, null, 10))
+        assertFalse(StaleBackendReclaimer.isOurAbandonedBackend(null, null, null, 10))
+    }
+
+    // Windows gives no command line (measured on Windows 11), only the executable and the parent.
+
+    @Test
+    fun `without a command line a node executable with no live owner is ours`() {
+        assertTrue(StaleBackendReclaimer.isOurAbandonedBackend(
+            null, """C:\Program Files\nodejs\node.exe""", parentPid = null, selfPid = 10,
+        ))
+    }
+
+    @Test
+    fun `without a command line a node executable with a live owner is left to the user`() {
+        assertFalse(StaleBackendReclaimer.isOurAbandonedBackend(
+            null, """C:\Program Files\nodejs\node.exe""", parentPid = 99, selfPid = 10,
+        ))
+    }
+
+    @Test
+    fun `without a command line a non-node executable is never reclaimed unasked`() {
+        assertFalse(StaleBackendReclaimer.isOurAbandonedBackend(
+            null, """C:\tools\some-server.exe""", parentPid = null, selfPid = 10,
+        ))
+    }
+
     // ── reclaim orchestration ───────────────────────────────────────────────
 
     /**

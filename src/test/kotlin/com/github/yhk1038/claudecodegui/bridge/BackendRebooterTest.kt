@@ -69,4 +69,49 @@ class BackendRebooterTest {
         assertTrue(rebooter("4242").hasStaleBackend(19836))
         assertFalse(rebooter("").hasStaleBackend(19836))
     }
+
+    // ── staleKind (issue #613): reboot without asking only for our own abandoned backend ──
+
+    private val ourBackendCmd =
+        """"C:\Program Files\nodejs\node.exe" C:\u\sb\system\plugins\claude-code-gui\0.34.9\backend\backend.mjs"""
+
+    private fun rebooterWith(occupiedBy: String, facts: StaleBackendReclaimer.ProcessFacts?): BackendRebooter =
+        BackendRebooter(
+            StaleBackendReclaimer(
+                runCommand = { occupiedBy },
+                killPid = { _, _ -> true },
+                isWindows = false,
+                sleep = { },
+                describeProcess = { facts },
+            )
+        )
+
+    @Test
+    fun `staleKind is NONE when nothing holds the port`() {
+        assertEquals(BackendRebooter.StaleKind.NONE, rebooterWith("", null).staleKind(19836))
+    }
+
+    @Test
+    fun `staleKind is ABANDONED for our backend whose owner is gone`() {
+        val facts = StaleBackendReclaimer.ProcessFacts(ourBackendCmd, executable = null, parentPid = null)
+        assertEquals(BackendRebooter.StaleKind.ABANDONED, rebooterWith("4242", facts).staleKind(19836))
+    }
+
+    @Test
+    fun `staleKind asks the user when the owner is still alive`() {
+        // The same folder open in a second IDE: that backend is somebody's live session.
+        val facts = StaleBackendReclaimer.ProcessFacts(ourBackendCmd, executable = null, parentPid = 31337)
+        assertEquals(BackendRebooter.StaleKind.NEEDS_USER, rebooterWith("4242", facts).staleKind(19836))
+    }
+
+    @Test
+    fun `staleKind asks the user when the process cannot be read`() {
+        assertEquals(BackendRebooter.StaleKind.NEEDS_USER, rebooterWith("4242", null).staleKind(19836))
+    }
+
+    @Test
+    fun `staleKind asks the user for a process that is not our backend`() {
+        val facts = StaleBackendReclaimer.ProcessFacts("""C:\tools\some-server.exe --port 19836""", executable = null, parentPid = null)
+        assertEquals(BackendRebooter.StaleKind.NEEDS_USER, rebooterWith("4242", facts).staleKind(19836))
+    }
 }

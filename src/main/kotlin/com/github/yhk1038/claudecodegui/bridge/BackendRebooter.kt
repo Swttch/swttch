@@ -77,4 +77,28 @@ class BackendRebooter(
      * Kept separate from [reboot] so callers choose their own trigger.
      */
     fun hasStaleBackend(port: Int): Boolean = reclaimer.listeningPids(port).isNotEmpty()
+
+    /** How a caller should treat what is holding a backend port (issue #613). */
+    enum class StaleKind {
+        /** Nothing but us is listening. */
+        NONE,
+
+        /** Our own backend, left behind by an owner that is gone: safe to reboot without asking. */
+        ABANDONED,
+
+        /** Something is holding the port that may be someone's live session: ask the user. */
+        NEEDS_USER,
+    }
+
+    /**
+     * Classifies the holder of [port]. Runs external commands, so it must not run on the EDT.
+     */
+    fun staleKind(port: Int): StaleKind {
+        val pids = reclaimer.listeningPids(port)
+        return when {
+            pids.isEmpty() -> StaleKind.NONE
+            reclaimer.canReclaimWithoutAsking(pids) -> StaleKind.ABANDONED
+            else -> StaleKind.NEEDS_USER
+        }
+    }
 }

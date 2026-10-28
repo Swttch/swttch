@@ -127,4 +127,24 @@ class StaleBackendReclaimerRealProcessTest {
         assertEquals(BackendRebooter.Outcome.Restarted(listOf(hog!!.pid())), outcome)
         assertEquals(listOf("restart"), order, "the caller's restart must have run")
     }
+
+    /**
+     * Issue #613: the output read used to run to EOF before the timeout was consulted, so a
+     * command that never finished held its caller for as long as it ran.
+     */
+    @Test
+    fun `a command that outlives the timeout returns null instead of blocking`() {
+        val slow = if (System.getProperty("os.name").startsWith("Windows", true)) {
+            listOf("ping", "-n", "30", "127.0.0.1")
+        } else {
+            listOf("sleep", "30")
+        }
+
+        val startedAt = System.nanoTime()
+        val output = StaleBackendReclaimer.runBounded(slow, 500)
+        val elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt)
+
+        assertNull(output)
+        assertTrue(elapsedMs < 5_000, "returned after ${elapsedMs}ms, the read was not bounded")
+    }
 }

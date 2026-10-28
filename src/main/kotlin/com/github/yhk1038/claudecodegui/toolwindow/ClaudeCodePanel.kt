@@ -302,6 +302,9 @@ class ClaudeCodePanel(
     // Error panel
     private var errorPanel: JPanel? = null
 
+    /** Listens for the backend's port after the start timeout drew the error screen; see [LatePortWatch]. */
+    private var latePortWatch: kotlinx.coroutines.Job? = null
+
     /** The project root whose backend this panel uses; what [ClaudePanelRegistry] groups panels by. */
     internal val projectBasePath: String get() = project.basePath ?: ""
 
@@ -996,6 +999,7 @@ class ClaudeCodePanel(
                         val diag = backendService.recentBackendDiagnostics(project.basePath ?: "")
                         javax.swing.SwingUtilities.invokeLater {
                             showBackendError("Backend did not become ready within ${BACKEND_START_TIMEOUT_MS / 1000} seconds.", diag)
+                            watchForLatePort()
                         }
                         return@launch
                     }
@@ -2316,8 +2320,38 @@ class ClaudeCodePanel(
         // A stage left by an earlier load would still be painted under the error.
         browserLayers?.let { remove(it) }
 
-        val staleBackendDetected = backendService.hasStaleBackend(project.basePath ?: "")
+        renderBackendError(errorMessage, diagnostics, staleBackendDetected = false)
 
+        // Looking for a leftover backend runs an external command (netstat / lsof). That must
+        // never happen on the EDT: the call waits on the process-creation lock other IDE work
+        // holds and reads a command's output, and 17 field reports froze the IDE for 22-393
+        // seconds right here (issue #613). The error is already on screen; the leftover-backend
+        // wording and its Reboot button are swapped in when the answer arrives.
+        val shownPanel = errorPanel
+        val basePath = project.basePath ?: ""
+        scope.launch {
+            val kind = withContext(Dispatchers.IO) { backendService.staleBackendKind(basePath) }
+            if (kind == com.github.yhk1038.claudecodegui.bridge.BackendRebooter.StaleKind.NONE) return@launch
+            // Our own backend whose owner is gone needs no one's consent: reboot it. The budget
+            // caps this at two automatic reboots per project, so a failure a reboot cannot fix
+            // ends at the button below instead of looping (issue #613).
+            val rebootNow = kind == com.github.yhk1038.claudecodegui.bridge.BackendRebooter.StaleKind.ABANDONED &&
+                backendService.tryTakeAutoReboot(basePath)
+            javax.swing.SwingUtilities.invokeLater {
+                // Skip when the user already moved on (Retry, Reboot) and the panel is gone.
+                if (errorPanel !== shownPanel) return@invokeLater
+                if (rebootNow) {
+                    logger.info("Leftover backend of an earlier run is abandoned; rebooting it without asking")
+                    rebootBackend()
+                    return@invokeLater
+                }
+                shownPanel?.let { remove(it) }
+                renderBackendError(errorMessage, diagnostics, staleBackendDetected = true)
+            }
+        }
+    }
+
+    private fun renderBackendError(errorMessage: String, diagnostics: String?, staleBackendDetected: Boolean) {
         errorPanel = JPanel(BorderLayout(0, 12)).apply {
             border = javax.swing.BorderFactory.createEmptyBorder(40, 40, 40, 40)
 
@@ -2401,12 +2435,8 @@ class ClaudeCodePanel(
      * the EDT because reclaiming waits for the old process to actually exit.
      */
     private fun rebootBackend() {
-        errorPanel?.let { remove(it) }
-        errorPanel = null
-        hideStuckHint()
-        add(loadingPanel, BorderLayout.CENTER)
-        revalidate()
-        repaint()
+        latePortWatch?.cancel()
+        showLoadingInPlaceOfError()
 
         val basePath = project.basePath ?: ""
         scope.launch {
@@ -2440,6 +2470,42 @@ class ClaudeCodePanel(
         }
     }
 
+    /** Takes the error screen away and puts the loading placeholder back, as every restart path starts. */
+    private fun showLoadingInPlaceOfError() {
+        errorPanel?.let { remove(it) }
+        errorPanel = null
+        hideStuckHint()
+        add(loadingPanel, BorderLayout.CENTER)
+        revalidate()
+        repaint()
+    }
+
+    /**
+     * Called right after the start timeout drew the error screen. A backend that was only slow can
+     * still come up and bind its port afterwards (issue #613: process creation held up for
+     * minutes), and the error screen would then stay over a working backend with only Retry to
+     * offer, which stops it and waits the slow start again. So the port is still listened for, and
+     * when it arrives the screen goes back to loading and the page is opened.
+     *
+     * Must run on the EDT, like [showBackendError] before it. Retry and Reboot cancel this watch,
+     * since each brings its own wait.
+     */
+    private fun watchForLatePort() {
+        latePortWatch?.cancel()
+        val basePath = project.basePath ?: ""
+        latePortWatch = scope.launch {
+            val port = LatePortWatch.await { backendService.awaitPort(basePath) } ?: return@launch
+            javax.swing.SwingUtilities.invokeLater {
+                // The error screen is what the port is for. If the user already left it, or the
+                // panel is gone, someone else is loading the page.
+                if (isPanelDisposed || errorPanel == null) return@invokeLater
+                logger.info("Backend came up on port $port after the panel gave up waiting; loading it")
+                showLoadingInPlaceOfError()
+                loadWebView(port)
+            }
+        }
+    }
+
     /** Wait for a manually-triggered backend start to bind a port, then load the webview. */
     private suspend fun awaitBackendAfterManualStart() {
         try {
@@ -2453,6 +2519,7 @@ class ClaudeCodePanel(
                         "Backend did not become ready within ${BACKEND_START_TIMEOUT_MS / 1000} seconds.",
                         diag,
                     )
+                    watchForLatePort()
                 }
                 return
             }
@@ -2472,12 +2539,8 @@ class ClaudeCodePanel(
      * Retry starting the Node.js backend after a failure.
      */
     private fun retryBackendStart() {
-        errorPanel?.let { remove(it) }
-        errorPanel = null
-        hideStuckHint()
-        add(loadingPanel, BorderLayout.CENTER)
-        revalidate()
-        repaint()
+        latePortWatch?.cancel()
+        showLoadingInPlaceOfError()
 
         backendService.restart(project.basePath ?: "")
         scope.launch { awaitBackendAfterManualStart() }

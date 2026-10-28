@@ -1,5 +1,6 @@
 package com.github.yhk1038.claudecodegui.services
 
+import com.github.yhk1038.claudecodegui.bridge.AutoRebootBudget
 import com.github.yhk1038.claudecodegui.bridge.BackendRebooter
 import com.github.yhk1038.claudecodegui.bridge.ClipboardContents
 import com.github.yhk1038.claudecodegui.bridge.ExtractedResources
@@ -786,15 +787,30 @@ class NodeBackendService : Disposable {
         backends[projectBasePath]?.lastKnownPort()
 
     /**
-     * True when something this IDE session does not own is holding [projectBasePath]'s backend
-     * port — the condition for offering the user a reboot (issue #308).
+     * What, if anything, this IDE session does not own is holding [projectBasePath]'s backend
+     * port: the condition for offering the user a reboot (issue #308), and for rebooting without
+     * asking when the holder is our own abandoned backend (issue #613).
+     *
+     * Runs external commands, so callers must stay off the EDT.
      */
-    fun hasStaleBackend(projectBasePath: String): Boolean {
-        val port = reclaimablePortOf(projectBasePath) ?: return false
-        // A backend we own and that is running is not stale, however the port reads.
-        if (backends[projectBasePath]?.lifecycleOrNull() == NodeProcessManager.Lifecycle.RUNNING) return false
-        return rebooter.hasStaleBackend(port)
+    fun staleBackendKind(projectBasePath: String): BackendRebooter.StaleKind {
+        val port = reclaimablePortOf(projectBasePath) ?: return BackendRebooter.StaleKind.NONE
+        // A backend we own and that is running is not stale, however the port reads. Neither is
+        // one that is still starting: the panel's start timeout can fire while a slow start is
+        // still under way, and that start may already hold the port before it announces it. Taking
+        // it for an abandoned leftover would have it rebooted out from under itself (issue #613).
+        val lifecycle = backends[projectBasePath]?.lifecycleOrNull()
+        if (lifecycle == NodeProcessManager.Lifecycle.RUNNING || lifecycle == NodeProcessManager.Lifecycle.STARTING) {
+            return BackendRebooter.StaleKind.NONE
+        }
+        return rebooter.staleKind(port)
     }
+
+    private val autoRebootBudgets = ConcurrentHashMap<String, AutoRebootBudget>()
+
+    /** Spends one of [projectBasePath]'s automatic reboots. See [AutoRebootBudget]. */
+    fun tryTakeAutoReboot(projectBasePath: String): Boolean =
+        autoRebootBudgets.computeIfAbsent(projectBasePath) { AutoRebootBudget() }.tryTake()
 
     /**
      * Clear a leftover backend process holding [projectBasePath]'s port, then restart through
