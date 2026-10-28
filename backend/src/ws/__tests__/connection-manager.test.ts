@@ -291,6 +291,57 @@ describe('ConnectionManager', () => {
       expect(killTree).not.toHaveBeenCalled();
     });
 
+    describe('a CLI that is mid-turn when its last tab goes (issue #605)', () => {
+      function goneMidTurn() {
+        // Another tab stays connected, so the backend's own idle shutdown stays out of it.
+        cm.addConnection(createMockWs());
+        const proc = makeProcess();
+        const connId = cm.addConnection(createMockWs());
+        cm.subscribe(connId, 'sess-1');
+        cm.setProcess('sess-1', proc);
+        cm.broadcastToSession('sess-1', MessageType.CLI_EVENT, { type: 'stream_event' });
+        cm.removeConnection(connId);
+        return proc;
+      }
+
+      it('is not ended while its stream is still going', () => {
+        goneMidTurn();
+
+        vi.advanceTimersByTime(CLEANUP_GRACE * 3);
+
+        expect(killTree).not.toHaveBeenCalled();
+      });
+
+      it('is ended one grace period after its turn finishes', () => {
+        const proc = goneMidTurn();
+        vi.advanceTimersByTime(CLEANUP_GRACE * 2);
+
+        cm.broadcastToSession('sess-1', MessageType.CLI_EVENT, { type: 'result' });
+        vi.advanceTimersByTime(CLEANUP_GRACE + 1);
+
+        expect(killTree).toHaveBeenCalledWith(proc);
+      });
+
+      it('is ended when the turn has gone quiet for good', () => {
+        const proc = goneMidTurn();
+
+        vi.advanceTimersByTime(6 * 60_000);
+
+        expect(killTree).toHaveBeenCalledWith(proc);
+      });
+
+      it('is kept when a tab comes back mid-turn', () => {
+        goneMidTurn();
+        vi.advanceTimersByTime(CLEANUP_GRACE - 1_000);
+
+        const back = cm.addConnection(createMockWs());
+        cm.subscribe(back, 'sess-1');
+        vi.advanceTimersByTime(CLEANUP_GRACE * 10);
+
+        expect(killTree).not.toHaveBeenCalled();
+      });
+    });
+
     it('does not push an already-running grace period further out', () => {
       // Sweeps repeat on every heartbeat tick. If each one re-armed the timer,
       // a session would be swept forever and never actually cleaned up.
