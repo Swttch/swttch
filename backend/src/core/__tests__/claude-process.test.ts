@@ -292,16 +292,123 @@ describe('buildArtifactEnv', () => {
   });
 
   it('reads the real process env when no env is given', () => {
-    const before = process.env.CLAUDE_CODE_ARTIFACT;
+    // A developer's shell may carry a gateway address or key, which this function now reads too.
+    const names = ['CLAUDE_CODE_ARTIFACT', 'ANTHROPIC_BASE_URL', 'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN'];
+    const before = Object.fromEntries(names.map((name) => [name, process.env[name]]));
     try {
-      delete process.env.CLAUDE_CODE_ARTIFACT;
+      for (const name of names) delete process.env[name];
       expect(buildArtifactEnv()).toEqual({ CLAUDE_CODE_ARTIFACT: '1' });
       process.env.CLAUDE_CODE_ARTIFACT = '0';
       expect(buildArtifactEnv()).toEqual({});
     } finally {
-      if (before === undefined) delete process.env.CLAUDE_CODE_ARTIFACT;
-      else process.env.CLAUDE_CODE_ARTIFACT = before;
+      for (const name of names) {
+        if (before[name] === undefined) delete process.env[name];
+        else process.env[name] = before[name];
+      }
     }
+  });
+
+  // Issue #609: where the CLI cannot publish an Artifact anyway, registering the tool only makes
+  // every request about 34KB heavier, and a gateway that cannot take that answers with nothing.
+  describe('where Artifacts cannot be published (#609)', () => {
+    it('withholds the variable for a gateway token, an API key or an apiKeyHelper', () => {
+      expect(buildArtifactEnv({ ANTHROPIC_AUTH_TOKEN: 'token' })).toEqual({});
+      expect(buildArtifactEnv({ ANTHROPIC_API_KEY: 'key' })).toEqual({});
+      expect(buildArtifactEnv({}, { apiKeyHelper: '~/bin/get-key.sh' })).toEqual({});
+    });
+
+    it('does not treat an empty credential as a credential', () => {
+      expect(buildArtifactEnv({ ANTHROPIC_AUTH_TOKEN: '', ANTHROPIC_API_KEY: '' }, { apiKeyHelper: '  ' })).toEqual({
+        CLAUDE_CODE_ARTIFACT: '1',
+      });
+    });
+
+    it('reads the credential from the env block of the Claude settings, where gateway users put it', () => {
+      expect(buildArtifactEnv({}, { env: { ANTHROPIC_AUTH_TOKEN: 'token' } })).toEqual({});
+      expect(buildArtifactEnv({}, { env: { ANTHROPIC_BASE_URL: 'https://llm-gateway.example.com' } })).toEqual({});
+    });
+
+    it('withholds the variable on Bedrock, Vertex, Foundry and the other cloud providers', () => {
+      for (const flag of [
+        'CLAUDE_CODE_USE_BEDROCK',
+        'CLAUDE_CODE_USE_VERTEX',
+        'CLAUDE_CODE_USE_FOUNDRY',
+        'CLAUDE_CODE_USE_ANTHROPIC_AWS',
+        'CLAUDE_CODE_USE_MANTLE',
+      ]) {
+        expect(buildArtifactEnv({ [flag]: '1' })).toEqual({});
+        expect(buildArtifactEnv({}, { env: { [flag]: 'true' } })).toEqual({});
+      }
+    });
+
+    it('keeps the variable when the provider flag is off', () => {
+      expect(buildArtifactEnv({ CLAUDE_CODE_USE_BEDROCK: '0' })).toEqual({ CLAUDE_CODE_ARTIFACT: '1' });
+    });
+
+    it('withholds the variable for a base URL that is not api.anthropic.com', () => {
+      expect(buildArtifactEnv({ ANTHROPIC_BASE_URL: 'https://llm-gateway.example.com' })).toEqual({});
+      expect(buildArtifactEnv({ ANTHROPIC_BASE_URL: 'http://localhost:4000' })).toEqual({});
+      expect(buildArtifactEnv({ ANTHROPIC_BASE_URL: 'not a url' })).toEqual({});
+    });
+
+    it('keeps the variable for the Anthropic address, with or without a path or a case difference', () => {
+      expect(buildArtifactEnv({ ANTHROPIC_BASE_URL: 'https://api.anthropic.com' })).toEqual({ CLAUDE_CODE_ARTIFACT: '1' });
+      expect(buildArtifactEnv({ ANTHROPIC_BASE_URL: 'https://API.Anthropic.com/v1' })).toEqual({ CLAUDE_CODE_ARTIFACT: '1' });
+      expect(buildArtifactEnv({ ANTHROPIC_BASE_URL: '' })).toEqual({ CLAUDE_CODE_ARTIFACT: '1' });
+    });
+
+    // The way back for someone behind a gateway who still wants `/slides`: an exported answer wins.
+    it('lets an exported CLAUDE_CODE_ARTIFACT stand even behind a gateway', () => {
+      expect(
+        buildArtifactEnv({ ANTHROPIC_BASE_URL: 'https://llm-gateway.example.com', CLAUDE_CODE_ARTIFACT: '1' }),
+      ).toEqual({});
+    });
+
+    it('lets the env block of the Claude settings answer for CLAUDE_CODE_ARTIFACT too', () => {
+      expect(buildArtifactEnv({}, { env: { CLAUDE_CODE_ARTIFACT: '0' } })).toEqual({});
+    });
+
+    // Windows treats `Anthropic_Base_Url` and `ANTHROPIC_BASE_URL` as one variable; Unix does not.
+    it('reads variable names case-insensitively on Windows only', () => {
+      const mixed = { Anthropic_Base_Url: 'https://llm-gateway.example.com' };
+      expect(buildArtifactEnv(mixed, {}, 'win32')).toEqual({});
+      expect(buildArtifactEnv(mixed, {}, 'darwin')).toEqual({ CLAUDE_CODE_ARTIFACT: '1' });
+      expect(buildArtifactEnv({ claude_code_artifact: '0' }, {}, 'win32')).toEqual({});
+      expect(buildArtifactEnv({}, { env: { Anthropic_Auth_Token: 'token' } }, 'win32')).toEqual({});
+    });
+
+    it('lets a settings env value override the shell, the way the CLI does', () => {
+      // The shell points at a gateway, the settings put it back on Anthropic's address.
+      expect(
+        buildArtifactEnv(
+          { ANTHROPIC_BASE_URL: 'https://llm-gateway.example.com' },
+          { env: { ANTHROPIC_BASE_URL: 'https://api.anthropic.com' } },
+        ),
+      ).toEqual({ CLAUDE_CODE_ARTIFACT: '1' });
+    });
+  });
+
+  describe('when the user turned Artifacts off (#609)', () => {
+    it('withholds the variable for enableArtifact false', () => {
+      expect(buildArtifactEnv({}, { enableArtifact: false })).toEqual({});
+    });
+
+    it('withholds the variable for the deprecated disableArtifact true', () => {
+      expect(buildArtifactEnv({}, { disableArtifact: true })).toEqual({});
+    });
+
+    it('withholds the variable for CLAUDE_CODE_DISABLE_ARTIFACT, from the shell or the settings env', () => {
+      expect(buildArtifactEnv({ CLAUDE_CODE_DISABLE_ARTIFACT: '1' })).toEqual({});
+      expect(buildArtifactEnv({}, { env: { CLAUDE_CODE_DISABLE_ARTIFACT: '1' } })).toEqual({});
+    });
+
+    // enableArtifact: true does not turn Artifacts on for a headless session (measured), so it
+    // must not stop us from passing the variable that does.
+    it('still passes the variable when enableArtifact is true or unset', () => {
+      expect(buildArtifactEnv({}, { enableArtifact: true })).toEqual({ CLAUDE_CODE_ARTIFACT: '1' });
+      expect(buildArtifactEnv({}, {})).toEqual({ CLAUDE_CODE_ARTIFACT: '1' });
+      expect(buildArtifactEnv({ CLAUDE_CODE_DISABLE_ARTIFACT: '0' })).toEqual({ CLAUDE_CODE_ARTIFACT: '1' });
+    });
   });
 });
 

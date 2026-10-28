@@ -153,6 +153,14 @@
       "label": "File checkpointing",
       "description": "Snapshot files before Claude edits them, so a code rewind can restore them."
     },
+    "artifacts": {
+      "label": "Artifacts",
+      "description": "Turn the Artifact tool off with a false in any file; no file can turn it back on\nKey: enableArtifact",
+      "hint": {
+        "title": "When this chat does not ask for Artifacts",
+        "body": "Claude Code can publish an Artifact only with a claude.ai login. Where it cannot, asking for the Artifact tool would only add about 34 KB to every request, and a gateway that cannot take that may answer with nothing. So this chat does not ask when:\n• this switch is off\n• you sign in with ANTHROPIC_AUTH_TOKEN, ANTHROPIC_API_KEY or an apiKeyHelper\n• the session runs on Amazon Bedrock, Google Cloud or Microsoft Foundry\n• ANTHROPIC_BASE_URL is not api.anthropic.com\nTo keep /slides behind your own address, set CLAUDE_CODE_ARTIFACT=1 in the environment that starts the IDE."
+      }
+    },
     "hostMode": {
       "label": "Preferred Location",
       "description": "Where Claude opens by default.",

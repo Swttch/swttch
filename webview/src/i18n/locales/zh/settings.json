@@ -153,6 +153,14 @@
       "label": "文件检查点",
       "description": "在 Claude 编辑文件之前保存快照，以便代码回退时能够恢复。"
     },
+    "artifacts": {
+      "label": "Artifacts",
+      "description": "在任意文件中设为 false 即可关闭 Artifact 工具；任何文件都无法再将其重新开启\n键: enableArtifact",
+      "hint": {
+        "title": "此聊天不请求 Artifacts 的情况",
+        "body": "Claude Code 只有在使用 claude.ai 登录时才能发布 Artifact。在无法发布的环境中请求 Artifact 工具，只会让每个请求多出约 34 KB，而无法处理的网关可能什么都不返回。因此在以下情况下，此聊天不会请求：\n• 此开关已关闭\n• 你使用 ANTHROPIC_AUTH_TOKEN、ANTHROPIC_API_KEY 或 apiKeyHelper 登录\n• 会话运行在 Amazon Bedrock、Google Cloud 或 Microsoft Foundry 上\n• ANTHROPIC_BASE_URL 不是 api.anthropic.com\n若想在自定义地址之后继续使用 /slides，请在启动 IDE 的环境中设置 CLAUDE_CODE_ARTIFACT=1。"
+      }
+    },
     "hostMode": {
       "label": "首选位置",
       "description": "Claude 默认打开的位置。",

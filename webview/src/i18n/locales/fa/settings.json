@@ -153,6 +153,14 @@
       "label": "نقاط بازیابی فایل",
       "description": "پیش از آنکه Claude فایل‌ها را ویرایش کند، از آن‌ها عکس لحظه‌ای گرفته می‌شود تا بازگرداندن کد بتواند آن‌ها را بازیابی کند."
     },
+    "artifacts": {
+      "label": "Artifacts",
+      "description": "ابزار Artifact را با false در هر فایلی خاموش کنید؛ هیچ فایلی نمی‌تواند آن را دوباره روشن کند\nکلید: enableArtifact",
+      "hint": {
+        "title": "چه زمانی این گفتگو Artifacts را درخواست نمی‌کند",
+        "body": "Claude Code فقط با ورود به claude.ai می‌تواند یک Artifact منتشر کند. جایی که این ممکن نیست، درخواست ابزار Artifact فقط حدود ۳۴ کیلوبایت به هر درخواست اضافه می‌کند و دروازه‌ای که از پس آن برنیاید ممکن است هیچ پاسخی ندهد. بنابراین این گفتگو در این موارد آن را درخواست نمی‌کند:\n• این کلید خاموش باشد\n• با ANTHROPIC_AUTH_TOKEN یا ANTHROPIC_API_KEY یا apiKeyHelper وارد شوید\n• نشست روی Amazon Bedrock یا Google Cloud یا Microsoft Foundry اجرا شود\n• ANTHROPIC_BASE_URL برابر api.anthropic.com نباشد\nبرای نگه داشتن /slides پشت نشانی خودتان، CLAUDE_CODE_ARTIFACT=1 را در محیطی که IDE را اجرا می‌کند تنظیم کنید."
+      }
+    },
     "hostMode": {
       "label": "مکان ترجیحی",
       "description": "جایی که Claude به‌طور پیش‌فرض باز می‌شود.",

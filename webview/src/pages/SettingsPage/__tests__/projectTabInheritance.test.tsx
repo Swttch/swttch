@@ -59,6 +59,7 @@ import { AutoResumeOnLimitRow } from '../General/Basics/AutoResumeOnLimitRow';
 import { AttachEditorContextRow } from '../Ide/Integration/AttachEditorContextRow';
 import { FocusInputRow } from '../Ide/Integration/FocusInputRow';
 import { FileCheckpointingRow } from '../General/Basics/FileCheckpointingRow';
+import { ArtifactsRow } from '../General/Basics/ArtifactsRow';
 import { RespectGitignoreRow } from '../General/Basics/RespectGitignoreRow';
 import { ShowThinkingSummariesRow } from '../General/Basics/ShowThinkingSummariesRow';
 
@@ -89,6 +90,7 @@ const TOGGLE_ROWS: ToggleRow[] = [
   { name: 'AttachEditorContextRow', Row: AttachEditorContextRow, labelPath: 'ide.attachEditorContext.label', store: 'app', key: 'attachEditorContext', builtInDefault: true },
   { name: 'FocusInputRow', Row: FocusInputRow, labelPath: 'ide.focusInputOnEditorContext.label', store: 'app', key: 'focusInputOnEditorContext', builtInDefault: true },
   { name: 'FileCheckpointingRow', Row: FileCheckpointingRow, labelPath: 'general.fileCheckpointing.label', store: 'claude', key: 'fileCheckpointingEnabled', builtInDefault: true },
+  { name: 'ArtifactsRow', Row: ArtifactsRow, labelPath: 'general.artifacts.label', store: 'claude', key: 'enableArtifact', builtInDefault: true },
   { name: 'RespectGitignoreRow', Row: RespectGitignoreRow, labelPath: 'general.respectGitignore.label', store: 'claude', key: 'respectGitignore', builtInDefault: false },
   { name: 'ShowThinkingSummariesRow', Row: ShowThinkingSummariesRow, labelPath: 'general.showThinkingSummaries.label', store: 'claude', key: 'showThinkingSummaries', builtInDefault: false },
 ];

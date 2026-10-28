@@ -1,6 +1,7 @@
 import { StringDecoder } from 'string_decoder';
 import { Claude } from '../claude';
 import { buildArtifactEnv } from '../claude-process';
+import { readMergedClaudeSettings } from './claude-settings';
 
 export interface SlashCommandInfo {
   name: string;
@@ -218,6 +219,11 @@ async function loadCliConfigInternal(workingDir: string): Promise<CliConfigContr
     '--settings', configProbeSettingsArg(),
   ];
 
+  // The same answer the chat spawn reads (#609): whether Artifacts are offered depends on the
+  // user's Claude settings (`enableArtifact`, the `env` block, `apiKeyHelper`), so the probe has to
+  // read them too or its command list would disagree with the session's.
+  const { settings: claudeSettings } = await readMergedClaudeSettings(workingDir);
+
   // spawnAuthed: the config probe runs as the same authenticated identity as chat
   // (inherited OAuth tokens stripped identically); env-provided API keys are kept. Awaited
   // before wiring handlers — the 'spawn' event fires only after this sync block registers it.
@@ -231,7 +237,7 @@ async function loadCliConfigInternal(workingDir: string): Promise<CliConfigContr
       // This probe produces the slash-command list the menu shows. It has to ask
       // the CLI the same question the chat session does, or `/slides` would be
       // listed by one and missing from the other (#584).
-      ...buildArtifactEnv(),
+      ...buildArtifactEnv(process.env, claudeSettings),
     },
   });
 

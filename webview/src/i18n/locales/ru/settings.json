@@ -153,6 +153,14 @@
       "label": "Контрольные точки файлов",
       "description": "Сохраняет снимок файлов до того, как Claude их изменит, чтобы откат кода мог их восстановить."
     },
+    "artifacts": {
+      "label": "Artifacts",
+      "description": "Отключите инструмент Artifact с помощью false в любом файле; ни один файл не может его включить обратно\nКлюч: enableArtifact",
+      "hint": {
+        "title": "Когда этот чат не запрашивает Artifacts",
+        "body": "Claude Code может опубликовать Artifact только при входе через claude.ai. Там, где это невозможно, запрос инструмента Artifact лишь добавил бы около 34 КБ к каждому запросу, а шлюз, который не справляется с этим, может ответить пустотой. Поэтому чат не запрашивает его, если:\n• этот переключатель выключен\n• вы входите через ANTHROPIC_AUTH_TOKEN, ANTHROPIC_API_KEY или apiKeyHelper\n• сессия работает на Amazon Bedrock, Google Cloud или Microsoft Foundry\n• ANTHROPIC_BASE_URL не равен api.anthropic.com\nЧтобы сохранить /slides за собственным адресом, задайте CLAUDE_CODE_ARTIFACT=1 в окружении, из которого запускается IDE."
+      }
+    },
     "hostMode": {
       "label": "Предпочитаемое расположение",
       "description": "Где Claude открывается по умолчанию.",

@@ -153,6 +153,14 @@
       "label": "ファイルチェックポイント",
       "description": "Claude がファイルを編集する前にスナップショットを保存し、コードの巻き戻しで復元できるようにします。"
     },
+    "artifacts": {
+      "label": "Artifacts",
+      "description": "いずれかのファイルで false を指定すると Artifact ツールをオフにします。どのファイルからも再びオンにすることはできません\nキー: enableArtifact",
+      "hint": {
+        "title": "このチャットが Artifact を要求しない場合",
+        "body": "Claude Code が Artifact を公開できるのは claude.ai にログインしている場合だけです。公開できない環境で Artifact ツールを要求すると、すべてのリクエストに約 34KB が加わるだけで、それを処理できないゲートウェイは何も返さないことがあります。そのため、次の場合はこのチャットは要求しません。\n• このスイッチがオフのとき\n• ANTHROPIC_AUTH_TOKEN、ANTHROPIC_API_KEY、apiKeyHelper でログインしているとき\n• セッションが Amazon Bedrock、Google Cloud、Microsoft Foundry で動いているとき\n• ANTHROPIC_BASE_URL が api.anthropic.com ではないとき\n独自のアドレスの先でも /slides を使うには、IDE を起動する環境に CLAUDE_CODE_ARTIFACT=1 を設定してください。"
+      }
+    },
     "hostMode": {
       "label": "優先表示場所",
       "description": "Claudeがデフォルトで開く場所。",

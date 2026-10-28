@@ -65,6 +65,12 @@ export interface ClaudeSettingsState {
    * backend reads this key to decide whether to inject it (issue #356).
    */
   fileCheckpointingEnabled?: boolean;
+  /**
+   * Official key: `false` removes the Artifact tool and `/slides`, and no other file can turn
+   * them back on. `true` or an absent key changes nothing, so an absent value reads as ON.
+   * The backend also reads it: with `false` it stops passing CLAUDE_CODE_ARTIFACT (issue #609).
+   */
+  enableArtifact?: boolean;
   env?: Record<string, string>; // official key: environment variables for Claude sessions
   alwaysThinkingEnabled: boolean; // extended thinking always on
   /**

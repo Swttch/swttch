@@ -322,12 +322,120 @@ export function buildCheckpointingEnv(
  * exported in the shell that started us is passed through untouched, because
  * the CLI reads it itself and turning it off in a terminal has to turn it off
  * here too. Only an absent value is filled in.
+ *
+ * The variable is also withheld where the CLI cannot publish an Artifact anyway
+ * (issue #609). Registering the tool is not free: it adds the Artifact schema
+ * and its instructions to every request (measured: about 34KB on top of 88KB),
+ * and a gateway that cannot digest that answers with an empty reply, which the
+ * CLI retries until the session looks dead. The official availability table says
+ * a session authenticated by an API key, a gateway token or a cloud provider
+ * credential cannot publish, and that Bedrock, Vertex and Foundry do not offer
+ * Artifacts at all. So nothing is gained there and the request only gets heavier.
+ * Four things count, read from the shell and from the `env` block of the Claude
+ * settings (the settings value wins, as it does for the CLI):
+ *
+ * - the user turned Artifacts off: `enableArtifact: false`, the deprecated
+ *   `disableArtifact: true`, or CLAUDE_CODE_DISABLE_ARTIFACT. Measured: with this
+ *   off, passing the variable adds nothing to the command list or the request;
+ * - a gateway credential: ANTHROPIC_AUTH_TOKEN, ANTHROPIC_API_KEY or `apiKeyHelper`;
+ * - a cloud provider: CLAUDE_CODE_USE_BEDROCK, _VERTEX, _FOUNDRY, _ANTHROPIC_AWS or _MANTLE;
+ * - ANTHROPIC_BASE_URL pointing somewhere other than api.anthropic.com. This one is
+ *   broader than the documented table, which names credentials, not addresses: a
+ *   claude.ai login behind a custom address is not ruled out by it. We take that
+ *   loss because the other side is a session that never answers, and the user keeps
+ *   a way back: exporting CLAUDE_CODE_ARTIFACT=1 in the shell is an answer and wins.
+ *
+ * Anything the CLI decides from the server (plan, organisation policy) cannot be
+ * seen from here and stays the CLI's call.
  */
 export function buildArtifactEnv(
   inherited: NodeJS.ProcessEnv = process.env,
+  settings: Record<string, unknown> = {},
+  platform: NodeJS.Platform = process.platform,
 ): { CLAUDE_CODE_ARTIFACT?: string } {
-  if (inherited.CLAUDE_CODE_ARTIFACT !== undefined) return {};
+  const env = effectiveEnv(inherited, settings, platform);
+  if (env.CLAUDE_CODE_ARTIFACT !== undefined) return {};
+  if (isArtifactTurnedOff(env, settings)) return {};
+  if (hasGatewayCredential(env, settings)) return {};
+  if (usesCloudProvider(env)) return {};
+  if (pointsAtNonAnthropicHost(env.ANTHROPIC_BASE_URL)) return {};
   return { CLAUDE_CODE_ARTIFACT: '1' };
+}
+
+/**
+ * The shell env with the Claude settings' `env` block on top: that block wins over a shell export.
+ *
+ * Windows spells environment variable names case-insensitively (`Anthropic_Base_Url` is the same
+ * variable as `ANTHROPIC_BASE_URL`), but a plain object copy is not, so there the names are folded
+ * to upper case first. Elsewhere the names stay exactly as written, as the OS treats them.
+ */
+function effectiveEnv(
+  inherited: NodeJS.ProcessEnv,
+  settings: Record<string, unknown>,
+  platform: NodeJS.Platform,
+): Record<string, string | undefined> {
+  const fold = (name: string): string => (platform === 'win32' ? name.toUpperCase() : name);
+  const env: Record<string, string | undefined> = {};
+  for (const [key, value] of Object.entries(inherited)) env[fold(key)] = value;
+  const block = settings.env;
+  if (block !== null && typeof block === 'object' && !Array.isArray(block)) {
+    for (const [key, value] of Object.entries(block as Record<string, unknown>)) {
+      if (typeof value === 'string') env[fold(key)] = value;
+      else if (typeof value === 'number' || typeof value === 'boolean') env[fold(key)] = String(value);
+    }
+  }
+  return env;
+}
+
+const ON_VALUES = new Set(['1', 'true', 'yes', 'on']);
+
+function isOn(value: string | undefined): boolean {
+  return value !== undefined && ON_VALUES.has(value.trim().toLowerCase());
+}
+
+function isArtifactTurnedOff(
+  env: Record<string, string | undefined>,
+  settings: Record<string, unknown>,
+): boolean {
+  return (
+    settings.enableArtifact === false ||
+    settings.disableArtifact === true ||
+    isOn(env.CLAUDE_CODE_DISABLE_ARTIFACT)
+  );
+}
+
+function hasGatewayCredential(
+  env: Record<string, string | undefined>,
+  settings: Record<string, unknown>,
+): boolean {
+  const helper = settings.apiKeyHelper;
+  return (
+    Boolean(env.ANTHROPIC_AUTH_TOKEN) ||
+    Boolean(env.ANTHROPIC_API_KEY) ||
+    (typeof helper === 'string' && helper.trim() !== '')
+  );
+}
+
+const CLOUD_PROVIDER_FLAGS = [
+  'CLAUDE_CODE_USE_BEDROCK',
+  'CLAUDE_CODE_USE_VERTEX',
+  'CLAUDE_CODE_USE_FOUNDRY',
+  'CLAUDE_CODE_USE_ANTHROPIC_AWS',
+  'CLAUDE_CODE_USE_MANTLE',
+];
+
+function usesCloudProvider(env: Record<string, string | undefined>): boolean {
+  return CLOUD_PROVIDER_FLAGS.some((name) => isOn(env[name]));
+}
+
+/** An unset or empty address is the default; an address that cannot be parsed is not Anthropic's. */
+function pointsAtNonAnthropicHost(baseUrl: string | undefined): boolean {
+  if (baseUrl === undefined || baseUrl.trim() === '') return false;
+  try {
+    return new URL(baseUrl.trim()).hostname.toLowerCase() !== 'api.anthropic.com';
+  } catch {
+    return true;
+  }
 }
 
 /**
@@ -699,7 +807,7 @@ export async function ensureClaudeProcess(
       CI: 'true',
       CLAUDECODE: undefined,
       ...buildCheckpointingEnv(claudeSettings),
-      ...buildArtifactEnv(),
+      ...buildArtifactEnv(process.env, claudeSettings),
       ...buildAttachmentsEnv(),
     },
     // win32: route this long-lived chat CLI through a Job Object wrapper so its

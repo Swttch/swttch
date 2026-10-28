@@ -153,6 +153,14 @@
       "label": "نقاط تفتيش الملفات",
       "description": "يتم حفظ نسخة من الملفات قبل أن يعدّلها Claude، حتى يتمكن التراجع عن الكود من استعادتها."
     },
+    "artifacts": {
+      "label": "Artifacts",
+      "description": "أوقف أداة Artifact باستخدام false في أي ملف؛ لا يمكن لأي ملف إعادة تشغيلها\nالمفتاح: enableArtifact",
+      "hint": {
+        "title": "متى لا تطلب هذه المحادثة Artifacts",
+        "body": "لا يستطيع Claude Code نشر Artifact إلا بتسجيل دخول إلى claude.ai. حيث لا يمكن ذلك، لن يؤدي طلب أداة Artifact إلا إلى إضافة نحو 34 كيلوبايت إلى كل طلب، وقد تردّ بوابة لا تستطيع التعامل مع ذلك بلا شيء. لذلك لا تطلبها هذه المحادثة عندما:\n• يكون هذا المفتاح متوقفًا\n• تسجّل الدخول عبر ANTHROPIC_AUTH_TOKEN أو ANTHROPIC_API_KEY أو apiKeyHelper\n• تعمل الجلسة على Amazon Bedrock أو Google Cloud أو Microsoft Foundry\n• لا يكون ANTHROPIC_BASE_URL هو api.anthropic.com\nللإبقاء على /slides خلف عنوانك الخاص، اضبط CLAUDE_CODE_ARTIFACT=1 في البيئة التي تشغّل بيئة التطوير."
+      }
+    },
     "hostMode": {
       "label": "الموقع المفضّل",
       "description": "أين يُفتح Claude افتراضيًا.",

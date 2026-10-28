@@ -153,6 +153,14 @@
       "label": "파일 체크포인트",
       "description": "Claude가 파일을 편집하기 전에 스냅샷을 남겨, 코드 되감기가 복원할 수 있게 합니다."
     },
+    "artifacts": {
+      "label": "Artifacts",
+      "description": "어느 파일에서든 false로 Artifact 도구를 끕니다. 어떤 파일도 다시 켤 수 없습니다\n키: enableArtifact",
+      "hint": {
+        "title": "이 채팅이 아티팩트를 요청하지 않는 경우",
+        "body": "Claude Code는 claude.ai 로그인에서만 아티팩트를 게시할 수 있습니다. 그럴 수 없는 환경에서 Artifact 도구를 요청하면 모든 요청에 약 34KB만 더해지고, 이를 소화하지 못하는 게이트웨이는 아무 응답도 주지 않을 수 있습니다. 그래서 다음 경우에는 이 채팅이 요청하지 않습니다.\n• 이 스위치가 꺼져 있을 때\n• ANTHROPIC_AUTH_TOKEN, ANTHROPIC_API_KEY, apiKeyHelper로 로그인할 때\n• 세션이 Amazon Bedrock, Google Cloud, Microsoft Foundry에서 돌 때\n• ANTHROPIC_BASE_URL이 api.anthropic.com이 아닐 때\n사용자 지정 주소 뒤에서도 /slides를 쓰려면 IDE를 띄우는 환경에 CLAUDE_CODE_ARTIFACT=1을 두세요."
+      }
+    },
     "hostMode": {
       "label": "기본 위치",
       "description": "Claude가 기본으로 열리는 위치입니다.",
