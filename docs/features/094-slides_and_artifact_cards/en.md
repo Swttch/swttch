@@ -63,13 +63,30 @@ If your account does not meet them, `/slides` does not appear, the same as in a 
 
 ## Turning Artifacts off
 
-Any of the official ways works here too:
+Open **Settings > General** and turn off **Artifacts**. The switch writes the official `"enableArtifact": false` to your Claude Code settings, so a terminal session reads the same answer. On the Project tab it can be set for one project only.
 
-- Set `"enableArtifact": false` in your Claude Code settings.
+![The Artifacts switch in Settings > General](assets/artifacts-setting.png)
+
+Any of the other official ways works here too:
+
+- Set `"enableArtifact": false` in your Claude Code settings by hand.
 - Set `CLAUDE_CODE_DISABLE_ARTIFACT=1` in the environment that starts the IDE.
 - Add `Artifact` to `permissions.deny`.
 
 If you set `CLAUDE_CODE_ARTIFACT` yourself in the environment that starts the IDE, including `0`, this chat leaves your value alone.
+
+## When this chat does not turn Artifacts on
+
+Turning Artifacts on adds the Artifact tool to every request the chat sends, about 34 KB more on top of roughly 88 KB. Where Claude Code cannot publish an Artifact anyway, that only makes each request heavier, and a gateway that cannot take it can answer with nothing, so the session looks stuck. In these cases the chat does not ask for Artifacts:
+
+- You turned Artifacts off, by any of the ways above.
+- The session signs in with `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_API_KEY` or an `apiKeyHelper`.
+- The session runs on Amazon Bedrock, Google Cloud, Microsoft Foundry or another cloud provider (`CLAUDE_CODE_USE_BEDROCK`, `CLAUDE_CODE_USE_VERTEX`, `CLAUDE_CODE_USE_FOUNDRY` and the like).
+- `ANTHROPIC_BASE_URL` points somewhere other than `api.anthropic.com`.
+
+The chat reads these from the environment that starts the IDE and from the `env` block of your Claude Code settings. The last case is wider than the official list: someone who signs in with claude.ai behind a custom address is covered by it too. If that is you and you want `/slides`, set `CLAUDE_CODE_ARTIFACT=1` in the environment that starts the IDE. Your value is always left alone.
+
+The same list opens as a hint when you hover the **?** beside **Artifacts** in Settings > General.
 
 ## What has not changed
 
@@ -77,4 +94,4 @@ This chat does not show the page itself. It gives you the link, and the page ope
 
 ---
 
-Reported in [#584](https://github.com/Swttch/swttch/issues/584). The exception this relies on is recorded in [584-artifact-env-for-slides.md](../../principle-exceptions/584-artifact-env-for-slides.md).
+Reported in [#584](https://github.com/Swttch/swttch/issues/584). The gateway case came from [#609](https://github.com/Swttch/swttch/issues/609). The exception this relies on is recorded in [584-artifact-env-for-slides.md](../../principle-exceptions/584-artifact-env-for-slides.md).

@@ -5,6 +5,7 @@ import { UiLanguageRow } from './UiLanguageRow';
 import { UiDirectionRow } from './UiDirectionRow';
 import { RespectGitignoreRow } from './RespectGitignoreRow';
 import { FileCheckpointingRow } from './FileCheckpointingRow';
+import { ArtifactsRow } from './ArtifactsRow';
 import { AutoResumeOnLimitRow } from './AutoResumeOnLimitRow';
 import { FileSuggestionRow } from './FileSuggestionRow';
 import { HostModeRow } from './HostModeRow';
@@ -34,6 +35,7 @@ export function BasicsSection() {
       <UiDirectionRow />
       <RespectGitignoreRow />
       <FileCheckpointingRow />
+      <ArtifactsRow />
       <AutoResumeOnLimitRow />
       <FileSuggestionRow />
       <HostModeRow />

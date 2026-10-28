@@ -11,6 +11,8 @@ interface SettingRowProps {
    * from the CLI. Plain strings still work unchanged.
    */
   description?: ReactNode;
+  /** Something that ends the title itself, right after the label text and before the badges (e.g. a "?" hint). */
+  labelSuffix?: ReactNode;
   /** Optional badge(s) shown to the right of the label (e.g. sponsor / native). */
   badge?: ReactNode;
   /**
@@ -58,7 +60,7 @@ interface SettingRowProps {
 }
 
 export function SettingRow(props: SettingRowProps) {
-  const { label, description, badge, isOverridden, isInherited, onResetToGlobal, below, children } = props;
+  const { label, description, labelSuffix, badge, isOverridden, isInherited, onResetToGlobal, below, children } = props;
   const { t } = useTranslation('settings');
 
   return (
@@ -70,6 +72,7 @@ export function SettingRow(props: SettingRowProps) {
       <div className="flex-1 me-4">
         <div className="flex items-center gap-1.5">
           <label className="text-sm text-text-primary">{label}</label>
+          {labelSuffix}
           {badge}
           {isOverridden && <SettingBadge variant={SettingBadgeVariant.ProjectOverride} />}
           {isInherited && <SettingBadge variant={SettingBadgeVariant.Inherited} />}

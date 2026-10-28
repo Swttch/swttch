@@ -63,13 +63,30 @@ Claude가 슬라이드 아티팩트를 만들고 어디 있는지 알려 줍니�
 
 ## 아티팩트를 끄려면
 
-공식 방법은 여기서도 모두 통합니다.
+**설정 > 일반**을 열고 **Artifacts**를 끄세요. 이 스위치는 공식 설정 `"enableArtifact": false`를 Claude Code 설정에 써 넣으므로, 터미널 세션도 같은 답을 읽습니다. 프로젝트 탭에서는 그 프로젝트에만 정할 수 있습니다.
 
-- Claude Code 설정에 `"enableArtifact": false`를 둡니다.
+![설정 > 일반의 Artifacts 스위치](assets/artifacts-setting.png)
+
+다른 공식 방법도 여기서 모두 통합니다.
+
+- Claude Code 설정에 `"enableArtifact": false`를 직접 둡니다.
 - IDE를 띄우는 환경에 `CLAUDE_CODE_DISABLE_ARTIFACT=1`을 둡니다.
 - `permissions.deny`에 `Artifact`를 추가합니다.
 
 IDE를 띄우는 환경에 `CLAUDE_CODE_ARTIFACT`를 직접 정해 두었다면(`0` 포함) 이 채팅은 그 값을 건드리지 않습니다.
+
+## 이 채팅이 아티팩트를 켜 달라고 하지 않는 경우
+
+아티팩트를 켜면 채팅이 보내는 모든 요청에 Artifact 도구가 붙어서, 약 88KB인 요청이 약 34KB 더 커집니다. Claude Code가 어차피 아티팩트를 게시할 수 없는 환경에서는 요청만 무거워질 뿐이고, 이를 소화하지 못하는 게이트웨이는 아무 응답도 주지 않아 세션이 멈춘 것처럼 보일 수 있습니다. 아래 경우에는 채팅이 아티팩트를 요청하지 않습니다.
+
+- 위의 방법 중 어느 하나로 아티팩트를 끈 경우
+- 세션이 `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_API_KEY`, `apiKeyHelper`로 로그인하는 경우
+- 세션이 Amazon Bedrock, Google Cloud, Microsoft Foundry 같은 클라우드 공급자에서 도는 경우(`CLAUDE_CODE_USE_BEDROCK`, `CLAUDE_CODE_USE_VERTEX`, `CLAUDE_CODE_USE_FOUNDRY` 등)
+- `ANTHROPIC_BASE_URL`이 `api.anthropic.com`이 아닌 곳을 가리키는 경우
+
+채팅은 이 값들을 IDE를 띄우는 환경과 Claude Code 설정의 `env` 블록에서 읽습니다. 마지막 경우는 공식 목록보다 넓어서, claude.ai로 로그인하면서 사용자 지정 주소를 쓰는 사람도 여기에 걸립니다. 그런 분이 `/slides`를 쓰고 싶다면 IDE를 띄우는 환경에 `CLAUDE_CODE_ARTIFACT=1`을 두세요. 직접 정한 값은 언제나 그대로 둡니다.
+
+같은 목록을 설정 > 일반에서 **Artifacts** 옆의 **?** 에 마우스를 올리면 말풍선으로도 볼 수 있습니다.
 
 ## 바뀌지 않은 것
 
@@ -77,4 +94,4 @@ IDE를 띄우는 환경에 `CLAUDE_CODE_ARTIFACT`를 직접 정해 두었다면(
 
 ---
 
-[#584](https://github.com/Swttch/swttch/issues/584)로 제보되었습니다. 이 기능이 기대는 예외는 [584-artifact-env-for-slides.md](../../principle-exceptions/584-artifact-env-for-slides.md)에 기록되어 있습니다.
+[#584](https://github.com/Swttch/swttch/issues/584)로 제보되었습니다. 게이트웨이 경우는 [#609](https://github.com/Swttch/swttch/issues/609)에서 나왔습니다. 이 기능이 기대는 예외는 [584-artifact-env-for-slides.md](../../principle-exceptions/584-artifact-env-for-slides.md)에 기록되어 있습니다.

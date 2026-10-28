@@ -153,6 +153,14 @@
       "label": "Pontos de verificação de arquivos",
       "description": "Salva um instantâneo dos arquivos antes de o Claude editá-los, para que o retrocesso de código possa restaurá-los."
     },
+    "artifacts": {
+      "label": "Artifacts",
+      "description": "Desative a ferramenta Artifact com um false em qualquer arquivo; nenhum arquivo pode ativá-la novamente\nChave: enableArtifact",
+      "hint": {
+        "title": "Quando este chat não solicita Artifacts",
+        "body": "O Claude Code só pode publicar um Artifact com um login do claude.ai. Onde isso não é possível, solicitar a ferramenta Artifact apenas acrescentaria cerca de 34 KB a cada requisição, e um gateway que não consiga lidar com isso pode responder com nada. Por isso este chat não solicita quando:\n• este interruptor está desligado\n• você entra com ANTHROPIC_AUTH_TOKEN, ANTHROPIC_API_KEY ou um apiKeyHelper\n• a sessão roda no Amazon Bedrock, Google Cloud ou Microsoft Foundry\n• ANTHROPIC_BASE_URL não é api.anthropic.com\nPara manter o /slides atrás de um endereço próprio, defina CLAUDE_CODE_ARTIFACT=1 no ambiente que inicia a IDE."
+      }
+    },
     "hostMode": {
       "label": "Localização Preferida",
       "description": "Onde o Claude abre por padrão.",
