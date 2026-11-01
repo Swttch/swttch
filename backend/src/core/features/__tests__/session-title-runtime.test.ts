@@ -60,6 +60,41 @@ describe('requestSessionTitleAfterSend', () => {
     });
   });
 
+  it('names a session after what the user wrote, not the file open in the IDE', async () => {
+    const opened =
+      '<ide_opened_file>The user opened the file __manifest__.py in the IDE. ' +
+      'This may or may not be related to the current task.</ide_opened_file>';
+    const selected =
+      '<ide_selection>The user selected the lines 3 to 5 from app/models.py:\nx = 1\n\n' +
+      'This may or may not be related to the current task.</ide_selection>';
+
+    requestSessionTitleAfterSend(connections, 's1', `${opened}\nFix the login bug`, true, '/proj');
+    requestSessionTitleAfterSend(connections, 's2', `${selected}\nWhy is x one?`, true, '/proj');
+    await settle();
+
+    expect(sendControlRequestToProcess).toHaveBeenNthCalledWith(1, connections, 's1', 'generate_session_title-1', {
+      subtype: 'generate_session_title',
+      description: 'Fix the login bug',
+      persist: true,
+    });
+    expect(sendControlRequestToProcess).toHaveBeenNthCalledWith(2, connections, 's2', 'generate_session_title-1', {
+      subtype: 'generate_session_title',
+      description: 'Why is x one?',
+      persist: true,
+    });
+  });
+
+  it('asks for nothing when the message is only IDE context', async () => {
+    const opened =
+      '<ide_opened_file>The user opened the file __manifest__.py in the IDE. ' +
+      'This may or may not be related to the current task.</ide_opened_file>';
+
+    requestSessionTitleAfterSend(connections, 's1', opened, true, '/proj');
+    await settle();
+
+    expect(sendControlRequestToProcess).not.toHaveBeenCalled();
+  });
+
   it('asks for nothing when the setting is off', async () => {
     generateSessionTitlesEnabled.mockResolvedValue(false);
 
