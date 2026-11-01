@@ -75,16 +75,32 @@ export function requestSessionTitleAfterSend(
   });
 }
 
+/**
+ * The composer puts the file open in the IDE (or the selected lines) in front of the
+ * message as one of these tags. The user did not write it, so it is not what names
+ * the session: a title built from it follows the open file instead of the question.
+ * The wording of the tags is in webview/src/hooks/ideContextTag.ts.
+ */
+const IDE_CONTEXT_TAGS = /<(ide_opened_file|ide_selection)>[\s\S]*?<\/\1>/g;
+
+/** What the user wrote, without the IDE context the composer added in front of it. */
+export function withoutIdeContext(prompt: string): string {
+  return prompt.replace(IDE_CONTEXT_TAGS, '').trim();
+}
+
 async function requestSessionTitle(
   connections: ConnectionManager,
   sessionId: string,
-  prompt: string,
+  sentPrompt: string,
   isNewSession: boolean,
   workingDir: string,
 ): Promise<void> {
+  const prompt = withoutIdeContext(sentPrompt);
+  // Nothing the user wrote: there is nothing to name the session after.
+  if (!prompt) return;
   // The CLI names a session after what was said in it, never after a command or
   // a reminder this app sent on the user's behalf.
-  if (prompt.trimStart().startsWith('/')) return;
+  if (prompt.startsWith('/')) return;
   if (prompt.includes(ACCOUNT_POOL_CONTINUE_REMINDER)) return;
   if (!(await generateSessionTitlesEnabled(workingDir))) return;
 
