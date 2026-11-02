@@ -66,7 +66,16 @@ object SessionViewJudge {
     fun isViewing(project: Project, tabId: String): Boolean =
         isViewing(read(project, tabId), ideFocused(project))
 
-    /** Reads where [tabId] is. Must run on the EDT. */
+    /**
+     * Reads where [tabId] is. Must run on the EDT.
+     *
+     * Asking must never change what is asked about. `contentManager` builds the tool window's
+     * content when nobody has yet, and for this tool window building its content is what opens
+     * a new editor tab (in editor-tab mode the sidebar icon is a button). This runs whenever the
+     * IDE window regains focus, so reading it that way added a tab at the first focus after every
+     * start. `contentManagerIfCreated` reads what is there and builds nothing: a tool window whose
+     * content was never built holds no session, so no tab of it can be selected.
+     */
     fun read(project: Project, tabId: String): SessionPlacement {
         val editorTabSelected = FileEditorManager.getInstance(project).selectedEditors.any {
             (it.file as? ClaudeCodeVirtualFile)?.tabId == tabId
@@ -75,7 +84,7 @@ object SessionViewJudge {
         return SessionPlacement(
             editorTabSelected = editorTabSelected,
             toolWindowVisible = toolWindow?.isVisible == true,
-            toolWindowTabSelected = toolWindow?.contentManager?.selectedContent
+            toolWindowTabSelected = toolWindow?.contentManagerIfCreated?.selectedContent
                 ?.getUserData(ToolWindowHost.TAB_ID_KEY) == tabId,
         )
     }
