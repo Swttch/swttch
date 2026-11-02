@@ -138,7 +138,9 @@ class ClaudeCodePanel(
     /**
      * The path the page is showing now, as the browser last reported it. [initialPath] is only
      * where the panel started; a page loaded again after the user moved to a conversation has
-     * to return to that conversation, not to the start (issue #605).
+     * to return to that conversation, not to the start (issue #605). It carries the folder the
+     * page was working in too, or the conversation is looked up under the project root and
+     * reported as missing (issue #622).
      */
     @Volatile
     private var shownPath: String? = null
@@ -1178,7 +1180,7 @@ class ClaudeCodePanel(
                 if (url != null && frame?.isMain == true) {
                     try {
                         val uri = java.net.URI(url)
-                        shownPath = uri.path
+                        shownPath = pathToReturnTo(uri)
                         holder!!.onPathChanged?.invoke(uri.path)
                     } catch (_: Exception) { /* ignore malformed URLs */ }
                 }
@@ -3611,6 +3613,19 @@ internal fun buildWebViewUrl(
     val query = listOfNotNull(workingDirParam, panelParam, themeParam, pairParam, forwardingParam).joinToString("&")
     val separator = if (pathSegment.contains('?')) "&" else "?"
     return "http://localhost:$port$pathSegment$separator$query"
+}
+
+/**
+ * The address to return to when the page is loaded again: its path, plus the two query
+ * parameters that say which folder it works in (`workingDir`, `rootUp`). Everything else in
+ * the query (`panelId`, `theme`, `pair`, `forwarding`) belongs to one load and is rebuilt by
+ * [buildWebViewUrl], so it is left out. Values stay percent-encoded as the page had them.
+ */
+internal fun pathToReturnTo(uri: java.net.URI): String {
+    val kept = (uri.rawQuery ?: "").split('&').filter { part ->
+        part.startsWith("workingDir=") || part.startsWith("rootUp=")
+    }
+    return if (kept.isEmpty()) uri.path else "${uri.path}?${kept.joinToString("&")}"
 }
 
 /**
