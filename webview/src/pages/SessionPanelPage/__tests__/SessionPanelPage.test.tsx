@@ -79,7 +79,22 @@ describe('SessionPanelPage', () => {
   it('opens the clicked session in a new tab via the adapter', () => {
     render(<SessionPanelPage />);
     fireEvent.click(screen.getByRole('button', { name: /My Session/i }));
-    expect(mockOpenSession).toHaveBeenCalledWith('s1');
+    expect(mockOpenSession).toHaveBeenCalledWith('s1', undefined);
+  });
+
+  // A session that ran in a folder under the project is looked up under the
+  // project root when the new tab is not told the folder, and reported as missing.
+  it('hands the clicked session its own folder so the new tab looks in the right place', () => {
+    const nested = { ...session, sessionDir: 'C:\\proj\\sub' };
+    mockUseSessionList.mockReturnValue(
+      listResult({
+        filteredSessions: [nested],
+        groupedSessions: { ...groupedOne, today: [nested] },
+      }),
+    );
+    render(<SessionPanelPage />);
+    fireEvent.click(screen.getByRole('button', { name: /My Session/i }));
+    expect(mockOpenSession).toHaveBeenCalledWith('s1', 'C:\\proj\\sub');
   });
 
   it('방향키로 세션을 하이라이트하고 Enter로 새 탭에서 연다', () => {
@@ -90,7 +105,7 @@ describe('SessionPanelPage', () => {
     fireEvent.keyDown(searchInput, { key: 'ArrowDown' });
     fireEvent.keyDown(searchInput, { key: 'Enter' });
 
-    expect(mockOpenSession).toHaveBeenCalledWith('s1');
+    expect(mockOpenSession).toHaveBeenCalledWith('s1', undefined);
   });
 
   it('Cmd/Ctrl+Shift+P로 세션 목록을 새로고침한다', () => {
