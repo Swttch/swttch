@@ -188,6 +188,12 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.35.1 - Chat panel reload, attach failure notice, and session title fixes</h3>
+            <ul>
+                <li>Fix the open conversation disappearing when the chat panel is reloaded (#622, reported by @CraftedFury)</li>
+                <li>Fix session titles following the open file instead of what you wrote (#562, reported by @itachi-8733)</li>
+                <li>Show a message in the chat when a file cannot be attached (#623)</li>
+            </ul>
             <h3>0.35.0 - Session switching and streaming fixes, plus effort and mermaid fixes</h3>
             <ul>
                 <li>Fix an in-progress session dying when the panel connection drops while streaming (#605, reported by @alvin-rosterfy)</li>
