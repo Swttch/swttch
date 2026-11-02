@@ -659,6 +659,8 @@ export enum MessageType {
   NATIVE_DROP = 'NATIVE_DROP',
   /** A file drop already LANDED, at the Swing or IDE layer rather than in the page, carrying { panelId, entries }. Attached immediately: on Windows the page never receives a drop event, so there is no flush coming to release a buffer. Kotlin→Node */
   NATIVE_DROP_DELIVER = 'NATIVE_DROP_DELIVER',
+  /** A drop landed at the Swing layer carrying data the IDE could not turn into files, carrying { panelId }. Kotlin→Node. The backend relays it with no payload to that panel's webview (outbound backend→webview), which tells the person instead of leaving the drop silent. */
+  NATIVE_DROP_FAILED = 'NATIVE_DROP_FAILED',
 
   // -- Panel focus routing --
   /** The webview reports its IDE panel (JCEF tab) gained window focus, carrying { panelId }, so the backend routes panel-scoped pushes (editor-context / ide-selection) to only the last-focused panel instead of every open Claude panel. inbound webview→backend */

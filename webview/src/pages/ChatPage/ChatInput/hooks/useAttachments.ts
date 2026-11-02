@@ -15,8 +15,20 @@ import {
   type DroppedEntry,
 } from './droppedFiles';
 
-function isInlineImageType(mimeType: string): boolean {
+export function isInlineImageType(mimeType: string): boolean {
   return ATTACHMENT_LIMITS.ALLOWED_IMAGE_MIME_TYPES.includes(mimeType as (typeof ATTACHMENT_LIMITS.ALLOWED_IMAGE_MIME_TYPES)[number]);
+}
+
+/**
+ * Whether a drop carried something whose chip needs a path from the IDE.
+ *
+ * In the IDE the page cannot learn a file's path, so every file and folder that is
+ * not a picture the model reads inline becomes a chip only when the IDE hands its
+ * path over. A drop that needed one and got none ends with no chip and no message,
+ * which is what the caller listens for.
+ */
+export function dropNeedsIdePath(entries: DroppedEntry[]): boolean {
+  return entries.some(({ file, isDirectory }) => isDirectory || !isInlineImageType(file.type));
 }
 
 /**

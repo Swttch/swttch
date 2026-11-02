@@ -81,7 +81,8 @@
       "errors": {
         "unsupportedType": "Nicht unterstützter Dateityp: {{type}}",
         "tooLarge": "Datei zu groß: {{size}}MB (max. {{max}}MB)",
-        "uploadFailed": "„{{name}}“ konnte nicht angehängt werden"
+        "uploadFailed": "„{{name}}“ konnte nicht angehängt werden",
+        "dropNotReadable": "Die abgelegten Dateien konnten nicht gelesen werden. Hänge sie stattdessen über das +-Menü an."
       }
     },
     "contextWindow": {

@@ -81,7 +81,8 @@
       "errors": {
         "unsupportedType": "不支持的文件类型:{{type}}",
         "tooLarge": "文件过大:{{size}}MB(最大 {{max}}MB)",
-        "uploadFailed": "无法附加“{{name}}”"
+        "uploadFailed": "无法附加“{{name}}”",
+        "dropNotReadable": "无法读取拖入的文件。请改用 + 菜单附加。"
       }
     },
     "contextWindow": {

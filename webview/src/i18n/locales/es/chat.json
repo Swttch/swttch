@@ -81,7 +81,8 @@
       "errors": {
         "unsupportedType": "Tipo de archivo no compatible: {{type}}",
         "tooLarge": "Archivo demasiado grande: {{size}}MB (máx. {{max}}MB)",
-        "uploadFailed": "No se pudo adjuntar «{{name}}»"
+        "uploadFailed": "No se pudo adjuntar «{{name}}»",
+        "dropNotReadable": "No se pudieron leer los archivos soltados. Adjúntalos con el menú +."
       }
     },
     "contextWindow": {

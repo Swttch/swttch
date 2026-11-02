@@ -219,7 +219,13 @@ export class JetBrainsBridge implements Bridge {
       this.pendingRequests.delete(response.id);
 
       if (response.error) {
-        pending.reject(new Error(`JSON-RPC error ${response.error.code}: ${response.error.message}`));
+        // `rpcMessage` is the host's own sentence, for callers that show it to the person
+        // instead of the wrapped one a log wants.
+        const rpcError: Error & { rpcMessage?: string } = new Error(
+          `JSON-RPC error ${response.error.code}: ${response.error.message}`,
+        );
+        rpcError.rpcMessage = response.error.message;
+        pending.reject(rpcError);
       } else {
         pending.resolve(response.result ?? {});
       }

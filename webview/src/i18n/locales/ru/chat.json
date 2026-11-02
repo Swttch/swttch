@@ -81,7 +81,8 @@
       "errors": {
         "unsupportedType": "Неподдерживаемый тип файла: {{type}}",
         "tooLarge": "Файл слишком большой: {{size}} МБ (макс. {{max}} МБ)",
-        "uploadFailed": "Не удалось прикрепить «{{name}}»"
+        "uploadFailed": "Не удалось прикрепить «{{name}}»",
+        "dropNotReadable": "Не удалось прочитать перетащенные файлы. Прикрепите их через меню +."
       }
     },
     "contextWindow": {

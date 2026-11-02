@@ -5,6 +5,7 @@ import com.github.yhk1038.claudecodegui.bridge.ClipboardContents
 import com.github.yhk1038.claudecodegui.bridge.NodeProcessManager
 import com.github.yhk1038.claudecodegui.bridge.NotificationOutcome
 import com.github.yhk1038.claudecodegui.bridge.OpenFileTargets
+import com.github.yhk1038.claudecodegui.bridge.RpcUserFacingException
 import com.github.yhk1038.claudecodegui.bridge.SystemClipboardReader
 import com.github.yhk1038.claudecodegui.bridge.SystemClipboardWriter
 import com.github.yhk1038.claudecodegui.bridge.SystemSelectionWriter
@@ -1893,6 +1894,13 @@ class ClaudeCodePanel(
                     event.acceptDrop(DnDConstants.ACTION_COPY)
                     val droppedFiles = extractDroppedFiles(event.transferable)
                     if (droppedFiles.isEmpty()) {
+                        // The last gate for "I dropped a file and nothing happened". Leave the
+                        // reason in the log (the flavors the source offered), and tell the person
+                        // when the drop was meant to carry files; a dragged text selection is not
+                        // a failed file drop.
+                        val mimeTypes = event.transferable.transferDataFlavors.map { it.mimeType }
+                        logger.warn("[NativeDrop] Swing drop carried no readable file (flavors=$mimeTypes)")
+                        if (NativeDropFlavors.carriesFiles(mimeTypes)) notifyNativeDropFailed()
                         event.dropComplete(false)
                         return
                     }
@@ -2078,6 +2086,15 @@ class ClaudeCodePanel(
         }
         val method = if (alreadyDropped) "NATIVE_DROP_DELIVER" else "NATIVE_DROP"
         backendService.sendNotification(project.basePath ?: "", method, params)
+    }
+
+    /**
+     * Tell this panel's webview that a drop landed but no file could be read from it, so
+     * the chat can say so instead of leaving the drop with no chip and no message.
+     */
+    private fun notifyNativeDropFailed() {
+        val params = buildJsonObject { put("panelId", JsonPrimitive(panelId)) }
+        backendService.sendNotification(project.basePath ?: "", "NATIVE_DROP_FAILED", params)
     }
 
     /**
@@ -2958,7 +2975,12 @@ class ClaudeCodePanel(
                         result.complete(files.map { it.path })
                     } catch (e: Exception) {
                         logger.warn("Failed to pick files (mode=$mode, multiple=$multiple)", e)
-                        result.complete(emptyList())
+                        // A dialog that could not open is not the same as one the person
+                        // cancelled: cancelling returns an empty list above, a failure is
+                        // reported so the chat can say so instead of staying silent.
+                        result.completeExceptionally(
+                            RpcUserFacingException("The file dialog could not be opened: ${e.message ?: e.javaClass.simpleName}", e)
+                        )
                     }
                 }
                 return result.await()

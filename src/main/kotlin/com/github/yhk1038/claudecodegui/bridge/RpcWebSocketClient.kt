@@ -359,6 +359,11 @@ class RpcWebSocketClient(
                     sendResult(ws, id, result)
                 } catch (e: CancellationException) {
                     throw e
+                } catch (e: RpcUserFacingException) {
+                    // Expected and explained to the person by the chat: a warning, not the
+                    // plugin error boundary below.
+                    logger.warn("RPC method '$method' failed: ${e.message}")
+                    sendError(ws, id, -32000, e.message ?: "Internal error")
                 } catch (e: Exception) {
                     logger.error("Error executing RPC method '$method'", e)
                     sendError(ws, id, -32000, e.message ?: "Internal error")
