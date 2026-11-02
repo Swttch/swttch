@@ -81,7 +81,8 @@
       "errors": {
         "unsupportedType": "지원하지 않는 파일 형식: {{type}}",
         "tooLarge": "파일이 너무 큽니다: {{size}}MB (최대 {{max}}MB)",
-        "uploadFailed": "“{{name}}”을(를) 첨부하지 못했습니다"
+        "uploadFailed": "“{{name}}”을(를) 첨부하지 못했습니다",
+        "dropNotReadable": "끌어온 파일을 읽지 못했습니다. + 메뉴로 첨부해 주세요."
       }
     },
     "contextWindow": {

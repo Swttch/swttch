@@ -19,10 +19,13 @@ export async function pickFilesHandler(
       paths: result.paths,
     });
   } catch (err) {
+    // The chat shows this sentence as is, so the host's own wording wins over the
+    // "JSON-RPC error -32000:" wrapper the bridge adds for its logs.
+    const hostMessage = err instanceof Error ? (err as Error & { rpcMessage?: string }).rpcMessage : undefined;
     connections.sendTo(connectionId, MessageType.ACK, {
       requestId: message.requestId,
       status: 'error',
-      error: err instanceof Error ? err.message : String(err),
+      error: hostMessage ?? (err instanceof Error ? err.message : String(err)),
     });
   }
 }

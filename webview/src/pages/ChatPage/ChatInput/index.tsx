@@ -1,4 +1,5 @@
 import { getPendingElements, pngFromBase64, removePendingElement, subscribeComposerElements, subscribeComposerImages, subscribePendingElements } from '@/utils/composerElements';
+import toast from 'react-hot-toast';
 import { useCallback, useEffect, useRef, KeyboardEvent, useState, useSyncExternalStore, type ClipboardEvent as ReactClipboardEvent, type DragEvent as ReactDragEvent } from 'react';
 import { CommandPalettePanel } from '@/commandPalette/ui/CommandPalettePanel';
 import { useCommandPalette } from '@/commandPalette/hooks/useCommandPalette';
@@ -26,7 +27,16 @@ import { EscapeStreak } from './hooks/escapeStreak';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { ImageAttachSource, SessionState } from '@/types';
 import { ImageAttachment } from '@/types/attachment';
-import { useAttachments } from './hooks/useAttachments';
+import { dropNeedsIdePath, useAttachments } from './hooks/useAttachments';
+import { readDroppedEntries } from './hooks/droppedFiles';
+import { isJetBrains } from '@/config/environment';
+
+/**
+ * How long a delivery of paths from the IDE still counts for a drop whose flush has just
+ * been answered. Generous because the IDE's Swing layer may deliver the same drop a moment
+ * before or after the page's own drop event.
+ */
+const NATIVE_ENTRIES_FRESH_MS = 1500;
 import { useHostClipboardPaste } from './hooks/useHostClipboardPaste';
 import { clipboardCarriesFile } from './clipboardCarriesFile';
 import { clipboardIsEmpty } from './clipboardIsEmpty';
@@ -232,12 +242,22 @@ export function ChatInput() {
     if (showConsentBanner) trackConsentBanner(ConsentBannerAction.SHOW);
   }, [showConsentBanner, trackConsentBanner]);
 
+  // When the IDE last handed this panel the paths of a drop. A drop's flush is answered
+  // with "nothing came" by looking here, not by counting: the IDE's Swing layer can deliver
+  // the same drop before the page's own drop event, and that still counts as delivered.
+  const lastNativeEntriesAt = useRef(0);
+  // The drop listener below is installed once; it reads the current translator from here
+  // instead of being torn down and re-installed whenever the language changes.
+  const tRef = useRef(t);
+  tRef.current = t;
+
   // Native (IDE/Swing) drag-and-drop bridge: Kotlin → Node backend → IPC NATIVE_DROP_ENTRIES.
   // Currently unused (CefDragHandler forwards drops to the page as HTML5 events instead),
   // but kept as a fallback path for sources that don't surface paths in dataTransfer.
   useEffect(() => {
     return subscribe(MessageType.NATIVE_DROP_ENTRIES, (message) => {
       const entries = (message.payload?.entries as NativeDropEntry[] | undefined) ?? [];
+      if (entries.length > 0) lastNativeEntriesAt.current = Date.now();
       for (const entry of entries) {
         if (!entry.path) continue;
         if (entry.type === 'folder') {
@@ -248,6 +268,14 @@ export function ChatInput() {
       }
     });
   }, [subscribe, addFileAttachment, addFolderAttachment]);
+
+  // The IDE saw a drop but could not read any file out of it. Say so: the drop would
+  // otherwise end with no chip and no message, and nothing tells the person why.
+  useEffect(() => {
+    return subscribe(MessageType.NATIVE_DROP_FAILED, () => {
+      toast.error(t('chatInput.attachments.errors.dropNotReadable'));
+    });
+  }, [subscribe, t]);
 
   // Catch native file drops anywhere in the JCEF surface, not just the chat input box.
   // The Kotlin CefDragHandler returns false so CEF forwards the drag as HTML5 events;
@@ -277,9 +305,20 @@ export function ChatInput() {
       if (!isFileDrag(e)) return;
       e.preventDefault();
       setIsDragOver(false);
+      // Read before anything yields: the browser empties the DataTransfer as soon as this
+      // handler returns. In the IDE a file or folder (anything but a picture the model reads
+      // inline) becomes a chip only when the IDE hands its path over.
+      const needsIdePath = isJetBrains() && !!e.dataTransfer && dropNeedsIdePath(readDroppedEntries(e.dataTransfer));
       // Image drops are handled here; file/folder paths are released by NATIVE_DROP_FLUSH.
       handleDrop(e as unknown as ReactDragEvent);
-      void bridge.send(MessageType.NATIVE_DROP_FLUSH, {});
+      void bridge.send(MessageType.NATIVE_DROP_FLUSH, {}).then(() => {
+        // The backend sends the entries BEFORE it acknowledges the flush, so by now the paths
+        // have either arrived or are not coming. None coming would end the drop with no chip
+        // and no message: the IDE never read a file out of what was dragged.
+        if (needsIdePath && Date.now() - lastNativeEntriesAt.current > NATIVE_ENTRIES_FRESH_MS) {
+          toast.error(tRef.current('chatInput.attachments.errors.dropNotReadable'));
+        }
+      }).catch(() => { /* a lost connection says so elsewhere */ });
     };
     window.addEventListener('dragover', handleWindowDragOver);
     window.addEventListener('dragleave', handleWindowDragLeave);

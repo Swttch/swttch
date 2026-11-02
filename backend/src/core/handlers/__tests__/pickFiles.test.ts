@@ -46,6 +46,22 @@ describe('pickFilesHandler', () => {
 
   // The host's own answer when it cannot open the dialog (the IDE's file chooser threw). The chat
   // toasts `error`, so the person is told instead of seeing the "+" menu do nothing (#623).
+  it('shows the host\'s own sentence, without the JSON-RPC wrapper the bridge adds for logs', async () => {
+    const wrapped = Object.assign(new Error('JSON-RPC error -32000: The file dialog could not be opened: boom'), {
+      rpcMessage: 'The file dialog could not be opened: boom',
+    });
+    const bridge = createMockBridge(vi.fn().mockRejectedValue(wrapped));
+    const connections = createMockConnections();
+
+    await pickFilesHandler('conn-1', message({ mode: 'files' }), connections, bridge);
+
+    expect(connections.sendTo).toHaveBeenCalledWith('conn-1', MessageType.ACK, {
+      requestId: 'req-7',
+      status: 'error',
+      error: 'The file dialog could not be opened: boom',
+    });
+  });
+
   it('tells the chat why when the host could not open the dialog', async () => {
     const bridge = createMockBridge(vi.fn().mockRejectedValue(new Error('The file dialog could not be opened: boom')));
     const connections = createMockConnections();

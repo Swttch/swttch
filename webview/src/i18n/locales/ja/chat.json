@@ -81,7 +81,8 @@
       "errors": {
         "unsupportedType": "サポートされていないファイル形式です: {{type}}",
         "tooLarge": "ファイルが大きすぎます: {{size}}MB (最大 {{max}}MB)",
-        "uploadFailed": "「{{name}}」を添付できませんでした"
+        "uploadFailed": "「{{name}}」を添付できませんでした",
+        "dropNotReadable": "ドロップしたファイルを読み取れませんでした。+ メニューから添付してください。"
       }
     },
     "contextWindow": {

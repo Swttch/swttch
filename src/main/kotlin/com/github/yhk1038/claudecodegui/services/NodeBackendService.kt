@@ -5,6 +5,7 @@ import com.github.yhk1038.claudecodegui.bridge.BackendRebooter
 import com.github.yhk1038.claudecodegui.bridge.ClipboardContents
 import com.github.yhk1038.claudecodegui.bridge.ExtractedResources
 import com.github.yhk1038.claudecodegui.bridge.NodeProcessManager
+import com.github.yhk1038.claudecodegui.bridge.RpcUserFacingException
 import com.github.yhk1038.claudecodegui.bridge.NotificationOutcome
 import com.github.yhk1038.claudecodegui.bridge.PluginResourceExtractor
 import com.github.yhk1038.claudecodegui.bridge.RpcWebSocketClient
@@ -332,7 +333,7 @@ class NodeBackendService : Disposable {
 
             override suspend fun pickFiles(mode: String, multiple: Boolean): List<String> =
                 any()?.pickFiles(mode, multiple)
-                    ?: run { warn("pickFiles"); throw IllegalStateException("The file dialog could not be opened: no IDE panel is open for this project") }
+                    ?: run { warn("pickFiles"); throw RpcUserFacingException("The file dialog could not be opened: no IDE panel is open for this project") }
 
             override suspend fun saveFile(suggestedName: String, contents: String): String? =
                 any()?.saveFile(suggestedName, contents) ?: run { warn("saveFile"); null }

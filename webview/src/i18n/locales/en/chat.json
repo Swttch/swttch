@@ -81,7 +81,8 @@
       "errors": {
         "unsupportedType": "Unsupported file type: {{type}}",
         "tooLarge": "File too large: {{size}}MB (max {{max}}MB)",
-        "uploadFailed": "Could not attach “{{name}}”"
+        "uploadFailed": "Could not attach “{{name}}”",
+        "dropNotReadable": "Could not read the dropped files. Attach them with the + menu instead."
       }
     },
     "contextWindow": {

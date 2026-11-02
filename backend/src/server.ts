@@ -417,6 +417,20 @@ async function main() {
     }
   });
 
+  // A drop landed at the Swing layer but carried nothing the IDE could read as a file.
+  // Without this the person releases the mouse and sees nothing at all. Relayed with no
+  // payload: the webview owns the sentence, and the IDE's own reason is in its log.
+  (bridges[ClientEnv.JETBRAINS] as JetBrainsBridge).onNotification(MessageType.NATIVE_DROP_FAILED, (_method, params) => {
+    const panelId = typeof params.panelId === 'string' ? params.panelId : '';
+    if (!panelId) return;
+    const connectionId = connections.getConnectionIdByPanelId(panelId);
+    if (!connectionId) {
+      console.error('[node-backend]', `[NATIVE_DROP_FAILED] no connection for panelId=${panelId}`);
+      return;
+    }
+    connections.sendTo(connectionId, MessageType.NATIVE_DROP_FAILED, {});
+  });
+
   // "Rename Session..." on a chat tab's IDE context menu. Kotlin does not rename
   // anything itself (a Swing popup over JCEF takes no input — see
   // RenameChatTabAction), so it names the tab and the tab's own webview prompts.

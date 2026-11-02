@@ -81,7 +81,8 @@
       "errors": {
         "unsupportedType": "نوع فایل پشتیبانی نمی‌شود: {{type}}",
         "tooLarge": "فایل بیش از حد بزرگ است: {{size}}MB (حداکثر {{max}}MB)",
-        "uploadFailed": "پیوست کردن «{{name}}» ممکن نشد"
+        "uploadFailed": "پیوست کردن «{{name}}» ممکن نشد",
+        "dropNotReadable": "خواندن فایل‌های رهاشده ممکن نشد. به‌جای آن از منوی + پیوست کنید."
       }
     },
     "contextWindow": {
