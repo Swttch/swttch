@@ -2958,7 +2958,12 @@ class ClaudeCodePanel(
                         result.complete(files.map { it.path })
                     } catch (e: Exception) {
                         logger.warn("Failed to pick files (mode=$mode, multiple=$multiple)", e)
-                        result.complete(emptyList())
+                        // A dialog that could not open is not the same as one the person
+                        // cancelled: cancelling returns an empty list above, a failure is
+                        // reported so the chat can say so instead of staying silent.
+                        result.completeExceptionally(
+                            IllegalStateException("The file dialog could not be opened: ${e.message ?: e.javaClass.simpleName}", e)
+                        )
                     }
                 }
                 return result.await()

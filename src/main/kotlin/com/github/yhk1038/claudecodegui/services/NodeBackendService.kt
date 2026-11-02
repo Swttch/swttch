@@ -331,7 +331,8 @@ class NodeBackendService : Disposable {
             }
 
             override suspend fun pickFiles(mode: String, multiple: Boolean): List<String> =
-                any()?.pickFiles(mode, multiple) ?: run { warn("pickFiles"); emptyList() }
+                any()?.pickFiles(mode, multiple)
+                    ?: run { warn("pickFiles"); throw IllegalStateException("The file dialog could not be opened: no IDE panel is open for this project") }
 
             override suspend fun saveFile(suggestedName: String, contents: String): String? =
                 any()?.saveFile(suggestedName, contents) ?: run { warn("saveFile"); null }
