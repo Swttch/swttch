@@ -39,7 +39,12 @@ export function SessionPanelPage() {
   const [scope, setScope] = useState<SessionScope>(SessionScope.Local);
 
   const handleSelectSession = (sessionId: string) => {
-    getAdapter().openSession(sessionId).catch((error) => {
+    // The new tab starts in the project's own directory, so a session that ran in a
+    // folder under it must carry that folder. Without it the tab looks for the
+    // transcript under the project root, finds none, and opens a new conversation
+    // instead (issue #622). The row already names where it came from.
+    const sessionDir = filteredSessions.find((s) => s.id === sessionId)?.sessionDir;
+    getAdapter().openSession(sessionId, sessionDir).catch((error) => {
       console.error('[SessionPanelPage] Failed to open session:', error);
     });
   };

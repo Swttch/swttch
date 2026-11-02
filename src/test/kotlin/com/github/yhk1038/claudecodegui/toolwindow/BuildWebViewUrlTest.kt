@@ -321,3 +321,36 @@ class BuildWebViewUrlTest {
         }
     }
 }
+
+class PathToReturnToTest {
+    private fun back(url: String) = pathToReturnTo(java.net.URI(url))
+
+    @Test
+    fun `keeps the folder the page works in, so a reload does not look under the project root`() {
+        val sid = "5b978045-6e64-47c9-afc6-6940d807877f"
+        val wd = java.net.URLEncoder.encode("W:\\Workspace\\Java\\Simplified\\Minecraft-Library\\asset-renderer", "UTF-8")
+        assertEquals(
+            "/sessions/$sid?workingDir=$wd&rootUp=2",
+            back("http://localhost:40402/sessions/$sid?workingDir=$wd&rootUp=2&panelId=p1&theme=dark&pair=x"),
+        )
+    }
+
+    @Test
+    fun `drops the parameters that belong to one load`() {
+        assertEquals("/sessions/new", back("http://localhost:1/sessions/new?panelId=p1&theme=dark&pair=x&forwarding=f"))
+    }
+
+    @Test
+    fun `a path without a query stays as it is`() {
+        assertEquals("/sessions/new", back("http://localhost:1/sessions/new"))
+    }
+
+    @Test
+    fun `the kept address is continued by buildWebViewUrl without a second question mark`() {
+        val kept = back("http://localhost:1/sessions/s1?workingDir=W%3A%2Fa%2Fb&panelId=old")
+        val url = buildWebViewUrl(port = 9, pathSegment = kept, workingDir = "W:/a", panelId = "p2", isBright = true)
+        assertEquals(1, url.count { it == '?' })
+        assertFalse(url.contains("workingDir=W%3A%2Fa&"), "project root must not be added: $url")
+        assertTrue(url.contains("workingDir=W%3A%2Fa%2Fb"))
+    }
+}
