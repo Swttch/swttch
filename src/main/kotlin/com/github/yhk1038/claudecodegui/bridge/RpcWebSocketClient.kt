@@ -23,6 +23,12 @@ internal const val AUTH_SUBPROTOCOL = "ccg-auth"
 /** Upper bound for one /rpc connection attempt; a hung attempt counts as a failure. */
 private val CONNECT_TIMEOUT: Duration = Duration.ofSeconds(5)
 
+/** Gap between reconnect attempts while a live backend process just is not answering. */
+private const val SLOW_BACKEND_RETRY_MS = 5_000L
+
+/** What the OS says about the backend process the plugin spawned; see [BackendRestartJudge]. */
+data class BackendProcessState(val alive: Boolean, val handleIsTheBackend: Boolean)
+
 /**
  * WebSocket client that connects to the Node.js backend's /rpc endpoint.
  * Receives JSON-RPC requests from the backend and dispatches them to
@@ -35,6 +41,14 @@ class RpcWebSocketClient(
     private val scope: CoroutineScope,
     private val rpcHandler: NodeProcessManager.RpcHandler,
     private val onPersistentFailure: (() -> Unit)? = null,
+    /**
+     * Asked once the connect failures reach the restart threshold: does the OS still report the
+     * backend process this plugin started as running, AND does that process handle stand for the
+     * backend itself (false for WSL, where the handle is `wsl.exe`)? A live, trustworthy process
+     * is never restarted on timeouts alone; see [BackendRestartJudge]. Null = no such knowledge,
+     * so the failure threshold restarts as before.
+     */
+    private val backendProcessState: (() -> BackendProcessState)? = null,
     private val onConnected: (() -> Unit)? = null,
     /**
      * Plugin error boundary hook: invoked when handling a Node→IDE RPC call throws, so the
@@ -81,6 +95,9 @@ class RpcWebSocketClient(
 
     private var consecutiveFailures = 0
     private val MAX_FAILURES_BEFORE_RESTART = 3
+
+    /** Whether any failure in the current run of failures was an actively refused connection. */
+    private var sawRefusedConnection = false
 
     /**
      * Connect to the RPC WebSocket endpoint.
@@ -146,6 +163,7 @@ class RpcWebSocketClient(
             .thenAccept { ws ->
                 webSocket = ws
                 consecutiveFailures = 0
+                sawRefusedConnection = false
                 logger.info("RPC WebSocket connected to port $port")
                 listener.startLiveness(ws)
                 // Re-advertise project roots on every (re)connection so the backend
@@ -160,10 +178,25 @@ class RpcWebSocketClient(
             .exceptionally { e ->
                 logger.warn("RPC WebSocket connection failed: ${e.message}")
                 consecutiveFailures++
+                if (BackendRestartJudge.isConnectionRefused(e)) sawRefusedConnection = true
                 if (consecutiveFailures >= MAX_FAILURES_BEFORE_RESTART) {
-                    logger.warn("RPC WebSocket reached $consecutiveFailures consecutive failures, triggering restart")
+                    val refused = sawRefusedConnection
+                    val state = backendProcessState?.invoke()
+                    val decision = if (state == null) {
+                        BackendRestartJudge.Decision.RESTART
+                    } else {
+                        BackendRestartJudge.decide(state.alive, state.handleIsTheBackend, refused)
+                    }
+                    logger.warn("RPC WebSocket reached $consecutiveFailures consecutive failures (refused=$refused, backendProcess=$state)")
                     consecutiveFailures = 0
-                    scope.launch { onPersistentFailure?.invoke() }
+                    sawRefusedConnection = false
+                    if (decision == BackendRestartJudge.Decision.RESTART) {
+                        logger.warn("Triggering backend restart")
+                        scope.launch { onPersistentFailure?.invoke() }
+                    } else {
+                        logger.warn("The backend process is still running and only unreachable; not restarting it, keep reconnecting")
+                        scheduleReconnect(port, SLOW_BACKEND_RETRY_MS)
+                    }
                 } else {
                     scheduleReconnect(port)
                 }

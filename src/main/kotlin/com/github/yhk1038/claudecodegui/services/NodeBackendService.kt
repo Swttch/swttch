@@ -1,6 +1,7 @@
 package com.github.yhk1038.claudecodegui.services
 
 import com.github.yhk1038.claudecodegui.bridge.AutoRebootBudget
+import com.github.yhk1038.claudecodegui.bridge.BackendProcessState
 import com.github.yhk1038.claudecodegui.bridge.BackendRebooter
 import com.github.yhk1038.claudecodegui.bridge.ClipboardContents
 import com.github.yhk1038.claudecodegui.bridge.ExtractedResources
@@ -466,6 +467,13 @@ class NodeBackendService : Disposable {
                 scope,
                 Router(),
                 onPersistentFailure = { requestRestart() },
+                backendProcessState = {
+                    val manager = nodeProcessManager
+                    BackendProcessState(
+                        alive = manager?.isAlive == true,
+                        handleIsTheBackend = manager?.handleIsTheBackend == true,
+                    )
+                },
                 // Re-assert the desired keep-alive state on EVERY (re)connect — this
                 // covers fresh spawns, exit-75 respawns and RPC reconnects, and a
                 // `false` push arms the backend's idle timer when it has no /ws

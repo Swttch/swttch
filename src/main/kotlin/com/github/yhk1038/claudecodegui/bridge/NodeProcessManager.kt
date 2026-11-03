@@ -966,6 +966,13 @@ class NodeProcessManager(
     val isAlive: Boolean
         get() = process?.isAlive == true
 
+    /**
+     * True when the process handle IS the backend. Under WSL the handle is `wsl.exe`, which can
+     * outlive the Linux side (issue #516), so a live handle there says nothing about the backend.
+     */
+    val handleIsTheBackend: Boolean
+        get() = wslDistro == null
+
     companion object {
         // How many recent stderr lines to retain for startup-failure diagnostics (#97).
         private const val MAX_STDERR_LINES = 30
