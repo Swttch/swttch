@@ -116,13 +116,18 @@ export async function fetchFilesAndDirs(workingDir: string): Promise<{ files: st
       //      keeps .gitignore honoured)
       // Issue #201.
       const gitOpts = consoleSafeExecOptions({ cwd: workingDir, maxBuffer: 10 * 1024 * 1024 });
+      //
+      // `-z` terminates entries with NUL and turns off git's path quoting. Without
+      // it git prints non-ASCII names as `"\344\270\255..."` (core.quotepath), so a
+      // Chinese/Korean/Japanese file or directory never matched the `@` query.
+      // Issue #627.
       const [tracked, untracked] = await Promise.all([
-        execFileAsync('git', ['ls-files', '--cached', '--recurse-submodules'], gitOpts),
-        execFileAsync('git', ['ls-files', '--others', '--exclude-standard'], gitOpts),
+        execFileAsync('git', ['ls-files', '-z', '--cached', '--recurse-submodules'], gitOpts),
+        execFileAsync('git', ['ls-files', '-z', '--others', '--exclude-standard'], gitOpts),
       ]);
       const fileSet = new Set<string>();
       for (const stdout of [tracked.stdout, untracked.stdout]) {
-        for (const f of stdout.split('\n')) {
+        for (const f of stdout.split('\0')) {
           if (f.length > 0) fileSet.add(f);
         }
       }
@@ -234,6 +239,46 @@ function scoreItem(
   return { score: pathScore, matchIndices: sf!.indices };
 }
 
+// A base character plus whatever composes with it: combining marks (accents)
+// and Hangul vowel/final jamo.
+const COMPOSING_CLUSTER = /[\s\S][\p{M}ᅠ-ᇿힰ-퟿]*/gu;
+
+/**
+ * Returns `s` in NFC. When that changes the string, also returns, for every
+ * UTF-16 unit of the NFC text, the units of `s` it came from — so match
+ * highlights can still point into the path the caller displays and opens.
+ * Works per cluster so a base letter and its accent (or Hangul jamo) stay
+ * together.
+ */
+function toNfc(s: string): { text: string; originalIndices: number[][] | null } {
+  if (s.normalize('NFC') === s) {
+    return { text: s, originalIndices: null };
+  }
+  let text = '';
+  const originalIndices: number[][] = [];
+  for (const match of s.matchAll(COMPOSING_CLUSTER)) {
+    const segment = match[0];
+    const index = match.index ?? 0;
+    const composed = segment.normalize('NFC');
+    const sources = Array.from({ length: segment.length }, (_, k) => index + k);
+    for (let k = 0; k < composed.length; k++) {
+      originalIndices.push(sources);
+    }
+    text += composed;
+  }
+  return { text, originalIndices };
+}
+
+function toOriginalIndices(indices: number[], originalIndices: number[][]): number[] {
+  const out = new Set<number>();
+  for (const i of indices) {
+    for (const o of originalIndices[i] ?? []) {
+      out.add(o);
+    }
+  }
+  return Array.from(out).sort((a, b) => a - b);
+}
+
 /**
  * Ranks files and directories against `query` using fuzzy subsequence +
  * word-boundary scoring (fzf/IntelliJ CamelHump style). Empty query returns
@@ -249,11 +294,24 @@ export function rankFiles(files: string[], dirs: string[], query: string, limit:
     ...files.map((f) => ({ relativePath: f, type: 'file' as const })),
   ];
 
+  // Keyboards type composed text (NFC), but a name on disk can be decomposed
+  // (NFD: `é` stored as `e` + accent, Hangul as separate jamo) — older macOS
+  // volumes, archives, git on Linux. Compare both in NFC.
+  const normalizedQuery = query.normalize('NFC');
+
   const scored = candidates
     .map((item) => {
-      const basename = item.relativePath.split('/').pop() ?? item.relativePath;
-      const result = scoreItem(item.relativePath, basename, query);
-      return result === null ? null : { ...item, score: result.score, matchIndices: result.matchIndices };
+      const { text, originalIndices } = toNfc(item.relativePath);
+      const basename = text.split('/').pop() ?? text;
+      const result = scoreItem(text, basename, normalizedQuery);
+      if (result === null) {
+        return null;
+      }
+      return {
+        ...item,
+        score: result.score,
+        matchIndices: originalIndices ? toOriginalIndices(result.matchIndices, originalIndices) : result.matchIndices,
+      };
     })
     .filter((item): item is FileEntry & { score: number; matchIndices: number[] } => item !== null);
 

@@ -246,6 +246,123 @@ function makeGitRepoWithSubmodule(): { root: string } {
   return { root };
 }
 
+// By default git prints paths with non-ASCII bytes as a quoted octal escape
+// (`"\344\270\255..."`, core.quotepath=true), so a Chinese/Korean/Japanese file
+// name never matched what the user typed after `@`. Issue #627.
+describeGit('fetchFilesAndDirs (git repo with non-ASCII paths)', () => {
+  function makeGitRepoWithNonAsciiPaths(): string {
+    const root = makeTmpDir();
+    git(root, ['init', '-q']);
+    git(root, ['config', 'user.email', 'test@example.com']);
+    git(root, ['config', 'user.name', 'test']);
+    fs.mkdirSync(path.join(root, '中文目录'), { recursive: true });
+    fs.writeFileSync(path.join(root, '中文目录', '文档.md'), '');
+    fs.writeFileSync(path.join(root, '한글.txt'), '');
+    git(root, ['add', '-A']);
+    git(root, ['commit', '-q', '-m', 'init']);
+    // Untracked (not ignored) non-ASCII file comes from the second ls-files call.
+    fs.writeFileSync(path.join(root, '日本語.txt'), '');
+    return root;
+  }
+
+  it('lists tracked and untracked non-ASCII file names as plain text, not octal escapes', async () => {
+    const root = makeGitRepoWithNonAsciiPaths();
+    const { files, dirs } = await fetchFilesAndDirs(root);
+    expect(files).toContain('中文目录/文档.md');
+    expect(files).toContain('한글.txt');
+    expect(files).toContain('日本語.txt');
+    expect(dirs).toContain('中文目录');
+    expect(files.some((f) => f.includes('\\') || f.startsWith('"'))).toBe(false);
+  });
+
+  it('finds a Chinese directory and document by the query the user types', async () => {
+    const root = makeGitRepoWithNonAsciiPaths();
+    const { files, dirs } = await fetchFilesAndDirs(root);
+    const byDir = rankFiles(files, dirs, '中文', 20).map((e) => e.relativePath);
+    expect(byDir).toContain('中文目录');
+    expect(byDir).toContain('中文目录/文档.md');
+    const byDoc = rankFiles(files, dirs, '文档', 20).map((e) => e.relativePath);
+    expect(byDoc).toContain('中文目录/文档.md');
+  });
+});
+
+// One row per UI language the plugin ships (webview/src/i18n/languageMap.ts):
+// a person using that language names a folder and a file in it in their own
+// script and types a fragment of either after `@`. `queries` are what they type.
+const LANGUAGE_NAMES: Array<{ locale: string; dir: string; file: string; queries: string[] }> = [
+  { locale: 'en', dir: 'Documents', file: 'report-final.md', queries: ['Docu', 'report'] },
+  { locale: 'ko', dir: '한글디렉토리', file: '보고서.md', queries: ['한글', '보고'] },
+  { locale: 'ja', dir: '日本語フォルダ', file: 'ひらがなカタカナ.md', queries: ['日本語', 'ひらがな', 'カタカナ'] },
+  { locale: 'zh', dir: '中文目录', file: '文档.md', queries: ['中文', '文档'] },
+  { locale: 'zh-TW', dir: '繁體中文目錄', file: '文件說明.md', queries: ['繁體', '文件'] },
+  { locale: 'es', dir: 'canción-ñandú', file: 'año.md', queries: ['canción', 'ñandú', 'AÑO'] },
+  { locale: 'fr', dir: 'été-à-Paris', file: 'café-crème.md', queries: ['été', 'café', 'CRÈME'] },
+  { locale: 'de', dir: 'Übergrößen', file: 'Straße.md', queries: ['über', 'ÜBER', 'straße'] },
+  { locale: 'pt', dir: 'ação', file: 'informação.md', queries: ['ação', 'informação'] },
+  { locale: 'ru', dir: 'Документы', file: 'отчёт.md', queries: ['Докум', 'докум', 'отчёт', 'ОТЧЁТ'] },
+  { locale: 'fa', dir: 'سند‌ها', file: 'فایل‌ها.md', queries: ['سند', 'فایل'] },
+  { locale: 'ar', dir: 'مستندات', file: 'ملف.md', queries: ['مستند', 'ملف'] },
+];
+
+function makeGitRepoWithNames(dir: string, file: string): string {
+  const root = makeTmpDir();
+  git(root, ['init', '-q']);
+  git(root, ['config', 'user.email', 'test@example.com']);
+  git(root, ['config', 'user.name', 'test']);
+  fs.mkdirSync(path.join(root, dir), { recursive: true });
+  fs.writeFileSync(path.join(root, dir, file), '');
+  git(root, ['add', '-A']);
+  git(root, ['commit', '-q', '-m', 'init']);
+  return root;
+}
+
+describeGit('@ mention search for every UI language', () => {
+  for (const { locale, dir, file, queries } of LANGUAGE_NAMES) {
+    for (const form of ['NFC', 'NFD'] as const) {
+      // Files written by other tools (older macOS volumes, archives) can carry
+      // decomposed names while the keyboard always types composed text.
+      const d = dir.normalize(form);
+      const f = file.normalize(form);
+
+      it(`${locale} (${form}): finds the folder and file in a git repo`, async () => {
+        const root = makeGitRepoWithNames(d, f);
+        const { files, dirs } = await fetchFilesAndDirs(root);
+        for (const q of queries) {
+          const found = rankFiles(files, dirs, q.normalize('NFC'), 20).map((e) => e.relativePath.normalize('NFC'));
+          const hit = `${dir}/${file}`.normalize('NFC');
+          expect(found.some((p) => p === hit || p === dir.normalize('NFC')), `query "${q}"`).toBe(true);
+        }
+      });
+
+      it(`${locale} (${form}): finds the folder and file outside git`, async () => {
+        const root = makeTmpDir();
+        fs.mkdirSync(path.join(root, d), { recursive: true });
+        fs.writeFileSync(path.join(root, d, f), '');
+        const { files, dirs } = await fetchFilesAndDirs(root);
+        for (const q of queries) {
+          const found = rankFiles(files, dirs, q.normalize('NFC'), 20).map((e) => e.relativePath.normalize('NFC'));
+          const hit = `${dir}/${file}`.normalize('NFC');
+          expect(found.some((p) => p === hit || p === dir.normalize('NFC')), `query "${q}"`).toBe(true);
+        }
+      });
+    }
+  }
+});
+
+describe('rankFiles with decomposed (NFD) names', () => {
+  it('returns the name as stored and highlights the letter together with its accent', () => {
+    const stored = 'café.md'.normalize('NFD'); // c a f e U+0301 . m d
+    const [hit] = rankFiles([stored], [], 'café'.normalize('NFC'), 5);
+    expect(hit.relativePath).toBe(stored);
+    expect(hit.matchIndices).toEqual([0, 1, 2, 3, 4]);
+  });
+
+  it('matches a decomposed query against a composed name', () => {
+    const [hit] = rankFiles(['한글.txt'.normalize('NFC')], [], '한글'.normalize('NFD'), 5);
+    expect(hit.relativePath).toBe('한글.txt'.normalize('NFC'));
+  });
+});
+
 describeGit('fetchFilesAndDirs (git repo with submodule)', () => {
   it('includes files tracked inside a git submodule', async () => {
     const { root } = makeGitRepoWithSubmodule();
