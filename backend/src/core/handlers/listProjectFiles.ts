@@ -116,13 +116,18 @@ export async function fetchFilesAndDirs(workingDir: string): Promise<{ files: st
       //      keeps .gitignore honoured)
       // Issue #201.
       const gitOpts = consoleSafeExecOptions({ cwd: workingDir, maxBuffer: 10 * 1024 * 1024 });
+      //
+      // `-z` terminates entries with NUL and turns off git's path quoting. Without
+      // it git prints non-ASCII names as `"\344\270\255..."` (core.quotepath), so a
+      // Chinese/Korean/Japanese file or directory never matched the `@` query.
+      // Issue #627.
       const [tracked, untracked] = await Promise.all([
-        execFileAsync('git', ['ls-files', '--cached', '--recurse-submodules'], gitOpts),
-        execFileAsync('git', ['ls-files', '--others', '--exclude-standard'], gitOpts),
+        execFileAsync('git', ['ls-files', '-z', '--cached', '--recurse-submodules'], gitOpts),
+        execFileAsync('git', ['ls-files', '-z', '--others', '--exclude-standard'], gitOpts),
       ]);
       const fileSet = new Set<string>();
       for (const stdout of [tracked.stdout, untracked.stdout]) {
-        for (const f of stdout.split('\n')) {
+        for (const f of stdout.split('\0')) {
           if (f.length > 0) fileSet.add(f);
         }
       }

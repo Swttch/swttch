@@ -246,6 +246,46 @@ function makeGitRepoWithSubmodule(): { root: string } {
   return { root };
 }
 
+// By default git prints paths with non-ASCII bytes as a quoted octal escape
+// (`"\344\270\255..."`, core.quotepath=true), so a Chinese/Korean/Japanese file
+// name never matched what the user typed after `@`. Issue #627.
+describeGit('fetchFilesAndDirs (git repo with non-ASCII paths)', () => {
+  function makeGitRepoWithNonAsciiPaths(): string {
+    const root = makeTmpDir();
+    git(root, ['init', '-q']);
+    git(root, ['config', 'user.email', 'test@example.com']);
+    git(root, ['config', 'user.name', 'test']);
+    fs.mkdirSync(path.join(root, '中文目录'), { recursive: true });
+    fs.writeFileSync(path.join(root, '中文目录', '文档.md'), '');
+    fs.writeFileSync(path.join(root, '한글.txt'), '');
+    git(root, ['add', '-A']);
+    git(root, ['commit', '-q', '-m', 'init']);
+    // Untracked (not ignored) non-ASCII file comes from the second ls-files call.
+    fs.writeFileSync(path.join(root, '日本語.txt'), '');
+    return root;
+  }
+
+  it('lists tracked and untracked non-ASCII file names as plain text, not octal escapes', async () => {
+    const root = makeGitRepoWithNonAsciiPaths();
+    const { files, dirs } = await fetchFilesAndDirs(root);
+    expect(files).toContain('中文目录/文档.md');
+    expect(files).toContain('한글.txt');
+    expect(files).toContain('日本語.txt');
+    expect(dirs).toContain('中文目录');
+    expect(files.some((f) => f.includes('\\') || f.startsWith('"'))).toBe(false);
+  });
+
+  it('finds a Chinese directory and document by the query the user types', async () => {
+    const root = makeGitRepoWithNonAsciiPaths();
+    const { files, dirs } = await fetchFilesAndDirs(root);
+    const byDir = rankFiles(files, dirs, '中文', 20).map((e) => e.relativePath);
+    expect(byDir).toContain('中文目录');
+    expect(byDir).toContain('中文目录/文档.md');
+    const byDoc = rankFiles(files, dirs, '文档', 20).map((e) => e.relativePath);
+    expect(byDoc).toContain('中文目录/文档.md');
+  });
+});
+
 describeGit('fetchFilesAndDirs (git repo with submodule)', () => {
   it('includes files tracked inside a git submodule', async () => {
     const { root } = makeGitRepoWithSubmodule();
