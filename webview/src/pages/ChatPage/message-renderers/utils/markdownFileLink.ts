@@ -13,6 +13,16 @@ export interface MarkdownFileLink {
   column?: number;
 }
 
+/**
+ * A `:line` or `:line:col` tail on a file name that has an extension (`a.py:9`, `a.ts:42:7`).
+ * Group 1 is the line, group 2 the column. The extension is required so an extensionless
+ * name ending in digits (`/var/log/app:5`) keeps its whole name.
+ */
+const COLON_LOCATOR = /(?<=\.[A-Za-z][A-Za-z0-9]*):(\d+)(?::(\d+))?$/;
+
+/** A bare `name.ext:line[:col]` or `dir/name.ext:line[:col]` link target (no URL scheme before the first colon). */
+const COLON_LOCATOR_TARGET = /^[^\s:]*\.[A-Za-z][A-Za-z0-9]*:\d+(?::\d+)?$/;
+
 /** True for a Windows drive-rooted path (`C:/…` or `C:\…`), matching `joinProjectPath`. */
 function isWindowsAbsolute(href: string): boolean {
   return /^[A-Za-z]:[\\/]/.test(href);
@@ -75,11 +85,15 @@ export function parseMarkdownFileLink(href: string): MarkdownFileLink | null {
   const isRelative = href.startsWith('./') || href.startsWith('../');
   if (!isPosixAbsolute && !isWindowsAbsolute(href) && !isWindowsUnc(href) && !isRelative) return null;
 
-  const match = LINE_ANCHOR.exec(href);
+  // `#L10C5` wins; otherwise a `:10` / `:10:5` tail after a file extension is the position.
+  // The tail is read from the END of the href, so a drive colon (`D:/…`) is never mistaken for it.
+  const anchor = LINE_ANCHOR.exec(href);
+  const tail = anchor ? null : COLON_LOCATOR.exec(href);
+  const match = anchor ?? tail;
   const line = match ? Number(match[1]) : undefined;
   const column = match && match[2] ? Number(match[2]) : undefined;
 
-  let path = href.replace(LINE_ANCHOR, '').replace(/^\.\//, '');
+  let path = href.replace(anchor ? LINE_ANCHOR : COLON_LOCATOR, '').replace(/^\.\//, '');
   // A Windows drive path travels as `/C:/…` (leading slash so rehype-sanitize
   // doesn't parse `C:` as a URL scheme and strip the link); restore `C:/…`.
   if (/^\/[A-Za-z]:[\\/]/.test(path)) path = path.slice(1);
@@ -197,7 +211,8 @@ export function normalizeMarkdownLinkUrls(markdown: string, workingDir: string |
       const isWindowsAbsolute = /^[A-Za-z]:[\\/]/.test(url);
       const isUnc = isWindowsUnc(url);
       // A single-letter "scheme" followed by / or \ is a Windows drive, not a URL scheme.
-      const isExternal = !isWindowsAbsolute && !isUnc
+      // `name.py:9` also starts with something that looks like a scheme (`name.py:`): it is a file position.
+      const isExternal = !isWindowsAbsolute && !isUnc && !COLON_LOCATOR_TARGET.test(url)
         && (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(url) || url.startsWith('//') || url.startsWith('#'));
       if (isExternal) return match;
       if (url.startsWith('/') || isWindowsAbsolute || isUnc) return `[${text}](${toLocalFileHref(url)})`;
