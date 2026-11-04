@@ -184,3 +184,74 @@ describe('Windows UNC paths (WSL project folders)', () => {
     expect(normalizeMarkdownLinkUrls('[x](//example.com/x.png)', '/wd')).toBe('[x](//example.com/x.png)');
   });
 });
+
+// #632: Claude writes `[example.py:9](D:/project/example.py:9)`; the `:line[:col]` tail is a
+// position, not part of the file name, so it must reach `openFile` as line/column.
+describe('a :line[:col] tail on a link href', () => {
+  const hrefOf = (markdown: string) => /\]\((.*)\)/.exec(markdown)![1];
+
+  it('splits :line off a Windows drive path with forward slashes', () => {
+    expect(parseMarkdownFileLink('D:/project/example.py:9')).toEqual({
+      path: 'D:/project/example.py',
+      line: 9,
+      column: undefined,
+    });
+  });
+
+  it('splits :line:col off a Windows drive path with backslashes', () => {
+    expect(parseMarkdownFileLink('D:\\project\\example.py:9:3')).toEqual({
+      path: 'D:\\project\\example.py',
+      line: 9,
+      column: 3,
+    });
+  });
+
+  it('leaves the drive colon alone when the path has no position', () => {
+    expect(parseMarkdownFileLink('D:/project/example.py')).toEqual({
+      path: 'D:/project/example.py',
+      line: undefined,
+      column: undefined,
+    });
+  });
+
+  it('splits :line off a POSIX absolute and a ./ relative path', () => {
+    expect(parseMarkdownFileLink('/Users/me/a.py:9')).toEqual({ path: '/Users/me/a.py', line: 9, column: undefined });
+    expect(parseMarkdownFileLink('./src/a.ts:42:7')).toEqual({ path: 'src/a.ts', line: 42, column: 7 });
+  });
+
+  it('does not take a trailing number of an extensionless name for a position', () => {
+    expect(parseMarkdownFileLink('/var/log/app:5')?.path).toBe('/var/log/app:5');
+  });
+
+  it('prefers a #L anchor when both are present', () => {
+    expect(parseMarkdownFileLink('/a/b.py:3#L9')).toEqual({ path: '/a/b.py:3', line: 9, column: undefined });
+  });
+
+  it('carries a Windows drive link written in markdown through the preprocessor', () => {
+    const href = hrefOf(normalizeMarkdownLinkUrls('[example.py:9](D:/project/example.py:9)', '/ignored'));
+    expect(resolveMarkdownFileLink(href, '/ignored')).toEqual({
+      path: 'D:/project/example.py',
+      line: 9,
+      column: undefined,
+    });
+  });
+
+  it('resolves a relative name:line link against the working directory instead of calling it a URL scheme', () => {
+    const href = hrefOf(normalizeMarkdownLinkUrls('[sink.py:180](sink.py:180)', 'D:/proj'));
+    expect(resolveMarkdownFileLink(href, 'D:/proj')).toEqual({
+      path: 'D:/proj/sink.py',
+      line: 180,
+      column: undefined,
+    });
+  });
+
+  it('resolves a relative dir/name:line:col link against the working directory', () => {
+    const href = hrefOf(normalizeMarkdownLinkUrls('[x](src/a.ts:42:7)', '/wd'));
+    expect(resolveMarkdownFileLink(href, '/wd')).toEqual({ path: '/wd/src/a.ts', line: 42, column: 7 });
+  });
+
+  it('still leaves real URLs external', () => {
+    expect(normalizeMarkdownLinkUrls('[x](https://example.com:8080/a.js:3)', '/wd')).toBe('[x](https://example.com:8080/a.js:3)');
+    expect(normalizeMarkdownLinkUrls('[x](mailto:a@b.co)', '/wd')).toBe('[x](mailto:a@b.co)');
+  });
+});

@@ -18,7 +18,7 @@ const MASKED_SPANS =
  * starting in the middle of a larger token.
  */
 const PLAINTEXT_FILE_REF =
-  /(?<![\w@/.\-#])((?:\.{0,2}\/)?(?:[\w.-]+\/)*[\w.-]+\.[A-Za-z][A-Za-z0-9]*)(?::(\d+)(?::(\d+))?|#L(\d+)(?:C(\d+))?(?:-L\d+(?:C\d+)?)?)?(?![\w/-])/g;
+  /(?<![\w@/.\-#])((?:[A-Za-z]:[\\/](?:[\w.-]+[\\/])*|(?:\.{0,2}\/)?(?:[\w.-]+\/)*)[\w.-]+\.[A-Za-z][A-Za-z0-9]*)(?::(\d+)(?::(\d+))?|#L(\d+)(?:C(\d+))?(?:-L\d+(?:C\d+)?)?)?(?![\w/-])/g;
 
 /**
  * An inline code span that holds nothing but one such path (and its locator).
@@ -27,7 +27,7 @@ const PLAINTEXT_FILE_REF =
 const CODE_SPAN_PATH =
   /`([^`\n]*\/[^`\n]*)`/g;
 const WHOLE_PATH =
-  /^((?:\.{0,2}\/)?(?:[\w.-]+\/)+[\w.-]+\.[A-Za-z][A-Za-z0-9]*)(?::(\d+)(?::(\d+))?|#L(\d+)(?:C(\d+))?(?:-L\d+(?:C\d+)?)?)?$/;
+  /^((?:[A-Za-z]:[\\/](?:[\w.-]+[\\/])*|(?:\.{0,2}\/)?(?:[\w.-]+\/)+)[\w.-]+\.[A-Za-z][A-Za-z0-9]*)(?::(\d+)(?::(\d+))?|#L(\d+)(?:C(\d+))?(?:-L\d+(?:C\d+)?)?)?$/;
 
 /**
  * NUL wrapper for a masked span. A raw NUL never appears in chat markdown, so a
@@ -83,7 +83,7 @@ export function linkifyPlainTextFileRefs(markdown: string): string {
     (full, path: string, colonLine, colonCol, anchorLine, anchorCol) => {
       // A path must contain a directory separator; a bare `name.ext:line`
       // (e.g. `example.com:8080`, `App.java:10`) is too ambiguous to linkify.
-      if (!path.includes('/')) return full;
+      if (!/[\\/]/.test(path)) return full;
       const line = colonLine ?? anchorLine;
       const column = colonCol ?? anchorCol;
       // A path with no line locator opens at the top of the file.

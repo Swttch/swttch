@@ -90,3 +90,28 @@ describe('linkifyPlainTextFileRefs', () => {
     );
   });
 });
+
+// #632: a Windows drive path written as plain text (no markdown link) is a file reference too.
+describe('linkifyPlainTextFileRefs with a Windows drive path', () => {
+  it('linkifies D:/dir/name.ext:line, keeping the drive in the href', () => {
+    expect(linkifyPlainTextFileRefs('see D:/project/example.py:9 here')).toBe(
+      'see [D:/project/example.py:9](D:/project/example.py#L9) here',
+    );
+  });
+
+  it('linkifies a backslash drive path with :line:col', () => {
+    expect(linkifyPlainTextFileRefs('at D:\\project\\example.py:9:3.')).toBe(
+      'at [D:\\project\\example.py:9:3](D:\\project\\example.py#L9C3).',
+    );
+  });
+
+  it('turns an inline code span that is only a drive path into a link', () => {
+    expect(linkifyPlainTextFileRefs('`D:/project/example.py:9`')).toBe(
+      '[D:/project/example.py:9](D:/project/example.py#L9)',
+    );
+  });
+
+  it('still does NOT linkify a bare name with no slash and no drive', () => {
+    expect(linkifyPlainTextFileRefs('example.py:9')).toBe('example.py:9');
+  });
+});
