@@ -153,6 +153,11 @@ class DiffService(private val project: Project) {
                 // selection object this bar reads, so the two cannot disagree.
                 if (onResolve != null) {
                     val selection = HunkSelection()
+                    // Known from the two texts, before any viewer has compared
+                    // (#620). The viewer replaces this with its own split once it
+                    // can report one, so the tick boxes still match the screen.
+                    val regions = DiffRegions.regionsOf(oldContent, newContent)
+                    if (regions != null) selection.setRanges(regions) else selection.markRegionsUnknown()
                     request.putUserData(HunkSelection.KEY, selection)
                     val panel = DiffReviewPanel(selection) { accepted, keepEdits, allowAllEdits ->
                         // Read the proposed side before the tab closes, and only
@@ -171,7 +176,18 @@ class DiffService(private val project: Project) {
                         // was still open, and dropped the entry that says the IDE
                         // owns it, so reopening fell through to the built-in diff.
                         // The backend closes it once it has really answered.
-                        onResolve(accepted, edited, allowAllEdits)
+                        //
+                        // The panel's own list is empty both when the reviewer
+                        // cleared every box and when the diff never reported its
+                        // regions. Only the first is a refusal (#620), so a
+                        // selection that learned nothing answers with the whole
+                        // proposal instead.
+                        val answered = if (accepted.isEmpty() && keepEdits) {
+                            selection.rangesToAnswer(oldContent, newContent)
+                        } else {
+                            accepted
+                        }
+                        onResolve(answered, edited, allowAllEdits)
                     }
                     // Banner above, controls below: the warning has to be read
                     // before the buttons it is about are pressed.
