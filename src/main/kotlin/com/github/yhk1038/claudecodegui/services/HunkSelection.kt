@@ -58,6 +58,37 @@ class HunkSelection {
     fun acceptedRanges(): List<AcceptedRange> =
         acceptedIndices().mapNotNull { ranges.getOrNull(it) }
 
+    /**
+     * What Apply and Allow all edits send (#620).
+     *
+     * The backend reads an empty list as "kept nothing" and denies the edit. An
+     * empty list is two different things here: a reviewer who cleared every box,
+     * and a diff that never told us its regions (compared too late, or shown in a
+     * viewer that reports no changes). The second must not read as a refusal, so
+     * with no regions learned the answer is the whole proposal, as a single range
+     * spanning both sides.
+     */
+    fun rangesToAnswer(oldContent: String, newContent: String): List<AcceptedRange> {
+        if (ranges.isNotEmpty()) return acceptedRanges()
+        return listOf(
+            AcceptedRange(
+                oldStart = 0,
+                oldEnd = lineCount(oldContent),
+                newStart = 0,
+                newEnd = lineCount(newContent),
+            ),
+        )
+    }
+
+    /**
+     * Lines the way the backend counts them: empty text has none, and a final
+     * newline ends the last line rather than starting another.
+     */
+    private fun lineCount(text: String): Int {
+        if (text.isEmpty()) return 0
+        return text.removeSuffix("\n").split('\n').size
+    }
+
     fun isAccepted(index: Int): Boolean = index in accepted
 
     fun toggle(index: Int) {

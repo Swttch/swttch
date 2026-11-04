@@ -42,6 +42,16 @@ describe('buildPartialApproval', () => {
     expect(buildPartialApproval(p, [FIRST, SECOND])).toBeNull();
   });
 
+  it('treats one range over the whole file as a full acceptance (#620)', () => {
+    // What the IDE side sends when its diff never reported any regions: a single
+    // range spanning both sides. It must read as "everything", not as a partial
+    // pick, so Claude's own call goes through unamended.
+    const lines = 40;
+    const whole: AcceptedRange = { oldStart: 0, oldEnd: lines, newStart: 0, newEnd: lines };
+    const p = preview('Edit', before, after);
+    expect(buildPartialApproval(p, [whole])).toBeNull();
+  });
+
   it('keeps an Edit in Edit shape', () => {
     const p = preview('Edit', before, after);
     const amended = buildPartialApproval(p, [FIRST])!;
