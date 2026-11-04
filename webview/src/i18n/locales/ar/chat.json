@@ -89,7 +89,11 @@
       "title": "السياق {{used}} / {{total}} ({{percent}}%)",
       "pending": "السياق {{used}} · يظهر الحجم الإجمالي بعد الرد التالي",
       "remaining": "{{percent}}% من السياق متبقٍّ حتى الضغط التلقائي.",
-      "clickToCompact": "انقر للضغط الآن."
+      "clickToCompact": "انقر للضغط الآن.",
+      "displayLabel": "تعرض الشارة",
+      "displayPercent": "النسبة",
+      "displayTokens": "الرموز",
+      "displayNone": "لا شيء"
     },
     "artifacts": {
       "fallbackTitle": "أرتيفاكت",

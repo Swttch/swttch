@@ -89,7 +89,11 @@
       "title": "Contexte {{used}} / {{total}} ({{percent}}%)",
       "pending": "Contexte {{used}} · La taille totale s'affiche après la prochaine réponse",
       "remaining": "{{percent}} % du contexte restant avant la compaction automatique.",
-      "clickToCompact": "Cliquez pour compacter maintenant."
+      "clickToCompact": "Cliquez pour compacter maintenant.",
+      "displayLabel": "Le badge affiche",
+      "displayPercent": "Pourcentage",
+      "displayTokens": "Jetons",
+      "displayNone": "Rien"
     },
     "artifacts": {
       "fallbackTitle": "Artefact",

@@ -117,6 +117,13 @@
         "queue": "In Warteschlange stellen",
         "steer": "Steuern",
         "notSet": "Nicht festgelegt (global verwenden)"
+      },
+      "contextBadge": {
+        "label": "Anzeige des Kontext-Badges",
+        "description": "Legt fest, welche Zahl das Kontext-Badge unter dem Eingabefeld zeigt. Beim Darüberfahren mit der Maus zeigt das Badge immer Token-Anzahl und Prozentwert zusammen.",
+        "percent": "Verbrauch in Prozent",
+        "tokens": "Verbrauchte Tokens",
+        "none": "Ausgeblendet"
       }
     },
     "notifications": {

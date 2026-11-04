@@ -89,7 +89,11 @@
       "title": "Контекст {{used}} / {{total}} ({{percent}}%)",
       "pending": "Контекст {{used}} · Общий размер появится после следующего ответа",
       "remaining": "Осталось {{percent}}% контекста до авто-сжатия.",
-      "clickToCompact": "Нажмите, чтобы сжать сейчас."
+      "clickToCompact": "Нажмите, чтобы сжать сейчас.",
+      "displayLabel": "Значок показывает",
+      "displayPercent": "Процент",
+      "displayTokens": "Токены",
+      "displayNone": "Ничего"
     },
     "artifacts": {
       "fallbackTitle": "Артефакт",

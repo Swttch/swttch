@@ -89,7 +89,11 @@
       "title": "Context {{used}} / {{total}} ({{percent}}%)",
       "pending": "Context {{used}} · The total size shows after the next reply",
       "remaining": "{{percent}}% of context remaining until auto-compact.",
-      "clickToCompact": "Click to compact now."
+      "clickToCompact": "Click to compact now.",
+      "displayLabel": "Badge shows",
+      "displayPercent": "Percent",
+      "displayTokens": "Tokens",
+      "displayNone": "None"
     },
     "artifacts": {
       "fallbackTitle": "Artifact",

@@ -89,7 +89,11 @@
       "title": "Contexto {{used}} / {{total}} ({{percent}}%)",
       "pending": "Contexto {{used}} · O tamanho total aparece após a próxima resposta",
       "remaining": "{{percent}}% de contexto restante até a compactação automática.",
-      "clickToCompact": "Clique para compactar agora."
+      "clickToCompact": "Clique para compactar agora.",
+      "displayLabel": "O selo mostra",
+      "displayPercent": "Porcentagem",
+      "displayTokens": "Tokens",
+      "displayNone": "Nada"
     },
     "artifacts": {
       "fallbackTitle": "Artefato",

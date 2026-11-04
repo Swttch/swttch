@@ -12,6 +12,8 @@ import {
   COMPOSER_SEND_SHORTCUTS,
   COMPOSER_NEWLINE_SHORTCUTS,
   FOLLOW_UP_BEHAVIORS,
+  ContextBadgeDisplay,
+  CONTEXT_BADGE_DISPLAYS,
 } from '../../shared';
 
 // ─── Settings helpers ────────────────────────────────────────────────────────
@@ -86,6 +88,7 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   composerNewlineShortcut: null,
   composerNewlineShortcutCustom: null,
   composerFollowUpBehavior: null,
+  contextBadgeDisplay: ContextBadgeDisplay.PERCENT,
   notificationBanner: null,
   notificationSound: null,
   notificationSoundVolume: 5,
@@ -172,6 +175,7 @@ const COMMENT_MAP: Record<string, string> = {
   allowAllCommandsByDefault: 'Sponsor-only. Whether every session starts with "Allow all command in this session" already on, so the GUI answers the CLI safety prompts itself. Off by default; a session can still turn it off for itself',
   attachEditorContext: '세션 시작 시 에디터 컨텍스트 칩을 활성 상태로 둘지. false면 칩은 뜨되 비활성으로 시작(세션 중 클릭 변경은 저장되지 않음)',
   autoOpenDiffOnPermission: '파일 편집 권한을 물을 때 diff를 저절로 열지. false면 승인 패널만 뜨고, 프롬프트의 파일명을 눌렀을 때만 diff가 열린다(변경 내용은 어느 쪽이든 보관되므로 나중에 눌러도 볼 수 있다)',
+  contextBadgeDisplay: '입력창 아래 컨텍스트 배지가 링 옆에 쓰는 숫자: "percent"(사용 비율) | "tokens"(사용 토큰 수) | "none"(링만). 마우스를 올렸을 때 나오는 설명에는 어느 쪽이든 토큰 수와 비율이 함께 나온다',
   diffSurface: '파일 편집 권한을 물을 때 변경 내용을 어디에 그릴지: "ide"(IDE 자체 diff 뷰어) | "built-in"(우리 diff 페이지). IDE 없이 실행 중이면 항상 "built-in"으로 동작한다',
   browserDiffPresentation: '브라우저에서 우리 diff 페이지를 어떻게 띄울지: "new-tab"(새 브라우저 탭) | "overlay"(현재 세션 위 모달). IDE에서는 에디터 탭으로 뜨므로 이 값과 무관하다',
   ultracode: '[레거시] 네이티브 settings.json으로 이관됨(CLI가 읽는 공식 키). 마이그레이션이 비우는 용도로만 남김',
@@ -449,6 +453,11 @@ function validateSetting(key: string, value: unknown): string | null {
     case 'composerFollowUpBehavior':
       if (value !== null && !FOLLOW_UP_BEHAVIORS.includes(value as string)) {
         return `composerFollowUpBehavior must be null or one of ${FOLLOW_UP_BEHAVIORS.map((s) => `"${s}"`).join(', ')}`;
+      }
+      break;
+    case 'contextBadgeDisplay':
+      if (!CONTEXT_BADGE_DISPLAYS.includes(value as string)) {
+        return `contextBadgeDisplay must be one of ${CONTEXT_BADGE_DISPLAYS.map((s) => `"${s}"`).join(', ')}`;
       }
       break;
     case 'diffSurface':

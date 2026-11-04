@@ -117,6 +117,13 @@
         "queue": "Mettre en file d’attente",
         "steer": "Orienter",
         "notSet": "Non défini (utiliser le paramètre global)"
+      },
+      "contextBadge": {
+        "label": "Affichage du badge de contexte",
+        "description": "Choisissez le nombre affiché par le badge de contexte sous la zone de saisie. Au survol du badge, le nombre de jetons et le pourcentage apparaissent toujours ensemble.",
+        "percent": "Pourcentage utilisé",
+        "tokens": "Jetons utilisés",
+        "none": "Masqué"
       }
     },
     "notifications": {

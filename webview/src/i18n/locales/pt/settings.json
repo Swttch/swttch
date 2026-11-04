@@ -117,6 +117,13 @@
         "queue": "Enfileirar",
         "steer": "Orientar",
         "notSet": "Não definido (usar global)"
+      },
+      "contextBadge": {
+        "label": "Exibição do selo de contexto",
+        "description": "Escolha qual número o selo de contexto abaixo do campo de entrada mostra. Ao passar o mouse sobre o selo, a contagem de tokens e a porcentagem sempre aparecem juntas.",
+        "percent": "Porcentagem usada",
+        "tokens": "Tokens usados",
+        "none": "Oculto"
       }
     },
     "notifications": {

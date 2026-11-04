@@ -89,7 +89,11 @@
       "title": "コンテキスト {{used}} / {{total}} ({{percent}}%)",
       "pending": "コンテキスト {{used}} · 全体のサイズは次の応答のあとに表示されます",
       "remaining": "自動圧縮まで残り {{percent}}% のコンテキストがあります。",
-      "clickToCompact": "クリックして今すぐ圧縮します。"
+      "clickToCompact": "クリックして今すぐ圧縮します。",
+      "displayLabel": "バッジ表示",
+      "displayPercent": "使用率",
+      "displayTokens": "トークン",
+      "displayNone": "なし"
     },
     "artifacts": {
       "fallbackTitle": "アーティファクト",

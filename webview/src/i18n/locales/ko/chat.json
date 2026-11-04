@@ -89,7 +89,11 @@
       "title": "컨텍스트 {{used}} / {{total}} ({{percent}}%)",
       "pending": "컨텍스트 {{used}} · 전체 크기는 다음 응답 뒤에 표시돼요",
       "remaining": "자동 압축까지 컨텍스트 {{percent}}% 남음.",
-      "clickToCompact": "클릭하면 지금 압축합니다."
+      "clickToCompact": "클릭하면 지금 압축합니다.",
+      "displayLabel": "배지 표시",
+      "displayPercent": "비율",
+      "displayTokens": "토큰",
+      "displayNone": "없음"
     },
     "artifacts": {
       "fallbackTitle": "아티팩트",

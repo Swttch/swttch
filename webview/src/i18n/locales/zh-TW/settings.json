@@ -117,6 +117,13 @@
         "queue": "加入佇列",
         "steer": "引導",
         "notSet": "未設定(使用全域)"
+      },
+      "contextBadge": {
+        "label": "上下文徽章顯示",
+        "description": "選擇輸入框下方的上下文徽章要顯示哪個數字。將滑鼠移到徽章上時，不論選哪一項，都會同時顯示 token 數與使用比例。",
+        "percent": "使用比例",
+        "tokens": "已用 token 數",
+        "none": "不顯示"
       }
     },
     "notifications": {

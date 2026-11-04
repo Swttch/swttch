@@ -117,6 +117,13 @@
         "queue": "Poner en cola",
         "steer": "Redirigir",
         "notSet": "Sin definir (usar global)"
+      },
+      "contextBadge": {
+        "label": "Visualización de la insignia de contexto",
+        "description": "Elige qué número muestra la insignia de contexto bajo el cuadro de entrada. Al pasar el ratón por la insignia siempre se ven juntos el número de tokens y el porcentaje.",
+        "percent": "Porcentaje usado",
+        "tokens": "Tokens usados",
+        "none": "Oculto"
       }
     },
     "notifications": {
