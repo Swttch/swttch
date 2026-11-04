@@ -47,8 +47,16 @@ private const val TOP_PADDING = 2
 /** Added below the row: the buttons sat flush against the bottom edge. */
 private const val BOTTOM_PADDING = 8
 
-/** Sized once, never shown: a stock button reporting the height a row needs. */
-private val MEASURING_BUTTON = JButton("Apply")
+/**
+ * The height of every button in the row, before HiDPI scaling.
+ *
+ * Stated outright instead of asked from the look-and-feel. A reporter's bar
+ * showed four buttons stretched to about six times a normal button's height
+ * (#590), and no setting on a development machine reproduced it. Whatever made
+ * the look-and-feel report that height, a number written here cannot be
+ * overruled by it.
+ */
+private const val BUTTON_HEIGHT = 28
 
 /** How wide an icon-only button is, before HiDPI scaling. */
 private const val ICON_BUTTON_WIDTH = 42
@@ -101,10 +109,10 @@ class DiffReviewPanel(
     private lateinit var root: JPanel
     private lateinit var actions: JPanel
     /** Left-aligned: answers this request AND stops the next ones (#393). */
-    private val allowAllButton = JButton(ALLOW_ALL_LABEL)
+    private val allowAllButton = RowButton(ALLOW_ALL_LABEL)
     private val summary = JBLabel()
     /** Wide: the "Clear all" / "Select all" button. Narrow: a bare tick box. */
-    private val selectAllButton = JButton()
+    private val selectAllButton = RowButton()
     private val selectAllBox = JBCheckBox()
     private val applyButton = iconSizedButton()
     private val rejectButton = iconSizedButton()
@@ -244,23 +252,28 @@ class DiffReviewPanel(
      * only way past that, and it is stated in scaled pixels so it holds on a
      * HiDPI display too.
      */
-    private fun iconSizedButton(): JButton = object : JButton() {
+    private fun iconSizedButton(): JButton = object : RowButton() {
         override fun getPreferredSize(): Dimension {
             val natural = super.getPreferredSize()
             if (text != null) return natural
             return Dimension(JBUI.scale(ICON_BUTTON_WIDTH), natural.height)
         }
+    }
+
+    /**
+     * A button whose height is [BUTTON_HEIGHT], whatever the look-and-feel
+     * would have chosen. Only the width is left to the label.
+     */
+    private open class RowButton(label: String? = null) : JButton(label) {
+        override fun getPreferredSize(): Dimension =
+            Dimension(super.getPreferredSize().width, JBUI.scale(BUTTON_HEIGHT))
 
         override fun getMinimumSize(): Dimension = preferredSize
         override fun getMaximumSize(): Dimension = preferredSize
     }
 
-    /**
-     * The height one row of buttons needs, independent of what our own buttons
-     * currently look like.
-     */
-    private fun rowHeight(): Int =
-        MEASURING_BUTTON.preferredSize.height + JBUI.scale(TOP_PADDING + BOTTOM_PADDING)
+    /** The height one row of buttons needs: the fixed button height plus its padding. */
+    private fun rowHeight(): Int = JBUI.scale(BUTTON_HEIGHT + TOP_PADDING + BOTTOM_PADDING)
 
     /**
      * Hold [splitter]'s divider exactly one row above its bottom edge.
