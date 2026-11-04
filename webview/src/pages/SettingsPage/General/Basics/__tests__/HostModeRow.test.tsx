@@ -8,7 +8,9 @@ import { SettingKey, HostMode } from '@/types/settings';
 
 const updateSettingWithScopeMock = vi.fn();
 let mockHostMode: HostMode = HostMode.EDITOR_TAB;
-let mockIsJetBrains = true;
+// Hoisted with the mock below: the `import` of the row is lifted above this file's own
+// statements, and the modules it pulls in call `isJetBrains()` while they load.
+const runtime = vi.hoisted(() => ({ isJetBrains: true }));
 
 vi.mock('@/contexts/SettingsContext', () => ({
   // Rows read project-override info through this; null = nothing overridden.
@@ -20,7 +22,7 @@ vi.mock('@/contexts/SettingsContext', () => ({
 }));
 
 vi.mock('@/config/environment', () => ({
-  isJetBrains: () => mockIsJetBrains,
+  isJetBrains: () => runtime.isJetBrains,
 }));
 
 import { HostModeRow } from '../HostModeRow';
@@ -28,7 +30,7 @@ import { HostModeRow } from '../HostModeRow';
 beforeEach(() => {
   updateSettingWithScopeMock.mockReset();
   mockHostMode = HostMode.EDITOR_TAB;
-  mockIsJetBrains = true;
+  runtime.isJetBrains = true;
 });
 
 const getTrigger = () =>
@@ -36,7 +38,7 @@ const getTrigger = () =>
 
 describe('HostModeRow', () => {
   it('renders nothing in the browser (non-JetBrains) runtime', () => {
-    mockIsJetBrains = false;
+    runtime.isJetBrains = false;
     const { container } = render(<HostModeRow />);
     expect(container).toBeEmptyDOMElement();
   });
