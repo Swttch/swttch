@@ -23,9 +23,6 @@ internal const val AUTH_SUBPROTOCOL = "ccg-auth"
 /** Upper bound for one /rpc connection attempt; a hung attempt counts as a failure. */
 private val CONNECT_TIMEOUT: Duration = Duration.ofSeconds(5)
 
-/** Gap between reconnect attempts while a live backend process just is not answering. */
-private const val SLOW_BACKEND_RETRY_MS = 5_000L
-
 /** What the OS says about the backend process the plugin spawned; see [BackendRestartJudge]. */
 data class BackendProcessState(val alive: Boolean, val handleIsTheBackend: Boolean)
 
@@ -195,7 +192,7 @@ class RpcWebSocketClient(
                         scope.launch { onPersistentFailure?.invoke() }
                     } else {
                         logger.warn("The backend process is still running and only unreachable; not restarting it, keep reconnecting")
-                        scheduleReconnect(port, SLOW_BACKEND_RETRY_MS)
+                        scheduleReconnect(port)
                     }
                 } else {
                     scheduleReconnect(port)
