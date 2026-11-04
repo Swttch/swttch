@@ -188,6 +188,17 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.35.2 - Diff buttons, file links, file names, tab switching, and connection fixes</h3>
+            <ul>
+                <li>Fix the chat input not getting the caret when you switch to an already open chat tab (#621, reported by @EndiButler)</li>
+                <li>Fix a slow backend being treated as dead and restarted, which broke the conversation (#622, reported by @CraftedFury)</li>
+                <li>Fix edits being rejected in the diff tab even when you allow them (#620, reported by @Nyho)</li>
+                <li>Fix diff screen buttons looking oversized and not responding to clicks (#590, reported by @alexandrezia)</li>
+                <li>Fix file links written as path:line not opening (#632, reported by @tianguanlong)</li>
+                <li>Fix the @ file mention not finding non-English folder and file names (#627, reported by @tianguanlong)</li>
+                <li>Fix dev servers started by the agent opening on a random port (#629, reported by @EndiButler)</li>
+                <li>Add a setting for what the context badge shows (#328, requested by @CraftedFury)</li>
+            </ul>
             <h3>0.35.1 - Chat panel reload, attach failure notice, and session title fixes</h3>
             <ul>
                 <li>Fix the open conversation disappearing when the chat panel is reloaded (#622, reported by @CraftedFury)</li>
