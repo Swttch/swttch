@@ -327,6 +327,23 @@ class ClaudeCodePanel(
      */
     internal val isRealized: Boolean get() = holder != null
 
+    /**
+     * Hands the keyboard focus to the page when this tab has just been selected (#621).
+     *
+     * The IDE selects the tab but leaves the focus where it was (the code editor, a tool
+     * window), because the panel is a plain JPanel with nothing to take it. The page then never
+     * hears a window `focus`, so the composer's own restore never runs. Once the page has the
+     * focus, that restore decides whether the composer gets the caret.
+     *
+     * Only for a browser that is built and on screen, and never when it already holds the
+     * focus, so a tab that is not being looked at cannot pull the focus away.
+     */
+    internal fun focusBrowserOnSelection() {
+        if (tabId == ClaudeSessionsToolWindowFactory.SESSION_PANEL_TAB_ID) return
+        val component = holder?.browser?.component ?: return
+        if (component.isShowing && !component.hasFocus()) component.requestFocusInWindow()
+    }
+
     // ─── Stalled-screen guide ───────────────────────────────────────────
     // The one page shown over a screen that has not come up, with a restart button, how to
     // quit the IDE completely, and the IDE options to change. See [StalledHelpPanel].
