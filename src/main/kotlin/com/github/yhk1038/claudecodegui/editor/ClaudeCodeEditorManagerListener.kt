@@ -28,6 +28,11 @@ class ClaudeCodeEditorManagerListener : FileEditorManagerListener {
             val project = event.manager.project
             ApplicationManager.getApplication().invokeLater { UnreadBadgeClearer.clear(project) }
         }
+        // Selecting the tab does not move the keyboard focus into it. Hand it to the page, so
+        // switching back to a chat tab lets the user type at once, as a freshly opened one does (#621).
+        (event.newEditor as? ClaudeCodeFileEditor)?.let { editor ->
+            ApplicationManager.getApplication().invokeLater { editor.focusBrowserOnSelection() }
+        }
         if (file is ClaudeCodeVirtualFile && file.badgeState.clearedBySelection) {
             if (file.setBadge(TabBadge.NONE)) {
                 (event.manager as? FileEditorManagerEx)?.refreshIcons()

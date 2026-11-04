@@ -40,9 +40,19 @@ class ClaudeCodeFileEditor(
      */
     private val panel: ClaudeCodePanel by lazy {
         ClaudeCodePanel(project, virtualFile.tabId, panePath).also { created ->
+            panelCreated = true
             Disposer.register(this, created)
             attachPanelCallbacks(created)
         }
+    }
+
+    /** Whether [panel] has been built, so asking about it never builds it (see [panel]). */
+    @Volatile
+    private var panelCreated = false
+
+    /** Gives the page the keyboard focus after the IDE selected this tab (#621). */
+    fun focusBrowserOnSelection() {
+        if (panelCreated) panel.focusBrowserOnSelection()
     }
 
     /**
@@ -128,7 +138,7 @@ class ClaudeCodeFileEditor(
 
     override fun getComponent(): JComponent = panel
 
-    override fun getPreferredFocusedComponent(): JComponent = panel
+    override fun getPreferredFocusedComponent(): JComponent = panel.preferredFocusTarget()
 
     override fun getName(): String = virtualFile.presentableName
 

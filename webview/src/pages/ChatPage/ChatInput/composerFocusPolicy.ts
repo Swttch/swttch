@@ -5,6 +5,10 @@
 const CLAIMS_CLICK_SELECTOR =
   'button, a, input, textarea, select, [role="button"], [contenteditable], [role="dialog"], [aria-modal="true"]';
 
+/** Places the user types into, which a tab selection must not take the focus from. */
+const TEXT_ENTRY_SELECTOR = 'input, textarea, select, [contenteditable]';
+const DIALOG_SELECTOR = '[role="dialog"], [aria-modal="true"]';
+
 /**
  * When the composer takes the caret back without being asked to.
  *
@@ -60,6 +64,30 @@ export class ComposerFocusPolicy {
     if (this.nothingElseHoldsFocus() && !this.hasSelection()) {
       this.focusComposer();
     }
+  }
+
+  /**
+   * Call when the IDE has just selected this tab (#621).
+   *
+   * Picking a tab is a clear request to start typing here, so unlike
+   * [restoreOnWindowFocus] this does not wait for `body` to hold the focus: a
+   * button the user pressed on the last visit (the history menu, a toolbar
+   * button) keeps the page's focus while the tab is away and would block the
+   * caret for good. Only a place the user is typing or answering in is left
+   * alone: a text field, or anything inside a dialog. A selection is also kept,
+   * and the mouse button is not asked about, since the press that selected the
+   * tab landed on the IDE's tab strip and never reached the page.
+   */
+  restoreOnTabSelected(): void {
+    if (this.hasSelection()) return;
+    if (this.holdsTypingOrDialog()) return;
+    this.focusComposer();
+  }
+
+  private holdsTypingOrDialog(): boolean {
+    const holder = this.doc.activeElement;
+    if (!(holder instanceof HTMLElement) || holder === this.doc.body) return false;
+    return holder.matches(TEXT_ENTRY_SELECTOR) || holder.closest(DIALOG_SELECTOR) !== null;
   }
 
   private focusOnPlainClick(event: MouseEvent): void {
