@@ -627,6 +627,9 @@ class NodeBackendService : Disposable {
         /** True when this backend's RPC socket is connected and can forward a notification. */
         fun isRpcReady(): Boolean = rpcClient != null
 
+        /** True while the /rpc socket to this backend is open, that is, while the backend answers the IDE. */
+        fun isRpcConnected(): Boolean = rpcClient?.isConnected == true
+
         suspend fun awaitPort(): Int = portDeferred.await()
 
         /** Recent backend stderr, for surfacing a startup-failure cause (#97). */
@@ -683,6 +686,9 @@ class NodeBackendService : Disposable {
 
     /** Bound port for [projectBasePath]'s backend, or null while not running. */
     fun portOf(projectBasePath: String): Int? = backends[projectBasePath]?.portOrNull()
+
+    /** Whether the backend of [projectBasePath] is answering the IDE over /rpc at this moment. */
+    fun isBackendAnswering(projectBasePath: String): Boolean = backends[projectBasePath]?.isRpcConnected() == true
 
     /**
      * Re-assert the keep-alive gate when a project window (re)opens, invoked by

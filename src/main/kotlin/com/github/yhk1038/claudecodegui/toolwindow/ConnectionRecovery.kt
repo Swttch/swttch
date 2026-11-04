@@ -24,6 +24,13 @@ object ConnectionRecovery {
         /** Load the page again from the backend's current port. */
         LOAD_AGAIN,
 
+        /**
+         * The backend is running but is not answering the IDE yet: ask again at the page's own
+         * pace. A page loaded now would hang on the unanswering backend and stay hung after it
+         * answers again (measured: the load never finished and the guide stayed up).
+         */
+        ASK_AGAIN_LATER,
+
         /** Leave the page as it is. */
         NOTHING,
     }
@@ -33,13 +40,21 @@ object ConnectionRecovery {
      * @param port the backend's current port, or null while it has none.
      * @param restarting whether a restart is under way (the page is loaded when it ends).
      * @param loadInFlight whether a load of the page has started and not finished.
+     * @param backendAnswering whether the backend answers the IDE's own socket right now.
      */
-    fun decide(backendRunning: Boolean, port: Int?, restarting: Boolean, loadInFlight: Boolean): Action = when {
+    fun decide(
+        backendRunning: Boolean,
+        port: Int?,
+        restarting: Boolean,
+        loadInFlight: Boolean,
+        backendAnswering: Boolean,
+    ): Action = when {
         !backendRunning -> Action.NOTHING
         port == null -> Action.NOTHING
         restarting -> Action.NOTHING
         // A page that is still being replaced cannot be reported on, and loading again would race it.
         loadInFlight -> Action.NOTHING
+        !backendAnswering -> Action.ASK_AGAIN_LATER
         else -> Action.LOAD_AGAIN
     }
 }

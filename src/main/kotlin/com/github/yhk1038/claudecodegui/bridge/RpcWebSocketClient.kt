@@ -77,6 +77,9 @@ class RpcWebSocketClient(
 
     @Volatile
     private var webSocket: WebSocket? = null
+
+    /** True while the /rpc socket to the backend is open: the backend is answering this IDE right now. */
+    val isConnected: Boolean get() = webSocket != null
     private var reconnectJob: Job? = null
 
     /**
@@ -92,9 +95,6 @@ class RpcWebSocketClient(
 
     private var consecutiveFailures = 0
     private val MAX_FAILURES_BEFORE_RESTART = 3
-
-    /** Whether any failure in the current run of failures was an actively refused connection. */
-    private var sawRefusedConnection = false
 
     /**
      * Connect to the RPC WebSocket endpoint.
@@ -160,7 +160,6 @@ class RpcWebSocketClient(
             .thenAccept { ws ->
                 webSocket = ws
                 consecutiveFailures = 0
-                sawRefusedConnection = false
                 logger.info("RPC WebSocket connected to port $port")
                 listener.startLiveness(ws)
                 // Re-advertise project roots on every (re)connection so the backend
@@ -175,19 +174,16 @@ class RpcWebSocketClient(
             .exceptionally { e ->
                 logger.warn("RPC WebSocket connection failed: ${e.message}")
                 consecutiveFailures++
-                if (BackendRestartJudge.isConnectionRefused(e)) sawRefusedConnection = true
                 if (consecutiveFailures >= MAX_FAILURES_BEFORE_RESTART) {
-                    val refused = sawRefusedConnection
                     val state = backendProcessState?.invoke()
                     val decision = if (state == null) {
                         BackendRestartJudge.Decision.RESTART
                     } else {
-                        BackendRestartJudge.decide(state.alive, state.handleIsTheBackend, refused)
+                        BackendRestartJudge.decide(state.alive, state.handleIsTheBackend)
                     }
-                    logger.warn("RPC WebSocket reached $consecutiveFailures consecutive failures (refused=$refused, backendProcess=$state)")
+                    logger.warn("RPC WebSocket reached $consecutiveFailures consecutive failures (backendProcess=$state)")
                     consecutiveFailures = 0
-                    sawRefusedConnection = false
-                    if (decision == BackendRestartJudge.Decision.RESTART) {
+                        if (decision == BackendRestartJudge.Decision.RESTART) {
                         logger.warn("Triggering backend restart")
                         scope.launch { onPersistentFailure?.invoke() }
                     } else {

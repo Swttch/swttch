@@ -11,7 +11,8 @@ class ConnectionRecoveryTest {
         port: Int? = 41234,
         restarting: Boolean = false,
         loadInFlight: Boolean = false,
-    ) = ConnectionRecovery.decide(backendRunning, port, restarting, loadInFlight)
+        backendAnswering: Boolean = true,
+    ) = ConnectionRecovery.decide(backendRunning, port, restarting, loadInFlight, backendAnswering)
 
     @Test
     fun `a page cut off from a backend the widget shows as running is loaded again`() {
@@ -36,6 +37,16 @@ class ConnectionRecoveryTest {
     @Test
     fun `a page already being loaded is not loaded again on top of itself`() {
         assertEquals(Action.NOTHING, decide(loadInFlight = true))
+    }
+
+    @Test
+    fun `a running backend that does not answer the IDE yet is asked about again later, not loaded`() {
+        assertEquals(Action.ASK_AGAIN_LATER, decide(backendAnswering = false))
+    }
+
+    @Test
+    fun `a backend that is not running is not asked about again even when it does not answer`() {
+        assertEquals(Action.NOTHING, decide(backendRunning = false, backendAnswering = false))
     }
 
     @Test

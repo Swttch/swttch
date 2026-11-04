@@ -1,7 +1,5 @@
 package com.github.yhk1038.claudecodegui.bridge
 
-import java.net.ConnectException
-
 /**
  * Decides what to do once the /rpc socket has failed to (re)connect several times in a row.
  *
@@ -12,12 +10,12 @@ import java.net.ConnectException
  * plugin started, and which the OS still reports as running, is never restarted on timeouts
  * alone: the client keeps reconnecting until it answers or the process is gone.
  *
- * Restart stays right in three cases:
- *  - the process has exited (nothing left to wait for);
- *  - a connection was actively refused (the process is up but nothing listens on the port);
- *  - the process handle proves nothing about the backend, which is the WSL case: the handle is
- *    `wsl.exe`, and a half-open socket after the VM went away (issue #516) is exactly a live
- *    handle with a dead backend behind it.
+ * Restart is right in two cases only: the process has exited (nothing left to wait for), and
+ * the process handle proves nothing about the backend, which is the WSL case: the handle is
+ * `wsl.exe`, and a half-open socket after the VM went away (issue #516) is exactly a live
+ * handle with a dead backend behind it. A refused connection is not a third case: a process
+ * that is running and refuses a connection is still a running backend, and the client keeps
+ * reconnecting to it.
  */
 internal object BackendRestartJudge {
     enum class Decision {
@@ -28,26 +26,10 @@ internal object BackendRestartJudge {
         KEEP_WAITING,
     }
 
-    fun decide(processAlive: Boolean, processHandleIsTheBackend: Boolean, connectionRefused: Boolean): Decision =
+    fun decide(processAlive: Boolean, processHandleIsTheBackend: Boolean): Decision =
         when {
             !processAlive -> Decision.RESTART
-            connectionRefused -> Decision.RESTART
             !processHandleIsTheBackend -> Decision.RESTART
             else -> Decision.KEEP_WAITING
         }
-
-    /**
-     * True when [error] (usually a CompletionException around the real cause) is a refused
-     * connection. A connect that merely timed out, `HttpConnectTimeoutException`, is NOT one.
-     */
-    fun isConnectionRefused(error: Throwable?): Boolean {
-        var cause = error
-        var depth = 0
-        while (cause != null && depth < 8) {
-            if (cause is ConnectException) return true
-            cause = cause.cause
-            depth++
-        }
-        return false
-    }
 }

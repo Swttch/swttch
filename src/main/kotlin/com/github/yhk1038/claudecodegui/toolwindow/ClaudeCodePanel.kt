@@ -719,18 +719,26 @@ class ClaudeCodePanel(
             port = port,
             restarting = restarting,
             loadInFlight = loadInFlight,
+            backendAnswering = backendService.isBackendAnswering(base),
         )
+        if (action == ConnectionRecovery.Action.ASK_AGAIN_LATER) {
+            askAgainLater(why)
+            return
+        }
         if (action != ConnectionRecovery.Action.LOAD_AGAIN || port == null) return
         logger.info("$why; loading the panel again from backend port $port")
         scope.launch { loadWebView(port) }
     }
 
     /** A load that failed outright left no page to report anything: ask for it again at the page's own pace. */
-    private fun retryLoadAfterFailure() {
+    private fun retryLoadAfterFailure() = askAgainLater("The page did not load")
+
+    /** One pending ask at a time, at the page's own pace; [recoverConnection] decides again when it comes. */
+    private fun askAgainLater(why: String) {
         if (loadRetry?.isActive == true) return
         loadRetry = scope.launch {
             delay(PageRetry.INTERVAL_MS)
-            recoverConnection("The page did not load")
+            recoverConnection(why)
         }
     }
 

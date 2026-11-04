@@ -118,7 +118,17 @@ If the screen is still cut off, five more failed attempts make it tell the IDE a
 - **A screen that is still loading** and **a restart in progress** are left alone, because loading again would race them.
 - **A screen that did not load at all** has nothing to report with. The IDE asks for the load again every two seconds (the screen's own retry interval) for as long as the backend runs. The guide stays over it until a load works.
 
-The unit tests cover the five-attempt count, the restart of the count after each report and the IDE's rule. The chain from five failed attempts to a reload was **not** measured in a production build: a frozen backend keeps accepting connections without answering, so the attempts hang instead of failing, and no real action of the operating system makes five attempts fail while the backend is shown as running. What was measured, in a sandbox IDE (IntelliJ IDEA 263.6800.24, Windows 11, production zip): a normal start connects; a backend killed with `Stop-Process` is started again by the IDE and the screen loads again about **10 seconds** later; a backend frozen for 65 seconds is not restarted and the screen is connected again once it answers.
+The IDE also waits for the backend to answer its own connection before it loads the screen. A screen loaded while the backend does not answer hung, and stayed hung after the backend answered again, with the guide over it. So while the IDE's own connection to the backend is down, the IDE asks again every two seconds and loads the screen once the backend answers.
+
+Measured in a sandbox IDE (IntelliJ IDEA 263.6800.24, Windows 11, production zip). The operating system froze the backend for 150 seconds and 900 connections waited at its port, so new connections failed instead of hanging:
+
+- The screen showed "Backend disconnected. Reconnecting..." while the status widget stayed green.
+- The screen reported "could not reach the backend" three times, about every 22 seconds.
+- The IDE neither restarted the backend nor loaded the screen during the freeze.
+- Two to three seconds after the backend answered again, the screen connected by itself and showed the conversation list. Nobody clicked anything.
+- Before the IDE waited for the backend to answer, the same test left the guide over a working screen for more than two minutes, until the guide was closed.
+
+Also measured there: a normal start connects, a backend killed with `Stop-Process` is started again by the IDE and the screen loads again about **10 seconds** later, and a backend frozen for 65 seconds is not restarted. **Not measured:** the screen reporting while the backend answers the IDE, where the IDE loads the screen again at once. Only the unit tests cover that.
 
 ### One Restart
 
