@@ -86,6 +86,10 @@ private val REJECT_COLOR = Color(0xA8, 0x3E, 0x3E)
  */
 private const val ALLOW_ALL_LABEL = "Allow all edits"
 
+/** What the bar says when it cannot tell which lines changed. */
+private const val UNKNOWN_REGIONS_NOTICE =
+    "This change is too large to review here. Answer it in the chat instead."
+
 /**
  * Below this the left-hand button is dropped. Apply and Reject answer the
  * request that is open and must survive any width; this one is an offer.
@@ -111,6 +115,13 @@ class DiffReviewPanel(
     /** Left-aligned: answers this request AND stops the next ones (#393). */
     private val allowAllButton = RowButton(ALLOW_ALL_LABEL)
     private val summary = JBLabel()
+    /**
+     * Said instead of offering a choice when the changed lines could not be
+     * worked out (#620). Every button would otherwise have to guess what it
+     * means, and a button that does something other than its label is worse
+     * than none.
+     */
+    private val notice = JBLabel(UNKNOWN_REGIONS_NOTICE)
     /** Wide: the "Clear all" / "Select all" button. Narrow: a bare tick box. */
     private val selectAllButton = RowButton()
     private val selectAllBox = JBCheckBox()
@@ -173,6 +184,7 @@ class DiffReviewPanel(
         }
         root.border = JBUI.Borders.empty(TOP_PADDING, 8, BOTTOM_PADDING, 8)
 
+        actions.add(notice)
         actions.add(summary)
         actions.add(selectAllButton)
         actions.add(selectAllBox)
@@ -337,9 +349,11 @@ class DiffReviewPanel(
         rejectButton.icon = if (compact) AllIcons.Actions.Cancel else null
         selectAllButton.text = if (kept == total) "Clear all" else "Select all"
 
-        summary.isVisible = total > 1
-        selectAllButton.isVisible = total > 1 && !compact
-        selectAllBox.isVisible = total > 1 && compact
+        val unknown = selection.regionsUnknown
+        notice.isVisible = unknown
+        summary.isVisible = !unknown && total > 1
+        selectAllButton.isVisible = !unknown && total > 1 && !compact
+        selectAllBox.isVisible = !unknown && total > 1 && compact
 
         // First to go when space runs short: it is an offer, while Apply and
         // Reject answer the request that is open and must survive any width.
@@ -362,7 +376,15 @@ class DiffReviewPanel(
         val kept = selection.keptCount()
         selectAllBox.isSelected = total > 0 && kept == total
         // Keeping nothing is a rejection, and Reject already says that.
-        applyButton.isEnabled = total == 0 || kept > 0
+        // With the changed lines unknown no button can mean what it says, so
+        // none is offered (#620); the notice points to the chat, which can
+        // still answer this request.
+        val unknown = selection.regionsUnknown
+        applyButton.isEnabled = !unknown && (total == 0 || kept > 0)
+        rejectButton.isEnabled = !unknown
+        allowAllButton.isEnabled = !unknown
+        selectAllButton.isEnabled = !unknown
+        selectAllBox.isEnabled = !unknown
         applyLabels(root.width)
         root.revalidate()
         root.repaint()

@@ -153,6 +153,11 @@ class DiffService(private val project: Project) {
                 // selection object this bar reads, so the two cannot disagree.
                 if (onResolve != null) {
                     val selection = HunkSelection()
+                    // Known from the two texts, before any viewer has compared
+                    // (#620). The viewer replaces this with its own split once it
+                    // can report one, so the tick boxes still match the screen.
+                    val regions = DiffRegions.regionsOf(oldContent, newContent)
+                    if (regions != null) selection.setRanges(regions) else selection.markRegionsUnknown()
                     request.putUserData(HunkSelection.KEY, selection)
                     val panel = DiffReviewPanel(selection) { accepted, keepEdits, allowAllEdits ->
                         // Read the proposed side before the tab closes, and only

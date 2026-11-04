@@ -1,6 +1,7 @@
 package com.github.yhk1038.claudecodegui.services
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -19,7 +20,27 @@ class HunkAnswerTest {
     private val newText = "a\nB\nc\n"
 
     @Test
-    fun `a selection that never learned the regions answers with the whole proposal`() {
+    fun `regions that could not be worked out are unknown and answer nothing`() {
+        val selection = HunkSelection()
+
+        selection.markRegionsUnknown()
+
+        assertTrue(selection.regionsUnknown)
+        assertTrue(selection.rangesToAnswer(oldText, newText).isEmpty())
+    }
+
+    @Test
+    fun `a viewer that does report its regions makes them known again`() {
+        val selection = HunkSelection()
+        selection.markRegionsUnknown()
+
+        selection.setRanges(listOf(AcceptedRange(oldStart = 1, oldEnd = 2, newStart = 1, newEnd = 2)))
+
+        assertFalse(selection.regionsUnknown)
+    }
+
+    @Test
+    fun `a proposal the comparison found no difference in answers with the whole proposal`() {
         val selection = HunkSelection()
 
         val answer = selection.rangesToAnswer(oldText, newText)

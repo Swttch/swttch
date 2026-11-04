@@ -47,6 +47,8 @@ class HunkSelection {
      */
     fun setRanges(newRanges: List<AcceptedRange>) {
         ranges = newRanges
+        // A viewer that did manage to compare knows the regions after all.
+        regionsUnknown = false
         accepted.clear()
         newRanges.forEachIndexed { index, range ->
             if (range !in declined) accepted.add(index)
@@ -59,16 +61,33 @@ class HunkSelection {
         acceptedIndices().mapNotNull { ranges.getOrNull(it) }
 
     /**
+     * True when the two texts could not be compared at all, so which lines changed
+     * is not known. Nothing can honestly be kept or dropped then, and the review
+     * says so and offers no choice (#620) rather than answering with a guess.
+     */
+    var regionsUnknown: Boolean = false
+        private set
+
+    /** Record that the regions cannot be worked out; the bar disables itself. */
+    fun markRegionsUnknown() {
+        regionsUnknown = true
+        listeners.forEach { it() }
+    }
+
+    /**
      * What Apply and Allow all edits send (#620).
      *
      * The backend reads an empty list as "kept nothing" and denies the edit. An
      * empty list is two different things here: a reviewer who cleared every box,
-     * and a diff that never told us its regions (compared too late, or shown in a
-     * viewer that reports no changes). The second must not read as a refusal, so
-     * with no regions learned the answer is the whole proposal, as a single range
-     * spanning both sides.
+     * and a proposal the comparison found no difference in (the file written back
+     * as it was). The second has nothing to keep or drop, so Apply means the whole
+     * proposal, as a single range spanning both sides.
+     *
+     * Not for the case where the regions are unknown: the buttons are disabled
+     * then, and an empty list is all there is to say.
      */
     fun rangesToAnswer(oldContent: String, newContent: String): List<AcceptedRange> {
+        if (regionsUnknown) return emptyList()
         if (ranges.isNotEmpty()) return acceptedRanges()
         return listOf(
             AcceptedRange(
