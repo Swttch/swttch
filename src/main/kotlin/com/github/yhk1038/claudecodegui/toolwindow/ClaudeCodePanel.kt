@@ -328,6 +328,19 @@ class ClaudeCodePanel(
     internal val isRealized: Boolean get() = holder != null
 
     /**
+     * What the IDE hands the keyboard focus to after it selects this tab.
+     *
+     * After a selection the IDE asks for the focus on the editor's preferred component. That was
+     * this panel, a plain container with nothing to type into, so the IDE's own request landed
+     * after (and overrode) the one made in [focusBrowserOnSelection], most visibly when the tab
+     * was switched from the keyboard. Pointing it at the page makes both requests agree.
+     *
+     * Until the browser is built the panel is all there is, as before.
+     */
+    internal fun preferredFocusTarget(): javax.swing.JComponent =
+        holder?.browser?.component ?: this
+
+    /**
      * Hands the keyboard focus to the page when this tab has just been selected (#621).
      *
      * The IDE selects the tab but leaves the focus where it was (the code editor, a tool
@@ -340,8 +353,38 @@ class ClaudeCodePanel(
      */
     internal fun focusBrowserOnSelection() {
         if (tabId == ClaudeSessionsToolWindowFactory.SESSION_PANEL_TAB_ID) return
-        val component = holder?.browser?.component ?: return
-        if (component.isShowing && !component.hasFocus()) component.requestFocusInWindow()
+        grabFocusForSelectedTab()
+        // The native view can still be joining the window when the tab is selected, and a focus
+        // request that lands before then is dropped without any error. Asking again a moment
+        // later is what makes the result the same every time instead of most of the time.
+        for (delayMs in FOCUS_RETRY_DELAYS_MS) {
+            val retry = javax.swing.Timer(delayMs) { grabFocusForSelectedTab() }
+            retry.isRepeats = false
+            retry.start()
+        }
+    }
+
+    /**
+     * One attempt at giving the page the keyboard focus after its tab was selected. Re-reads
+     * [holder] on every call, since a tab move can swap it between attempts, and does nothing
+     * once the panel is gone or the tab is no longer on screen.
+     */
+    private fun grabFocusForSelectedTab() {
+        if (isPanelDisposed) return
+        val current = holder ?: return
+        val component = current.browser.component
+        if (!component.isShowing) return
+        if (!component.hasFocus()) component.requestFocusInWindow()
+        // Swing can already count the browser as focused while the native view is not, and then
+        // no focus event comes to move it. Setting it on the browser itself closes that gap.
+        current.browser.cefBrowser.setFocus(true)
+        // The page's own window-focus restore stands down while a button it left focused on the
+        // last visit holds the page's focus. Telling the page the tab was selected covers that.
+        try {
+            JcefHandlers.executeJavaScript(current.browser, "window.dispatchEvent(new Event('ide-tab-selected'));")
+        } catch (e: Exception) {
+            logger.warn("Failed to tell the WebView its tab was selected", e)
+        }
     }
 
     // ─── Stalled-screen guide ───────────────────────────────────────────
@@ -3370,6 +3413,9 @@ class ClaudeCodePanel(
     // ─── Lifecycle ──────────────────────────────────────────────────
 
     companion object {
+        /** When to try again for the page's keyboard focus after its tab was selected (#621). */
+        private val FOCUS_RETRY_DELAYS_MS = intArrayOf(120, 400)
+
         /**
          * The marketplace name of this plugin, typed into the Plugins settings search box.
          * Read from plugin-info.properties, which the build fills from `pluginName` in

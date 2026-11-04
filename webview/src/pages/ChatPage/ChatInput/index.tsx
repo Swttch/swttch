@@ -846,6 +846,13 @@ export function ChatInput() {
   }
   useEffect(() => focusPolicyRef.current!.attach(), []);
   useOnWindowFocus(() => focusPolicyRef.current!.restoreOnWindowFocus());
+  // The IDE selected this chat tab (#621): the window regaining focus alone is not enough, a
+  // button left focused on the last visit stops it. See ComposerFocusPolicy.restoreOnTabSelected.
+  useEffect(() => {
+    const onTabSelected = () => focusPolicyRef.current!.restoreOnTabSelected();
+    window.addEventListener('ide-tab-selected', onTabSelected);
+    return () => window.removeEventListener('ide-tab-selected', onTabSelected);
+  }, []);
 
   // 세션 전환 시 ChatInput 로컬 상태 리셋
   const prevChatInputSessionRef = useRef(currentSessionId);

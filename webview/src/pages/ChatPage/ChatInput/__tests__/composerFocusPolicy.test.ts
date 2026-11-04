@@ -158,3 +158,61 @@ describe('ComposerFocusPolicy after a click (#513)', () => {
     expect(focusComposer).not.toHaveBeenCalled();
   });
 });
+
+describe('ComposerFocusPolicy when the IDE selects the tab (#621)', () => {
+  it('puts the caret in the composer when nothing holds focus', () => {
+    newPolicy().restoreOnTabSelected();
+    expect(focusComposer).toHaveBeenCalledTimes(1);
+  });
+
+  it('takes the focus from a button that kept it from the last visit', () => {
+    const policy = newPolicy();
+    document.getElementById('btn')!.focus();
+    expect(document.activeElement).not.toBe(document.body);
+
+    policy.restoreOnTabSelected();
+
+    expect(focusComposer).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not wait for a mouse button the page never saw go down', () => {
+    const policy = newPolicy();
+    press('pointerdown');
+    policy.restoreOnTabSelected();
+    expect(focusComposer).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves a text field the user was typing in alone', () => {
+    const policy = newPolicy();
+    const field = document.createElement('input');
+    document.body.appendChild(field);
+    field.focus();
+
+    policy.restoreOnTabSelected();
+
+    expect(focusComposer).not.toHaveBeenCalled();
+  });
+
+  it('leaves whatever a dialog holds alone', () => {
+    const policy = newPolicy();
+    const inside = document.getElementById('in-dialog')!;
+    inside.tabIndex = 0;
+    inside.focus();
+    expect(document.activeElement).toBe(inside);
+
+    policy.restoreOnTabSelected();
+
+    expect(focusComposer).not.toHaveBeenCalled();
+  });
+
+  it('keeps a selection the user made, and goes ahead once it is dropped', () => {
+    const policy = newPolicy();
+    selectText();
+    policy.restoreOnTabSelected();
+    expect(focusComposer).not.toHaveBeenCalled();
+
+    window.getSelection()!.removeAllRanges();
+    policy.restoreOnTabSelected();
+    expect(focusComposer).toHaveBeenCalledTimes(1);
+  });
+});

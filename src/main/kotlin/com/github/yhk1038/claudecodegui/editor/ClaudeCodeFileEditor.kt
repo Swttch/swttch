@@ -138,7 +138,7 @@ class ClaudeCodeFileEditor(
 
     override fun getComponent(): JComponent = panel
 
-    override fun getPreferredFocusedComponent(): JComponent = panel
+    override fun getPreferredFocusedComponent(): JComponent = panel.preferredFocusTarget()
 
     override fun getName(): String = virtualFile.presentableName
 
