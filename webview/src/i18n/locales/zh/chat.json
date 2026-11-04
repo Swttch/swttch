@@ -89,7 +89,11 @@
       "title": "上下文 {{used}} / {{total}} ({{percent}}%)",
       "pending": "上下文 {{used}} · 总大小将在下一次回复后显示",
       "remaining": "距自动压缩还剩 {{percent}}% 的上下文。",
-      "clickToCompact": "点击立即压缩。"
+      "clickToCompact": "点击立即压缩。",
+      "displayLabel": "徽章显示",
+      "displayPercent": "比例",
+      "displayTokens": "令牌",
+      "displayNone": "无"
     },
     "artifacts": {
       "fallbackTitle": "工件",

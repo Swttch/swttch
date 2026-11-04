@@ -117,6 +117,13 @@
         "queue": "Queue",
         "steer": "Steer",
         "notSet": "Not set (use global)"
+      },
+      "contextBadge": {
+        "label": "Context badge display",
+        "description": "Choose which number the context badge below the input shows. Hovering the badge always shows both the token count and the percentage.",
+        "percent": "Percentage used",
+        "tokens": "Tokens used",
+        "none": "Hidden"
       }
     },
     "notifications": {

@@ -89,7 +89,11 @@
       "title": "زمینه {{used}} / {{total}} ({{percent}}%)",
       "pending": "زمینه {{used}} · اندازه کل پس از پاسخ بعدی نمایش داده می‌شود",
       "remaining": "{{percent}}٪ از زمینه تا فشرده‌سازی خودکار باقی مانده است.",
-      "clickToCompact": "برای فشرده‌سازی اکنون کلیک کنید."
+      "clickToCompact": "برای فشرده‌سازی اکنون کلیک کنید.",
+      "displayLabel": "نشان نمایش می‌دهد",
+      "displayPercent": "درصد",
+      "displayTokens": "توکن",
+      "displayNone": "هیچ"
     },
     "artifacts": {
       "fallbackTitle": "آرتیفکت",

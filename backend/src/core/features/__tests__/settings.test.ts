@@ -442,6 +442,18 @@ describe('settings', () => {
       expect(bad.error).toContain('must be null or one of');
     });
 
+    it('should accept the context badge displays and nothing else', async () => {
+      for (const display of ['percent', 'tokens', 'none']) {
+        expect((await saveSettingToFile('contextBadgeDisplay', display)).status).toBe('ok');
+      }
+      // Unlike the follow-up behaviour, null is not a value: the default is stored as "percent".
+      for (const bad of [null, 'bytes']) {
+        const result = await saveSettingToFile('contextBadgeDisplay', bad);
+        expect(result.status).toBe('error');
+        expect(result.error).toContain('contextBadgeDisplay must be one of');
+      }
+    });
+
     it('should accept a recorded composer combination as a string or null', async () => {
       for (const key of ['composerSendShortcutCustom', 'composerNewlineShortcutCustom']) {
         expect((await saveSettingToFile(key, 'Meta+Enter')).status).toBe('ok');
@@ -708,6 +720,7 @@ describe('settings', () => {
         composerNewlineShortcut: null,
         composerNewlineShortcutCustom: null,
         composerFollowUpBehavior: null,
+        contextBadgeDisplay: "percent",
         notificationBanner: null,
         notificationSound: null,
         notificationSoundVolume: 5,
@@ -850,6 +863,7 @@ export default {
         composerNewlineShortcut: null,
         composerNewlineShortcutCustom: null,
         composerFollowUpBehavior: null,
+        contextBadgeDisplay: "percent",
         notificationBanner: null,
         notificationSound: null,
         notificationSoundVolume: 5,

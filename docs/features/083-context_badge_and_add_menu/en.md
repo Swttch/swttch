@@ -29,9 +29,19 @@ Hover the badge for the details:
 |-----------|-------|---------|
 | The window size is known | Ring and a whole percentage | Used / total with one decimal, the room left before auto-compact, and the click-to-compact hint from 10% |
 | A new chat with nothing used yet | Empty ring and **0%** | `Context … · The total size shows after the next reply` |
-| A chat with history whose window size is not known yet | Ring and the **used token count** (for example **32.3k**) in place of a percentage | The same sentence about the next reply |
+| A chat with history whose window size is not known yet | The ring alone under the default **Percentage used** choice (the **used token count**, for example **32.3k**, under **Tokens used**) | The same sentence about the next reply |
 
-The badge never guesses a window size. The CLI tells the GUI the size when a reply ends, so a badge that guessed 200k would be wrong for a 1M-token model. Showing the token count until the size is known keeps the number honest.
+The badge never guesses a window size. The CLI tells the GUI the size when a reply ends, so a badge that guessed 200k would be wrong for a 1M-token model. Until the size is known, the percentage is left out rather than guessed.
+
+### Choosing what the badge writes
+
+The setting **Context badge display** (Settings → General → Composer) decides what stays beside the ring:
+
+- **Percentage used** (default): `8%`
+- **Tokens used**: `81k`. The same number whatever the window size is, so it stays comparable when you switch between a 200k and a 1M model.
+- **Hidden**: the ring alone.
+
+The same choice sits at the bottom of the tooltip (**Badge shows: Percent / Tokens / None**), so you can change it without opening Settings. The tooltip itself always shows both the tokens and the percentage.
 
 ### Opening an earlier chat
 

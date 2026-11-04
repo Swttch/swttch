@@ -117,6 +117,13 @@
         "queue": "排队",
         "steer": "引导",
         "notSet": "未设置(使用全局)"
+      },
+      "contextBadge": {
+        "label": "上下文徽章显示",
+        "description": "选择输入框下方的上下文徽章显示哪个数字。将鼠标悬停在徽章上时，无论选择哪一项，都会同时显示令牌数和使用比例。",
+        "percent": "使用比例",
+        "tokens": "已用令牌数",
+        "none": "不显示"
       }
     },
     "notifications": {

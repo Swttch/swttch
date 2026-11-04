@@ -6,6 +6,7 @@ import {
   ComposerSendShortcut,
   ComposerNewlineShortcut,
   FollowUpBehavior,
+  ContextBadgeDisplay,
 } from '@/shared';
 
 /**
@@ -126,6 +127,10 @@ export enum SettingKey {
   // What a message sent while a turn is running does: wait for the turn, or
   // end it and be answered instead. Null until chosen, which reads as waiting.
   COMPOSER_FOLLOW_UP_BEHAVIOR = 'composerFollowUpBehavior',
+
+  // What the context badge under the chat input writes next to its ring: the
+  // percentage, the token count, or nothing. See {@link ContextBadgeDisplay}.
+  CONTEXT_BADGE_DISPLAY = 'contextBadgeDisplay',
 
   // Whether a desktop notification may put a banner on screen when a session
   // ends its turn or stops to ask something while the user is looking
@@ -297,7 +302,7 @@ export enum OpenSettingsMode {
 // Defined in shared/ because the backend decides on them too (whether to ask the
 // IDE for a diff at all), and re-exported here so callers reach every setting
 // value through this module the way they do for the enums declared above.
-export { DiffSurface, BrowserDiffPresentation };
+export { DiffSurface, BrowserDiffPresentation, ContextBadgeDisplay };
 
 /**
  * 채팅을 띄우는 자리(호스트) - Kotlin HostMode / 백엔드 hostMode 와 동기화.
@@ -434,6 +439,7 @@ export interface SettingsState {
   [SettingKey.COMPOSER_NEWLINE_SHORTCUT]: ComposerNewlineShortcut | null;
   [SettingKey.COMPOSER_NEWLINE_SHORTCUT_CUSTOM]: string | null;
   [SettingKey.COMPOSER_FOLLOW_UP_BEHAVIOR]: FollowUpBehavior | null;
+  [SettingKey.CONTEXT_BADGE_DISPLAY]: ContextBadgeDisplay;
   [SettingKey.NOTIFICATION_BANNER]: boolean | null;
   [SettingKey.NOTIFICATION_SOUND]: string | null;
   [SettingKey.NOTIFICATION_SOUND_VOLUME]: number;
@@ -482,6 +488,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.COMPOSER_NEWLINE_SHORTCUT]: null,
   [SettingKey.COMPOSER_NEWLINE_SHORTCUT_CUSTOM]: null,
   [SettingKey.COMPOSER_FOLLOW_UP_BEHAVIOR]: null,
+  [SettingKey.CONTEXT_BADGE_DISPLAY]: ContextBadgeDisplay.PERCENT,
   [SettingKey.NOTIFICATION_BANNER]: null,
   [SettingKey.NOTIFICATION_SOUND]: null,
   [SettingKey.NOTIFICATION_SOUND_VOLUME]: 5,

@@ -5,6 +5,7 @@ export * from './cli-update';
 export * from './cli-auto-update';
 export * from './client-env';
 export * from './composer-shortcut';
+export * from './context-badge-display';
 export * from './control-request-command';
 export * from './diff-surface';
 export * from './mcp';
