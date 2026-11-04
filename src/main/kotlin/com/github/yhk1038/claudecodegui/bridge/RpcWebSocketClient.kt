@@ -23,6 +23,9 @@ internal const val AUTH_SUBPROTOCOL = "ccg-auth"
 /** Upper bound for one /rpc connection attempt; a hung attempt counts as a failure. */
 private val CONNECT_TIMEOUT: Duration = Duration.ofSeconds(5)
 
+/** What the OS says about the backend process the plugin spawned; see [BackendRestartJudge]. */
+data class BackendProcessState(val alive: Boolean, val handleIsTheBackend: Boolean)
+
 /**
  * WebSocket client that connects to the Node.js backend's /rpc endpoint.
  * Receives JSON-RPC requests from the backend and dispatches them to
@@ -35,6 +38,14 @@ class RpcWebSocketClient(
     private val scope: CoroutineScope,
     private val rpcHandler: NodeProcessManager.RpcHandler,
     private val onPersistentFailure: (() -> Unit)? = null,
+    /**
+     * Asked once the connect failures reach the restart threshold: does the OS still report the
+     * backend process this plugin started as running, AND does that process handle stand for the
+     * backend itself (false for WSL, where the handle is `wsl.exe`)? A live, trustworthy process
+     * is never restarted on timeouts alone; see [BackendRestartJudge]. Null = no such knowledge,
+     * so the failure threshold restarts as before.
+     */
+    private val backendProcessState: (() -> BackendProcessState)? = null,
     private val onConnected: (() -> Unit)? = null,
     /**
      * Plugin error boundary hook: invoked when handling a Node→IDE RPC call throws, so the
@@ -66,6 +77,9 @@ class RpcWebSocketClient(
 
     @Volatile
     private var webSocket: WebSocket? = null
+
+    /** True while the /rpc socket to the backend is open: the backend is answering this IDE right now. */
+    val isConnected: Boolean get() = webSocket != null
     private var reconnectJob: Job? = null
 
     /**
@@ -161,9 +175,21 @@ class RpcWebSocketClient(
                 logger.warn("RPC WebSocket connection failed: ${e.message}")
                 consecutiveFailures++
                 if (consecutiveFailures >= MAX_FAILURES_BEFORE_RESTART) {
-                    logger.warn("RPC WebSocket reached $consecutiveFailures consecutive failures, triggering restart")
+                    val state = backendProcessState?.invoke()
+                    val decision = if (state == null) {
+                        BackendRestartJudge.Decision.RESTART
+                    } else {
+                        BackendRestartJudge.decide(state.alive, state.handleIsTheBackend)
+                    }
+                    logger.warn("RPC WebSocket reached $consecutiveFailures consecutive failures (backendProcess=$state)")
                     consecutiveFailures = 0
-                    scope.launch { onPersistentFailure?.invoke() }
+                        if (decision == BackendRestartJudge.Decision.RESTART) {
+                        logger.warn("Triggering backend restart")
+                        scope.launch { onPersistentFailure?.invoke() }
+                    } else {
+                        logger.warn("The backend process is still running and only unreachable; not restarting it, keep reconnecting")
+                        scheduleReconnect(port)
+                    }
                 } else {
                     scheduleReconnect(port)
                 }

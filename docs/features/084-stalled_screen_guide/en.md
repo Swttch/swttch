@@ -11,7 +11,7 @@ Three things changed for the moments when the Claude Code screen does not come u
 - If the screen has not finished loading **30 seconds** after it started, or the browser reports that it could not load it at all, a **guide** takes the place of "Loading the screen...". It has a **Restart** button, tells you to quit the IDE completely and open it again, and walks you through the **IDE setting** that fixes a built-in browser that cannot draw.
 - The **status bar** says **Swttch** in front of its dot, and the card it opens has **Reload** and **Restart**.
 - If the backend comes back on a different port, the screen **loads again by itself** instead of staying on the old address.
-- If the **backend is gone** while a tab is open, or the screen is up but **cannot connect to the backend** and only shows "Backend disconnected. Reconnecting...", the IDE **restarts the backend or loads the screen again by itself**, and shows the guide if that does not help.
+- If the **backend is gone** while a tab is open, the IDE **restarts it by itself**. If the screen **cannot connect to a backend that is running** and only shows "Backend disconnected. Reconnecting...", the screen keeps retrying and the IDE **loads it again from the backend's current port, as many times as it takes** ([#622](https://github.com/Swttch/swttch/issues/622)).
 
 The loading text now says **"(SSH)"** only when the screen is really drawn by a Remote Development client. It used to say so in a local IDE too ([#526](https://github.com/Swttch/swttch/issues/526)).
 
@@ -108,17 +108,27 @@ Measured on the production build in a sandbox IDE (IntelliJ IDEA 2026.2): a term
 
 ### The backend is there but the screen is not connected
 
-The IDE asks the backend whether this panel is among the panels connected to it. The backend lists them.
+The screen never stops retrying. Every two seconds it asks the backend for a connection again, for as long as it lives. That mends nearly every break by itself, so the IDE is not involved at first.
 
-1. Not listed on two looks in a row: the IDE **loads the screen again by itself**. This builds the address and the pairing anew and leaves the other tabs alone.
-2. Still not listed on two looks in a row after the new screen has finished loading: the guide takes its place, with the title **"The screen is up, but it cannot reach the backend"**. It has the **Restart** card and the footer, and no settings card, because nothing about how the browser draws is wrong.
-3. When the IDE has stopped starting a backend that never came up, the guide opens at once. Loading the screen again cannot help a tab that has no backend.
+When **five attempts in a row** have failed, the screen tells the IDE. The IDE then asks the one thing the status widget at the bottom right shows: is the backend running? If it is, the IDE **loads the screen again by itself**, from the backend's current port and with a fresh pairing. The address keeps its place in the conversation, and the other tabs are left alone.
 
-The guide goes away **by itself** the moment the screen connects. If you close it, it stays closed until the screen has connected once. A screen that is still loading, a backend that cannot be asked and a restart in progress count as "not known", never as "not connected".
+If the screen is still cut off, five more failed attempts make it tell the IDE again, and the IDE loads it again. This repeats for as long as the backend runs and the screen cannot connect. The IDE never gives up on a running backend, and nothing here counts seconds: the evidence is the screen's own failed attempts, at the screen's own pace.
 
-The look interval is the screen's own reconnect interval (two seconds). Two looks are enough because a screen whose backend has just come back has made one retry by the second look.
+- **A backend that is not running** is not handled here. The restart paths above start it again and load the screen when it is up.
+- **A screen that is still loading** and **a restart in progress** are left alone, because loading again would race them.
+- **A screen that did not load at all** has nothing to report with. The IDE asks for the load again every two seconds (the screen's own retry interval) for as long as the backend runs. The guide stays over it until a load works.
 
-This case was **not** reproduced in a production build, because a production build has no way to make the backend answer while refusing only the screen's connection. The rule above is covered by unit tests, not by a measurement.
+The IDE also waits for the backend to answer its own connection before it loads the screen. A screen loaded while the backend does not answer hung, and stayed hung after the backend answered again, with the guide over it. So while the IDE's own connection to the backend is down, the IDE asks again every two seconds and loads the screen once the backend answers.
+
+Measured in a sandbox IDE (IntelliJ IDEA 263.6800.24, Windows 11, production zip). The operating system froze the backend for 150 seconds and 900 connections waited at its port, so new connections failed instead of hanging:
+
+- The screen showed "Backend disconnected. Reconnecting..." while the status widget stayed green.
+- The screen reported "could not reach the backend" three times, about every 22 seconds.
+- The IDE neither restarted the backend nor loaded the screen during the freeze.
+- Two to three seconds after the backend answered again, the screen connected by itself and showed the conversation list. Nobody clicked anything.
+- Before the IDE waited for the backend to answer, the same test left the guide over a working screen for more than two minutes, until the guide was closed.
+
+Also measured there: a normal start connects, a backend killed with `Stop-Process` is started again by the IDE and the screen loads again about **10 seconds** later, and a backend frozen for 65 seconds is not restarted. **Not measured:** the screen reporting while the backend answers the IDE, where the IDE loads the screen again at once. Only the unit tests cover that.
 
 ### One Restart
 
@@ -153,7 +163,7 @@ They live in the card because the card can be opened even when the screen is bla
 
 ## When the backend moves to another port
 
-A screen keeps asking the address it was loaded from. When the backend comes back on a new port, the screen is left talking to nothing. The plugin now looks at the backend's port every two seconds and, when it has changed on two looks in a row (so a restart that is still settling is not loaded twice), loads the screen again from the new one. You do not have to do anything. This was **not** measured in a production build: a restart asks for the port it had before, so the port does not move on its own, and a port that cannot be reused is taken back from whatever holds it instead of being replaced by a new one.
+A screen keeps asking the address it was loaded from. When the backend comes back on a new port, that address answers nothing, so the screen's attempts fail five times in a row. The screen tells the IDE, and the IDE loads it again from the new port, the same way as above. You do not have to do anything.
 
 An ordinary restart from the IDE asks the backend for the port it had before, so the address usually stays the same and nothing needs loading again. This covers the cases where it did not.
 
@@ -166,7 +176,7 @@ An ordinary restart from the IDE asks the backend for the port it had before, so
 - **The second option can make heavy pages slower**, because the processor draws instead of the graphics chip.
 - **Under Remote Development** (PhpStorm 2026.2.3 as the host, JetBrains Client on macOS) the guide appears in the client, and its **Restart** button restarted the backend and loaded the screen again. **Two things were not measured there:** which IDE the **Open the settings file** button opens the file in, and whether the settings change the browser that runs in the client. The status bar card was **not shown in the client** at all, so Reload and Restart of the card are not available there; the guide's own Restart is.
 - **It was checked on a local IDE** (IntelliJ IDEA 2026.2.3 on Linux, on Arm), in both browser modes.
-- **The "not connected" check needs the backend to list its connected panels.** An older standalone runtime that does not can only tell that no panel at all is connected.
+- **The IDE only helps a screen it can reach.** A screen opened in a plain browser, or one the IDE has no say over, keeps retrying on its own but nobody loads it again for it.
 - **It was not measured with several panels of one project at once, and not under Remote Development** for this case.
 - **A guide that covers a working screen** (the screen is fine but did not report that it finished) can be closed with the button above.
 

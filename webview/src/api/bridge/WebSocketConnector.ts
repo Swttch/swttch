@@ -1,7 +1,7 @@
 // webview/src/api/bridge/WebSocketConnector.ts
 
 import type { Connector, RawMessageHandler, ConnectionChangeHandler } from './Connector';
-import { detectRuntime } from '../../config/environment';
+import { detectRuntime, isJetBrains } from '../../config/environment';
 import {
   authSubprotocols,
   ensureAuthTokenReady,
@@ -22,6 +22,16 @@ import { MessageType } from '@/shared';
  * reconnect; being hasty costs a reconnect the user did not need.
  */
 const HEARTBEAT_MISSES_BEFORE_STALE = 3;
+
+/**
+ * Reconnect attempts in a row that must fail before this page tells the IDE.
+ *
+ * The page retries on its own, forever, and that mends nearly every break, so the IDE is not
+ * told at the first failure: a report that early would act on a break the page is about to
+ * mend itself. A run this long means the page's own retries are not working. The count starts
+ * over after each report, so the IDE hears again for as long as the page stays cut off.
+ */
+const FAILED_ATTEMPTS_BEFORE_REPORT = 5;
 
 export class WebSocketConnector implements Connector {
   private ws: WebSocket | null = null;
@@ -45,6 +55,8 @@ export class WebSocketConnector implements Connector {
    */
   private lastFrameAt = 0;
   private livenessTimer: ReturnType<typeof setInterval> | null = null;
+  /** Connection attempts in a row that ended without the socket ever opening. */
+  private failedAttempts = 0;
 
   get isConnected(): boolean {
     return this.connected;
@@ -86,6 +98,7 @@ export class WebSocketConnector implements Connector {
           onFirstError?.(new Error('Remote pairing failed'));
           onFirstError = undefined;
           onFirstConnect = undefined;
+          this.keepTryingInsideTheIde();
           return;
         }
         // Unpaired remote device (tunnel URL, no ?pair= code, no stored token):
@@ -96,6 +109,7 @@ export class WebSocketConnector implements Connector {
           onFirstError?.(new Error('Forbidden: unpaired remote device'));
           onFirstError = undefined;
           onFirstConnect = undefined;
+          this.keepTryingInsideTheIde();
           return;
         }
         this.openSocket(onFirstConnect, onFirstError);
@@ -103,6 +117,7 @@ export class WebSocketConnector implements Connector {
       .catch(() => {
         // ensureAuthTokenReady never rejects, but guard defensively.
         this.isConnecting = false;
+        this.noteFailedAttempt();
         this.scheduleReconnect();
       });
   }
@@ -126,9 +141,12 @@ export class WebSocketConnector implements Connector {
     // backend's upgrade handler accepts the control channel (Phase 1 requires it).
     const ws = new WebSocket(wsUrl, authSubprotocols());
     this.ws = ws;
+    let opened = false;
 
     ws.onopen = () => {
       console.log('[WebSocketConnector] Connected');
+      opened = true;
+      this.failedAttempts = 0;
       this.isConnecting = false;
       this.connected = true;
       this.lastFrameAt = Date.now();
@@ -197,6 +215,7 @@ export class WebSocketConnector implements Connector {
       this.ws = null;
       this.connected = false;
       this.notifyConnectionChange(false);
+      if (!opened) this.noteFailedAttempt();
 
       // 자동 재연결 (disposed 되지 않은 경우만)
       this.scheduleReconnect();
@@ -278,18 +297,54 @@ export class WebSocketConnector implements Connector {
    */
   private scheduleReconnect(): void {
     if (this.disposed) return;
-    if (hasPairCode() && getPairingStatus().state === 'failed') {
-      console.log('[WebSocketConnector] Remote pairing failed — not reconnecting; rescan the QR.');
-      return;
-    }
-    if (isRemoteBlocked()) {
-      console.log('[WebSocketConnector] Unpaired remote device — not reconnecting (403).');
-      return;
+    // Inside the IDE the page never stops: the IDE can hand it a fresh pairing by loading it
+    // again, which is exactly what it does when told the page cannot connect. The two stops
+    // below are for a browser, where only the user can fix the pairing.
+    if (!isJetBrains()) {
+      if (hasPairCode() && getPairingStatus().state === 'failed') {
+        console.log('[WebSocketConnector] Remote pairing failed — not reconnecting; rescan the QR.');
+        return;
+      }
+      if (isRemoteBlocked()) {
+        console.log('[WebSocketConnector] Unpaired remote device — not reconnecting (403).');
+        return;
+      }
     }
     this.reconnectTimeout = setTimeout(() => {
       console.log('[WebSocketConnector] Attempting to reconnect...');
       this.connectInternal();
     }, 2000);
+  }
+
+  /**
+   * An attempt the browser-side stops (failed pairing, blocked device) still counts as a failed
+   * one and is tried again, but only inside the IDE; see [scheduleReconnect].
+   */
+  private keepTryingInsideTheIde(): void {
+    if (!isJetBrains()) return;
+    this.noteFailedAttempt();
+    this.scheduleReconnect();
+  }
+
+  /**
+   * Count one connection attempt that never opened, and tell the IDE when enough of them have
+   * failed in a row. The IDE's answer is not awaited and not needed: the page goes on retrying
+   * either way, and reports again after the next run of failures.
+   */
+  private noteFailedAttempt(): void {
+    this.failedAttempts += 1;
+    if (this.failedAttempts < FAILED_ATTEMPTS_BEFORE_REPORT) return;
+    this.failedAttempts = 0;
+    // The IDE hands the page this function when it loads it (the same channel that carries the
+    // tab's activity). A browser has none, and has no IDE to tell.
+    const notify = (window as unknown as Record<string, unknown>).__notifyStreamingState;
+    if (typeof notify !== 'function') return;
+    console.warn('[WebSocketConnector] Could not reach the backend; telling the IDE.');
+    try {
+      (notify as (state: string) => void)('connection-lost');
+    } catch {
+      // Nothing to do: the next run of failures reports again.
+    }
   }
 
   disconnect(): void {
