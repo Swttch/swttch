@@ -41,6 +41,11 @@ export const disableIdleShutdown = process.env.CCG_DISABLE_IDLE_SHUTDOWN === 'tr
 // ── 서버 설정 ──────────────────────────────────────────
 const DEFAULT_PORT = 19836;
 export const serverPort = parseInt(process.env.PORT ?? String(DEFAULT_PORT), 10);
+// PORT is how the launcher (JetBrains plugin / ccg / `pnpm dev`) tells this backend where to
+// listen. It is for us only: every child we spawn (the claude CLI and the shell commands the
+// agent runs) copies process.env, and a project server that reads PORT would then bind to the
+// backend's port, or to a random one when the launcher passed 0 (#629). Drop it once read.
+delete process.env.PORT;
 
 // ── 서버 바인딩 host ────────────────────────────────────
 // 기본은 loopback(127.0.0.1) — 외부 네트워크에 노출되지 않는다. 실행 주체(ccg
