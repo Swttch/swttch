@@ -156,6 +156,15 @@ export function useChatStreamContext() {
   return context;
 }
 
+/**
+ * Like `useChatStreamContext`, but returns null outside a ChatStreamProvider.
+ * For tool cards that are also rendered on their own (tests, the side question
+ * window) and only use the transcript as a fallback.
+ */
+export function useChatStreamContextOrNull() {
+  return useContext(ChatStreamContext) ?? null;
+}
+
 interface ChatStreamProviderProps {
   children: ReactNode;
   setInput: (value: string) => void;
