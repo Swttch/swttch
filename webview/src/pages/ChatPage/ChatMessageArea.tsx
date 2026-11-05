@@ -13,6 +13,7 @@ import { EmptyState } from './EmptyState';
 import { isJetBrains } from '@/config/environment';
 import { LoadedMessageDto } from '../../types';
 import { StickySendHeader } from './StickySendHeader';
+import { TurnWrapUp } from './TurnWrapUp';
 import { SectionFoldContext, SectionKeyContext } from './SectionFoldContext';
 import { SendActionsContext } from './SendActionsContext';
 import { LastEntryContext, lastEntryUuid } from './LastEntryContext';
@@ -151,7 +152,7 @@ export function ChatMessageArea(props: Props) {
       <SectionFoldContext.Provider value={fold}>
       <SendActionsContext.Provider value={sendActions}>
       <LastEntryContext.Provider value={lastEntryUuid(mergedMessages)}>
-      {sections.map(section => {
+      {sections.map((section, sectionIndex) => {
         /*
           A headless opening section takes its header from the send index. The
           key on the wrapper becomes that send's uuid so a jump from the rail
@@ -241,6 +242,8 @@ export function ChatMessageArea(props: Props) {
                 <MessageBubble message={message} onRetry={onRetry} />
               </div>
             ))}
+            {/* The turn's wrap-up is drawn here, after its last message, not where its call sits. */}
+            <TurnWrapUp body={section.body} next={sections[sectionIndex + 1]?.head ?? null} />
           </div>
           {fold.isCollapsed(section.key) && section.body.length > 0 && (
             <CollapsedReplyNotice

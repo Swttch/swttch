@@ -4,11 +4,20 @@ import { useSessionContext } from './SessionContext';
 interface ChatInputStateContextType {
   input: string;
   setInput: (input: string) => void;
+  /**
+   * Whether the composer holds anything at all: typed text, a picture or file, a picked page element, a quoted
+   * reply, or an upload under way. The composer reports it; whatever must stand back while a message is being
+   * put together (the wrap-up box's Cmd+Enter) reads it.
+   */
+  composerHasContent: boolean;
+  setComposerHasContent: (hasContent: boolean) => void;
 }
 
 const ChatInputStateContext = createContext<ChatInputStateContextType>({
   input: '',
   setInput: () => {},
+  composerHasContent: false,
+  setComposerHasContent: () => {},
 });
 
 export function useChatInputState() {
@@ -24,6 +33,7 @@ interface Props {
 export function ChatInputStateProvider(props: Props) {
   const { children, inputRef, setInputCallbackRef } = props;
   const [input, setInputRaw] = useState('');
+  const [composerHasContent, setComposerHasContent] = useState(false);
   const session = useSessionContext();
 
   // Keep shared ref in sync so sibling providers (ChatStreamProvider) can read
@@ -66,7 +76,7 @@ export function ChatInputStateProvider(props: Props) {
   }, [input, session.currentSessionId]);
 
   return (
-    <ChatInputStateContext.Provider value={{ input, setInput }}>
+    <ChatInputStateContext.Provider value={{ input, setInput, composerHasContent, setComposerHasContent }}>
       {children}
     </ChatInputStateContext.Provider>
   );
