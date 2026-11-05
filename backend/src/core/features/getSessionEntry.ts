@@ -28,19 +28,17 @@ export async function getSessionEntry(
 ): Promise<SessionListEntry | null> {
   try {
     const sessionsPath = await getProjectSessionsPath(workingDir);
+    const overrides = await readSessionTitleOverrides(sessionsPath);
     const info = await extractSessionInfo(join(sessionsPath, `${sessionId}.jsonl`), {
       includeLastPrompt: await includeLastPromptInTitles(workingDir),
+      override: overrides[sessionId],
     });
     if (info.isSidechain) return null;
-
-    const overrides = await readSessionTitleOverrides(sessionsPath);
-    const override = overrides[sessionId];
 
     return {
       sessionId,
       sessionDir: workingDir,
       ...info,
-      ...(override ? { title: override } : {}),
     };
   } catch (err) {
     console.error('[node-backend]', 'Failed to build session entry:', sessionId, err);

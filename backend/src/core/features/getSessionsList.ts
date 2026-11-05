@@ -163,13 +163,15 @@ export async function resolvePage(
   const limit = options.limit;
 
   // One override file per directory, read once each rather than per session.
-  const overridesByPath = new Map<string, Record<string, string>>();
-  const overridesFor = async (sessionsPath: string): Promise<Record<string, string>> => {
-    const cached = overridesByPath.get(sessionsPath);
-    if (cached) return cached;
-    const loaded = await readSessionTitleOverrides(sessionsPath);
-    overridesByPath.set(sessionsPath, loaded);
-    return loaded;
+  // The promise is kept, not the value: the sessions of a batch ask at the same time.
+  const overridesByPath = new Map<string, Promise<Record<string, string>>>();
+  const overridesFor = (sessionsPath: string): Promise<Record<string, string>> => {
+    let loading = overridesByPath.get(sessionsPath);
+    if (!loading) {
+      loading = readSessionTitleOverrides(sessionsPath);
+      overridesByPath.set(sessionsPath, loading);
+    }
+    return loading;
   };
 
   // The switch is per project, so it is read once per directory the page draws from.
@@ -200,8 +202,10 @@ export async function resolvePage(
 
     const infos = await mapWithLimit(batch, READ_CONCURRENCY, async (key) => {
       try {
+        const overrides = await overridesFor(key.sessionsPath);
         const info = await extractSessionInfo(key.fullPath, {
           includeLastPrompt: await includeLastPromptFor(key.sessionDir),
+          override: overrides[key.sessionId],
         });
         return { key, info };
       } catch (err) {
@@ -218,13 +222,10 @@ export async function resolvePage(
       // unable to tell a short page from the end of the list.
       if (resolved.info.isSidechain) continue;
       if (limit !== undefined && sessions.length >= limit) break;
-      const overrides = await overridesFor(resolved.key.sessionsPath);
-      const override = overrides[resolved.key.sessionId];
       sessions.push({
         sessionId: resolved.key.sessionId,
         sessionDir: resolved.key.sessionDir,
         ...resolved.info,
-        ...(override ? { title: override } : {}),
       });
     }
   }

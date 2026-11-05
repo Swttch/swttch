@@ -30,6 +30,7 @@ import {
   waitForControlResponse,
 } from '../control-response-waiter';
 import { generateSessionTitlesEnabled } from './sessionTitleSettings';
+import { announceGeneratedTitle, watchSessionTitle } from './session-title-watcher';
 
 /** Naming is a model call, so the answer takes seconds; this only bounds a CLI that never answers. */
 const GENERATE_TIMEOUT_MS = 30_000;
@@ -114,6 +115,14 @@ async function requestSessionTitle(
   state.requests += 1;
   const asking = state;
 
+  // The answer to the request below is not what shows the title: the CLI answers
+  // only after its own model call ends, which can be past our wait or never. The
+  // title is in the transcript whenever the CLI records it, and this is what
+  // picks it up from there (#638).
+  watchSessionTitle(connections, sessionId, workingDir, () => {
+    asking.settled = true;
+  });
+
   const requestId = nextControlRequestId('generate_session_title');
   const waiting = waitForControlResponse<GenerateTitleResponse>(requestId, GENERATE_TIMEOUT_MS);
   const written = sendControlRequestToProcess(connections, sessionId, requestId, {
@@ -134,9 +143,10 @@ async function requestSessionTitle(
     const title = typeof response?.title === 'string' ? response.title.trim() : '';
     if (!title) return;
     asking.settled = true;
-    // `generated` is this app's own flag, not the CLI's: it tells the screen that the
-    // title just arrived by itself, which is when it is drawn letter by letter. A title
-    // the user typed arrives without it.
+    // The name shown is the one resolveSessionTitle gives from the transcript, which
+    // the CLI has just written the title to. A CLI that answers with a title without
+    // recording it leaves nothing there to resolve, so the answer itself is shown.
+    if (await announceGeneratedTitle(connections, sessionId, workingDir)) return;
     connections.broadcastToAll(MessageType.SESSIONS_UPDATED, {
       action: 'rename',
       session: { sessionId, title, generated: true },
