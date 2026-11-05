@@ -36,7 +36,9 @@ function PlanMark({ status }: { status: PlanItem['status'] }) {
       </span>
     );
   }
-  return <span className="h-4 w-4 shrink-0 rounded-full border-2 border-dashed border-text-primary/40" aria-hidden="true" />;
+  // `block`: a bare span is inline, and an inline box ignores its width and height, which drew this circle as a
+  // thin dashed vertical line.
+  return <span className="block h-4 w-4 shrink-0 rounded-full border-2 border-dashed border-text-primary/40" aria-hidden="true" />;
 }
 
 export function UpdatePlanRenderer(props: RendererProps) {
@@ -54,7 +56,7 @@ export function UpdatePlanRenderer(props: RendererProps) {
             data-status={item.status}
             className={`flex items-start gap-2 ${item.status === 'completed' ? 'text-text-primary/50' : 'text-text-primary/80'}`}
           >
-            <span className="mt-[3px]">
+            <span className="mt-[3px] flex">
               <PlanMark status={item.status} />
             </span>
             <span className="min-w-0 break-words">{item.content}</span>
