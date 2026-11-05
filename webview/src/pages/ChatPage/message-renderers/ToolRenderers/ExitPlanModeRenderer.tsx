@@ -31,8 +31,11 @@ export function ExitPlanModeRenderer(props: RendererProps) {
         <ToolWrapper message={props.message}>
             <ToolHeader name={headerName} inProgress={!props.toolResult} className="mb-2.5" />
 
+            {/* Same text size as a reply (AssistantMessageRenderer). Without it the
+                body inherits the tool row's smaller size, so the plan reads smaller
+                than the rest of the chat (#467). */}
             {plan && (
-                <div className="markdown-content mb-2">
+                <div className="markdown-content mb-2 text-text-primary text-[1rem] leading-relaxed">
                     <Streamdown
                         mode="static"
                         controls={{ code: true, table: true, mermaid: MERMAID_CONTROLS }}
