@@ -178,7 +178,12 @@
   },
   "mcp": {
     "common": {
-      "out": "خرج"
+      "out": "خرج",
+      "input": "إدخال",
+      "output": "إخراج",
+      "failed": "فشل",
+      "using": "استخدام {{name}}",
+      "used": "تم استخدام {{name}}"
     }
   },
   "filesystem": {

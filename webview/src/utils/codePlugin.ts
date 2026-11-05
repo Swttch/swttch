@@ -20,7 +20,15 @@ type HighlightResult = NonNullable<ReturnType<CodeHighlighterPlugin['highlight']
 // language list and its alias table (`ts`, `sh`, …), which Shiki resolves
 // itself, and with them the risk of a fence quietly rendering uncoloured
 // because a spelling was missing from our map.
-const THEMES: [BundledTheme, BundledTheme] = ['github-light', 'github-dark'];
+type ThemePair = [BundledTheme, BundledTheme];
+
+const THEMES: ThemePair = ['github-light', 'github-dark'];
+
+// Palette for a tool result's JSON (the MCP OUT row): github-dark colours a key
+// and a string value in two near-identical blues, which read as one mass there.
+const JSON_RESULT_THEMES: ThemePair = ['one-light', 'one-dark-pro'];
+
+const ALL_THEMES: BundledTheme[] = [...THEMES, ...JSON_RESULT_THEMES];
 
 let highlighter: Highlighter | null = null;
 let highlighterPromise: Promise<Highlighter> | null = null;
@@ -32,7 +40,7 @@ const isSupported = (language: string): language is BundledLanguage =>
 
 const loadHighlighter = (): Promise<Highlighter> => {
     highlighterPromise ??= createHighlighter({
-        themes: [...THEMES],
+        themes: ALL_THEMES,
         // Grammars are loaded per language on first use; preloading all of them
         // would parse every grammar in the bundle at startup.
         langs: [],
@@ -54,15 +62,15 @@ const loadLanguage = (language: BundledLanguage): Promise<void> => {
     return pending;
 };
 
-const tokenize = (core: Highlighter, options: HighlightOptions): HighlightResult => {
+const tokenize = (core: Highlighter, options: HighlightOptions, themes: ThemePair): HighlightResult => {
     const result = core.codeToTokens(options.code, {
         lang: options.language,
-        themes: { light: THEMES[0], dark: THEMES[1] },
+        themes: { light: themes[0], dark: themes[1] },
     });
     return { tokens: result.tokens, fg: result.fg, bg: result.bg };
 };
 
-export const code: CodeHighlighterPlugin = {
+const createCodeHighlighter = (themes: ThemePair): CodeHighlighterPlugin => ({
     name: 'shiki',
     type: 'code-highlighter',
 
@@ -78,14 +86,14 @@ export const code: CodeHighlighterPlugin = {
         }
 
         if (highlighter?.getLoadedLanguages().includes(language)) {
-            return tokenize(highlighter, options);
+            return tokenize(highlighter, options, themes);
         }
 
         if (callback) {
             void loadLanguage(language)
                 .then(() => {
                     if (highlighter) {
-                        callback(tokenize(highlighter, options));
+                        callback(tokenize(highlighter, options, themes));
                     }
                 })
                 // A grammar that fails to load must not take the chat down with
@@ -101,5 +109,10 @@ export const code: CodeHighlighterPlugin = {
 
     getSupportedLanguages: () => Object.keys(bundledLanguages) as BundledLanguage[],
 
-    getThemes: () => THEMES,
-};
+    getThemes: () => themes,
+});
+
+export const code: CodeHighlighterPlugin = createCodeHighlighter(THEMES);
+
+/** Same highlighter, palette for a tool result's JSON. */
+export const jsonResultCode: CodeHighlighterPlugin = createCodeHighlighter(JSON_RESULT_THEMES);

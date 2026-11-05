@@ -281,6 +281,12 @@
   color: var(--shiki-dark, inherit) !important;
 }
 
+/* The JSON in an MCP tool's OUT row (HighlightedJson) is coloured by the same
+   dual-theme tokens as a code block, so it needs the same dark-mode swap. */
+.dark [data-mcp-json-token] {
+  color: var(--shiki-dark, inherit) !important;
+}
+
 [data-streamdown="code-block-copy-button"] {
   background: var(--md-code-copy-btn-bg);
   border: none;

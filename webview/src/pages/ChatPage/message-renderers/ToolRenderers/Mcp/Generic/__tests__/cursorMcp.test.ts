@@ -3,7 +3,6 @@ import {
     isMcpToolName,
     mcpServerName,
     mcpToolName,
-    humanizeMcpServer,
     mcpHeaderLabel,
     mcpInputPreview,
 } from '../cursorMcp';
@@ -44,37 +43,37 @@ describe('mcpServerName / mcpToolName', () => {
     });
 });
 
-describe('humanizeMcpServer', () => {
-    it('title-cases each underscore token and lowercases the rest', () => {
-        expect(humanizeMcpServer('claude_ai_Gmail')).toBe('Claude AI Gmail');
-    });
-
-    it('does not split on hyphens', () => {
-        expect(humanizeMcpServer('workspace-mcp')).toBe('Workspace-mcp');
-    });
-
-    it('applies special-case overrides (github -> GitHub, pubmed -> PubMed)', () => {
-        expect(humanizeMcpServer('github')).toBe('GitHub');
-        expect(humanizeMcpServer('pubmed')).toBe('PubMed');
-    });
-});
-
 describe('mcpHeaderLabel', () => {
-    it('formats as "Server [tool]" using Cursor rules', () => {
-        expect(mcpHeaderLabel('mcp__workspace-mcp__search_gmail_messages')).toBe(
-            'Workspace-mcp [search_gmail_messages]'
-        );
+    it('formats as "server: tool" with the tool\'s underscores read as spaces', () => {
+        expect(mcpHeaderLabel('mcp__shell-sandboxed__run_command')).toBe('shell-sandboxed: run command');
+        expect(mcpHeaderLabel('mcp__shell-sandboxed__screenshot')).toBe('shell-sandboxed: screenshot');
     });
 
-    it('humanizes multi-token servers', () => {
-        expect(mcpHeaderLabel('mcp__claude_ai_Gmail__get_thread')).toBe(
-            'Claude AI Gmail [get_thread]'
-        );
+    it('keeps the server exactly as named', () => {
+        expect(mcpHeaderLabel('mcp__claude_ai_Gmail__get_thread')).toBe('claude_ai_Gmail: get thread');
+    });
+
+    it('keeps a __ inside the tool name as a single space', () => {
+        expect(mcpHeaderLabel('mcp__server__foo__bar')).toBe('server: foo bar');
     });
 
     it('falls back to the raw name when it is not a valid mcp name', () => {
         expect(mcpHeaderLabel('Bash')).toBe('Bash');
         expect(mcpHeaderLabel('mcp__only_one_segment')).toBe('mcp__only_one_segment');
+    });
+});
+
+describe('mcpInputPreview keys the desktop app does not preview (#596)', () => {
+    it('does not preview a `command`, which the card shows in its own code box', () => {
+        expect(mcpInputPreview({command: 'echo "hello 3"'})).toBeNull();
+    });
+
+    it('does not preview a `text`', () => {
+        expect(mcpInputPreview({text: 'plain'})).toBeNull();
+    });
+
+    it('still previews a `query` when a command comes with it', () => {
+        expect(mcpInputPreview({command: 'x', query: 'how to rotate keys'})).toBe('how to rotate keys');
     });
 });
 

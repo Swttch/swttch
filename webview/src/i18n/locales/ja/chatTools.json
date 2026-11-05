@@ -170,7 +170,12 @@
   },
   "mcp": {
     "common": {
-      "out": "OUT"
+      "out": "OUT",
+      "input": "入力",
+      "output": "出力",
+      "failed": "失敗",
+      "using": "{{name}} を使用中",
+      "used": "{{name}} を使用"
     }
   },
   "filesystem": {

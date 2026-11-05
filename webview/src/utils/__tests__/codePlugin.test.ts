@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { code } from '../codePlugin';
+import { code, jsonResultCode } from '../codePlugin';
 
 // Regression cover for issue #282: code blocks rendered with one span per line
 // and `color: inherit`, i.e. Streamdown's uncoloured fallback, because no
@@ -145,5 +145,28 @@ describe('code highlighter plugin', () => {
 
         expect(immediate).not.toBeNull();
         expect(immediate?.tokens[0].length).toBeGreaterThan(1);
+    });
+});
+
+describe('jsonResultCode (MCP result JSON palette)', () => {
+    it('reports its own themes, light first', () => {
+        expect(jsonResultCode.getThemes()).toEqual(['one-light', 'one-dark-pro']);
+        expect(code.getThemes()).toEqual(['github-light', 'github-dark']);
+    });
+
+    it('colours a key and a string value differently, unlike github-dark', async () => {
+        const source = '{"stdout": "hi"}';
+        const result = await new Promise<ReturnType<typeof jsonResultCode.highlight>>((resolve) => {
+            const immediate = jsonResultCode.highlight(
+                { code: source, language: 'json', themes: jsonResultCode.getThemes() } as never,
+                (r) => resolve(r),
+            );
+            if (immediate) resolve(immediate);
+        });
+        const dark = (content: string) =>
+            result?.tokens[0].find((t) => t.content === content)?.htmlStyle as Record<string, string> | undefined;
+
+        expect(dark('"stdout"')?.['--shiki-dark']).toBeDefined();
+        expect(dark('"stdout"')?.['--shiki-dark']).not.toEqual(dark('"hi"')?.['--shiki-dark']);
     });
 });
