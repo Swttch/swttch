@@ -43,6 +43,11 @@ export function takeSendRequest(): boolean {
   return requested;
 }
 
+/** Rewrites the comment of a card waiting in the row; a comment of blanks makes it an excerpt. */
+export function updatePendingReply(id: string, comment: string): void {
+  setPending(pending.map((entry) => (entry.id === id ? { ...entry, comment: comment.trim() } : entry)));
+}
+
 export function removePendingReply(id: string): void {
   setPending(pending.filter((entry) => entry.id !== id));
 }

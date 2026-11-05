@@ -997,6 +997,7 @@
     "removeCard": "حذف",
     "close": "بستن",
     "addToPrompt": "افزودن به پرامپت",
-    "sendReply": "ارسال پاسخ"
+    "sendReply": "ارسال پاسخ",
+    "editHint": "Enter برای ذخیره · Esc برای لغو"
   }
 }

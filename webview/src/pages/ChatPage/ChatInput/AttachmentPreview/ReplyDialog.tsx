@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '@/i18n';
 import { QuoteBlock } from '@/components/QuoteBlock';
@@ -9,16 +10,40 @@ import type { PendingReply } from '@/utils/composerReplies';
 interface Props {
   reply: PendingReply;
   onClose: () => void;
+  /**
+   * Given for a card still in the message box: the comment can then be rewritten here (Enter saves, Esc and the
+   * other ways out drop the change), and a card with no comment can be given one. Left out for what was already
+   * sent, which is a record and is only read.
+   */
+  onSave?: (comment: string) => void;
 }
 
 /** What a reply or an excerpt card will say when the message is sent: the quote, then the comment. */
-export function ReplyDialog({ reply, onClose }: Props) {
+export function ReplyDialog({ reply, onClose, onSave }: Props) {
   const { t } = useTranslation('chat');
+  const [draft, setDraft] = useState(reply.comment);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const editable = onSave !== undefined;
   const isReply = reply.comment !== '';
   useEscapeLayer(() => {
     onClose();
     return true;
   });
+
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.focus();
+    el.setSelectionRange(el.value.length, el.value.length);
+  }, []);
+
+  // The box grows with what is written, up to a limit.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+  }, [draft]);
 
   return (
     <Portal>
@@ -40,10 +65,31 @@ export function ReplyDialog({ reply, onClose }: Props) {
           <h2 className="pr-6 text-md font-semibold text-text-primary">
             {isReply ? t('selectionReply.replyBadge') : t('selectionReply.excerptBadge')}
           </h2>
-          <QuoteBlock className="min-h-0 flex-1 overflow-y-auto">
-            <div>{quoteLines(reply.quote)}</div>
-            {isReply && <div className="mt-4 text-text-primary/90">{reply.comment}</div>}
-          </QuoteBlock>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
+            <QuoteBlock>
+              <div>{quoteLines(reply.quote)}</div>
+              {!editable && isReply && <div className="mt-4 text-text-primary/90">{reply.comment}</div>}
+            </QuoteBlock>
+            {editable && (
+              <textarea
+                ref={inputRef}
+                rows={1}
+                value={draft}
+                placeholder={t('selectionReply.placeholder')}
+                aria-label={t('selectionReply.placeholder')}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                    e.preventDefault();
+                    onSave(draft.trim());
+                    onClose();
+                  }
+                }}
+                className="block w-full resize-none bg-transparent text-[1rem] leading-[1.5] text-text-primary outline-none placeholder:text-text-tertiary"
+              />
+            )}
+          </div>
+          {editable && <div className="text-xs text-text-tertiary">{t('selectionReply.editHint')}</div>}
         </div>
       </div>
     </Portal>

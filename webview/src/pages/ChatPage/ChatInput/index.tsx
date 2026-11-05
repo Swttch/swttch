@@ -1,4 +1,4 @@
-import { getPendingReplies, removePendingReply, subscribePendingReplies, takeSendRequest } from '@/utils/composerReplies';
+import { getPendingReplies, removePendingReply, subscribePendingReplies, takeSendRequest, updatePendingReply } from '@/utils/composerReplies';
 import { getPendingElements, pngFromBase64, removePendingElement, subscribeComposerElements, subscribeComposerImages, subscribePendingElements } from '@/utils/composerElements';
 import toast from 'react-hot-toast';
 import { useCallback, useEffect, useRef, KeyboardEvent, useState, useSyncExternalStore, type ClipboardEvent as ReactClipboardEvent, type DragEvent as ReactDragEvent } from 'react';
@@ -1556,6 +1556,7 @@ export function ChatInput() {
           onRemoveElement={removePageElement}
           replies={pendingReplies}
           onRemoveReply={removePendingReply}
+          onEditReply={updatePendingReply}
           uploads={uploads}
           onRemove={removeAttachment}
           onReorder={reorderAttachments}

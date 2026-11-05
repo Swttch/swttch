@@ -997,6 +997,7 @@
     "removeCard": "移除",
     "close": "关闭",
     "addToPrompt": "添加到提示",
-    "sendReply": "发送回复"
+    "sendReply": "发送回复",
+    "editHint": "按 Enter 保存 · 按 Esc 取消"
   }
 }

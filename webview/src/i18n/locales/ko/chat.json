@@ -997,6 +997,7 @@
     "removeCard": "지우기",
     "close": "닫기",
     "addToPrompt": "프롬프트에 추가",
-    "sendReply": "답장 보내기"
+    "sendReply": "답장 보내기",
+    "editHint": "Enter로 저장 · Esc로 취소"
   }
 }

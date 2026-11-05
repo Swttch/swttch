@@ -997,6 +997,7 @@
     "removeCard": "削除",
     "close": "閉じる",
     "addToPrompt": "プロンプトに追加",
-    "sendReply": "返信を送信"
+    "sendReply": "返信を送信",
+    "editHint": "Enterで保存 · Escでキャンセル"
   }
 }

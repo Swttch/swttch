@@ -997,6 +997,7 @@
     "removeCard": "Remover",
     "close": "Fechar",
     "addToPrompt": "Adicionar ao prompt",
-    "sendReply": "Enviar resposta"
+    "sendReply": "Enviar resposta",
+    "editHint": "Enter para salvar · Esc para cancelar"
   }
 }

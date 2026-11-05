@@ -1001,6 +1001,7 @@
     "removeCard": "Remove",
     "close": "Close",
     "addToPrompt": "Add to prompt",
-    "sendReply": "Send reply"
+    "sendReply": "Send reply",
+    "editHint": "Enter to save · Esc to cancel"
   }
 }

@@ -29,7 +29,7 @@ Once you have typed a comment, the card stays open while you look elsewhere: cli
 
 ### Reply and Excerpt cards
 
-The card lands in the row of attachments in the message box. A reply with a comment is a **Reply** card, which shows your comment. If you press Enter with the comment left empty, it is an **Excerpt** card, which shows the quoted text. Several cards can wait there together. Click a card to read all of it, or hover it and press **×** to remove it.
+The card lands in the row of attachments in the message box. A reply with a comment is a **Reply** card, which shows your comment. If you press Enter with the comment left empty, it is an **Excerpt** card, which shows the quoted text. Several cards can wait there together. Click a card to read all of it and to **edit its comment**: the quote stays as it is, and the comment is a box you can rewrite (**Enter** saves, **Esc** or **×** closes without saving). Give an Excerpt card a comment and it becomes a Reply card; clear the comment of a Reply card and it becomes an Excerpt card. Hover a card and press **×** to remove it.
 
 ![The message box with two cards under the text area. The first reads "Which two? I only know about macOS." with a "Reply" badge. The second reads "The release is planned for Friday." with an "Excerpt" badge.](./assets/cards-in-message-box.png)
 

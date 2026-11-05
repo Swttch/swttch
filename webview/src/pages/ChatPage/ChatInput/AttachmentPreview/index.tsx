@@ -26,6 +26,8 @@ interface Props {
   /** Replies and excerpts taken from text selected in the chat, drawn first in the row. */
   replies?: readonly PendingReply[];
   onRemoveReply?: (id: string) => void;
+  /** The comment of a card was rewritten in its dialog. */
+  onEditReply?: (id: string, comment: string) => void;
   /** Files and folders still travelling to the backend; drawn after the finished ones. */
   uploads?: PendingUpload[];
   onRemove: (id: string) => void;
@@ -35,7 +37,7 @@ interface Props {
 }
 
 export function AttachmentPreview(props: Props) {
-  const { attachments, elements = [], onRemoveElement, replies = [], onRemoveReply, uploads = [], onRemove, onReorder, onCancelUpload } = props;
+  const { attachments, elements = [], onRemoveElement, replies = [], onRemoveReply, onEditReply, uploads = [], onRemove, onReorder, onCancelUpload } = props;
 
   // Held here rather than inside ImagePreview: stepping to the next image needs
   // the whole set, and a single preview only knows itself. This is also what
@@ -134,7 +136,11 @@ export function AttachmentPreview(props: Props) {
       </DragDropProvider>
 
       {openedReplyId !== null && replies.some((reply) => reply.id === openedReplyId) && (
-        <ReplyDialog reply={replies.find((reply) => reply.id === openedReplyId)!} onClose={() => setOpenedReplyId(null)} />
+        <ReplyDialog
+          reply={replies.find((reply) => reply.id === openedReplyId)!}
+          onClose={() => setOpenedReplyId(null)}
+          onSave={onEditReply ? (comment) => onEditReply(openedReplyId, comment) : undefined}
+        />
       )}
 
       {/*

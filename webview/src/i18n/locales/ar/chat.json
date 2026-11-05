@@ -1013,6 +1013,7 @@
     "removeCard": "إزالة",
     "close": "إغلاق",
     "addToPrompt": "إضافة إلى المطالبة",
-    "sendReply": "إرسال الرد"
+    "sendReply": "إرسال الرد",
+    "editHint": "Enter للحفظ · Esc للإلغاء"
   }
 }

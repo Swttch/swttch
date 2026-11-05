@@ -1005,6 +1005,7 @@
     "removeCard": "Удалить",
     "close": "Закрыть",
     "addToPrompt": "Добавить в промпт",
-    "sendReply": "Отправить ответ"
+    "sendReply": "Отправить ответ",
+    "editHint": "Enter — сохранить · Esc — отмена"
   }
 }

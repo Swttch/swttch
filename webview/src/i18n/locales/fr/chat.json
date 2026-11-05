@@ -997,6 +997,7 @@
     "removeCard": "Retirer",
     "close": "Fermer",
     "addToPrompt": "Ajouter au prompt",
-    "sendReply": "Envoyer la réponse"
+    "sendReply": "Envoyer la réponse",
+    "editHint": "Entrée pour enregistrer · Échap pour annuler"
   }
 }

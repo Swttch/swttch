@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { parseReplyBlocks } from "@/pages/ChatPage/message-renderers/utils/replyBlocks";
-import { addReplyToComposer, expandReplyCards, getPendingReplies, removePendingReply } from "../composerReplies";
+import { addReplyToComposer, expandReplyCards, getPendingReplies, removePendingReply, updatePendingReply } from "../composerReplies";
 
 beforeEach(() => {
   getPendingReplies().forEach((entry) => removePendingReply(entry.id));
@@ -26,6 +26,18 @@ describe("composerReplies", () => {
   it("sends the cards alone when nothing was typed", () => {
     addReplyToComposer("quoted", "my comment");
     expect(parseReplyBlocks(expandReplyCards(""))?.body).toBe("");
+  });
+
+  it("rewrites a comment, and a comment emptied or added turns the card into an excerpt or a reply", () => {
+    addReplyToComposer("quoted", "first");
+    const id = getPendingReplies()[0].id;
+    updatePendingReply(id, "  second  ");
+    expect(getPendingReplies()[0].comment).toBe("second");
+    updatePendingReply(id, "   ");
+    expect(parseReplyBlocks(expandReplyCards(""))).toEqual({ replies: [], excerpts: ["quoted"], body: "" });
+    addReplyToComposer("other", "");
+    updatePendingReply(getPendingReplies()[0].id, "now a reply");
+    expect(parseReplyBlocks(expandReplyCards(""))?.replies).toEqual([{ quote: "other", comment: "now a reply" }]);
   });
 
   it("takes one card out of the row", () => {
