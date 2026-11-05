@@ -343,5 +343,13 @@
   },
   "crossSessionMessage": {
     "title": "Message received from"
+  },
+  "sessionBrief": {
+    "from": "شروع‌شده از یک جلسهٔ دیگر",
+    "fromNamed": "شروع‌شده از جلسهٔ",
+    "task": "وظیفه",
+    "context": "زمینه",
+    "showMore": "نمایش بیشتر",
+    "showLess": "نمایش کمتر"
   }
 }

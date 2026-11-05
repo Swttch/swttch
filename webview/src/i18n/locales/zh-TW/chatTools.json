@@ -343,5 +343,13 @@
   },
   "crossSessionMessage": {
     "title": "Message received from"
+  },
+  "sessionBrief": {
+    "from": "從另一個工作階段啟動",
+    "fromNamed": "從以下工作階段啟動：",
+    "task": "任務",
+    "context": "脈絡",
+    "showMore": "顯示更多",
+    "showLess": "顯示更少"
   }
 }

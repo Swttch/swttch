@@ -343,5 +343,13 @@
   },
   "crossSessionMessage": {
     "title": "Message received from"
+  },
+  "sessionBrief": {
+    "from": "別のセッションから開始",
+    "fromNamed": "次のセッションから開始：",
+    "task": "タスク",
+    "context": "コンテキスト",
+    "showMore": "もっと表示",
+    "showLess": "表示を減らす"
   }
 }

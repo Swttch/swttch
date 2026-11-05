@@ -343,5 +343,13 @@
   },
   "crossSessionMessage": {
     "title": "Message received from"
+  },
+  "sessionBrief": {
+    "from": "从另一个会话启动",
+    "fromNamed": "从以下会话启动：",
+    "task": "任务",
+    "context": "上下文",
+    "showMore": "显示更多",
+    "showLess": "显示更少"
   }
 }

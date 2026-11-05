@@ -355,5 +355,13 @@
   },
   "crossSessionMessage": {
     "title": "Message received from"
+  },
+  "sessionBrief": {
+    "from": "Запущено из другой сессии",
+    "fromNamed": "Запущено из сессии",
+    "task": "Задача",
+    "context": "Контекст",
+    "showMore": "Показать больше",
+    "showLess": "Показать меньше"
   }
 }

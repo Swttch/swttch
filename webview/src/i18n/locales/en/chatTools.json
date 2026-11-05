@@ -347,5 +347,13 @@
   },
   "crossSessionMessage": {
     "title": "Message received from"
+  },
+  "sessionBrief": {
+    "from": "Started from another session",
+    "fromNamed": "Started from",
+    "task": "Task",
+    "context": "Context",
+    "showMore": "Show more",
+    "showLess": "Show less"
   }
 }

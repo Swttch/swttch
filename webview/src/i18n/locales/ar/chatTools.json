@@ -367,5 +367,13 @@
   },
   "crossSessionMessage": {
     "title": "Message received from"
+  },
+  "sessionBrief": {
+    "from": "بدأ من جلسة أخرى",
+    "fromNamed": "بدأ من الجلسة",
+    "task": "المهمة",
+    "context": "السياق",
+    "showMore": "عرض المزيد",
+    "showLess": "عرض أقل"
   }
 }

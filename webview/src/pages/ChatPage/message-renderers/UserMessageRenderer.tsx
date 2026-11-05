@@ -6,12 +6,11 @@ import { ContextPills } from './components/ContextPills';
 import { ImageAttachments } from './components/ImageAttachments';
 import { SendActionMenu } from './components/SendActionMenu';
 import { SendFoldToggle } from './components/SendFoldToggle';
-import { parseUserContent } from './utils/parseUserContent';
+import { parseUserContent, stripSystemReminders } from './utils/parseUserContent';
+import { parseSessionBrief } from './utils/sessionBrief';
+import { SessionBriefCard } from './components/SessionBriefCard';
 import { commandSendText } from '../sendText';
-import { tokenizeMessagePaths } from './utils/tokenizeMessagePaths';
-import { splitInlineCode } from './utils/splitInlineCode';
-import { MessagePathChip } from './components/MessagePathChip';
-import { MessageSessionMentionChip } from './components/MessageSessionMentionChip';
+import { UserMessageText } from './components/UserMessageText';
 import { stripSessionMentionTags } from '../ChatInput/sessionMentionTag';
 import { InterruptedMessageRenderer } from './InterruptedMessageRenderer';
 import { PeerAgentMessageRenderer } from './PeerAgentMessageRenderer';
@@ -68,6 +67,13 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
         renderBody={(body) => <UserMessageRenderer message={{ ...message, message: { ...message.message, content: body } as LoadedMessageDto['message'] }} />}
       />
     );
+  }
+
+  // The first message of a session another session started: a "Task" and a "Context" card, as in Claude
+  // Desktop, instead of the one long bubble of its plain-text frame.
+  const sessionBrief = parseSessionBrief(stripSystemReminders(getTextContent(message)).trimStart());
+  if (sessionBrief) {
+    return <SessionBriefCard brief={sessionBrief} />;
   }
 
   const imageBlocks = useMemo(() => {
@@ -252,28 +258,7 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
                   <ReplyQuotes replies={parsedContent.replies} followedByText={parsedContent.text !== ''} />
                 )}
                 <div className="text-text-primary/80 text-[1rem] leading-[1.5] whitespace-pre-wrap break-words">
-                  {splitInlineCode(parsedContent.text).map((part, partIdx) =>
-                    part.code ? (
-                      // The same look as `code` in a reply; a path inside it stays code, not a chip.
-                      <code
-                        key={partIdx}
-                        className="rounded px-1 py-0.5 font-mono text-[0.875em]"
-                        style={{ background: 'var(--md-inline-code-bg)', color: 'var(--md-inline-code-fg)' }}
-                      >
-                        {part.text}
-                      </code>
-                    ) : (
-                      tokenizeMessagePaths(part.text).map((seg, idx) =>
-                        seg.mention ? (
-                          <MessageSessionMentionChip key={`${partIdx}-${idx}`} mention={seg.mention} />
-                        ) : seg.isPath ? (
-                          <MessagePathChip key={`${partIdx}-${idx}`} token={seg.text} />
-                        ) : (
-                          <React.Fragment key={`${partIdx}-${idx}`}>{seg.text}</React.Fragment>
-                        ),
-                      )
-                    ),
-                  )}
+                  <UserMessageText text={parsedContent.text} />
                 </div>
               </MessageBox>
             )}

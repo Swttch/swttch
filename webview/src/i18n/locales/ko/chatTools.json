@@ -343,5 +343,13 @@
   },
   "crossSessionMessage": {
     "title": "다음 발신자로부터 메시지 수신"
+  },
+  "sessionBrief": {
+    "from": "다른 세션에서 시작함",
+    "fromNamed": "다음 세션에서 시작함",
+    "task": "작업",
+    "context": "컨텍스트",
+    "showMore": "더 보기",
+    "showLess": "간략히 보기"
   }
 }
