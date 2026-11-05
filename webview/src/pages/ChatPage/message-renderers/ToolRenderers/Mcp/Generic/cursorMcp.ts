@@ -50,13 +50,14 @@ export function mcpToolName(name: string): string {
 
 /**
  * Build the `server: tool` header label the way the desktop app writes it: the
- * server exactly as named, the tool with its underscores read as spaces
- * (`mcp__shell-sandboxed__run_command` → `shell-sandboxed: run command`). Falls
- * back to the raw name when the input is not a well-formed mcp name (no prefix,
- * or missing server/tool).
+ * server and the tool each with their underscores read as spaces
+ * (`mcp__ccd_session_mgmt__archive_session` → `ccd session mgmt: archive session`;
+ * hyphens stay, `mcp__shell-sandboxed__run_command` → `shell-sandboxed: run command`).
+ * Falls back to the raw name when the input is not a well-formed mcp name (no
+ * prefix, or missing server/tool).
  */
 export function mcpHeaderLabel(name: string): string {
-    const server = mcpServerName(name);
+    const server = mcpServerName(name).replace(/_+/g, ' ').trim();
     const tool = mcpToolName(name).replace(/_+/g, ' ').trim();
     if (!server || !tool) return name;
     return `${server}: ${tool}`;
