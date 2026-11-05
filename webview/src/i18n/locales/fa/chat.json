@@ -987,5 +987,17 @@
     "notLoaded": "صفحه هنوز بارگذاری نشده است.",
     "duplicated": "نسخه ایجاد شد: {{name}}",
     "cannotCopy": "این مصنوع قابل کپی نیست"
+  },
+  "selectionReply": {
+    "reply": "پاسخ",
+    "startSideChat": "شروع گفتگوی جانبی",
+    "placeholder": "پاسخ خود را اینجا بنویسید",
+    "replyBadge": "پاسخ",
+    "excerptBadge": "گزیده",
+    "removeCard": "حذف",
+    "close": "بستن",
+    "addToPrompt": "افزودن به پرامپت",
+    "sendReply": "ارسال پاسخ",
+    "editHint": "Enter برای ذخیره · Esc برای لغو"
   }
 }

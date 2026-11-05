@@ -1,3 +1,4 @@
+import { getPendingReplies, removePendingReply, subscribePendingReplies, takeSendRequest, updatePendingReply } from '@/utils/composerReplies';
 import { getPendingElements, pngFromBase64, removePendingElement, subscribeComposerElements, subscribeComposerImages, subscribePendingElements } from '@/utils/composerElements';
 import toast from 'react-hot-toast';
 import { useCallback, useEffect, useRef, KeyboardEvent, useState, useSyncExternalStore, type ClipboardEvent as ReactClipboardEvent, type DragEvent as ReactDragEvent } from 'react';
@@ -172,6 +173,8 @@ export function ChatInput() {
   const [pathTokens, setPathTokens] = useState<string[]>([]);
   // Elements picked in the Browser pane, shown as chips in the attachment row.
   const pageElements = useSyncExternalStore(subscribePendingElements, getPendingElements);
+  // Replies and excerpts taken from text selected in the chat, shown as cards in the attachment row.
+  const pendingReplies = useSyncExternalStore(subscribePendingReplies, getPendingReplies);
 
   const {
     attachments,
@@ -630,7 +633,7 @@ export function ChatInput() {
     if (disabled) return;
     // A file still travelling has no path yet, so the message would leave without it.
     if (uploads.length > 0) return;
-    if (!value.trim() && attachments.length === 0 && pageElements.length === 0) return;
+    if (!value.trim() && attachments.length === 0 && pageElements.length === 0 && pendingReplies.length === 0) return;
 
     if (recipient) {
       // Two forms of the same message. What the user typed, chip and all, is
@@ -673,6 +676,7 @@ export function ChatInput() {
     value,
     attachments,
     pageElements,
+    pendingReplies,
     uploads,
     pushToHistory,
     recipient,
@@ -683,6 +687,13 @@ export function ChatInput() {
     onSubmit,
     clearAttachments,
   ]);
+
+  // A reply card added with ⌘↵ asks for the message to go out as soon as the card is in the box. This waits for
+  // the card to show up in `pendingReplies`, so the send sees it.
+  useEffect(() => {
+    if (pendingReplies.length === 0 || !takeSendRequest()) return;
+    submitComposer();
+  }, [pendingReplies, submitComposer]);
 
   const agentMention = useAgentMention({
     currentSessionId,
@@ -1218,7 +1229,7 @@ export function ChatInput() {
     // undo entry, and fires `input`, which handleRichChange picks up.
   }, [handlePaste, pasteFromHost]);
 
-  const hasValue = (!!value.trim() || attachments.length > 0 || pageElements.length > 0) && uploads.length === 0;
+  const hasValue = (!!value.trim() || attachments.length > 0 || pageElements.length > 0 || pendingReplies.length > 0) && uploads.length === 0;
 
   return (
     <div className="max-w-[44rem] mx-auto px-4 pb-[14px] pt-2">
@@ -1543,6 +1554,9 @@ export function ChatInput() {
           attachments={attachments}
           elements={pageElements}
           onRemoveElement={removePageElement}
+          replies={pendingReplies}
+          onRemoveReply={removePendingReply}
+          onEditReply={updatePendingReply}
           uploads={uploads}
           onRemove={removeAttachment}
           onReorder={reorderAttachments}

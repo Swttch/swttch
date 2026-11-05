@@ -987,5 +987,17 @@
     "notLoaded": "Die Seite ist noch nicht geladen.",
     "duplicated": "Kopie erstellt: {{name}}",
     "cannotCopy": "Dieses Artefakt kann nicht dupliziert werden"
+  },
+  "selectionReply": {
+    "reply": "Antworten",
+    "startSideChat": "Seitenchat starten",
+    "placeholder": "Antwort hier schreiben",
+    "replyBadge": "Antwort",
+    "excerptBadge": "Auszug",
+    "removeCard": "Entfernen",
+    "close": "Schließen",
+    "addToPrompt": "Zum Prompt hinzufügen",
+    "sendReply": "Antwort senden",
+    "editHint": "Enter zum Speichern · Esc zum Abbrechen"
   }
 }

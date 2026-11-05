@@ -987,5 +987,17 @@
     "notLoaded": "La page n’est pas encore chargée.",
     "duplicated": "Copie créée : {{name}}",
     "cannotCopy": "Cet artefact ne peut pas être dupliqué"
+  },
+  "selectionReply": {
+    "reply": "Répondre",
+    "startSideChat": "Démarrer un chat parallèle",
+    "placeholder": "Écrivez votre réponse ici",
+    "replyBadge": "Réponse",
+    "excerptBadge": "Extrait",
+    "removeCard": "Retirer",
+    "close": "Fermer",
+    "addToPrompt": "Ajouter au prompt",
+    "sendReply": "Envoyer la réponse",
+    "editHint": "Entrée pour enregistrer · Échap pour annuler"
   }
 }

@@ -987,5 +987,17 @@
     "notLoaded": "페이지를 아직 불러오지 못했습니다.",
     "duplicated": "복사본을 만들었습니다: {{name}}",
     "cannotCopy": "이 아티팩트는 복제할 수 없습니다"
+  },
+  "selectionReply": {
+    "reply": "답글",
+    "startSideChat": "사이드 채팅 시작",
+    "placeholder": "여기에 답글을 작성하세요",
+    "replyBadge": "답장",
+    "excerptBadge": "발췌",
+    "removeCard": "지우기",
+    "close": "닫기",
+    "addToPrompt": "프롬프트에 추가",
+    "sendReply": "답장 보내기",
+    "editHint": "Enter로 저장 · Esc로 취소"
   }
 }

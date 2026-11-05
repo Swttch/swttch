@@ -987,5 +987,17 @@
     "notLoaded": "页面尚未加载。",
     "duplicated": "已创建副本:{{name}}",
     "cannotCopy": "无法复制此工件"
+  },
+  "selectionReply": {
+    "reply": "回复",
+    "startSideChat": "开始侧边聊天",
+    "placeholder": "在此输入回复",
+    "replyBadge": "回复",
+    "excerptBadge": "摘录",
+    "removeCard": "移除",
+    "close": "关闭",
+    "addToPrompt": "添加到提示",
+    "sendReply": "发送回复",
+    "editHint": "按 Enter 保存 · 按 Esc 取消"
   }
 }

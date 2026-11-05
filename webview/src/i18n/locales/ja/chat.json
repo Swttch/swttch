@@ -987,5 +987,17 @@
     "notLoaded": "ページがまだ読み込まれていません。",
     "duplicated": "コピーを作成しました: {{name}}",
     "cannotCopy": "このアーティファクトは複製できません"
+  },
+  "selectionReply": {
+    "reply": "返信",
+    "startSideChat": "サイドチャットを開始",
+    "placeholder": "ここに返信を入力してください",
+    "replyBadge": "返信",
+    "excerptBadge": "抜粋",
+    "removeCard": "削除",
+    "close": "閉じる",
+    "addToPrompt": "プロンプトに追加",
+    "sendReply": "返信を送信",
+    "editHint": "Enterで保存 · Escでキャンセル"
   }
 }

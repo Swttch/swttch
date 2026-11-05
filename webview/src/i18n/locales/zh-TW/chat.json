@@ -987,5 +987,17 @@
     "notLoaded": "頁面尚未載入。",
     "duplicated": "已建立副本:{{name}}",
     "cannotCopy": "無法複製此成品"
+  },
+  "selectionReply": {
+    "reply": "回覆",
+    "startSideChat": "開始側邊聊天",
+    "placeholder": "在此輸入回覆",
+    "replyBadge": "回覆",
+    "excerptBadge": "摘錄",
+    "removeCard": "移除",
+    "close": "關閉",
+    "addToPrompt": "加入提示",
+    "sendReply": "傳送回覆",
+    "editHint": "按 Enter 儲存 · 按 Esc 取消"
   }
 }

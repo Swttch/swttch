@@ -21,6 +21,7 @@ import { useSectionFold } from './useSectionFold';
 import { CollapsedReplyNotice } from './CollapsedReplyNotice';
 import { useTranslation } from '@/i18n';
 import { ChatSearchBar } from './chatSearch/ChatSearchBar';
+import { SelectionReplyLayer } from './SelectionReply/SelectionReplyLayer';
 import { useChatSearch, type ChatSearchSource } from './chatSearch/useChatSearch';
 
 /** The find bar's source when the page offers none: it counts what is loaded. */
@@ -113,6 +114,7 @@ export function ChatMessageArea(props: Props) {
   return (
     <div ref={containerRef} className="flex-1 text-xs">
       <ChatSearchBar search={search} />
+      <SelectionReplyLayer containerRef={containerRef} />
       {(isLoadingMore || hasMore) && (
         <div className="flex justify-center py-4">
           {isLoadingMore ? (
