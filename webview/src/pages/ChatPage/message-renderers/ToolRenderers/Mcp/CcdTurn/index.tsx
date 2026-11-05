@@ -174,13 +174,15 @@ export const WrapUpBox: FC<{
                     setPicked(answer);
                     onAnswer?.(answer);
                   }}
-                  className={`flex items-center gap-2 rounded-lg py-1.5 text-[1rem] leading-none transition-colors active:scale-[0.98] ${
+                  className={`flex h-[1.9rem] items-center gap-1 rounded-lg text-[1rem] leading-none transition-colors active:scale-[0.98] ${
                     primary
                       ? 'bg-text-primary/[0.93] pe-1.5 ps-2.5 text-text-inverse hover:bg-text-primary'
                       : 'bg-text-primary/15 px-2.5 text-text-primary/80 hover:bg-text-primary/20'
                   } ${onAnswer ? 'cursor-pointer' : 'cursor-default'}`}
                 >
-                  <span>{answer}</span>
+                  {/* The 4px at its end is what is left of the gap to the key chips, so the label keeps the same room
+                      to its right when the chips are gone. */}
+                  <span className="pe-[0.25rem]">{answer}</span>
                   {primary && onAnswer && composerEmpty && (
                     <span className="flex items-center gap-[2px]" aria-hidden="true">
                       <span className={KEY_CHIP}>{isMac ? '⌘' : 'Ctrl'}</span>
