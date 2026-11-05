@@ -1,9 +1,9 @@
 /**
- * Cursor-compatible parsing helpers for the generic MCP fallback renderer.
+ * Parsing helpers for the generic MCP fallback renderer.
  *
- * These deliberately mirror the rules used by Anthropic's official Claude Code
- * VSCode/Cursor extension so an unregistered MCP tool renders with the exact
- * same header label and input preview. They live apart from the project's own
+ * The input preview mirrors the rules of Anthropic's official Claude Code
+ * VSCode/Cursor extension; the header label (`server: tool`) follows the desktop
+ * app. They live apart from the project's own
  * `formatMcpToolName` (in `../_common`) — that one stays as-is for the dedicated
  * renderers; these are scoped to the fallback only.
  */
@@ -11,19 +11,12 @@
 const MCP_PREFIX = 'mcp__';
 
 /**
- * Server-name tokens that Cursor special-cases instead of plain title-casing.
- * Keyed by the already title-cased token (first letter upper, rest lower).
- */
-const HUMANIZE_OVERRIDES: Record<string, string> = {
-    Github: 'GitHub',
-    Pubmed: 'PubMed',
-    Ai: 'AI',
-};
-
-/**
- * Input keys, in priority order, that Cursor scans to build the dim header
- * preview shown next to `Server [tool]`. The first key holding a non-empty
- * string wins.
+ * Input keys, in priority order, scanned to build the dim header preview shown
+ * after the label. The first key holding a non-empty string wins.
+ *
+ * Cursor's list also had `text`, and `command` came up in #596; neither is here,
+ * because the desktop app shows no preview for them: a `command` is already in
+ * the card's own code box, and a `text` is just one more input field.
  */
 const INPUT_PREVIEW_KEYS = [
     'query',
@@ -34,7 +27,6 @@ const INPUT_PREVIEW_KEYS = [
     'path',
     'title',
     'search',
-    'text',
 ] as const;
 
 export function isMcpToolName(name: string): boolean {
@@ -57,27 +49,17 @@ export function mcpToolName(name: string): string {
 }
 
 /**
- * Humanize a raw server segment: split on `_`, title-case each token (first
- * letter upper, rest lower), apply special-case overrides, join with spaces.
- * Hyphens are NOT split, matching Cursor (`workspace-mcp` → `Workspace-mcp`).
- */
-export function humanizeMcpServer(server: string): string {
-    return server
-        .split('_')
-        .map((token) => token.charAt(0).toUpperCase() + token.slice(1).toLowerCase())
-        .map((token) => HUMANIZE_OVERRIDES[token] ?? token)
-        .join(' ');
-}
-
-/**
- * Build the `Server [tool]` header label. Falls back to the raw name when the
- * input is not a well-formed mcp name (no prefix, or missing server/tool).
+ * Build the `server: tool` header label the way the desktop app writes it: the
+ * server exactly as named, the tool with its underscores read as spaces
+ * (`mcp__shell-sandboxed__run_command` → `shell-sandboxed: run command`). Falls
+ * back to the raw name when the input is not a well-formed mcp name (no prefix,
+ * or missing server/tool).
  */
 export function mcpHeaderLabel(name: string): string {
     const server = mcpServerName(name);
-    const tool = mcpToolName(name);
+    const tool = mcpToolName(name).replace(/_+/g, ' ').trim();
     if (!server || !tool) return name;
-    return `${humanizeMcpServer(server)} [${tool}]`;
+    return `${server}: ${tool}`;
 }
 
 function truncate(value: string, max: number): string {

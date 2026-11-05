@@ -174,7 +174,12 @@
   },
   "mcp": {
     "common": {
-      "out": "OUT"
+      "out": "OUT",
+      "input": "Entrada",
+      "output": "Saída",
+      "failed": "Falhou",
+      "using": "Usando {{name}}",
+      "used": "Usou {{name}}"
     }
   },
   "filesystem": {

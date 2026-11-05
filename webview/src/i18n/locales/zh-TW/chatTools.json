@@ -170,7 +170,12 @@
   },
   "mcp": {
     "common": {
-      "out": "輸出"
+      "out": "輸出",
+      "input": "輸入",
+      "output": "輸出",
+      "failed": "失敗",
+      "using": "正在使用 {{name}}",
+      "used": "已使用 {{name}}"
     }
   },
   "filesystem": {

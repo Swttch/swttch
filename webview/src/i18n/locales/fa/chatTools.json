@@ -170,7 +170,12 @@
   },
   "mcp": {
     "common": {
-      "out": "OUT"
+      "out": "OUT",
+      "input": "ورودی",
+      "output": "خروجی",
+      "failed": "ناموفق",
+      "using": "در حال استفاده از {{name}}",
+      "used": "استفاده از {{name}}"
     }
   },
   "filesystem": {

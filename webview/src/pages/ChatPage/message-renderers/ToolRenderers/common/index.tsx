@@ -131,7 +131,8 @@ export const ToolWrapper2 = (props: {
 }
 
 export const ToolHeader = (props: {
-    name: string;
+    /** Bold. A node, so a part of it (e.g. a status word) can opt out with `font-normal`. */
+    name: ReactNode;
     description?: string;
     inProgress?: boolean;
     className?: string;
