@@ -62,9 +62,13 @@ export function ReplyDialog({ reply, onClose, onSave }: Props) {
           >
             <XMarkIcon className="h-4 w-4" />
           </button>
-          <h2 className="pr-6 text-md font-semibold text-text-primary">
-            {isReply ? t('selectionReply.replyBadge') : t('selectionReply.excerptBadge')}
-          </h2>
+          {/* The key hint sits in the title row, left of the close button, so it takes no line of its own. */}
+          <div className="flex items-center justify-between gap-3 pr-7">
+            <h2 className="text-md font-semibold text-text-primary">
+              {isReply ? t('selectionReply.replyBadge') : t('selectionReply.excerptBadge')}
+            </h2>
+            {editable && <span className="text-xs text-text-tertiary">{t('selectionReply.editHint')}</span>}
+          </div>
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
             <QuoteBlock>
               <div>{quoteLines(reply.quote)}</div>
@@ -89,7 +93,6 @@ export function ReplyDialog({ reply, onClose, onSave }: Props) {
               />
             )}
           </div>
-          {editable && <div className="text-xs text-text-tertiary">{t('selectionReply.editHint')}</div>}
         </div>
       </div>
     </Portal>
