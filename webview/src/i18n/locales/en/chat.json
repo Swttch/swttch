@@ -991,5 +991,16 @@
     "notLoaded": "The page is not loaded yet.",
     "duplicated": "Made a copy: {{name}}",
     "cannotCopy": "This artifact cannot be copied"
+  },
+  "selectionReply": {
+    "reply": "Reply",
+    "startSideChat": "Start side chat",
+    "placeholder": "Write your reply here",
+    "replyBadge": "Reply",
+    "excerptBadge": "Excerpt",
+    "removeCard": "Remove",
+    "close": "Close",
+    "addToPrompt": "Add to prompt",
+    "sendReply": "Send reply"
   }
 }

@@ -9,6 +9,9 @@ import { FolderChip } from './FolderChip';
 import { ElementChip } from './ElementChip';
 import type { PendingElement } from '@/utils/composerElements';
 import { UploadChip } from './UploadChip';
+import { ReplyChip } from './ReplyChip';
+import { ReplyDialog } from './ReplyDialog';
+import type { PendingReply } from '@/utils/composerReplies';
 import { FileTile, FolderTile, UploadTile } from './Tiles';
 import { SortableChip } from './SortableChip';
 import { idsAfterDrag } from './attachmentOrder';
@@ -20,6 +23,9 @@ interface Props {
   /** Elements picked in the Browser pane, drawn first in the row. */
   elements?: readonly PendingElement[];
   onRemoveElement?: (token: string) => void;
+  /** Replies and excerpts taken from text selected in the chat, drawn first in the row. */
+  replies?: readonly PendingReply[];
+  onRemoveReply?: (id: string) => void;
   /** Files and folders still travelling to the backend; drawn after the finished ones. */
   uploads?: PendingUpload[];
   onRemove: (id: string) => void;
@@ -29,15 +35,16 @@ interface Props {
 }
 
 export function AttachmentPreview(props: Props) {
-  const { attachments, elements = [], onRemoveElement, uploads = [], onRemove, onReorder, onCancelUpload } = props;
+  const { attachments, elements = [], onRemoveElement, replies = [], onRemoveReply, uploads = [], onRemove, onReorder, onCancelUpload } = props;
 
   // Held here rather than inside ImagePreview: stepping to the next image needs
   // the whole set, and a single preview only knows itself. This is also what
   // keeps the composer's viewer the same component the transcript opens.
   const [openedIndex, setOpenedIndex] = useState<number | null>(null);
   const pictureSources = usePictureSources(attachments);
+  const [openedReplyId, setOpenedReplyId] = useState<string | null>(null);
 
-  if (attachments.length === 0 && uploads.length === 0 && elements.length === 0) return null;
+  if (attachments.length === 0 && uploads.length === 0 && elements.length === 0 && replies.length === 0) return null;
 
   // A picture is a picture however it got here: pasted or dropped (inline), or a
   // picture file picked or dropped by path. Pictures are what the viewer steps
@@ -95,6 +102,9 @@ export function AttachmentPreview(props: Props) {
         {/* items-start: without it the row stretches every chip to the tallest one,
             so a thumbnail makes the file chips beside it grow as tall as the picture. */}
         <div className="flex flex-wrap items-start gap-2 px-3 py-2">
+          {onRemoveReply && replies.map((reply) => (
+            <ReplyChip key={reply.id} reply={reply} onOpen={setOpenedReplyId} onRemove={onRemoveReply} />
+          ))}
           {onRemoveElement && elements.map((entry) => {
             const picture = pictureOfElement(entry.imageName);
             return (
@@ -122,6 +132,10 @@ export function AttachmentPreview(props: Props) {
           ))}
         </div>
       </DragDropProvider>
+
+      {openedReplyId !== null && replies.some((reply) => reply.id === openedReplyId) && (
+        <ReplyDialog reply={replies.find((reply) => reply.id === openedReplyId)!} onClose={() => setOpenedReplyId(null)} />
+      )}
 
       {/*
         Scoped to what is still in the composer. These images are not part of the

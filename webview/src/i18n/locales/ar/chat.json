@@ -1003,5 +1003,16 @@
     "notLoaded": "لم تُحمَّل الصفحة بعد.",
     "duplicated": "تم إنشاء نسخة: {{name}}",
     "cannotCopy": "لا يمكن نسخ هذا العنصر"
+  },
+  "selectionReply": {
+    "reply": "رد",
+    "startSideChat": "بدء دردشة جانبية",
+    "placeholder": "اكتب ردك هنا",
+    "replyBadge": "رد",
+    "excerptBadge": "مقتطف",
+    "removeCard": "إزالة",
+    "close": "إغلاق",
+    "addToPrompt": "إضافة إلى المطالبة",
+    "sendReply": "إرسال الرد"
   }
 }

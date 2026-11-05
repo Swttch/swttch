@@ -67,6 +67,12 @@ interface SideQuestionContextValue {
   hasUnseen: boolean;
   /** Show the window, bringing it back if it was parked. */
   open: () => void;
+  /** Show the window with `text` put in its composer, for text selected in the chat (nothing is sent). */
+  openWithText: (text: string) => void;
+  /** The text last put in the composer by {@link openWithText}; a new `id` means a new text to take. */
+  seed: { id: number; text: string } | null;
+  /** The composer has taken the seed; it is not offered again. */
+  clearSeed: () => void;
   close: () => void;
   /** Park the window as a floating button in the corner. */
   minimize: () => void;
@@ -100,7 +106,14 @@ export function SideQuestionProvider({ currentSessionId, children }: SideQuestio
   // When the window was last parked; an answer settled after it is "unseen".
   const [minimizedAt, setMinimizedAt] = useState<number | null>(null);
 
+  const [seed, setSeed] = useState<{ id: number; text: string } | null>(null);
+
+  const clearSeed = useCallback(() => setSeed(null), []);
   const open = useCallback(() => setMode(SideQuestionWindowMode.Open), []);
+  const openWithText = useCallback((text: string) => {
+    setSeed((prev) => ({ id: (prev?.id ?? 0) + 1, text }));
+    setMode(SideQuestionWindowMode.Open);
+  }, []);
   const close = useCallback(() => setMode(SideQuestionWindowMode.Closed), []);
   const minimize = useCallback(() => {
     setMinimizedAt(Date.now());
@@ -208,6 +221,9 @@ export function SideQuestionProvider({ currentSessionId, children }: SideQuestio
       isMinimized,
       hasUnseen,
       open,
+      openWithText,
+      seed,
+      clearSeed,
       close,
       minimize,
       toggle,
@@ -218,7 +234,7 @@ export function SideQuestionProvider({ currentSessionId, children }: SideQuestio
       failDelivered,
       clear,
     }),
-    [exchanges, mode, isMinimized, hasUnseen, open, close, minimize, toggle, addQuestion, settleQuestion, markDelivered, failPending, failDelivered, clear],
+    [exchanges, mode, isMinimized, hasUnseen, open, openWithText, seed, clearSeed, close, minimize, toggle, addQuestion, settleQuestion, markDelivered, failPending, failDelivered, clear],
   );
 
   return <SideQuestionContext.Provider value={value}>{children}</SideQuestionContext.Provider>;

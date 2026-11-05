@@ -122,4 +122,16 @@ describe('parseUserContent', () => {
     const sent = 'look at this\n\n<picked-element>\nElement <h1/> Screenshot test\nselector: h1\nhtml: <h1>x</h1>\n</picked-element>';
     expect(parseUserContent(sent).text).toBe('look at this\n\n<h1/> Screenshot test');
   });
+
+  it("데스크탑이 쓴 답장 카드는 인용과 코멘트로, 발췌는 따로 풀고, 본문만 text로 남긴다", () => {
+    const text = "<!-- reply 1 -->\n> 인용\n\n코멘트\n\n\n<!-- attach -->\n> 발췌\n\n본문";
+    const result = parseUserContent(text);
+    expect(result.replies).toEqual([{ quote: "인용", comment: "코멘트" }]);
+    expect(result.excerpts).toEqual(["발췌"]);
+    expect(result.text).toBe("본문");
+  });
+
+  it("카드가 없는 글은 replies가 비어 있다", () => {
+    expect(parseUserContent("그냥 글").replies).toEqual([]);
+  });
 });

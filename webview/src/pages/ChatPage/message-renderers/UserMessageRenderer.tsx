@@ -18,6 +18,8 @@ import { PeerAgentMessageRenderer } from './PeerAgentMessageRenderer';
 import { CrossSessionMessageRenderer, parseCrossSessionMessage } from './CrossSessionMessageRenderer';
 import { NotificationLine } from './NotificationMessageRenderer';
 import { MessageBox } from './components/MessageBox';
+import { ReplyQuotes } from './components/ReplyQuotes';
+import { ExcerptCards } from './components/ExcerptCards';
 import { IfVisible, hasVisibleGlyph } from './components/IfVisible';
 import { toolResultText } from './ToolRenderers/common/toolStatus';
 import { useCliConfig } from '@/contexts/CliConfigContext';
@@ -217,8 +219,9 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
   }
 
   return (
-    <IfVisible extra={imageBlocks.length > 0 || allContexts.length > 0} debugId={debugId}>
+    <IfVisible extra={imageBlocks.length > 0 || allContexts.length > 0 || parsedContent.replies.length > 0 || parsedContent.excerpts.length > 0} debugId={debugId}>
       <div className={`group ${folded ? 'pt-2 pb-4' : 'py-2'} px-4 space-y-2.5`}>
+        {parsedContent.excerpts.length > 0 && <ExcerptCards excerpts={parsedContent.excerpts} />}
         <div className="flex items-start">
           {/*
             `relative` so the menu can hang off the bubble's own top-right
@@ -232,6 +235,9 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
             {/* Folds the reply below this send; see `SendFoldToggle`. */}
             <SendFoldToggle />
             <MessageBox expanded={expanded} onExpandedChange={setExpanded}>
+              {parsedContent.replies.length > 0 && (
+                <ReplyQuotes replies={parsedContent.replies} followedByText={parsedContent.text !== ''} />
+              )}
               <div className="text-text-primary/80 text-[1rem] leading-[1.5] whitespace-pre-wrap break-words">
                 {splitInlineCode(parsedContent.text).map((part, partIdx) =>
                   part.code ? (

@@ -995,5 +995,16 @@
     "notLoaded": "Страница ещё не загружена.",
     "duplicated": "Копия создана: {{name}}",
     "cannotCopy": "Этот артефакт нельзя скопировать"
+  },
+  "selectionReply": {
+    "reply": "Ответить",
+    "startSideChat": "Начать боковой чат",
+    "placeholder": "Напишите ответ здесь",
+    "replyBadge": "Ответ",
+    "excerptBadge": "Отрывок",
+    "removeCard": "Удалить",
+    "close": "Закрыть",
+    "addToPrompt": "Добавить в промпт",
+    "sendReply": "Отправить ответ"
   }
 }

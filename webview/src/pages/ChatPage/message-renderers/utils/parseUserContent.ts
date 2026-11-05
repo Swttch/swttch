@@ -1,4 +1,5 @@
 import { Context, ContextType } from '../../../../types';
+import { parseReplyBlocks, type ReplyCard } from './replyBlocks';
 
 /**
  * 사용자 메시지에서 시스템 태그를 파싱하여 컨텍스트를 추출하고, 정리된 텍스트를 반환
@@ -47,6 +48,10 @@ export function parseUserContent(content: string): {
   commandName?: string;
   hasLocalCommandCaveat?: boolean;
   hasLocalCommandStdout?: boolean;
+  /** Replies the message opens with, each a quote and the comment on it. Excerpts are not here: they are not drawn. */
+  replies: ReplyCard[];
+  /** Quotes of the excerpt cards (replies with no comment); drawn as cards above the bubble. */
+  excerpts: string[];
 } {
   const contexts: Context[] = [];
 
@@ -112,12 +117,23 @@ export function parseUserContent(content: string): {
   // reader sees the element's chip text where the whole description sits, as the chip they sent.
   cleanText = cleanText.replace(/<picked-element>\s*Element ([^\n]*)\n[\s\S]*?<\/picked-element>/g, '$1');
 
+  // Step H4: the replies and excerpts the message opens with (Desktop writes them ahead of what was typed).
+  // The replies are drawn inside the bubble, above its text; the excerpts are drawn as cards above the bubble.
+  let replies: ReplyCard[] = [];
+  let excerpts: string[] = [];
+  const replyBlocks = parseReplyBlocks(cleanText);
+  if (replyBlocks) {
+    replies = replyBlocks.replies;
+    excerpts = replyBlocks.excerpts;
+    cleanText = replyBlocks.body;
+  }
+
   // Step I: 중복 공백/줄바꿈 정리
   cleanText = cleanText
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 
-  return { text: cleanText, contexts, commandName, hasLocalCommandCaveat, hasLocalCommandStdout };
+  return { text: cleanText, contexts, commandName, hasLocalCommandCaveat, hasLocalCommandStdout, replies, excerpts };
 }
 
 /**

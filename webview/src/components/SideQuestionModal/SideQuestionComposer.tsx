@@ -1,4 +1,5 @@
-import { useState, type KeyboardEvent as ReactKeyboardEvent, type Ref } from 'react';
+import { useEffect, useState, type KeyboardEvent as ReactKeyboardEvent, type Ref } from 'react';
+import { useOptionalSideQuestions } from '@/contexts/SideQuestionContext';
 import { useTranslation } from '@/i18n';
 import { useSettings } from '@/contexts/SettingsContext';
 import { RichInput } from '@/pages/ChatPage/ChatInput/RichInput';
@@ -30,6 +31,17 @@ export function SideQuestionComposer(props: Props) {
   const [text, setText] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const ime = useIMEComposition();
+  const sideQuestions = useOptionalSideQuestions();
+  const seed = sideQuestions?.seed ?? null;
+  const clearSeed = sideQuestions?.clearSeed;
+
+  // Text put here from a selection in the chat: the quote, with a blank line under it for the question.
+  // Taken once, so reopening the window does not bring an old quote back.
+  useEffect(() => {
+    if (!seed) return;
+    setText(seed.text);
+    clearSeed?.();
+  }, [seed, clearSeed]);
 
   const send = () => {
     const question = text.trim();
