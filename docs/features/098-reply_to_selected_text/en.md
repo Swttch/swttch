@@ -21,9 +21,11 @@ The bar appears when you release the mouse (or Shift+arrow), follows the text if
 | **Enter** | Puts the reply in the message box as a card. Nothing is sent yet, so you can add more cards or type more text first |
 | **Cmd+Enter** (**Ctrl+Enter** on Windows and Linux) | Puts the reply in the message box and sends the message right away, together with whatever the message box already holds |
 | **Shift+Enter** | A new line in the comment |
-| **Esc**, or a click outside the card | Closes the card |
+| **Esc** | Closes the card |
 
 The send button's tooltip lists the first two.
+
+The card stays open while you look elsewhere: clicking or selecting other text in the chat does not close it, and a new selection brings up no bar while a card is open. The quoted text stays highlighted for as long as its card is open.
 
 ### Reply and Excerpt cards
 

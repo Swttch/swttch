@@ -4,6 +4,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* The text a reply card quotes stays marked while the card is open, as the selection it came from has moved on. */
+::highlight(reply-quote) {
+  background-color: rgba(88, 142, 214, 0.38);
+}
+
 /* ============================================
    Dragged element under the UI zoom
    The drag layer (`@dnd-kit`) measures the dragged element in screen pixels and

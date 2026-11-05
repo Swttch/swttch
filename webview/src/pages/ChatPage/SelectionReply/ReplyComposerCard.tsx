@@ -42,23 +42,8 @@ export function ReplyComposerCard({ quote, style, onSubmit, onCancel }: Props) {
     inputRef.current?.focus();
   }, []);
 
-  // A press or a focus outside the card closes it. Both the mouse and the pointer events are watched, in the
-  // capture phase so nothing in the page can swallow them first, and the focus too, for a press that moves
-  // the focus without either event reaching us.
-  useEffect(() => {
-    const isOutside = (target: EventTarget | null) => target instanceof Node && cardRef.current !== null && !cardRef.current.contains(target);
-    const onPress = (e: Event) => {
-      if (isOutside(e.target)) onCancel();
-    };
-    document.addEventListener('mousedown', onPress, true);
-    document.addEventListener('pointerdown', onPress, true);
-    document.addEventListener('focusin', onPress, true);
-    return () => {
-      document.removeEventListener('mousedown', onPress, true);
-      document.removeEventListener('pointerdown', onPress, true);
-      document.removeEventListener('focusin', onPress, true);
-    };
-  }, [onCancel]);
+  // Nothing outside the card closes it: as in Claude Desktop, a comment being written stays put while the reader
+  // looks elsewhere or selects other text. Esc, or sending the card, ends it.
 
   // The box grows with what is written, up to a limit.
   useEffect(() => {

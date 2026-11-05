@@ -76,33 +76,37 @@ export function SelectionReplyLayer({ containerRef }: Props) {
   }, []);
 
   const pickSelection = useCallback(() => {
-    // While the reply card is open it keeps the text it was opened for: pressing in its box moves the selection
-    // away (and a selection inside a text box reads as empty), and none of that may close it. Only a new
-    // selection made in the chat replaces it.
-    const composing = composingRef.current;
+    // While the reply card is open it keeps the text it was opened for, and a new selection brings up no bar
+    // (as in Claude Desktop): pressing in its box moves the selection away, and none of that may close it.
+    if (composingRef.current) return;
     const selection = window.getSelection();
     const container = containerRef.current;
-    const clear = () => {
-      if (composing) return;
+    if (!selection || !container || selection.rangeCount === 0 || selection.isCollapsed) {
       setPicked(null);
       setAnchor(null);
-    };
-    if (!selection || !container || selection.rangeCount === 0 || selection.isCollapsed) {
-      clear();
       return;
     }
     const range = selection.getRangeAt(0);
     const text = selection.toString().trim();
     if (!text || !container.contains(range.commonAncestorContainer) || isEditable(range.commonAncestorContainer)) {
-      clear();
+      setPicked(null);
+      setAnchor(null);
       return;
     }
     const next = anchorOf(range);
     if (!next) return;
-    setComposing(false);
     setPicked({ text, range: range.cloneRange() });
     setAnchor(next);
   }, [containerRef]);
+
+  // The quoted text stays highlighted while its card is open, even after the selection itself has moved on.
+  useEffect(() => {
+    if (!composing || !picked || typeof CSS === "undefined" || !("highlights" in CSS) || typeof Highlight === "undefined") return;
+    CSS.highlights.set("reply-quote", new Highlight(picked.range));
+    return () => {
+      CSS.highlights.delete("reply-quote");
+    };
+  }, [composing, picked]);
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
