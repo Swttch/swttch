@@ -203,7 +203,9 @@ export function SelectionReplyLayer({ containerRef }: Props) {
     top: above ? anchor.top - BAR_HEIGHT - EDGE : anchor.bottom + EDGE,
     transform: 'translateX(-50%)',
   };
-  const buttonClass = 'px-3 text-[0.9231rem] text-text-primary hover:bg-surface-hover transition-colors';
+  // `whitespace-nowrap` and `w-max`: a fixed box can grow only as far as the window's edge from its `left`, so a
+  // selection near the right edge made "Start side chat" wrap onto two lines.
+  const buttonClass = 'whitespace-nowrap px-3 text-[0.9231rem] text-text-primary hover:bg-surface-hover transition-colors';
 
   return (
     // Pressing a button must not move focus or the selection away before the click lands.
@@ -211,7 +213,7 @@ export function SelectionReplyLayer({ containerRef }: Props) {
       role="toolbar"
       style={barStyle}
       onMouseDown={(e) => e.preventDefault()}
-      className="fixed z-40 flex h-9 items-stretch divide-x divide-border-default overflow-hidden rounded-lg border border-border-default bg-surface-raised shadow-lg"
+      className="fixed z-40 flex h-9 w-max items-stretch divide-x divide-border-default overflow-hidden rounded-lg border border-border-default bg-surface-raised shadow-lg"
     >
       {sideQuestions && (
         <button
