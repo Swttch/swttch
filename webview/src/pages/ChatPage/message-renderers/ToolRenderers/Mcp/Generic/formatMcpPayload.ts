@@ -47,6 +47,20 @@ function isPlainValue(value: unknown): boolean {
 }
 
 /**
+ * The CLI puts a note next to a picture it returns, `[Image: source: <path>]`,
+ * as a text block of its own. When the picture itself is drawn, the note is just
+ * a file path in the middle of the output, so it is dropped; a line that merely
+ * resembles it, or any text that comes with it, is kept.
+ */
+export function stripImageNotes(text: string): string {
+    return text
+        .split('\n')
+        .filter((line) => !/^\[Image: source: [^\]]*\]$/.test(line.trim()))
+        .join('\n')
+        .trim();
+}
+
+/**
  * The OUT row text. A result that is a JSON object or array packed into one text
  * value (the way a server returns `{"stdout": ..., "exit_code": ...}`) is shown as
  * that same JSON, indented: keys, nesting, types and escapes stay as the server

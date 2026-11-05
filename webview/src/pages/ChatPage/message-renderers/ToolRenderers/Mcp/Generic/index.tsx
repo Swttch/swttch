@@ -15,7 +15,7 @@ import {
     useToolStatus,
 } from "../../common";
 import {mcpHeaderLabel, mcpInputPreview} from "./cursorMcp";
-import {formatMcpResultParts, mcpInputEntries} from "./formatMcpPayload";
+import {formatMcpResultParts, mcpInputEntries, stripImageNotes} from "./formatMcpPayload";
 import {HighlightedCode} from "./HighlightedCode";
 import {
     McpInputFields,
@@ -90,7 +90,9 @@ export function GenericMcpRenderer(props: RendererProps) {
     const [viewing, setViewing] = useState<number | null>(null);
     const input = toolUse.input as Record<string, unknown> | undefined;
     const inputEntries = mcpInputEntries(input);
-    const output = formatMcpResultParts(toolResultText(toolResult));
+    const images = toolResultImages(toolResult);
+    const resultText = toolResultText(toolResult);
+    const output = formatMcpResultParts(images.length > 0 ? stripImageNotes(resultText) : resultText);
     // Raw, not display text: the display form deliberately drops the decline
     // marker so result rows stay empty, so the decision has to be read from what
     // was actually recorded — and is then shown as recorded.
@@ -98,7 +100,6 @@ export function GenericMcpRenderer(props: RendererProps) {
     const declined = parseUserDeclined(rawText);
     const failed = !declined && toolResultIsError(toolResult);
     const hasOutputText = !declined && output.text !== '';
-    const images = declined ? [] : toolResultImages(toolResult);
     const imageKeys = toolResultPictureKeys(toolResult, toolUse.id);
 
     return (

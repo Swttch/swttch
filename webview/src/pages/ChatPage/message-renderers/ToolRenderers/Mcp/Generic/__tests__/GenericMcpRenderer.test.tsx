@@ -195,6 +195,21 @@ describe('GenericMcpRenderer', () => {
         expect(container.querySelector('img')?.getAttribute('src')).toBe('data:image/png;base64,AAAA');
     });
 
+    it('hides the CLI\'s "[Image: source: ...]" note next to a picture it draws', () => {
+        const {container} = render(
+            <GenericMcpRenderer
+                toolUse={makeToolUse({region: 'full'}, 'mcp__shell-sandboxed__screenshot')}
+                toolResult={makeToolResult([
+                    {type: ContentBlockType.Text, text: '[Image: source: /tmp/x/shot.png]'},
+                    {type: ContentBlockType.Image, source: {type: 'base64', media_type: 'image/png', data: 'AAAA'}},
+                ])}
+            />
+        );
+        expect(container.querySelector('img')).not.toBeNull();
+        expect(screen.queryByText(/Image: source/)).not.toBeInTheDocument();
+        expect(screen.queryByText('Output')).not.toBeInTheDocument();
+    });
+
     it('does not render an output section when there is no result', () => {
         render(<GenericMcpRenderer toolUse={makeToolUse({query: 'x'}, TOOL)} />);
         expect(screen.queryByText("Output")).not.toBeInTheDocument();

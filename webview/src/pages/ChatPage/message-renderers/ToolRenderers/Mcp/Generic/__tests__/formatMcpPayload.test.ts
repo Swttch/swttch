@@ -1,5 +1,5 @@
 import {describe, it, expect} from 'vitest';
-import {formatMcpFieldValue, formatMcpResult, mcpFieldLabel, mcpInputEntries} from '../formatMcpPayload';
+import {formatMcpFieldValue, formatMcpResult, mcpFieldLabel, mcpInputEntries, stripImageNotes} from '../formatMcpPayload';
 
 describe('mcpFieldLabel', () => {
     it('capitalises the first letter and turns separators into spaces', () => {
@@ -54,6 +54,20 @@ describe('formatMcpFieldValue', () => {
     it('spells out an empty list and a list holding objects as JSON', () => {
         expect(formatMcpFieldValue([])).toBe('[]');
         expect(formatMcpFieldValue([{a: 1}])).toBe('[\n  {\n    "a": 1\n  }\n]');
+    });
+});
+
+describe('stripImageNotes', () => {
+    it('drops the CLI\'s note about where a returned picture was saved', () => {
+        expect(stripImageNotes('[Image: source: /tmp/a/b.png]')).toBe('');
+    });
+
+    it('keeps the text that comes with the note', () => {
+        expect(stripImageNotes('Captured.\n[Image: source: /tmp/a/b.png]\nDone')).toBe('Captured.\nDone');
+    });
+
+    it('keeps a line that only resembles the note', () => {
+        expect(stripImageNotes('see [Image: source: x] here')).toBe('see [Image: source: x] here');
     });
 });
 
