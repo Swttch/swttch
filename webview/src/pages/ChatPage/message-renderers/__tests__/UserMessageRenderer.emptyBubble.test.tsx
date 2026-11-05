@@ -228,6 +228,24 @@ describe('UserMessageRenderer — nothing visible means nothing rendered', () =>
     expect(wrapper).not.toBeNull();
     expect(wrapper!.style.display).not.toBe('none');
   });
+
+  it('draws no bubble for pictures sent with no text, only a system-reminder beside them', () => {
+    // Claude Desktop draws the pictures alone. The reminder is stripped to nothing, and a bubble with nothing
+    // in it came out as a bare pill above the pictures.
+    const { container } = render(
+      <UserMessageRenderer
+        message={userMessage([
+          { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'iVBOR' } },
+          { type: 'text', text: '<system-reminder>Linked sessions now.</system-reminder>' },
+        ])}
+      />,
+    );
+    // The picture's own frame shares the bubble's colours, so look for a box that is not around an image.
+    const bubbles = [...container.querySelectorAll('.bg-surface-hover.border')].filter((box) => box.querySelector('img') === null);
+    expect(bubbles).toHaveLength(0);
+    expect(container.querySelector('img')).not.toBeNull();
+    expect((container.firstElementChild as HTMLElement).style.display).not.toBe('none');
+  });
 });
 
 /**

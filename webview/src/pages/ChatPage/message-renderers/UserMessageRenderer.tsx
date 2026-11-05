@@ -218,10 +218,16 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
     );
   }
 
+  const hasBubble = parsedContent.text.trim() !== '' || parsedContent.replies.length > 0;
+  const picturesNode = imageBlocks.length > 0 ? <ImageAttachments images={imageBlocks} entryUuid={message.uuid} /> : null;
+  // What is left of the row with no bubble and no pictures (a context pill alone) is a footer over nothing.
+  const showRow = hasBubble || imageBlocks.length > 0;
+
   return (
     <IfVisible extra={imageBlocks.length > 0 || allContexts.length > 0 || parsedContent.replies.length > 0 || parsedContent.excerpts.length > 0} debugId={debugId}>
       <div className={`group ${folded ? 'pt-2 pb-4' : 'py-2'} px-4 space-y-2.5`}>
         {parsedContent.excerpts.length > 0 && <ExcerptCards excerpts={parsedContent.excerpts} />}
+        {showRow && (
         <div className="flex items-start">
           {/*
             `relative` so the menu can hang off the bubble's own top-right
@@ -234,38 +240,46 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
           <div className="relative min-w-0">
             {/* Folds the reply below this send; see `SendFoldToggle`. */}
             <SendFoldToggle />
-            <MessageBox expanded={expanded} onExpandedChange={setExpanded}>
-              {parsedContent.replies.length > 0 && (
-                <ReplyQuotes replies={parsedContent.replies} followedByText={parsedContent.text !== ''} />
-              )}
-              <div className="text-text-primary/80 text-[1rem] leading-[1.5] whitespace-pre-wrap break-words">
-                {splitInlineCode(parsedContent.text).map((part, partIdx) =>
-                  part.code ? (
-                    // The same look as `code` in a reply; a path inside it stays code, not a chip.
-                    <code
-                      key={partIdx}
-                      className="rounded px-1 py-0.5 font-mono text-[0.875em]"
-                      style={{ background: 'var(--md-inline-code-bg)', color: 'var(--md-inline-code-fg)' }}
-                    >
-                      {part.text}
-                    </code>
-                  ) : (
-                    tokenizeMessagePaths(part.text).map((seg, idx) =>
-                      seg.mention ? (
-                        <MessageSessionMentionChip key={`${partIdx}-${idx}`} mention={seg.mention} />
-                      ) : seg.isPath ? (
-                        <MessagePathChip key={`${partIdx}-${idx}`} token={seg.text} />
-                      ) : (
-                        <React.Fragment key={`${partIdx}-${idx}`}>{seg.text}</React.Fragment>
-                      ),
-                    )
-                  ),
+            {/*
+              A message of only pictures has no text to put in a bubble: Desktop draws none, and an empty one is a
+              bare pill. The pictures take the bubble's place, so the footer and the menu stay under and beside
+              them as they would under a bubble, instead of floating over them.
+            */}
+            {!hasBubble && picturesNode}
+            {hasBubble && (
+              <MessageBox expanded={expanded} onExpandedChange={setExpanded}>
+                {parsedContent.replies.length > 0 && (
+                  <ReplyQuotes replies={parsedContent.replies} followedByText={parsedContent.text !== ''} />
                 )}
-              </div>
-            </MessageBox>
+                <div className="text-text-primary/80 text-[1rem] leading-[1.5] whitespace-pre-wrap break-words">
+                  {splitInlineCode(parsedContent.text).map((part, partIdx) =>
+                    part.code ? (
+                      // The same look as `code` in a reply; a path inside it stays code, not a chip.
+                      <code
+                        key={partIdx}
+                        className="rounded px-1 py-0.5 font-mono text-[0.875em]"
+                        style={{ background: 'var(--md-inline-code-bg)', color: 'var(--md-inline-code-fg)' }}
+                      >
+                        {part.text}
+                      </code>
+                    ) : (
+                      tokenizeMessagePaths(part.text).map((seg, idx) =>
+                        seg.mention ? (
+                          <MessageSessionMentionChip key={`${partIdx}-${idx}`} mention={seg.mention} />
+                        ) : seg.isPath ? (
+                          <MessagePathChip key={`${partIdx}-${idx}`} token={seg.text} />
+                        ) : (
+                          <React.Fragment key={`${partIdx}-${idx}`}>{seg.text}</React.Fragment>
+                        ),
+                      )
+                    ),
+                  )}
+                </div>
+              </MessageBox>
+            )}
 
             <MessageFooter
-              copyText={stripSessionMentionTags(parsedContent.text)}
+              copyText={hasBubble ? stripSessionMentionTags(parsedContent.text) : undefined}
               onFork={
                 sendActions && sectionKey !== null && sendActions.canFork(sectionKey)
                   ? () => sendActions.forkConversation(sectionKey)
@@ -276,13 +290,12 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
               alwaysDisplay={isLastEntry}
             />
 
-            <SendActionMenu copyText={stripSessionMentionTags(parsedContent.text)} />
+            <SendActionMenu copyText={hasBubble ? stripSessionMentionTags(parsedContent.text) : undefined} />
           </div>
         </div>
-
-        {imageBlocks.length > 0 && (
-            <ImageAttachments images={imageBlocks} entryUuid={message.uuid} />
         )}
+
+        {hasBubble && picturesNode}
 
         {allContexts.length > 0 && <ContextPills context={allContexts} />}
       </div>

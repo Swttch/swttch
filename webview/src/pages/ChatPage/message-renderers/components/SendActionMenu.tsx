@@ -65,8 +65,11 @@ interface SendActionMenuProps {
    * above already holds the value and is the only thing that knows which of its
    * branches drew the bubble. The other per-send values are contexts because
    * they come from the whole transcript, which the renderer does not hold.
+   *
+   * Left out for a send that has no text of its own (pictures alone), which has nothing to copy: the
+   * entry is then not drawn.
    */
-  copyText: string;
+  copyText?: string;
 }
 
 export function SendActionMenu({ copyText }: SendActionMenuProps) {
@@ -93,6 +96,7 @@ export function SendActionMenu({ copyText }: SendActionMenuProps) {
   */
   const handleCopy = () => {
     setOpen(false);
+    if (copyText === undefined) return;
     navigator.clipboard.writeText(copyText).then(
       () => toast.success(t('sendActions.copyDone')),
       () => toast.error(t('sendActions.copyFailed')),
@@ -157,14 +161,16 @@ export function SendActionMenu({ copyText }: SendActionMenuProps) {
               often. The two below it act on the transcript; this one only reads
               from it.
             */}
-            <button
-              type="button"
-              role="menuitem"
-              onClick={handleCopy}
-              className={itemClass}
-            >
-              {t('sendActions.copyMessage')}
-            </button>
+            {copyText !== undefined && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleCopy}
+                className={itemClass}
+              >
+                {t('sendActions.copyMessage')}
+              </button>
+            )}
             <button
               type="button"
               role="menuitem"
