@@ -77,7 +77,7 @@ export function ReplyComposerCard({ quote, style, onSubmit, onCancel, onDraftCha
       ref={cardRef}
       role="dialog"
       style={style}
-      className="fixed z-40 flex w-[420px] max-w-[calc(100vw-16px)] flex-col gap-3 rounded-2xl border border-border-default bg-surface-raised px-4 py-3 shadow-2xl"
+      className="fixed z-40 flex flex-col gap-3 rounded-2xl border border-border-default bg-surface-raised px-4 py-3 shadow-2xl"
     >
       <QuoteBlock size="sm" clamp={2} className="[&>div]:text-[0.9231rem]">
         {quote}

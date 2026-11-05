@@ -23,6 +23,8 @@ interface Anchor {
 
 const BAR_HEIGHT = 36;
 const EDGE = 8;
+/** The reply card's width, which the placement below keeps inside the window; the card is given the same value. */
+const CARD_WIDTH = 395;
 
 /**
  * The page zoom (`zoom` on the root, the zoom control's doing). A range reports its place in screen pixels, but
@@ -180,10 +182,12 @@ export function SelectionReplyLayer({ containerRef }: Props) {
 
   if (composing) {
     const cardAbove = anchor.top > 200;
-    const cardLeft = Math.min(Math.max(anchor.centerX - 180, EDGE), Math.max(EDGE, viewport.width - 360 - EDGE));
+    // Never wider than the window, so a narrow pane keeps the card whole; centred on the text, then kept inside.
+    const cardWidth = Math.min(CARD_WIDTH, viewport.width - 2 * EDGE);
+    const cardLeft = Math.min(Math.max(anchor.centerX - cardWidth / 2, EDGE), Math.max(EDGE, viewport.width - cardWidth - EDGE));
     const style: CSSProperties = cardAbove
-      ? { left: cardLeft, bottom: viewport.height - anchor.top + EDGE }
-      : { left: cardLeft, top: anchor.bottom + EDGE };
+      ? { left: cardLeft, width: cardWidth, bottom: viewport.height - anchor.top + EDGE }
+      : { left: cardLeft, width: cardWidth, top: anchor.bottom + EDGE };
     return (
       <ReplyComposerCard
         quote={picked.text}
