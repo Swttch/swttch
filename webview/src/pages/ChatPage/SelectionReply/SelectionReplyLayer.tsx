@@ -76,24 +76,30 @@ export function SelectionReplyLayer({ containerRef }: Props) {
   }, []);
 
   const pickSelection = useCallback(() => {
-    // The card keeps the text it was opened for, even though pressing in its box moves the selection away.
-    if (composingRef.current) return;
+    // While the reply card is open it keeps the text it was opened for: pressing in its box moves the selection
+    // away (and a selection inside a text box reads as empty), and none of that may close it. Only a new
+    // selection made in the chat replaces it.
+    const composing = composingRef.current;
     const selection = window.getSelection();
     const container = containerRef.current;
-    if (!selection || !container || selection.rangeCount === 0 || selection.isCollapsed) {
+    const clear = () => {
+      if (composing) return;
       setPicked(null);
       setAnchor(null);
+    };
+    if (!selection || !container || selection.rangeCount === 0 || selection.isCollapsed) {
+      clear();
       return;
     }
     const range = selection.getRangeAt(0);
     const text = selection.toString().trim();
     if (!text || !container.contains(range.commonAncestorContainer) || isEditable(range.commonAncestorContainer)) {
-      setPicked(null);
-      setAnchor(null);
+      clear();
       return;
     }
     const next = anchorOf(range);
     if (!next) return;
+    setComposing(false);
     setPicked({ text, range: range.cloneRange() });
     setAnchor(next);
   }, [containerRef]);

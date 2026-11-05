@@ -42,13 +42,22 @@ export function ReplyComposerCard({ quote, style, onSubmit, onCancel }: Props) {
     inputRef.current?.focus();
   }, []);
 
-  // A press outside the card closes it; the selection it was made from is gone by then anyway.
+  // A press or a focus outside the card closes it. Both the mouse and the pointer events are watched, in the
+  // capture phase so nothing in the page can swallow them first, and the focus too, for a press that moves
+  // the focus without either event reaching us.
   useEffect(() => {
-    const onPress = (e: MouseEvent) => {
-      if (cardRef.current && e.target instanceof Node && !cardRef.current.contains(e.target)) onCancel();
+    const isOutside = (target: EventTarget | null) => target instanceof Node && cardRef.current !== null && !cardRef.current.contains(target);
+    const onPress = (e: Event) => {
+      if (isOutside(e.target)) onCancel();
     };
     document.addEventListener('mousedown', onPress, true);
-    return () => document.removeEventListener('mousedown', onPress, true);
+    document.addEventListener('pointerdown', onPress, true);
+    document.addEventListener('focusin', onPress, true);
+    return () => {
+      document.removeEventListener('mousedown', onPress, true);
+      document.removeEventListener('pointerdown', onPress, true);
+      document.removeEventListener('focusin', onPress, true);
+    };
   }, [onCancel]);
 
   // The box grows with what is written, up to a limit.
