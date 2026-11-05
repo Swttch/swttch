@@ -41,7 +41,7 @@ export function StructuredOutputRenderer(props: RendererProps) {
             )}
 
             {report ? (
-                <div className="markdown-content mb-2">
+                <div className="markdown-content mb-2 text-text-primary text-[1rem] leading-relaxed">
                     <Streamdown
                         mode="static"
                         controls={{ code: true, table: true, mermaid: MERMAID_CONTROLS }}
