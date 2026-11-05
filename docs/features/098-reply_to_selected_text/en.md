@@ -25,7 +25,7 @@ The bar appears when you release the mouse (or Shift+arrow), follows the text if
 
 The send button's tooltip lists the first two.
 
-The card stays open while you look elsewhere: clicking or selecting other text in the chat does not close it, and a new selection brings up no bar while a card is open. The quoted text stays highlighted for as long as its card is open.
+Once you have typed a comment, the card stays open while you look elsewhere: clicking or selecting other text in the chat does not close it, and a new selection brings up no bar while it is open. The quoted text stays highlighted for as long as the card is open. A card with nothing typed in it goes away as soon as you click or select elsewhere, and a new selection then gets its own bar.
 
 ### Reply and Excerpt cards
 

@@ -68,6 +68,11 @@ export function SelectionReplyLayer({ containerRef }: Props) {
   const pointerDown = useRef(false);
   const composingRef = useRef(false);
   composingRef.current = composing;
+  // Whether the open card has a comment in it: a card in use is kept, an empty one gives way to a new selection.
+  const draftRef = useRef(false);
+  const onDraftChange = useCallback((hasText: boolean) => {
+    draftRef.current = hasText;
+  }, []);
 
   const dismiss = useCallback(() => {
     setPicked(null);
@@ -76,25 +81,31 @@ export function SelectionReplyLayer({ containerRef }: Props) {
   }, []);
 
   const pickSelection = useCallback(() => {
-    // While the reply card is open it keeps the text it was opened for, and a new selection brings up no bar
-    // (as in Claude Desktop): pressing in its box moves the selection away, and none of that may close it.
-    if (composingRef.current) return;
+    // A card with a comment in it keeps the text it was opened for, and a new selection brings up no bar (as in
+    // Claude Desktop): pressing in its box moves the selection away, and none of that may close it. An empty
+    // card is only a question, so a new selection replaces it.
+    const composing = composingRef.current;
+    if (composing && draftRef.current) return;
     const selection = window.getSelection();
     const container = containerRef.current;
-    if (!selection || !container || selection.rangeCount === 0 || selection.isCollapsed) {
+    const clear = () => {
+      if (composing) return;
       setPicked(null);
       setAnchor(null);
+    };
+    if (!selection || !container || selection.rangeCount === 0 || selection.isCollapsed) {
+      clear();
       return;
     }
     const range = selection.getRangeAt(0);
     const text = selection.toString().trim();
     if (!text || !container.contains(range.commonAncestorContainer) || isEditable(range.commonAncestorContainer)) {
-      setPicked(null);
-      setAnchor(null);
+      clear();
       return;
     }
     const next = anchorOf(range);
     if (!next) return;
+    setComposing(false);
     setPicked({ text, range: range.cloneRange() });
     setAnchor(next);
   }, [containerRef]);
@@ -178,6 +189,7 @@ export function SelectionReplyLayer({ containerRef }: Props) {
         quote={picked.text}
         style={style}
         onCancel={dismiss}
+        onDraftChange={onDraftChange}
         onSubmit={(comment, send) => {
           addReplyToComposer(picked.text, comment, send);
           clearSelection();

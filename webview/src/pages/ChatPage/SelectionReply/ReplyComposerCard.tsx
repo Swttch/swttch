@@ -24,6 +24,8 @@ interface Props {
   /** Enter was pressed: `comment` is what was written, empty for an excerpt. `send` is ⌘↵ (Ctrl+Enter off the Mac). */
   onSubmit: (comment: string, send: boolean) => void;
   onCancel: () => void;
+  /** Whether something is written in the box, so the page can tell a card in use from one only just opened. */
+  onDraftChange: (hasText: boolean) => void;
 }
 
 /**
@@ -31,7 +33,7 @@ interface Props {
  * top, a box for the comment under it. Enter puts the card in the message box and ⌘↵ sends it right away; the
  * send button's tooltip says so.
  */
-export function ReplyComposerCard({ quote, style, onSubmit, onCancel }: Props) {
+export function ReplyComposerCard({ quote, style, onSubmit, onCancel, onDraftChange }: Props) {
   const { t } = useTranslation('chat');
   const [comment, setComment] = useState('');
   const cardRef = useRef<HTMLDivElement>(null);
@@ -42,8 +44,25 @@ export function ReplyComposerCard({ quote, style, onSubmit, onCancel }: Props) {
     inputRef.current?.focus();
   }, []);
 
-  // Nothing outside the card closes it: as in Claude Desktop, a comment being written stays put while the reader
-  // looks elsewhere or selects other text. Esc, or sending the card, ends it.
+  // An empty card goes away when the reader turns to something else (a press outside it; not a focus, which the message box takes back by itself after a click); once a
+  // comment is being written it stays put, as in Claude Desktop, and only Esc or sending ends it.
+  const commentRef = useRef(comment);
+  commentRef.current = comment;
+  useEffect(() => {
+    onDraftChange(comment.trim() !== '');
+  }, [comment, onDraftChange]);
+  useEffect(() => {
+    const onPress = (e: Event) => {
+      const outside = e.target instanceof Node && cardRef.current !== null && !cardRef.current.contains(e.target);
+      if (outside && commentRef.current.trim() === '') onCancel();
+    };
+    document.addEventListener('mousedown', onPress, true);
+    document.addEventListener('pointerdown', onPress, true);
+    return () => {
+      document.removeEventListener('mousedown', onPress, true);
+      document.removeEventListener('pointerdown', onPress, true);
+    };
+  }, [onCancel]);
 
   // The box grows with what is written, up to a limit.
   useEffect(() => {
