@@ -10,6 +10,8 @@ const sendControlRequestToProcess = vi.fn<(...args: unknown[]) => boolean>();
 const waitForControlResponse = vi.fn<(...args: unknown[]) => Promise<unknown>>();
 const cancelControlResponse = vi.fn();
 const generateSessionTitlesEnabled = vi.fn<() => Promise<boolean>>();
+const watchSessionTitle = vi.fn<(...args: unknown[]) => void>();
+const announceGeneratedTitle = vi.fn<(...args: unknown[]) => Promise<boolean>>();
 
 vi.mock('../../claude-process', () => ({
   sendControlRequestToProcess: (...args: unknown[]) => sendControlRequestToProcess(...args),
@@ -21,6 +23,11 @@ vi.mock('../../control-response-waiter', () => ({
 }));
 vi.mock('../sessionTitleSettings', () => ({
   generateSessionTitlesEnabled: () => generateSessionTitlesEnabled(),
+}));
+
+vi.mock('../session-title-watcher', () => ({
+  watchSessionTitle: (...args: unknown[]) => watchSessionTitle(...args),
+  announceGeneratedTitle: (...args: unknown[]) => announceGeneratedTitle(...args),
 }));
 
 import { requestSessionTitleAfterSend, resetSessionTitleStates } from '../session-title-runtime';
@@ -41,6 +48,7 @@ beforeEach(() => {
   generateSessionTitlesEnabled.mockResolvedValue(true);
   sendControlRequestToProcess.mockReturnValue(true);
   waitForControlResponse.mockResolvedValue({ title: 'Generated name' });
+  announceGeneratedTitle.mockResolvedValue(false);
 });
 
 describe('requestSessionTitleAfterSend', () => {
@@ -179,10 +187,59 @@ describe('requestSessionTitleAfterSend', () => {
 
   it('ignores an answer without a title', async () => {
     waitForControlResponse.mockResolvedValue({ title: '   ' });
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     requestSessionTitleAfterSend(connections, 's1', 'first prompt', true, '/proj');
     await settle();
 
     expect(broadcastToAll).not.toHaveBeenCalled();
+  });
+
+  it('says in the log that the CLI answered without a title (#638)', async () => {
+    waitForControlResponse.mockResolvedValue({ title: null });
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    requestSessionTitleAfterSend(connections, 's1', 'first prompt', true, '/proj');
+    await settle();
+
+    expect(error).toHaveBeenCalledWith(
+      '[node-backend]',
+      expect.stringContaining('generate_session_title answered without a title for s1 (request 1 of 3): {"title":null}'),
+    );
+    expect(broadcastToAll).not.toHaveBeenCalled();
+  });
+
+  describe('the transcript, not the answer, shows the title (#638)', () => {
+    it('watches the transcript of the session it asks for a title', async () => {
+      requestSessionTitleAfterSend(connections, 's1', 'Fix the login bug', true, '/proj');
+      await settle();
+
+      expect(watchSessionTitle).toHaveBeenCalledWith(connections, 's1', '/proj', expect.any(Function));
+    });
+
+    it('shows the name resolved from the transcript when an answer has a title', async () => {
+      announceGeneratedTitle.mockResolvedValue(true);
+
+      requestSessionTitleAfterSend(connections, 's1', 'Fix the login bug', true, '/proj');
+      await settle();
+
+      expect(announceGeneratedTitle).toHaveBeenCalledWith(connections, 's1', '/proj');
+      expect(broadcastToAll).not.toHaveBeenCalled();
+    });
+
+    it('keeps asking only until the watch has announced a title', async () => {
+      waitForControlResponse.mockRejectedValue(new Error('control_response timed out after 30000ms'));
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      requestSessionTitleAfterSend(connections, 's1', 'hi', true, '/proj');
+      await settle();
+      // The answer never came, but the title turned up in the transcript.
+      const onAnnounced = watchSessionTitle.mock.calls[0][3] as () => void;
+      onAnnounced();
+      requestSessionTitleAfterSend(connections, 's1', 'second prompt', false, '/proj');
+      await settle();
+
+      expect(sendControlRequestToProcess).toHaveBeenCalledTimes(1);
+    });
   });
 });

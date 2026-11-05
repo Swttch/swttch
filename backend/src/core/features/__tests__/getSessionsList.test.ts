@@ -147,10 +147,14 @@ describe('getSessionsList', () => {
     headInfo({ 'sess-1': { title: 'Original 1' }, 'sess-2': { title: 'Original 2' } });
     mockReadOverrides.mockResolvedValue({ 'sess-1': 'Renamed 1' });
 
-    const result = await getSessionsList('/test');
+    await getSessionsList('/test');
 
-    expect(result.sessions.find((s) => s.sessionId === 'sess-1')?.title).toBe('Renamed 1');
-    expect(result.sessions.find((s) => s.sessionId === 'sess-2')?.title).toBe('Original 2');
+    // The stored name is handed to extractSessionInfo, which names the session through
+    // resolveSessionTitle; the list adds no rule of its own on top of that.
+    const overrideOf = (id: string) =>
+      mockExtractInfo.mock.calls.find(([file]) => baseName(file) === `${id}.jsonl`)?.[1]?.override;
+    expect(overrideOf('sess-1')).toBe('Renamed 1');
+    expect(overrideOf('sess-2')).toBeUndefined();
   });
 
   it('should keep the original title when no override exists', async () => {

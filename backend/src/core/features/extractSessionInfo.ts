@@ -1,6 +1,7 @@
 import { createReadStream } from 'fs';
 import { open } from 'fs/promises';
 import { createInterface } from 'readline';
+import { resolveSessionTitle } from './resolveSessionTitle';
 
 /**
  * Extract session info from a JSONL file (Cursor-compatible)
@@ -421,6 +422,8 @@ export interface ExtractSessionInfoOptions {
    * under its last prompt.
    */
   includeLastPrompt?: boolean;
+  /** A name the user typed in this app. It names the session ahead of everything the transcript holds. */
+  override?: string | null;
 }
 
 export async function extractSessionInfo(
@@ -459,24 +462,17 @@ export async function extractSessionInfo(
     };
   }
 
-  // The order the Claude Code extensions for VS Code and Cursor and the desktop
-  // app list a session by, so one session reads the same in every client:
-  //   1. a name chosen with `/rename` (custom-title)
-  //   2. the title the CLI generated from the conversation (ai-title)
-  //   3. the newest prompt (last-prompt), unless the setting turns it off
-  //   4. a summary entry, then the first prompt
-  // Within each, the tail holds the newest entry when the scan stopped early, and
-  // the head's last value covers the rest.
-  const title =
-    tail.customTitle ??
-    head.customTitle ??
-    tail.aiTitle ??
-    head.aiTitle ??
-    (includeLastPrompt ? (tail.lastPrompt ?? head.lastPrompt) : null) ??
-    head.summary ??
-    tail.summary ??
-    head.title ??
-    'No title';
+  // Which source names the session is decided in resolveSessionTitle, the one
+  // place that does. Within each source the tail holds the newest entry when the
+  // scan stopped early, and the head's last value covers the rest.
+  const title = resolveSessionTitle({
+    override: options.override,
+    customTitle: tail.customTitle ?? head.customTitle,
+    aiTitle: tail.aiTitle ?? head.aiTitle,
+    lastPrompt: includeLastPrompt ? (tail.lastPrompt ?? head.lastPrompt) : null,
+    summary: head.summary ?? tail.summary,
+    firstPrompt: head.title,
+  });
 
   return {
     title,
