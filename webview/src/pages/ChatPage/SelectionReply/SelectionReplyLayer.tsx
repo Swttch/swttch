@@ -24,7 +24,7 @@ interface Anchor {
 const BAR_HEIGHT = 36;
 const EDGE = 8;
 /** The reply card's width, which the placement below keeps inside the window; the card is given the same value. */
-const CARD_WIDTH = 395;
+const CARD_WIDTH = 380;
 
 /**
  * The page zoom (`zoom` on the root, the zoom control's doing). A range reports its place in screen pixels, but
