@@ -187,10 +187,25 @@ describe('requestSessionTitleAfterSend', () => {
 
   it('ignores an answer without a title', async () => {
     waitForControlResponse.mockResolvedValue({ title: '   ' });
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     requestSessionTitleAfterSend(connections, 's1', 'first prompt', true, '/proj');
     await settle();
 
+    expect(broadcastToAll).not.toHaveBeenCalled();
+  });
+
+  it('says in the log that the CLI answered without a title (#638)', async () => {
+    waitForControlResponse.mockResolvedValue({ title: null });
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    requestSessionTitleAfterSend(connections, 's1', 'first prompt', true, '/proj');
+    await settle();
+
+    expect(error).toHaveBeenCalledWith(
+      '[node-backend]',
+      expect.stringContaining('generate_session_title answered without a title for s1 (request 1 of 3): {"title":null}'),
+    );
     expect(broadcastToAll).not.toHaveBeenCalled();
   });
 

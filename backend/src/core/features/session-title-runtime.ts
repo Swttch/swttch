@@ -141,7 +141,19 @@ async function requestSessionTitle(
   try {
     const response = await waiting;
     const title = typeof response?.title === 'string' ? response.title.trim() : '';
-    if (!title) return;
+    if (!title) {
+      // The CLI answers `{title: null}` as an ordinary success when its model call
+      // gave nothing usable (a gateway's model it cannot name a session with, #638).
+      // Nothing is wrong to repair and no official command names a session, so the
+      // session stays under the name its transcript gives; the log is how a report
+      // can tell this from a request that never went out.
+      console.error(
+        '[node-backend]',
+        `generate_session_title answered without a title for ${sessionId} ` +
+          `(request ${asking.requests} of ${MAX_REQUESTS}): ${JSON.stringify(response)?.slice(0, 200)}`,
+      );
+      return;
+    }
     asking.settled = true;
     // The name shown is the one resolveSessionTitle gives from the transcript, which
     // the CLI has just written the title to. A CLI that answers with a title without
