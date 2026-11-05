@@ -19,7 +19,10 @@
     "title": "Message from another agent"
   },
   "sendMessage": {
-    "to": "To: {{to}}"
+    "to": "To: {{to}}",
+    "sent": "Message sent",
+    "delivered": "Delivered",
+    "anotherSession": "another session"
   },
   "attachments": {
     "imageAlt": "Image {{index}}",
@@ -355,5 +358,8 @@
     "context": "Context",
     "showMore": "Show more",
     "showLess": "Show less"
+  },
+  "sessionLink": {
+    "archived": "Archived"
   }
 }

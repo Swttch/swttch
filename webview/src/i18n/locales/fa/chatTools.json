@@ -19,7 +19,10 @@
     "title": "پیام از ایجنت دیگر"
   },
   "sendMessage": {
-    "to": "به: {{to}}"
+    "to": "به: {{to}}",
+    "sent": "پیام ارسال شد",
+    "delivered": "تحویل داده شد",
+    "anotherSession": "جلسهٔ دیگر"
   },
   "attachments": {
     "imageAlt": "تصویر {{index}}",
@@ -351,5 +354,8 @@
     "context": "زمینه",
     "showMore": "نمایش بیشتر",
     "showLess": "نمایش کمتر"
+  },
+  "sessionLink": {
+    "archived": "بایگانی‌شده"
   }
 }

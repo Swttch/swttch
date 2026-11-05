@@ -61,6 +61,51 @@ async function readJson(file: string): Promise<Record<string, unknown> | undefin
   }
 }
 
+/** What a Desktop session's own file says about it; every field is left out when the file has nothing usable. */
+export interface DesktopSessionInfo {
+  title?: string;
+  /** The CLI session it runs: the id this app's own sessions are named by. */
+  cliSessionId?: string;
+  /** The folder it works in. */
+  cwd?: string;
+  isArchived?: boolean;
+  lastActivityAt?: number;
+}
+
+function text(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() !== '' ? value : undefined;
+}
+
+/** The Desktop session `desktopSessionId` (`local_…`), read from its own file; undefined when there is no such file. */
+export async function findDesktopSession(
+  desktopSessionId: string,
+  root: string = desktopSessionsRoot(),
+): Promise<DesktopSessionInfo | undefined> {
+  // The id names a file, so it must be nothing but a name.
+  if (path.basename(desktopSessionId) !== desktopSessionId || !desktopSessionId.startsWith('local_')) return undefined;
+  const file = (await listSessionFiles(root)).find(candidate => path.basename(candidate) === `${desktopSessionId}.json`);
+  const session = file ? await readJson(file) : undefined;
+  if (!session) return undefined;
+  const title = text(session.title);
+  const cliSessionId = text(session.cliSessionId);
+  const cwd = text(session.cwd);
+  return {
+    ...(title !== undefined && { title }),
+    ...(cliSessionId !== undefined && { cliSessionId }),
+    ...(cwd !== undefined && { cwd }),
+    ...(typeof session.isArchived === 'boolean' && { isArchived: session.isArchived }),
+    ...(typeof session.lastActivityAt === 'number' && { lastActivityAt: session.lastActivityAt }),
+  };
+}
+
+/** The title of the Desktop session `desktopSessionId`, or undefined when it has none. */
+export async function findDesktopSessionTitle(
+  desktopSessionId: string,
+  root: string = desktopSessionsRoot(),
+): Promise<string | undefined> {
+  return (await findDesktopSession(desktopSessionId, root))?.title;
+}
+
 /**
  * The title of the Desktop session that started the CLI session `cliSessionId`, or undefined when Desktop did
  * not start it, its files are not here, or the starter has no title.
@@ -93,10 +138,5 @@ export async function findDesktopParentSessionTitle(
     if (typeof spawnedFrom?.sessionId === 'string') parentId = spawnedFrom.sessionId;
     break;
   }
-  // The id names a file, so it must be nothing but a name.
-  if (!parentId || path.basename(parentId) !== parentId) return undefined;
-
-  const parentFile = files.find(file => path.basename(file) === `${parentId}.json`);
-  const title = parentFile ? (await readJson(parentFile))?.title : undefined;
-  return typeof title === 'string' && title.trim() !== '' ? title : undefined;
+  return parentId ? findDesktopSessionTitle(parentId, root) : undefined;
 }

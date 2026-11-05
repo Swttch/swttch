@@ -19,7 +19,10 @@
     "title": "Сообщение от другого агента"
   },
   "sendMessage": {
-    "to": "Кому: {{to}}"
+    "to": "Кому: {{to}}",
+    "sent": "Сообщение отправлено",
+    "delivered": "Доставлено",
+    "anotherSession": "другая сессия"
   },
   "attachments": {
     "imageAlt": "Изображение {{index}}",
@@ -363,5 +366,8 @@
     "context": "Контекст",
     "showMore": "Показать больше",
     "showLess": "Показать меньше"
+  },
+  "sessionLink": {
+    "archived": "В архиве"
   }
 }

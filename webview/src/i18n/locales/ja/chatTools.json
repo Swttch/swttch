@@ -19,7 +19,10 @@
     "title": "他のエージェントからのメッセージ"
   },
   "sendMessage": {
-    "to": "宛先: {{to}}"
+    "to": "宛先: {{to}}",
+    "sent": "メッセージを送信",
+    "delivered": "配送済み",
+    "anotherSession": "別のセッション"
   },
   "attachments": {
     "imageAlt": "画像 {{index}}",
@@ -351,5 +354,8 @@
     "context": "コンテキスト",
     "showMore": "もっと表示",
     "showLess": "表示を減らす"
+  },
+  "sessionLink": {
+    "archived": "アーカイブ済み"
   }
 }

@@ -19,7 +19,10 @@
     "title": "다른 에이전트가 보낸 메시지"
   },
   "sendMessage": {
-    "to": "받는 대상: {{to}}"
+    "to": "받는 대상: {{to}}",
+    "sent": "메시지 전송함",
+    "delivered": "배송됨",
+    "anotherSession": "다른 세션"
   },
   "attachments": {
     "imageAlt": "이미지 {{index}}",
@@ -351,5 +354,8 @@
     "context": "컨텍스트",
     "showMore": "더 보기",
     "showLess": "간략히 보기"
+  },
+  "sessionLink": {
+    "archived": "보관됨"
   }
 }

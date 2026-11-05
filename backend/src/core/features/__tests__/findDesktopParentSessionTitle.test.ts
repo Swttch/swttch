@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { promises as fs } from 'fs';
 import os from 'os';
 import path from 'path';
-import { findDesktopParentSessionTitle } from '../findDesktopParentSessionTitle';
+import { findDesktopParentSessionTitle, findDesktopSession, findDesktopSessionTitle } from '../findDesktopParentSessionTitle';
 
 let root: string;
 let organization: string;
@@ -58,5 +58,48 @@ describe('findDesktopParentSessionTitle', () => {
     await writeSession('local_child', { cliSessionId: 'cli-1', spawnedFrom: { sessionId: '../local_parent' } });
     await writeSession('local_parent', { title: 'parent title' });
     expect(await findDesktopParentSessionTitle('cli-1', root)).toBeUndefined();
+  });
+});
+
+describe('findDesktopSessionTitle', () => {
+  it('reads the title from the session\'s own file', async () => {
+    await writeSession('local_abc', { sessionId: 'local_abc', title: 'Release manager' });
+    expect(await findDesktopSessionTitle('local_abc', root)).toBe('Release manager');
+  });
+
+  it('finds nothing for an unknown session, an empty title, or an id that is not a plain Desktop id', async () => {
+    await writeSession('local_blank', { title: ' ' });
+    await writeSession('other', { title: 'not a session file name' });
+    expect(await findDesktopSessionTitle('local_missing', root)).toBeUndefined();
+    expect(await findDesktopSessionTitle('local_blank', root)).toBeUndefined();
+    expect(await findDesktopSessionTitle('other', root)).toBeUndefined();
+    expect(await findDesktopSessionTitle('../local_abc', root)).toBeUndefined();
+  });
+});
+
+describe('findDesktopSession', () => {
+  it('reads the title, the CLI session it runs and its folder', async () => {
+    await writeSession('local_abc', {
+      sessionId: 'local_abc',
+      title: 'Mockup session',
+      cliSessionId: 'cli-9',
+      cwd: '/Users/me/project',
+      isArchived: true,
+      lastActivityAt: 1793912956893,
+      extra: 'ignored',
+    });
+    expect(await findDesktopSession('local_abc', root)).toEqual({
+      title: 'Mockup session',
+      cliSessionId: 'cli-9',
+      cwd: '/Users/me/project',
+      isArchived: true,
+      lastActivityAt: 1793912956893,
+    });
+  });
+
+  it('leaves out what the file does not have, and finds nothing without a file', async () => {
+    await writeSession('local_bare', { sessionId: 'local_bare', title: '  ', cwd: 5 });
+    expect(await findDesktopSession('local_bare', root)).toEqual({});
+    expect(await findDesktopSession('local_missing', root)).toBeUndefined();
   });
 });
