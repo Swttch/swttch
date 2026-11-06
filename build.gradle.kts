@@ -188,6 +188,14 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.35.3 - Fix small plan text, add reply to selected text, and more</h3>
+            <ul>
+                <li>Add reply to or excerpt of text selected in the chat (#639)</li>
+                <li>Show session starts, messages, session links, plans, and wrap-up boxes as cards like the Claude desktop app (#644)</li>
+                <li>Show each argument of an MCP tool call in its own field (#596, requested by @p-himik)</li>
+                <li>Fix the plan text being too small and sometimes missing from the plan card (#467, #642, reported by @benomatis and @VijitCoder)</li>
+                <li>Fix session titles not showing when the CLI records them late or answers empty (#638, reported by @Zach0126)</li>
+            </ul>
             <h3>0.35.2 - Diff buttons, file links, file names, tab switching, and connection fixes</h3>
             <ul>
                 <li>Fix the chat input not getting the caret when you switch to an already open chat tab (#621, reported by @EndiButler)</li>

@@ -4,7 +4,7 @@
 
 ## What's new
 
-When you work with the Claude desktop app, its sessions can start other sessions, hand each other messages and link to each other in the text of a reply. Until now this chat drew all of that as plain text and raw JSON: a long first message, a tool call with a pile of fields, a session id that meant nothing to a reader. Since v0.36.0 four things are drawn the way the desktop app draws them:
+When you work with the Claude desktop app, its sessions can start other sessions, hand each other messages and link to each other in the text of a reply. Until now this chat drew all of that as plain text and raw JSON: a long first message, a tool call with a pile of fields, a session id that meant nothing to a reader. Since v0.35.3 four things are drawn the way the desktop app draws them:
 
 1. The first message of a session another session started becomes a **Task** card and a **Context** card.
 2. The **plan** and the **wrap-up** that Claude Desktop's `ccd_turn` tools keep for a turn become two plain boxes.
