@@ -30,7 +30,7 @@ The same port (19836) is shared with the JetBrains plugin, so opening the IDE or
 |------------------|--------------|
 | `ccg`            | Default. Probe port → version-check → spawn → open browser. |
 | `ccg update`     | Force-update the runtime to the latest release. |
-| `ccg stop`       | Gracefully stop the backend on port 19836. |
+| `ccg stop`       | Stop the backend on port 19836, child processes included. Options: `--all` (every backend, IDE-launched ones too; asks first), `--force` (SIGKILL immediately), `<pid>`, `--port <n>`, `--no-tree`. |
 | `ccg version`    | Show installed ccg, cached runtimes, and running backend. |
 | `ccg doctor`     | Diagnose environment (node, PATH, cache, port). |
 | `ccg self-update`| Re-run the installer to update ccg itself. |

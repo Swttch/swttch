@@ -138,7 +138,7 @@ The same Claude Code GUI you love in Cursor and VS Code, now available in JetBra
 - `Cmd+N` / `Ctrl+N` (panel focused) — New session tab
 - `Alt+K` / `⌥K` (editor focused) — Send the current file and selected lines to the chat input
 
-### Terminal Launcher (`ccg`)
+### Getting Started Without an IDE (Standalone, `ccg`)
 
 Prefer your own browser over the IDE panel? Install the terminal launcher with one line:
 
@@ -153,6 +153,22 @@ ccg
 ```
 
 Same backend, same UI, opened in your default browser on `http://localhost:19836`. Coexists with the JetBrains plugin on port 19836. See [cli/README.md](cli/README.md) for details.
+
+**Stopping `ccg`.** Press `Ctrl+C` in the terminal where `ccg` is running. If the process does not exit, open another terminal and run:
+
+```bash
+ccg stop                  # stop the backend on port 19836 and its child processes
+ccg stop --all --force    # stop EVERY backend (IDE-launched ones too) with SIGKILL, no grace period; asks before killing
+```
+
+**Updating.** Stop the running `ccg` first, then:
+
+```bash
+ccg self-update           # update the ccg command itself (re-runs the install script)
+ccg update                # update the runtime (backend + webview) to the latest release
+```
+
+**All commands.** Run `ccg --help` for the full list, and `ccg <command> -h` (for example `ccg stop -h`) for the options of one command.
 
 ## Troubleshooting
 
