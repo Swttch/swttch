@@ -19,7 +19,10 @@
     "title": "다른 에이전트가 보낸 메시지"
   },
   "sendMessage": {
-    "to": "받는 대상: {{to}}"
+    "to": "받는 대상: {{to}}",
+    "sent": "메시지 전송함",
+    "delivered": "배송됨",
+    "anotherSession": "다른 세션"
   },
   "attachments": {
     "imageAlt": "이미지 {{index}}",
@@ -343,5 +346,16 @@
   },
   "crossSessionMessage": {
     "title": "다음 발신자로부터 메시지 수신"
+  },
+  "sessionBrief": {
+    "from": "다른 세션에서 시작함",
+    "fromNamed": "다음 세션에서 시작함",
+    "task": "작업",
+    "context": "컨텍스트",
+    "showMore": "더 보기",
+    "showLess": "간략히 보기"
+  },
+  "sessionLink": {
+    "archived": "보관됨"
   }
 }

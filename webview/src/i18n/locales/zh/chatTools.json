@@ -19,7 +19,10 @@
     "title": "来自其他智能体的消息"
   },
   "sendMessage": {
-    "to": "收件人: {{to}}"
+    "to": "收件人: {{to}}",
+    "sent": "已发送消息",
+    "delivered": "已送达",
+    "anotherSession": "另一个会话"
   },
   "attachments": {
     "imageAlt": "图片 {{index}}",
@@ -343,5 +346,16 @@
   },
   "crossSessionMessage": {
     "title": "Message received from"
+  },
+  "sessionBrief": {
+    "from": "从另一个会话启动",
+    "fromNamed": "从以下会话启动：",
+    "task": "任务",
+    "context": "上下文",
+    "showMore": "显示更多",
+    "showLess": "显示更少"
+  },
+  "sessionLink": {
+    "archived": "已归档"
   }
 }

@@ -49,8 +49,10 @@ describe('mcpHeaderLabel', () => {
         expect(mcpHeaderLabel('mcp__shell-sandboxed__screenshot')).toBe('shell-sandboxed: screenshot');
     });
 
-    it('keeps the server exactly as named', () => {
-        expect(mcpHeaderLabel('mcp__claude_ai_Gmail__get_thread')).toBe('claude_ai_Gmail: get thread');
+    it('reads the server\'s underscores as spaces too and keeps its other characters', () => {
+        expect(mcpHeaderLabel('mcp__ccd_session_mgmt__archive_session')).toBe('ccd session mgmt: archive session');
+        expect(mcpHeaderLabel('mcp__claude_ai_Gmail__get_thread')).toBe('claude ai Gmail: get thread');
+        expect(mcpHeaderLabel('mcp__workspace-mcp__search_gmail_messages')).toBe('workspace-mcp: search gmail messages');
     });
 
     it('keeps a __ inside the tool name as a single space', () => {

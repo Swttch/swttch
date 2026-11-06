@@ -194,6 +194,8 @@ import {
 } from './prompts';
 import { getSessionAssetsHandler } from './getSessionAssets';
 import { getSessionSendsHandler } from './getSessionSends';
+import { getSessionParentTitleHandler } from './getSessionParentTitle';
+import { getDesktopSessionHandler } from './getDesktopSession';
 import { searchSessionHandler } from './searchSession';
 import { getSessionAssetDataHandler } from './getSessionAssetData';
 import { getSessionOutputsHandler } from './getSessionOutputs';
@@ -809,6 +811,12 @@ export async function handleMessage(
       break;
     case MessageType.GET_SESSION_SENDS:
       await getSessionSendsHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_SESSION_PARENT_TITLE:
+      await getSessionParentTitleHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_DESKTOP_SESSION:
+      await getDesktopSessionHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.SEARCH_SESSION:
       await searchSessionHandler(connectionId, message, connections, bridge);

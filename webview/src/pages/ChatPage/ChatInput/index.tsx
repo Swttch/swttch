@@ -142,7 +142,7 @@ export function ChatInput() {
   const chatStream = useChatStreamContext();
   const onboarding = useOnboarding();
   const { handleSubmit: onSubmit, isStreaming, stop: onStop, queuedMessages, cancelQueuedMessage, mergeQueuedMessages, moveQueuedMessage, steerQueuedMessage } = chatStream;
-  const { input: value, setInput: onChange } = useChatInputState();
+  const { input: value, setInput: onChange, setComposerHasContent } = useChatInputState();
   const inputHistory = useInputHistory({ workingDirectory, sessionId: currentSessionId });
   const { pushToHistory, navigateUp, navigateDown, resetHistory } = inputHistory;
   // The recording itself belongs to DictationProvider, which sits above this
@@ -1230,6 +1230,14 @@ export function ChatInput() {
   }, [handlePaste, pasteFromHost]);
 
   const hasValue = (!!value.trim() || attachments.length > 0 || pageElements.length > 0 || pendingReplies.length > 0) && uploads.length === 0;
+
+  // Whatever is in the composer, even an upload still under way, puts a message together there: the wrap-up
+  // box's key shortcut stands back for as long as that is so.
+  const composerHasContent = hasValue || uploads.length > 0;
+  useEffect(() => {
+    setComposerHasContent(composerHasContent);
+    return () => setComposerHasContent(false);
+  }, [composerHasContent, setComposerHasContent]);
 
   return (
     <div className="max-w-[44rem] mx-auto px-4 pb-[14px] pt-2">

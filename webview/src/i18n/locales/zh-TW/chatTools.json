@@ -19,7 +19,10 @@
     "title": "來自其他代理程式的訊息"
   },
   "sendMessage": {
-    "to": "收件者: {{to}}"
+    "to": "收件者: {{to}}",
+    "sent": "已傳送訊息",
+    "delivered": "已送達",
+    "anotherSession": "另一個工作階段"
   },
   "attachments": {
     "imageAlt": "圖片 {{index}}",
@@ -343,5 +346,16 @@
   },
   "crossSessionMessage": {
     "title": "Message received from"
+  },
+  "sessionBrief": {
+    "from": "從另一個工作階段啟動",
+    "fromNamed": "從以下工作階段啟動：",
+    "task": "任務",
+    "context": "脈絡",
+    "showMore": "顯示更多",
+    "showLess": "顯示更少"
+  },
+  "sessionLink": {
+    "archived": "已封存"
   }
 }

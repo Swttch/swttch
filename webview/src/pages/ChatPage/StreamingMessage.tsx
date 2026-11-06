@@ -22,6 +22,11 @@ interface StreamingMessageProps {
      * the padding used to.
      */
     footer?: React.ReactNode;
+    /**
+     * Draw the text alone, without the status bullet a reply carries in front of it. For text that sits inside a
+     * card of its own, where the card says what it is and a bullet would read as a second marker.
+     */
+    plain?: boolean;
 }
 
 export const StreamingMessage: React.FC<StreamingMessageProps> = ({
@@ -30,6 +35,7 @@ export const StreamingMessage: React.FC<StreamingMessageProps> = ({
     className = '',
     message,
     footer,
+    plain = false,
 }) => {
     const mermaidOptions = useMermaidOptions();
     const [shouldAnimate, setShouldAnimate] = useState(isStreaming);
@@ -52,29 +58,34 @@ export const StreamingMessage: React.FC<StreamingMessageProps> = ({
         }
     }, [isStreaming]);
 
+    const text = (
+        <div className={`streaming-message ${className}`}>
+            <div ref={markdownRef} className={`markdown-content ${shouldAnimate ? 'streaming-animate' : ''}`}>
+                <Streamdown
+                    mode={isStreaming ? 'streaming' : 'static'}
+                    parseIncompleteMarkdown={isStreaming}
+                    isAnimating={isStreaming}
+                    components={MARKDOWN_COMPONENTS}
+                    controls={{
+                        code: true,
+                        table: true,
+                        mermaid: MERMAID_CONTROLS,
+                    }}
+                    plugins={{ math, code, mermaid }}
+                    mermaid={mermaidOptions}
+                >
+                    {prepareAssistantMarkdown(content, workingDirectory)}
+                </Streamdown>
+                <CodeBlockWrapControls containerRef={markdownRef} content={content} />
+            </div>
+            {footer}
+        </div>
+    );
+
+    if (plain) return text;
     return (
         <ToolWrapper message={message} className="!mt-0" groupClassName={footer ? '!pb-0 -mb-2' : undefined}>
-            <div className={`streaming-message ${className}`}>
-                <div ref={markdownRef} className={`markdown-content ${shouldAnimate ? 'streaming-animate' : ''}`}>
-                    <Streamdown
-                        mode={isStreaming ? 'streaming' : 'static'}
-                        parseIncompleteMarkdown={isStreaming}
-                        isAnimating={isStreaming}
-                        components={MARKDOWN_COMPONENTS}
-                        controls={{
-                            code: true,
-                            table: true,
-                            mermaid: MERMAID_CONTROLS,
-                        }}
-                        plugins={{ math, code, mermaid }}
-                        mermaid={mermaidOptions}
-                    >
-                        {prepareAssistantMarkdown(content, workingDirectory)}
-                    </Streamdown>
-                    <CodeBlockWrapControls containerRef={markdownRef} content={content} />
-                </div>
-                {footer}
-            </div>
+            {text}
         </ToolWrapper>
     );
 };

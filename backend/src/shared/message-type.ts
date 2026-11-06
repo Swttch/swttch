@@ -679,6 +679,10 @@ export enum MessageType {
   // -- Session sends --
   /** Ask for the index of every send the USER typed in one session, as {workingDir, sessionId}. The reply carries one row per send — uuid, timestamp and a truncated preview — so the send index can draw a tick for the whole session while the transcript itself is still paged. Never carries the entries: a prompt drags whatever was pasted into it, up to 21MB of base64 in the worst session measured here. inbound webview→backend */
   GET_SESSION_SENDS = 'GET_SESSION_SENDS',
+  /** Ask for the title of the Claude Desktop session that started this one, as {sessionId} (the CLI session id). The reply is {title} when Desktop's own session files name a starter with a title, and carries no title otherwise. The first message of a session another session started shows it in the line over its Task and Context cards. inbound webview→backend */
+  GET_SESSION_PARENT_TITLE = 'GET_SESSION_PARENT_TITLE',
+  /** Ask what Claude Desktop's own file says about a session named by its Desktop id, as {desktopSessionId} (`local_…`). The reply is {session: {title?, cliSessionId?, cwd?, isArchived?, lastActivityAt?}}, with no `session` when there is no such file. The chat text that links to a session and the card for a message sent to one use it to name the session and to open it. inbound webview→backend */
+  GET_DESKTOP_SESSION = 'GET_DESKTOP_SESSION',
 
   // -- Session search --
   /** Search one session's whole history for a piece of text, as {workingDir, sessionId, query}. The reply lists, newest entry first, which entries contain the text and how many times each does — {uuid, count} rows and a total, never the entries. The find bar uses it so that looking for something does not mean loading the whole transcript: the count is known at once, and the transcript is only loaded back as far as the match the person moves to (LOAD_OLDER_MESSAGES with includeUuid). inbound webview→backend */

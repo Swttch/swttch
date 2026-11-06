@@ -19,7 +19,10 @@
     "title": "رسالة من وكيل آخر"
   },
   "sendMessage": {
-    "to": "إلى: {{to}}"
+    "to": "إلى: {{to}}",
+    "sent": "تم إرسال الرسالة",
+    "delivered": "تم التسليم",
+    "anotherSession": "جلسة أخرى"
   },
   "attachments": {
     "imageAlt": "صورة {{index}}",
@@ -367,5 +370,16 @@
   },
   "crossSessionMessage": {
     "title": "Message received from"
+  },
+  "sessionBrief": {
+    "from": "بدأ من جلسة أخرى",
+    "fromNamed": "بدأ من الجلسة",
+    "task": "المهمة",
+    "context": "السياق",
+    "showMore": "عرض المزيد",
+    "showLess": "عرض أقل"
+  },
+  "sessionLink": {
+    "archived": "مؤرشفة"
   }
 }

@@ -8,6 +8,7 @@ import { i18n } from '@/i18n';
 import { linkMenuStore } from '@/utils/linkMenuStore';
 import { resolveMarkdownFileLink } from '../utils/markdownFileLink';
 import { ArtifactChip } from './ArtifactChip';
+import { DesktopSessionLink, desktopSessionIdOf } from './DesktopSessionLink';
 import { artifactUrlFrom } from '../ToolRenderers/ArtifactRenderer';
 
 // Streamdown's default link classes, re-applied because a custom component fully
@@ -28,6 +29,10 @@ export const MarkdownFileLink: React.FC<{ href?: string; children?: ReactNode }>
 
   // An Artifact page's address is a chip with the page's name, not the address itself.
   if (href && artifactUrlFrom(href) === href) return <ArtifactChip url={href} />;
+
+  // A session of Claude Desktop, linked by its Desktop id: its name on a blue background, a click opens it.
+  const desktopSessionId = desktopSessionIdOf(href);
+  if (desktopSessionId) return <DesktopSessionLink id={desktopSessionId}>{children}</DesktopSessionLink>;
 
   if (link) {
     const open = (event: React.SyntheticEvent) => {

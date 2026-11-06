@@ -19,7 +19,10 @@
     "title": "Mensagem de outro agente"
   },
   "sendMessage": {
-    "to": "Para: {{to}}"
+    "to": "Para: {{to}}",
+    "sent": "Mensagem enviada",
+    "delivered": "Entregue",
+    "anotherSession": "outra sessão"
   },
   "attachments": {
     "imageAlt": "Imagem {{index}}",
@@ -347,5 +350,16 @@
   },
   "crossSessionMessage": {
     "title": "Message received from"
+  },
+  "sessionBrief": {
+    "from": "Iniciada a partir de outra sessão",
+    "fromNamed": "Iniciada a partir de",
+    "task": "Tarefa",
+    "context": "Contexto",
+    "showMore": "Mostrar mais",
+    "showLess": "Mostrar menos"
+  },
+  "sessionLink": {
+    "archived": "Arquivado"
   }
 }
