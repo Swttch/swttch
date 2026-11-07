@@ -2,14 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vite
 import { ClipboardReporter } from './ClipboardReporter';
 
 let detach: (() => void) | undefined;
-let report: Mock<(text: string) => Promise<unknown>>;
+let report: Mock<(text: string, html?: string) => Promise<unknown>>;
 
 function clipboardWith(writeText: (text: string) => Promise<void>) {
   return { writeText } as unknown as Clipboard;
 }
 
 function attach(clipboard: Clipboard | undefined): void {
-  report = vi.fn<(text: string) => Promise<unknown>>().mockResolvedValue(undefined);
+  report = vi.fn<(text: string, html?: string) => Promise<unknown>>().mockResolvedValue(undefined);
   detach = new ClipboardReporter(document, clipboard, report).attach();
 }
 
@@ -146,7 +146,40 @@ describe('ClipboardReporter: copies made by the browser itself', () => {
 
     copyEvent('copy');
 
-    expect(report).toHaveBeenCalledWith('beta');
+    expect(report).toHaveBeenCalledWith('beta', 'beta');
+  });
+
+  it('writes the same text and HTML itself, so what a paste gets does not depend on whether the browser or the host wrote last (#648)', () => {
+    document.body.innerHTML = '<p id="text">before <strong>bold</strong></p>';
+    attach(undefined);
+    const range = document.createRange();
+    range.selectNodeContents(document.getElementById('text')!);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+    const setData = vi.fn();
+    const event = new Event('copy', { bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'clipboardData', { value: { setData } });
+
+    document.dispatchEvent(event);
+
+    expect(setData).toHaveBeenCalledWith('text/plain', 'before bold');
+    expect(setData).toHaveBeenCalledWith('text/html', 'before <strong>bold</strong>');
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('leaves a cut to the browser, which has to remove the selection itself', () => {
+    document.body.innerHTML = '<p id="text">alpha beta</p>';
+    attach(undefined);
+    selectWord('beta');
+    const setData = vi.fn();
+    const event = new Event('cut', { bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'clipboardData', { value: { setData } });
+
+    document.dispatchEvent(event);
+
+    expect(setData).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
   });
 
   it('reports the selected text for a cut', () => {
@@ -155,7 +188,25 @@ describe('ClipboardReporter: copies made by the browser itself', () => {
 
     copyEvent('cut');
 
-    expect(report).toHaveBeenCalledWith('gamma');
+    expect(report).toHaveBeenCalledWith('gamma', 'gamma');
+  });
+
+  it('reports the selection as HTML too, so the host does not replace the formatted copy with plain text (#648)', () => {
+    document.body.innerHTML = '<p id="text">before <strong>bold</strong> and <code>code</code> after</p>';
+    attach(undefined);
+    const paragraph = document.getElementById('text')!;
+    const range = document.createRange();
+    range.selectNodeContents(paragraph);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    copyEvent('copy');
+
+    expect(report).toHaveBeenCalledWith(
+      'before bold and code after',
+      'before <strong>bold</strong> and <code>code</code> after',
+    );
   });
 
   it('reads the selection inside a text field, which the page selection does not hold', () => {
@@ -166,7 +217,7 @@ describe('ClipboardReporter: copies made by the browser itself', () => {
 
     copyEvent('copy');
 
-    expect(report).toHaveBeenCalledWith('typed');
+    expect(report).toHaveBeenCalledWith('typed', undefined);
   });
 
   it('does not report password selections', () => {

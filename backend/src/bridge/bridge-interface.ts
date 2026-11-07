@@ -300,9 +300,13 @@ export interface Bridge {
    *   Standalone: a real browser writes the system clipboard itself, so there is nothing left to do.
    *               That makes the no-op honest: a standalone user loses nothing without it.
    *
+   * [html] is the same selection as HTML, present when the copy came from a selection in the page. The
+   * host puts both on the clipboard so a program that pastes formatting keeps it; text alone would
+   * replace the formatted copy the browser had already made (#648).
+   *
    * [workingDir] routes the request to the IDE host serving that project when several IDEs share one
    * backend. Rejects when the host could not place the text, so the webview can report the copy as
    * failed instead of letting the user paste something older.
    */
-  setClipboard(params: { text: string; workingDir?: string }): Promise<void>;
+  setClipboard(params: { text: string; html?: string; workingDir?: string }): Promise<void>;
 }

@@ -566,7 +566,7 @@ export class JetBrainsBridge implements Bridge {
     return parseClipboardResult(result);
   }
 
-  async setClipboard(params: { text: string; workingDir?: string }): Promise<void> {
+  async setClipboard(params: { text: string; html?: string; workingDir?: string }): Promise<void> {
     await this.request(MessageType.SET_CLIPBOARD, params);
   }
 }

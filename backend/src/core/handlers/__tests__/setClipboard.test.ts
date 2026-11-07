@@ -42,6 +42,35 @@ describe('setClipboardHandler', () => {
     expect(bridge.setClipboard).toHaveBeenCalledWith({ text: '  a\n\tb  ', workingDir: undefined });
   });
 
+  it('hands the selection as HTML along with the text, so the host does not replace a formatted copy with plain text (#648)', async () => {
+    const bridge = createMockBridge();
+
+    await setClipboardHandler(
+      'conn-1',
+      message({ text: 'bold', html: '<strong>bold</strong>', workingDir: '/proj' }),
+      createMockConnections(),
+      bridge,
+    );
+
+    expect(bridge.setClipboard).toHaveBeenCalledWith({
+      text: 'bold',
+      html: '<strong>bold</strong>',
+      workingDir: '/proj',
+    });
+  });
+
+  it.each([
+    ['empty HTML', { text: 'x', html: '' }],
+    ['non-string HTML', { text: 'x', html: 42 }],
+    ['missing HTML', { text: 'x' }],
+  ])('places the text alone for %s', async (_name, payload) => {
+    const bridge = createMockBridge();
+
+    await setClipboardHandler('conn-1', message(payload), createMockConnections(), bridge);
+
+    expect(bridge.setClipboard).toHaveBeenCalledWith({ text: 'x', html: undefined, workingDir: undefined });
+  });
+
   it('asks without a project when the webview names none, and when it names an empty one', async () => {
     const bridge = createMockBridge();
 

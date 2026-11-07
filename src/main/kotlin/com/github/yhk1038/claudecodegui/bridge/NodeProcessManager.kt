@@ -322,8 +322,11 @@ class NodeProcessManager(
          * Throws when the text could not be placed, so the webview can tell the user the copy
          * failed instead of leaving them to paste something older. An empty text is not an
          * error: copying nothing leaves the clipboard as it was.
+         *
+         * [html] is the same selection as HTML when the copy came from the page. Both go on the
+         * clipboard so a program that pastes formatting keeps it (#648).
          */
-        suspend fun setClipboard(text: String)
+        suspend fun setClipboard(text: String, html: String? = null)
 
         /**
          * What the system clipboard holds right now, read on behalf of a chat

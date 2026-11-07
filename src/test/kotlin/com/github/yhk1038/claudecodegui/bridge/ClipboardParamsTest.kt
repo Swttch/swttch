@@ -23,4 +23,20 @@ class ClipboardParamsTest {
         assertNull(parseClipboardText(params("""{"text":42}""")))
         assertNull(parseClipboardText(params("""{"text":null}""")))
     }
+
+    @Test
+    fun `extracts the copied selection as HTML without changing it`() {
+        assertEquals(
+            "<p>a <strong>b</strong>\n</p>",
+            parseClipboardHtml(params("""{"text":"a b","html":"<p>a <strong>b</strong>\n</p>"}""")),
+        )
+    }
+
+    @Test
+    fun `leaves out missing empty and non-string HTML`() {
+        assertNull(parseClipboardHtml(params("""{"text":"a"}""")))
+        assertNull(parseClipboardHtml(params("""{"text":"a","html":""}""")))
+        assertNull(parseClipboardHtml(params("""{"text":"a","html":42}""")))
+        assertNull(parseClipboardHtml(params("""{"text":"a","html":null}""")))
+    }
 }

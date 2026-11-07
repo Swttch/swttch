@@ -25,10 +25,10 @@ export function useClipboardReporter(): void {
     if (!isJetBrains()) return;
     const bridge = getBridge();
     const clipboard = typeof navigator !== 'undefined' ? navigator.clipboard : undefined;
-    const reporter = new ClipboardReporter(document, clipboard, (text) =>
+    const reporter = new ClipboardReporter(document, clipboard, (text, html) =>
       bridge.request(
         MessageType.SET_CLIPBOARD,
-        { text, workingDir },
+        { text, html, workingDir },
         { timeout: HOST_CLIPBOARD_WRITE_TIMEOUT_MS },
       ),
     );

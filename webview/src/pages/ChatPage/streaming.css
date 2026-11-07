@@ -100,6 +100,13 @@
    Streamdown Custom Styles
    ============================================ */
 
+/* A code block's top bar (the language name and the copy button) is not part of the code, so a copy that
+   reaches over it must not carry it along (#648). */
+[data-streamdown="code-block-header"] {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 /* Headings */
 [data-streamdown="heading-1"] {
   font-size: 1.7em;

@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import java.awt.datatransfer.DataFlavor
+import java.awt.datatransfer.Transferable
 
 class SystemClipboardWriterTest {
 
@@ -34,6 +36,33 @@ class SystemClipboardWriterTest {
 
         assertFalse(placed)
         assertEquals(0, calls)
+    }
+
+    @Test
+    fun `puts the text and the HTML on the clipboard together so formatting survives a paste`() {
+        var rich: Transferable? = null
+        var plainCalls = 0
+
+        val placed = SystemClipboardWriter(setRichContents = { rich = it }, setContents = { plainCalls++ })
+            .write("bold text", "<strong>bold</strong> text")
+
+        assertTrue(placed)
+        assertEquals(0, plainCalls)
+        val contents = rich!!
+        assertEquals("<strong>bold</strong> text", contents.getTransferData(DataFlavor.allHtmlFlavor))
+        assertEquals("bold text", contents.getTransferData(DataFlavor.stringFlavor))
+    }
+
+    @Test
+    fun `writes plain text alone when there is no HTML`() {
+        var copied = ""
+        var richCalls = 0
+
+        SystemClipboardWriter(setRichContents = { richCalls++ }, setContents = { copied = it }).write("plain", null)
+        SystemClipboardWriter(setRichContents = { richCalls++ }, setContents = { copied = it }).write("plain", "")
+
+        assertEquals("plain", copied)
+        assertEquals(0, richCalls)
     }
 
     @Test

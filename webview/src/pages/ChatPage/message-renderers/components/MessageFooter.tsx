@@ -109,8 +109,12 @@ export function MessageFooter({ className = '', copyText, onFork, timestamp, exp
   return (
     // The click stops here: `ChatMessageArea` logs the raw entry on any click
     // that reaches it, which is not what pressing one of these buttons asked for.
+    //
+    // The line is not part of the message, so a copy that reaches over it leaves it out (#648):
+    // `select-none` for the selected text, `data-copy-ignore` for the HTML built from the page.
     <div
-      className={`${className} ${folded ? (expanded ? '' : 'hidden') : (alwaysDisplay ? '' : 'invisible group-hover:visible')} transition-all inline-flex items-center gap-1 text-xs text-text-secondary -top-0.5`}
+      className={`${className} ${folded ? (expanded ? '' : 'hidden') : (alwaysDisplay ? '' : 'invisible group-hover:visible')} select-none transition-all inline-flex items-center gap-1 text-xs text-text-secondary -top-0.5`}
+      data-copy-ignore="true"
       onClick={e => e.stopPropagation()}
     >
       {copyText !== undefined && (
