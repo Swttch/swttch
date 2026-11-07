@@ -37,6 +37,25 @@ for cmd in curl tar; do
   fi
 done
 
+# ─── 1b. Node.js check (the backend needs Node.js >= 18) ───────
+
+# Advice only: never installs anything and never blocks the install. Shown again
+# after the install so it is the last thing the user reads.
+node_ok=0
+if command -v node >/dev/null 2>&1; then
+  # `|| true`: a node that is on PATH but fails to run (broken shim) must not abort the installer.
+  node_major=$(node --version 2>/dev/null | sed -E 's/^v([0-9]+)\..*/\1/' || true)
+  if [[ "$node_major" =~ ^[0-9]+$ ]] && (( node_major >= 18 )); then node_ok=1; fi
+fi
+node_warn() {
+  if (( node_ok == 0 )); then
+    say ""
+    say "⚠ Node.js 18 or newer was not found on PATH (ccg needs it to run the backend)."
+    say "  If you already installed it (for example with nvm), open a new terminal so PATH is refreshed."
+    say "  Otherwise install it from https://nodejs.org/ (macOS: brew install node)."
+  fi
+}
+
 # ─── 2. resolve latest version (or honor CCG_VERSION override) ───
 
 if [[ -n "${CCG_VERSION:-}" ]]; then
@@ -125,12 +144,14 @@ case "$shell_type" in
     say "✔ Installation complete. Open a new terminal or run:"
     say "    source $rc_file"
     say "Then run: ccg"
+    node_warn
     ;;
   fish)
     say "ℹ Fish shell detected. Please run:"
     say "    fish_add_path $CCG_HOME/bin"
     say ""
     say "✔ Installation complete. Then run: ccg"
+    node_warn
     ;;
   *)
     say "⚠ Could not auto-detect your shell."
@@ -138,5 +159,6 @@ case "$shell_type" in
     say "    export PATH=\"$CCG_HOME/bin:\$PATH\""
     say ""
     say "✔ Installation complete. Then run: ccg"
+    node_warn
     ;;
 esac

@@ -1,0 +1,46 @@
+﻿# ccg.ps1 - claude-code-gui terminal launcher for native Windows (PowerShell).
+#
+# Usage: ccg [run | list | update | stop | version | doctor | self-update | uninstall | help]
+#
+# Entry point only: resolve paths, dot-source lib/* and commands/*, dispatch.
+# Mirrors the bash `ccg` (cli/bin/ccg): same commands, same options.
+
+$ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+# Installation layout: <CcgRoot>\win\bin\ccg.ps1, <CcgRoot>\win\lib, <CcgRoot>\win\commands, ...
+$script:WinRoot = Split-Path -Parent $PSScriptRoot
+$script:CcgRoot = Split-Path -Parent $script:WinRoot
+$script:CcgPort = if ($env:CCG_PORT) { [int]$env:CCG_PORT } else { 19836 }
+
+foreach ($m in 'i18n', 'version', 'node', 'port', 'runtime') {
+    . (Join-Path $script:WinRoot "lib\$m.ps1")
+}
+foreach ($m in 'help', 'version', 'doctor') {
+    . (Join-Path $script:WinRoot "commands\$m.ps1")
+}
+
+Import-CcgLocale (Get-CcgLocale)
+
+function Invoke-Ccg {
+    param([string[]]$CcgArgs)
+    $cmd = if ($CcgArgs.Count -gt 0) { $CcgArgs[0] } else { 'run' }
+    $rest = if ($CcgArgs.Count -gt 1) { $CcgArgs[1..($CcgArgs.Count - 1)] } else { @() }
+
+    switch ($cmd) {
+        { $_ -in 'version', '--version', '-v' } { Invoke-CcgVersion $rest }
+        'doctor' { Invoke-CcgDoctor $rest }
+        { $_ -in 'help', '--help', '-h' } { Invoke-CcgHelp }
+        { $_ -in 'run', 'list', 'ls', 'update', 'stop', 'self-update', 'uninstall', 'account', 'acct' } {
+            [Console]::Error.WriteLine((T 'cmd_not_yet' $cmd))
+            exit 1
+        }
+        default {
+            [Console]::Error.WriteLine((T 'unknown_command' $cmd))
+            Invoke-CcgHelp
+            exit 1
+        }
+    }
+}
+
+Invoke-Ccg $args
