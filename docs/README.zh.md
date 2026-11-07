@@ -132,19 +132,19 @@
 
 ### 无需 IDE 即可使用（Standalone，`swttch`）
 
-如果想用平时的浏览器而不是 IDE 面板，可以用一行命令安装终端启动器 `swttch`:
+如果想用平时的浏览器而不是 IDE 面板，可以用一行命令安装终端启动器 `swttch`.
+
+在可使用 `curl` 和 `bash` 的环境中:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.sh | bash
 ```
 
-在 **Windows** 上，请改为打开 PowerShell 并运行（无需 Git、bash 或 WSL）:
+在 **PowerShell** 环境中:
 
 ```powershell
 irm https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.ps1 | iex
 ```
-
-如果缺少 Node.js 18 或更高版本，安装程序会给出警告，但不会替你安装（`winget install OpenJS.NodeJS.LTS` 或 https://nodejs.org/）。如果你使用 Git Bash 或 WSL，上面的 `curl` 命令在那里同样可用。
 
 安装后，在任意项目目录中运行:
 

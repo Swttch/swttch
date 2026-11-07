@@ -132,19 +132,19 @@ Cursor와 VS Code에서 사랑받는 Claude Code GUI를 이제 JetBrains IDE에�
 
 ### IDE 없이 시작하기 (Standalone, `swttch`)
 
-IDE 패널 대신 평소 쓰는 브라우저로 사용하고 싶다면, 한 줄로 터미널 런처 `swttch`를 설치할 수 있습니다:
+IDE 패널 대신 평소 쓰는 브라우저로 사용하고 싶다면, 한 줄로 터미널 런처 `swttch`를 설치할 수 있습니다.
+
+`curl`과 `bash`를 사용할 수 있는 환경에서:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.sh | bash
 ```
 
-**Windows**에서는 대신 PowerShell을 열어 다음을 실행합니다 (Git, bash, WSL이 필요 없습니다):
+**PowerShell** 환경에서:
 
 ```powershell
 irm https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.ps1 | iex
 ```
-
-설치 스크립트는 Node.js 18 이상이 없으면 경고하지만 대신 설치하지는 않습니다 (`winget install OpenJS.NodeJS.LTS` 또는 https://nodejs.org/). Git Bash나 WSL을 쓰고 있다면 위의 `curl` 한 줄도 그대로 동작합니다.
 
 설치한 뒤에는 원하는 프로젝트 디렉토리에서 다음을 실행합니다:
 

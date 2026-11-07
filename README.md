@@ -140,19 +140,19 @@ The same Claude Code GUI you love in Cursor and VS Code, now available in JetBra
 
 ### Getting Started Without an IDE (Standalone, `swttch`)
 
-Prefer your own browser over the IDE panel? Install the terminal launcher with one line:
+Prefer your own browser over the IDE panel? Install the terminal launcher with one line.
+
+Where `curl` and `bash` are available:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.sh | bash
 ```
 
-On **Windows**, open PowerShell instead (no Git, bash or WSL needed):
+In **PowerShell**:
 
 ```powershell
 irm https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.ps1 | iex
 ```
-
-The installer warns you if Node.js 18 or newer is missing, but never installs it for you (`winget install OpenJS.NodeJS.LTS` or https://nodejs.org/). If you use Git Bash or WSL, the `curl` line above works there too.
 
 Then from any project directory:
 

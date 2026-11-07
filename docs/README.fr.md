@@ -133,19 +133,19 @@ La même interface Claude Code GUI que vous aimez dans Cursor et VS Code, mainte
 
 ### Démarrer sans IDE (Standalone, `swttch`)
 
-Si vous préférez utiliser votre propre navigateur plutôt que le panneau de l'IDE, vous pouvez installer le lanceur de terminal `swttch` en une seule ligne :
+Si vous préférez utiliser votre propre navigateur plutôt que le panneau de l'IDE, vous pouvez installer le lanceur de terminal `swttch` en une seule ligne.
+
+Dans un environnement avec `curl` et `bash` :
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.sh | bash
 ```
 
-Sous **Windows**, ouvrez plutôt PowerShell (ni Git, ni bash, ni WSL requis) :
+Dans **PowerShell** :
 
 ```powershell
 irm https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.ps1 | iex
 ```
-
-Le script d'installation vous avertit si Node.js 18 ou supérieur est absent, mais ne l'installe jamais à votre place (`winget install OpenJS.NodeJS.LTS` ou https://nodejs.org/). Si vous utilisez Git Bash ou WSL, la ligne `curl` ci-dessus fonctionne aussi.
 
 Ensuite, depuis n'importe quel répertoire de projet :
 
