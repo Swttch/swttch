@@ -123,6 +123,9 @@ MSG_en_err_restart_loop="Backend restarted too quickly (crash loop detected). Ab
 MSG_en_abort="Aborted."
 MSG_en_unknown_command="Unknown command: %s"
 MSG_en_usage_header="Usage: ccg <command> [args]"
+MSG_en_swttch_usage_header="Usage: swttch <command> [args]"
+MSG_en_desktop_not_available="The Swttch desktop app is not available yet."
+MSG_en_help_swttch_body="  swttch browser        Open Swttch in your browser (starts or reuses the backend).\n                        Use -h for details. (The old name 'ccg' still works but is deprecated.)\n  swttch desktop        Open the Swttch desktop app (not available yet).\n  swttch list, ls       Show the backend process tree (PIDs, ports, source labels).\n  swttch account, acct  Manage saved Claude accounts (list/use/current/save/rm).\n  swttch update         Force-update runtime to the latest release.\n  swttch stop           Stop the backend on port 19836, descendants included.\n  swttch version, -v    Show installed swttch, cached runtimes, and running backend.\n  swttch doctor         Diagnose environment (node, PATH, cache, port).\n  swttch self-update    Re-run the install script to update swttch itself.\n  swttch uninstall      Remove swttch from this machine.\n  swttch help, -h       Show this message.\n\n  Run 'swttch <command> -h' for details on any command."
 
 # Account (ccg account)
 MSG_en_account_list_header="Saved Claude accounts:"

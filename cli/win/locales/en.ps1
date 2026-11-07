@@ -92,4 +92,7 @@ $Messages = @{
     uninstall_failed        = "Could not remove: {0}. A running backend may be using them: run 'ccg stop' and try again."
     uninstall_done          = "Uninstall complete. Your data in {0} (accounts, settings, licence) was kept; delete that folder yourself to remove it too. Open a new terminal to refresh PATH."
     err_self_update_fetch   = "Could not download the install script from {0}."
+    swttch_usage_header     = "Usage: swttch <command> [args]"
+    desktop_not_available   = "The Swttch desktop app is not available yet."
+    help_swttch_body        = "  swttch browser        Open Swttch in your browser (starts or reuses the backend).`n                        Use -h for details. (The old name 'ccg' still works but is deprecated.)`n  swttch desktop        Open the Swttch desktop app (not available yet).`n  swttch list, ls       Show the backend process tree (PIDs, ports, source labels).`n  swttch update         Force-update runtime to the latest release.`n  swttch stop           Stop the backend on port 19836, descendants included.`n  swttch version, -v    Show installed swttch, cached runtimes, and running backend.`n  swttch doctor         Diagnose environment (node, PATH, cache, port).`n  swttch self-update    Re-run the install script to update swttch itself.`n  swttch uninstall      Remove swttch from this machine.`n  swttch help, -h       Show this message.`n`n  Run 'swttch <command> -h' for details on any command."
 }

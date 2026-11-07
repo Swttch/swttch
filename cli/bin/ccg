@@ -55,7 +55,7 @@ source "$CCG_LIB_DIR/spawn/index.sh"
 # shellcheck disable=SC1090
 for _cmd_module in \
   run/index.sh list/index.sh stop/index.sh account/index.sh \
-  doctor.sh version.sh update.sh self-update.sh uninstall.sh help.sh; do
+  doctor.sh version.sh update.sh self-update.sh uninstall.sh help.sh swttch.sh; do
   source "$CCG_COMMANDS_DIR/$_cmd_module"
 done
 unset _cmd_module

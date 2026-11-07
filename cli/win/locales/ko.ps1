@@ -92,4 +92,7 @@ $Messages = @{
     uninstall_failed        = "제거하지 못한 항목: {0}. 실행 중인 백엔드가 쓰고 있을 수 있습니다. 'ccg stop' 후 다시 시도하세요."
     uninstall_done          = "제거를 마쳤습니다. {0}의 사용자 데이터(계정, 설정, 라이선스)는 남겼습니다. 그것까지 지우려면 그 폴더를 직접 삭제하세요. PATH를 갱신하려면 새 터미널을 여세요."
     err_self_update_fetch   = "{0}에서 설치 스크립트를 내려받지 못했습니다."
+    swttch_usage_header     = "사용법: swttch <command> [args]"
+    desktop_not_available   = "Swttch 데스크탑 앱은 아직 제공되지 않습니다."
+    help_swttch_body        = "  swttch browser        브라우저에서 Swttch를 엽니다 (백엔드를 시작하거나 재사용).`n                        자세한 내용은 -h. (예전 이름 'ccg'도 동작하지만 더는 권장하지 않습니다.)`n  swttch desktop        Swttch 데스크탑 앱을 엽니다 (아직 제공되지 않음).`n  swttch list, ls       백엔드 프로세스 트리를 보여 줍니다 (PID, 포트, 출처 라벨).`n  swttch update         런타임을 최신 릴리즈로 강제 업데이트합니다.`n  swttch stop           포트 19836의 백엔드를 자손까지 함께 종료합니다.`n  swttch version, -v    설치된 swttch, 캐시된 런타임, 실행 중인 백엔드를 보여 줍니다.`n  swttch doctor         환경을 진단합니다 (node, PATH, 캐시, 포트).`n  swttch self-update    설치 스크립트를 다시 실행해 swttch 자체를 업데이트합니다.`n  swttch uninstall      이 컴퓨터에서 swttch를 제거합니다.`n  swttch help, -h       이 도움말을 보여 줍니다.`n`n  각 명령의 자세한 설명은 'swttch <command> -h'로 볼 수 있습니다."
 }

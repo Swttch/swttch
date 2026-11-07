@@ -55,7 +55,7 @@ for rc in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.bash_profile" "$HOME/.profile";
 done
 
 say "Removing ccg from $CCG_HOME..."
-for item in bin/ccg commands lib locales win runtimes uninstall.sh .ccg-version; do
+for item in bin/ccg bin/swttch commands lib locales win runtimes uninstall.sh .ccg-version; do
   rm -rf "${CCG_HOME:?}/$item"
 done
 # bin/ also holds files that are not ours (cloudflared); drop the folder only when it is empty.

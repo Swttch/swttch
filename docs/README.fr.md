@@ -131,37 +131,49 @@ La même interface Claude Code GUI que vous aimez dans Cursor et VS Code, mainte
 - `Ctrl+Shift+C` — Ouvrir le panneau Claude Code
 - `Cmd+N` / `Ctrl+N` (panneau en focus) — Nouvel onglet de session
 
-### Démarrer sans IDE (Standalone, `ccg`)
+### Démarrer sans IDE (Standalone, `swttch`)
 
-Si vous préférez utiliser votre propre navigateur plutôt que le panneau de l'IDE, vous pouvez installer le lanceur de terminal `ccg` en une seule ligne :
+Si vous préférez utiliser votre propre navigateur plutôt que le panneau de l'IDE, vous pouvez installer le lanceur de terminal `swttch` en une seule ligne :
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.sh | bash
 ```
 
+Sous **Windows**, ouvrez plutôt PowerShell (ni Git, ni bash, ni WSL requis) :
+
+```powershell
+irm https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.ps1 | iex
+```
+
+Le script d'installation vous avertit si Node.js 18 ou supérieur est absent, mais ne l'installe jamais à votre place (`winget install OpenJS.NodeJS.LTS` ou https://nodejs.org/). Si vous utilisez Git Bash ou WSL, la ligne `curl` ci-dessus fonctionne aussi.
+
 Ensuite, depuis n'importe quel répertoire de projet :
 
 ```bash
-ccg
+swttch browser
 ```
 
 Le backend et l'interface sont les mêmes que ceux du plugin de l'IDE, et s'ouvrent dans votre navigateur par défaut à l'adresse `http://localhost:19836`. Le port 19836 est partagé avec le plugin JetBrains, les deux peuvent donc coexister. Voir [cli/README.md](../cli/README.md) pour plus de détails.
 
-**Arrêter `ccg`.** Appuyez sur `Ctrl+C` dans le terminal où `ccg` s'exécute. Si le processus ne se termine pas, ouvrez un autre terminal et exécutez :
+L'ancien nom de commande, `ccg`, fonctionne toujours mais est obsolète (deprecated). Utilisez plutôt `swttch browser`.
+
+**Arrêter `swttch`.** Appuyez sur `Ctrl+C` dans le terminal où `swttch` s'exécute. Si le processus ne se termine pas, ouvrez un autre terminal et exécutez :
 
 ```bash
-ccg stop                  # arrête le backend du port 19836 et ses processus enfants
-ccg stop --all --force    # arrête TOUS les backends (y compris ceux lancés par l'IDE) avec SIGKILL, sans délai de grâce ; demande confirmation avant d'arrêter
+swttch stop                  # arrête le backend du port 19836 et ses processus enfants
+swttch stop --all --force    # arrête TOUS les backends (y compris ceux lancés par l'IDE) avec SIGKILL, sans délai de grâce ; demande confirmation avant d'arrêter
 ```
 
-**Mettre à jour.** Arrêtez d'abord le `ccg` en cours d'exécution, puis exécutez :
+Sous Windows, après `Ctrl+C`, `Terminate batch job (Y/N)?` peut s'afficher ; répondez `Y`.
+
+**Mettre à jour.** Arrêtez d'abord le `swttch` en cours d'exécution, puis exécutez :
 
 ```bash
-ccg self-update           # met à jour la commande ccg elle-même (relance le script d'installation)
-ccg update                # met à jour le runtime (backend et interface) vers la dernière version
+swttch self-update           # met à jour la commande swttch elle-même (relance le script d'installation)
+swttch update                # met à jour le runtime (backend et interface) vers la dernière version
 ```
 
-**Toutes les commandes.** Exécutez `ccg --help` pour la liste complète, et `ccg <commande> -h` (par exemple `ccg stop -h`) pour les options d'une commande.
+**Toutes les commandes.** Exécutez `swttch --help` pour la liste complète, et `swttch <commande> -h` (par exemple `swttch stop -h`) pour les options d'une commande.
 
 ## Dépannage
 

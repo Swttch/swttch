@@ -14,6 +14,8 @@ $ErrorActionPreference = 'Stop'
 # Installation layout: <CcgRoot>\win\main.ps1, <CcgRoot>\win\bin\ccg.cmd, <CcgRoot>\win\lib, ...
 $script:WinRoot = $PSScriptRoot
 $script:CcgRoot = Split-Path -Parent $script:WinRoot
+# `swttch.cmd` sets CCG_PROGRAM=swttch; ccg.cmd (the deprecated name of `swttch browser`) leaves it unset.
+$script:Program = if ($env:CCG_PROGRAM) { $env:CCG_PROGRAM } else { 'ccg' }
 $script:CcgPort = if ($env:CCG_PORT) { [int]$env:CCG_PORT } else { 19836 }
 
 foreach ($m in 'i18n', 'version', 'node', 'port', 'runtime', 'browser', 'spawn', 'proc', 'backend-tree') {
@@ -27,8 +29,17 @@ Import-CcgLocale (Get-CcgLocale)
 
 function Invoke-Ccg {
     param([string[]]$CcgArgs)
-    $cmd = if ($CcgArgs.Count -gt 0) { $CcgArgs[0] } else { 'run' }
+    # `swttch` has no default action (browser and desktop are peers): bare `swttch` prints help.
+    $isSwttch = $script:Program -eq 'swttch'
+    $cmd = if ($CcgArgs.Count -gt 0) { $CcgArgs[0] } elseif ($isSwttch) { 'help' } else { 'run' }
     $rest = if ($CcgArgs.Count -gt 1) { $CcgArgs[1..($CcgArgs.Count - 1)] } else { @() }
+
+    if ($isSwttch -and $cmd -eq 'browser') { $cmd = 'run' }
+    elseif ($isSwttch -and $cmd -eq 'run') { $cmd = '<unknown-in-swttch>' }
+    elseif ($isSwttch -and $cmd -eq 'desktop') {
+        [Console]::Error.WriteLine((T 'desktop_not_available'))
+        exit 1
+    }
 
     switch ($cmd) {
         { $_ -in 'version', '--version', '-v' } { Invoke-CcgVersion $rest }
@@ -63,7 +74,7 @@ function Invoke-Ccg {
             exit 1
         }
         default {
-            [Console]::Error.WriteLine((T 'unknown_command' $cmd))
+            [Console]::Error.WriteLine((T 'unknown_command' ($CcgArgs[0])))
             Invoke-CcgHelp
             exit 1
         }

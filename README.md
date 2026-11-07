@@ -138,7 +138,7 @@ The same Claude Code GUI you love in Cursor and VS Code, now available in JetBra
 - `Cmd+N` / `Ctrl+N` (panel focused) — New session tab
 - `Alt+K` / `⌥K` (editor focused) — Send the current file and selected lines to the chat input
 
-### Getting Started Without an IDE (Standalone, `ccg`)
+### Getting Started Without an IDE (Standalone, `swttch`)
 
 Prefer your own browser over the IDE panel? Install the terminal launcher with one line:
 
@@ -146,29 +146,41 @@ Prefer your own browser over the IDE panel? Install the terminal launcher with o
 curl -fsSL https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.sh | bash
 ```
 
+On **Windows**, open PowerShell instead (no Git, bash or WSL needed):
+
+```powershell
+irm https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.ps1 | iex
+```
+
+The installer warns you if Node.js 18 or newer is missing, but never installs it for you (`winget install OpenJS.NodeJS.LTS` or https://nodejs.org/). If you use Git Bash or WSL, the `curl` line above works there too.
+
 Then from any project directory:
 
 ```bash
-ccg
+swttch browser
 ```
 
 Same backend, same UI, opened in your default browser on `http://localhost:19836`. Coexists with the JetBrains plugin on port 19836. See [cli/README.md](cli/README.md) for details.
 
-**Stopping `ccg`.** Press `Ctrl+C` in the terminal where `ccg` is running. If the process does not exit, open another terminal and run:
+The previous command name, `ccg`, still works but is deprecated. Use `swttch browser` instead.
+
+**Stopping `swttch`.** Press `Ctrl+C` in the terminal where `swttch` is running. If the process does not exit, open another terminal and run:
 
 ```bash
-ccg stop                  # stop the backend on port 19836 and its child processes
-ccg stop --all --force    # stop EVERY backend (IDE-launched ones too) with SIGKILL, no grace period; asks before killing
+swttch stop                  # stop the backend on port 19836 and its child processes
+swttch stop --all --force    # stop EVERY backend (IDE-launched ones too) with SIGKILL, no grace period; asks before killing
 ```
 
-**Updating.** Stop the running `ccg` first, then:
+On Windows, after `Ctrl+C` you may see `Terminate batch job (Y/N)?`; answer `Y`.
+
+**Updating.** Stop the running `swttch` first, then:
 
 ```bash
-ccg self-update           # update the ccg command itself (re-runs the install script)
-ccg update                # update the runtime (backend + webview) to the latest release
+swttch self-update           # update the swttch command itself (re-runs the install script)
+swttch update                # update the runtime (backend + webview) to the latest release
 ```
 
-**All commands.** Run `ccg --help` for the full list, and `ccg <command> -h` (for example `ccg stop -h`) for the options of one command.
+**All commands.** Run `swttch --help` for the full list, and `swttch <command> -h` (for example `swttch stop -h`) for the options of one command.
 
 ## Troubleshooting
 

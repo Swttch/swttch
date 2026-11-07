@@ -27,5 +27,10 @@ t() {
 
   # printf interprets backslash escapes in templates (e.g. \n)
   # shellcheck disable=SC2059
-  printf "$template" "$@"
+  printf -v _t_out "$template" "$@"
+  # `swttch` runs the same modules: mention the program the user typed, not `ccg`.
+  if [[ "${CCG_PROGRAM:-ccg}" != "ccg" ]]; then
+    _t_out=${_t_out//ccg /${CCG_PROGRAM} }
+  fi
+  printf '%s' "$_t_out"
 }

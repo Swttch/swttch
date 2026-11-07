@@ -249,7 +249,7 @@ case "${1:-}" in
     cp -R "$ROOT/cli/locales" "$stage/"
     cp -R "$ROOT/cli/win" "$stage/"
     cp "$ROOT/cli/uninstall.sh" "$stage/"
-    chmod +x "$stage/bin/ccg" "$stage/uninstall.sh"
+    chmod +x "$stage/bin/ccg" "$stage/bin/swttch" "$stage/uninstall.sh"
     out="$ROOT/dist/ccg-cli-v$version.tar.gz"
     # COPYFILE_DISABLE: do not add macOS '._*' sidecar entries to the archive
     COPYFILE_DISABLE=1 tar -czf "$out" -C "$stage" .

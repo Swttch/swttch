@@ -28,6 +28,9 @@ function T {
     $template = $script:Messages[$Key]
     if ($null -eq $template) { $template = $script:MessagesEn[$Key] }
     if ($null -eq $template) { return "<<$Key>>" }
-    if ($args.Count -gt 0) { return [string]::Format($template, $args) }
-    return $template
+    $out = $template
+    if ($args.Count -gt 0) { $out = [string]::Format($template, $args) }
+    # `swttch` runs the same modules: mention the program the user typed, not `ccg`.
+    if ($script:Program -ne 'ccg') { $out = $out.Replace('ccg ', $script:Program + ' ') }
+    return $out
 }
