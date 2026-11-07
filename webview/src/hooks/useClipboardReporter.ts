@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { getBridge } from '@/api/bridge/Bridge';
 import { ClipboardReporter } from '@/api/clipboard/ClipboardReporter';
+import { attachFormattedCopy } from '@/api/clipboard/FormattedCopy';
 import { isJetBrains } from '@/config/environment';
 import { useWorkingDirOrNull } from '@/contexts/WorkingDirContext';
 import { MessageType } from '@/shared';
@@ -16,13 +17,14 @@ const HOST_CLIPBOARD_WRITE_TIMEOUT_MS = 5_000;
  * Keep the IDE's system clipboard in sync with copies made inside JCEF.
  *
  * A normal browser owns the clipboard process that performs the copy, so only
- * the embedded JetBrains browser needs this host report.
+ * the embedded JetBrains browser needs this host report. A normal browser still
+ * copies the same text and HTML as the IDE does, so a paste reads the same everywhere.
  */
 export function useClipboardReporter(): void {
   const workingDir = useWorkingDirOrNull()?.workingDirectory ?? undefined;
 
   useEffect(() => {
-    if (!isJetBrains()) return;
+    if (!isJetBrains()) return attachFormattedCopy(document);
     const bridge = getBridge();
     const clipboard = typeof navigator !== 'undefined' ? navigator.clipboard : undefined;
     const reporter = new ClipboardReporter(document, clipboard, (text, html) =>
