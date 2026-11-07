@@ -537,7 +537,7 @@ class RpcWebSocketClient(
             }
             "SET_CLIPBOARD" -> {
                 // Empty or malformed reports leave the host clipboard alone.
-                parseClipboardText(params)?.let { rpcHandler.setClipboard(it) }
+                parseClipboardText(params)?.let { rpcHandler.setClipboard(it, parseClipboardHtml(params)) }
                 buildJsonObject {}
             }
             "GET_CLIPBOARD" -> {
@@ -692,6 +692,13 @@ internal fun parsePrimarySelectionText(params: JsonObject): String? =
 /** Extracts non-empty copied text from SET_CLIPBOARD params without logging it. */
 internal fun parseClipboardText(params: JsonObject): String? =
     (params["text"] as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf { it.isNotEmpty() }
+
+/**
+ * Extracts the copied selection as HTML from SET_CLIPBOARD params, or null when it is missing, empty
+ * or not a string. It rides along with the text so a program that pastes formatting keeps it (#648).
+ */
+internal fun parseClipboardHtml(params: JsonObject): String? =
+    (params["html"] as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf { it.isNotEmpty() }
 
 /**
  * Extracts the "paths" string array from REFRESH_FILES params, skipping any

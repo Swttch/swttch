@@ -626,7 +626,7 @@ if ($dialog.ShowDialog() -eq 'OK') {
     return { text: null, image: null };
   }
 
-  async setClipboard(_params: { text: string; workingDir?: string }): Promise<void> {
+  async setClipboard(_params: { text: string; html?: string; workingDir?: string }): Promise<void> {
     // A real browser owns the clipboard that performed the copy. The host
     // bridge is only needed for JCEF, where the IDE owns a separate process.
   }

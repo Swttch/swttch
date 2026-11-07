@@ -2884,14 +2884,14 @@ class ClaudeCodePanel(
                 }
             }
 
-            override suspend fun setClipboard(text: String) {
+            override suspend fun setClipboard(text: String, html: String?) {
                 // Clipboard manager access belongs on the EDT. The webview waits for the answer: a
                 // copy that did not take must reach the user as "copy failed", or they paste
                 // something older and believe it is what they copied. A deadline keeps a clipboard
                 // that never answers from leaving the copy button waiting for good.
                 val placed = CompletableDeferred<Boolean>()
                 ApplicationManager.getApplication().invokeLater {
-                    placed.complete(systemClipboardWriter.write(text))
+                    placed.complete(systemClipboardWriter.write(text, html))
                 }
                 val done = withTimeoutOrNull(CLIPBOARD_READ_TIMEOUT_MS) { placed.await() }
                 if (done != true) {

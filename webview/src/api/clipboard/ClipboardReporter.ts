@@ -1,10 +1,15 @@
 import { selectedText } from '../selection/selectedText';
+import { selectedHtml } from '../selection/selectedHtml';
+import { writeFormattedCopy } from './FormattedCopy';
 
 /**
  * Hands text to the IDE host, which puts it on the system clipboard. Resolves once the host has
  * placed it and rejects when it could not.
+ *
+ * [html] is the same selection as HTML when the copy came from the page. The host puts both on the
+ * clipboard: text alone would replace the formatted copy the browser already made (#648).
  */
-export type HostCopy = (text: string) => Promise<unknown>;
+export type HostCopy = (text: string, html?: string) => Promise<unknown>;
 
 /**
  * Reports text copied inside the embedded browser to the IDE host.
@@ -50,7 +55,12 @@ export class ClipboardReporter {
       if (event.defaultPrevented) return;
       const text = selectedText(this.doc);
       if (text.length === 0) return;
-      this.report(text).catch(() => {
+      const html = selectedHtml(this.doc);
+      // The browser and the host each write the clipboard and the later write wins, so what a paste
+      // gets would depend on which finished last. Writing the browser's copy ourselves makes both
+      // hold the same text and HTML (#648).
+      writeFormattedCopy(event, text, html);
+      this.report(text, html).catch(() => {
         // The browser's own copy went ahead, and there is no button to say no to.
       });
     };

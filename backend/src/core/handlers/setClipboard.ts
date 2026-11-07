@@ -30,12 +30,17 @@ export async function setClipboardHandler(
     return;
   }
 
+  // The copied selection as HTML, so a program that pastes formatting keeps it. Without it the host
+  // could only put the plain text on the clipboard, replacing the formatted copy the browser made (#648).
+  const htmlValue = message.payload?.html;
+  const html = typeof htmlValue === 'string' && htmlValue.length > 0 ? htmlValue : undefined;
+
   const workingDirValue = message.payload?.workingDir;
   const workingDir =
     typeof workingDirValue === 'string' && workingDirValue.length > 0 ? workingDirValue : undefined;
 
   try {
-    await bridge.setClipboard({ text, workingDir });
+    await bridge.setClipboard({ text, html, workingDir });
     connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId });
   } catch (err) {
     const msg = err instanceof Error ? err.message : JSON.stringify(err);
