@@ -168,7 +168,9 @@ El nombre de comando anterior, `ccg`, sigue funcionando pero está obsoleto (dep
 
 ### Otros usos
 
-**Detener `swttch`.** Pulsa `Ctrl+C` en la terminal donde se ejecuta `swttch`. Si el proceso no termina, abre otra terminal y ejecuta:
+#### Detener `swttch`
+
+Pulsa `Ctrl+C` en la terminal donde se ejecuta `swttch`. Si el proceso no termina, abre otra terminal y ejecuta:
 
 ```bash
 swttch stop                  # detiene el backend del puerto 19836 y sus procesos hijos
@@ -177,14 +179,18 @@ swttch stop --all --force    # detiene TODOS los backends (también los iniciado
 
 En Windows, tras `Ctrl+C` puede aparecer `Terminate batch job (Y/N)?`; responde `Y`.
 
-**Actualizar.** Detén primero el `swttch` en ejecución y luego ejecuta:
+#### Actualizar
+
+Detén primero el `swttch` en ejecución y luego ejecuta:
 
 ```bash
 swttch self-update           # actualiza el propio comando swttch (vuelve a ejecutar el script de instalación)
 swttch update                # actualiza el runtime (backend e interfaz) a la última versión
 ```
 
-**Todos los comandos.** Ejecuta `swttch --help` para ver la lista completa y `swttch <comando> -h` (por ejemplo `swttch stop -h`) para ver las opciones de un comando.
+#### Todos los comandos
+
+Ejecuta `swttch --help` para ver la lista completa y `swttch <comando> -h` (por ejemplo `swttch stop -h`) para ver las opciones de un comando.
 
 ## Solución de problemas
 

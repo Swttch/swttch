@@ -167,7 +167,9 @@ swttch browser
 
 ### 其他用法
 
-**停止 `swttch`。** 在运行 `swttch` 的终端中按 `Ctrl+C`。如果进程仍未退出，请打开另一个终端并运行:
+#### 停止 `swttch`
+
+在运行 `swttch` 的终端中按 `Ctrl+C`。如果进程仍未退出，请打开另一个终端并运行:
 
 ```bash
 swttch stop                  # 停止端口 19836 上的后端及其子进程
@@ -176,14 +178,18 @@ swttch stop --all --force    # 不等待宽限时间，用 SIGKILL 停止所有�
 
 在 Windows 上，按下 `Ctrl+C` 后可能会出现 `Terminate batch job (Y/N)?`，请输入 `Y`。
 
-**更新。** 先停止正在运行的 `swttch`，然后运行:
+#### 更新
+
+先停止正在运行的 `swttch`，然后运行:
 
 ```bash
 swttch self-update           # 更新 swttch 命令本身（重新运行安装脚本）
 swttch update                # 将运行时（后端和界面）更新到最新版本
 ```
 
-**所有命令。** 运行 `swttch --help` 查看完整命令列表，运行 `swttch <命令> -h`（例如 `swttch stop -h`）查看单个命令的选项。
+#### 所有命令
+
+运行 `swttch --help` 查看完整命令列表，运行 `swttch <命令> -h`（例如 `swttch stop -h`）查看单个命令的选项。
 
 ## 故障排查
 

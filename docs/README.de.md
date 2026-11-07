@@ -168,7 +168,9 @@ Der frühere Befehlsname `ccg` funktioniert weiterhin, ist aber veraltet (deprec
 
 ### Weitere Verwendung
 
-**`swttch` beenden.** Drücken Sie `Ctrl+C` in dem Terminal, in dem `swttch` läuft. Wenn der Prozess nicht endet, öffnen Sie ein weiteres Terminal und führen Sie aus:
+#### `swttch` beenden
+
+Drücken Sie `Ctrl+C` in dem Terminal, in dem `swttch` läuft. Wenn der Prozess nicht endet, öffnen Sie ein weiteres Terminal und führen Sie aus:
 
 ```bash
 swttch stop                  # beendet das Backend auf Port 19836 samt Kindprozessen
@@ -177,14 +179,18 @@ swttch stop --all --force    # beendet ALLE Backends (auch die vom IDE gestartet
 
 Unter Windows kann nach `Ctrl+C` die Frage `Terminate batch job (Y/N)?` erscheinen; antworten Sie mit `Y`.
 
-**Aktualisieren.** Beenden Sie zuerst das laufende `swttch` und führen Sie dann aus:
+#### Aktualisieren
+
+Beenden Sie zuerst das laufende `swttch` und führen Sie dann aus:
 
 ```bash
 swttch self-update           # aktualisiert den Befehl swttch selbst (führt das Installationsskript erneut aus)
 swttch update                # aktualisiert die Laufzeit (Backend und Oberfläche) auf das neueste Release
 ```
 
-**Alle Befehle.** `swttch --help` zeigt die vollständige Liste, `swttch <Befehl> -h` (zum Beispiel `swttch stop -h`) die Optionen eines einzelnen Befehls.
+#### Alle Befehle
+
+`swttch --help` zeigt die vollständige Liste, `swttch <Befehl> -h` (zum Beispiel `swttch stop -h`) die Optionen eines einzelnen Befehls.
 
 ## Fehlerbehebung
 

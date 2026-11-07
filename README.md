@@ -175,7 +175,9 @@ The previous command name, `ccg`, still works but is deprecated. Use `swttch bro
 
 ### Other uses
 
-**Stopping `swttch`.** Press `Ctrl+C` in the terminal where `swttch` is running. If the process does not exit, open another terminal and run:
+#### Stopping `swttch`
+
+Press `Ctrl+C` in the terminal where `swttch` is running. If the process does not exit, open another terminal and run:
 
 ```bash
 swttch stop                  # stop the backend on port 19836 and its child processes
@@ -184,14 +186,18 @@ swttch stop --all --force    # stop EVERY backend (IDE-launched ones too) with S
 
 On Windows, after `Ctrl+C` you may see `Terminate batch job (Y/N)?`; answer `Y`.
 
-**Updating.** Stop the running `swttch` first, then:
+#### Updating
+
+Stop the running `swttch` first, then:
 
 ```bash
 swttch self-update           # update the swttch command itself (re-runs the install script)
 swttch update                # update the runtime (backend + webview) to the latest release
 ```
 
-**All commands.** Run `swttch --help` for the full list, and `swttch <command> -h` (for example `swttch stop -h`) for the options of one command.
+#### All commands
+
+Run `swttch --help` for the full list, and `swttch <command> -h` (for example `swttch stop -h`) for the options of one command.
 
 ## Troubleshooting
 

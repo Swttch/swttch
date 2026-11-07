@@ -167,7 +167,9 @@ swttch browser
 
 ### 그 밖의 활용
 
-**`swttch` 종료하기.** `swttch`를 실행 중인 터미널에서 `Ctrl+C`를 누릅니다. 그래도 프로세스가 끝나지 않으면 다른 터미널을 열어 다음을 실행합니다:
+#### `swttch` 종료하기
+
+`swttch`를 실행 중인 터미널에서 `Ctrl+C`를 누릅니다. 그래도 프로세스가 끝나지 않으면 다른 터미널을 열어 다음을 실행합니다:
 
 ```bash
 swttch stop                  # 포트 19836의 백엔드와 그 자식 프로세스를 종료
@@ -176,14 +178,18 @@ swttch stop --all --force    # IDE가 띄운 것까지 모든 백엔드를 유�
 
 Windows에서는 `Ctrl+C`를 누른 뒤 `Terminate batch job (Y/N)?`(배치 작업을 끝내시겠습니까?)가 나올 수 있습니다. `Y`를 누르세요.
 
-**업데이트하기.** 실행 중인 `swttch`를 먼저 종료한 뒤 다음을 실행합니다:
+#### 업데이트하기
+
+실행 중인 `swttch`를 먼저 종료한 뒤 다음을 실행합니다:
 
 ```bash
 swttch self-update           # swttch 명령 자체를 업데이트 (설치 스크립트를 다시 실행)
 swttch update                # 런타임(백엔드와 화면)을 최신 릴리즈로 업데이트
 ```
 
-**전체 명령.** `swttch --help`로 전체 명령 목록을, `swttch <명령> -h`(예: `swttch stop -h`)로 명령별 옵션을 볼 수 있습니다.
+#### 전체 명령
+
+`swttch --help`로 전체 명령 목록을, `swttch <명령> -h`(예: `swttch stop -h`)로 명령별 옵션을 볼 수 있습니다.
 
 ## 문제 해결
 
