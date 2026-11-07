@@ -188,39 +188,12 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
-            <h3>0.35.3 - Fix small plan text, add reply to selected text, and more</h3>
+            <h3>0.36.0 - Chat freeze fix, formatted copy, and Claude Desktop session compatibility</h3>
             <ul>
-                <li>Add reply to or excerpt of text selected in the chat (#639)</li>
-                <li>Show session starts, messages, session links, plans, and wrap-up boxes as cards like the Claude desktop app (#644)</li>
-                <li>Show each argument of an MCP tool call in its own field (#596, requested by @p-himik)</li>
-                <li>Fix the plan text being too small and sometimes missing from the plan card (#467, #642, reported by @benomatis and @VijitCoder)</li>
-                <li>Fix session titles not showing when the CLI records them late or answers empty (#638, reported by @Zach0126)</li>
-            </ul>
-            <h3>0.35.2 - Diff buttons, file links, file names, tab switching, and connection fixes</h3>
-            <ul>
-                <li>Fix the chat input not getting the caret when you switch to an already open chat tab (#621, reported by @EndiButler)</li>
-                <li>Fix a slow backend being treated as dead and restarted, which broke the conversation (#622, reported by @CraftedFury)</li>
-                <li>Fix edits being rejected in the diff tab even when you allow them (#620, reported by @Nyho)</li>
-                <li>Fix diff screen buttons looking oversized and not responding to clicks (#590, reported by @alexandrezia)</li>
-                <li>Fix file links written as path:line not opening (#632, reported by @tianguanlong)</li>
-                <li>Fix the @ file mention not finding non-English folder and file names (#627, reported by @tianguanlong)</li>
-                <li>Fix dev servers started by the agent opening on a random port (#629, reported by @EndiButler)</li>
-                <li>Add a setting for what the context badge shows (#328, requested by @CraftedFury)</li>
-            </ul>
-            <h3>0.35.1 - Chat panel reload, attach failure notice, and session title fixes</h3>
-            <ul>
-                <li>Fix the open conversation disappearing when the chat panel is reloaded (#622, reported by @CraftedFury)</li>
-                <li>Fix session titles following the open file instead of what you wrote (#562, reported by @itachi-8733)</li>
-                <li>Show a message in the chat when a file cannot be attached (#623)</li>
-            </ul>
-            <h3>0.35.0 - Session switching and streaming fixes, plus effort and mermaid fixes</h3>
-            <ul>
-                <li>Fix an in-progress session dying when the panel connection drops while streaming (#605, reported by @alvin-rosterfy)</li>
-                <li>Fix a returned-to session showing the previous conversation (#610, reported by @Zach0126)</li>
-                <li>Fix empty replies from gateway models (#609, reported by @Zach0126)</li>
-                <li>Fix the Max effort pick not staying on the slider (#616, reported by @junightCode)</li>
-                <li>Fix mermaid diagram labels being clipped and diagrams rendering too small (#556, reported by @brtbrt)</li>
-                <li>Fix the IDE freezing on the backend start-failure screen (#613)</li>
+                <li>Fix the chat panel freezing when you select text (#645, reported by @Zach0126)</li>
+                <li>Show code blocks and quotes in your own messages the same way as in replies (#646, reported by @Pochwar)</li>
+                <li>Make sessions created in the plugin compatible with the Claude Desktop Code tab (#647, reported by @josueaponte7)</li>
+                <li>Fix copied chat text sometimes losing its formatting in the IDE (#648, reported by @simonruep-bosch)</li>
             </ul>
         """.trimIndent()
     }
