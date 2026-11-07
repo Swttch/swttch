@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # commands/stop/kill-tree.sh — terminate a process tree leaves-first.
 # Sourced by commands/stop/index.sh. Requires proc/* (_pid_alive,
-# collect_descendants, _snap_or_capture) and port/* (_kill_pid).
+# collect_descendants, _snap_or_capture) and port/* (_kill_proc).
 
 # Terminate the tree rooted at <pid>: descendants first (leaves before
 # parents — killing the parent first would orphan the children), then the
@@ -55,11 +55,11 @@ _kill_one() {
   local pid=$1 force=$2 timeout=$3
 
   if (( force )); then
-    _kill_pid -KILL "$pid" 2>/dev/null || true
+    _kill_proc -KILL "$pid" 2>/dev/null || true
     return 0
   fi
 
-  _kill_pid -TERM "$pid" 2>/dev/null || true
+  _kill_proc -TERM "$pid" 2>/dev/null || true
 
   local waited=0
   while (( waited < timeout )); do
@@ -72,7 +72,7 @@ _kill_one() {
 
   # Still alive after the grace period — escalate.
   if _pid_alive "$pid"; then
-    _kill_pid -KILL "$pid" 2>/dev/null || true
+    _kill_proc -KILL "$pid" 2>/dev/null || true
   fi
   return 0
 }

@@ -6,7 +6,9 @@
 # Uses lsof on unix; falls back to netstat on systems without lsof.
 find_pid_on_port() {
   local raw pid
-  if command -v lsof >/dev/null 2>&1; then
+  if _is_windows_shell; then
+    raw=$(_win_pids_on_port "${CCG_PORT}")
+  elif command -v lsof >/dev/null 2>&1; then
     raw=$(lsof -ti ":${CCG_PORT}" 2>/dev/null) || return 1
   elif command -v netstat >/dev/null 2>&1; then
     # netstat fallback (Linux/BSD variants differ; best-effort)
@@ -36,7 +38,9 @@ find_pid_on_port() {
 find_pids_on_port() {
   local port=${1:-$CCG_PORT}
   local raw
-  if command -v lsof >/dev/null 2>&1; then
+  if _is_windows_shell; then
+    raw=$(_win_pids_on_port "${port}")
+  elif command -v lsof >/dev/null 2>&1; then
     raw=$(lsof -ti ":${port}" 2>/dev/null) || return 1
   elif command -v netstat >/dev/null 2>&1; then
     raw=$(netstat -anp 2>/dev/null | awk -v p=":${port}" '$4 ~ p {print $7}' | sed 's|/.*||' | grep -E '^[0-9]+$')

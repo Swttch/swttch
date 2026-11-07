@@ -14,7 +14,7 @@ _exe_is_node() {
   local exe=${cmd%%[[:space:]]*}
   local exe_base=${exe##*/}
   case "$exe_base" in
-    node|nodejs|node[0-9]*) return 0 ;;
+    node|node.exe|nodejs|node[0-9]*) return 0 ;;
     *) return 1 ;;
   esac
 }

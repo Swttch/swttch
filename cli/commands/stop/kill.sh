@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # commands/stop/kill.sh — interactive confirm + per-root kill helpers shared by
 # the stop modes. Sourced by commands/stop/index.sh. Requires kill-tree.sh
-# (kill_tree), proc/* (_pid_alive), port/* (_kill_pid).
+# (kill_tree), proc/* (_pid_alive), port/* (_kill_proc).
 
 # Confirm a y/N prompt. Returns 0 on yes. Honors STDIN; defaults to No.
 _confirm() {
@@ -33,15 +33,15 @@ _stop_kill_root() {
 _kill_single() {
   local pid=$1 force=$2
   if [[ "$force" == "1" ]]; then
-    _kill_pid -KILL "$pid" 2>/dev/null || true
+    _kill_proc -KILL "$pid" 2>/dev/null || true
   else
-    _kill_pid -TERM "$pid" 2>/dev/null || true
+    _kill_proc -TERM "$pid" 2>/dev/null || true
     local waited=0
     while (( waited < 3 )); do
       _pid_alive "$pid" || return 0
       sleep 1
       waited=$(( waited + 1 ))
     done
-    _pid_alive "$pid" && _kill_pid -KILL "$pid" 2>/dev/null || true
+    _pid_alive "$pid" && _kill_proc -KILL "$pid" 2>/dev/null || true
   fi
 }

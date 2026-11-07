@@ -20,6 +20,10 @@
 
 : "${CCG_PORT:=19836}"
 
+# Windows (Git Bash) replacements for lsof / kill, used behind the same seams.
+# shellcheck source=../winos.sh
+source "$(dirname "${BASH_SOURCE[0]}")/../winos.sh"
+
 _port_dir="$(dirname "${BASH_SOURCE[0]}")"
 # shellcheck source=./status.sh
 source "$_port_dir/status.sh"
