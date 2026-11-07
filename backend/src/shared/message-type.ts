@@ -100,6 +100,11 @@ export enum MessageType {
   /** Rename a session's title. */
   RENAME_SESSION = 'RENAME_SESSION',
   /**
+   * Moves the sessions of a project folder that were started before the entrypoint was named (`sdk-cli`) to this
+   * app's own entrypoint, so Claude Desktop's session import picks them up (#647). inbound webview→backend
+   */
+  UPDATE_SESSIONS_ENTRYPOINT = 'UPDATE_SESSIONS_ENTRYPOINT',
+  /**
    * Tells the webview the uuid the CLI recorded for the send whose turn just
    * ended, and whether the code can be rewound to it (issue #356).
    *

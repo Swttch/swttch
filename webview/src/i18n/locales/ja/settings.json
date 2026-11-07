@@ -216,6 +216,18 @@
       "keys": "env: CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
       "managed": "管理者が管理するマネージド設定（{{path}}）でオンになっているため変更できません。",
       "saveFailed": "設定を保存できませんでした"
+    },
+    "desktopSessions": {
+      "label": "Claude Desktop にセッションをインポートできるよう準備する",
+      "description": "このフォルダーにすでにあるセッションは、ここで準備しないと Claude Desktop のセッションのインポートに表示されません。今後作成するセッションは、準備しなくてもインポートできます。",
+      "action": "準備",
+      "busy": "準備中…",
+      "done": "準備したセッション: {{count}} 件",
+      "next": "Claude Desktop で「ヘルプ → トラブルシューティング → Claude Code CLI セッションをインポート…」を選んでください。",
+      "none": "{{folder}} に準備する以前のセッションはありません。",
+      "left": "使用中のためそのままにしたセッション: {{count}} 件。閉じてからもう一度お試しください。",
+      "failed": "準備できなかったセッション: {{count}} 件",
+      "error": "セッションを準備できませんでした: {{message}}"
     }
   },
   "diffView": {

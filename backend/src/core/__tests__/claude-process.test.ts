@@ -4,6 +4,7 @@ import {
   buildAttachmentsEnv,
   buildCheckpointingEnv,
   buildClaudeArgs,
+  buildEntrypointEnv,
   isWorkflowRunning,
   needsRestartForEffort,
   needsRestartForMode,
@@ -503,5 +504,28 @@ describe('buildAttachmentsEnv', () => {
     expect(buildAttachmentsEnv({ CLAUDE_CODE_ATTACHMENTS_BY_PATH: '1' })).toEqual({});
     expect(buildAttachmentsEnv({ CLAUDE_CODE_ATTACHMENTS_BY_PATH: '0' })).toEqual({});
     expect(buildAttachmentsEnv({ CLAUDE_CODE_ATTACHMENTS_BY_PATH: '' })).toEqual({});
+  });
+});
+
+describe('buildEntrypointEnv', () => {
+  // A headless `-p` spawn is stamped `sdk-cli`, which Claude Desktop's session import leaves out,
+  // so a session started here never reached the Desktop Code tab (#647).
+  it('names the IDE as the entrypoint when the backend runs inside a JetBrains IDE', () => {
+    expect(buildEntrypointEnv({ JETBRAINS_MODE: 'true' })).toEqual({ CLAUDE_CODE_ENTRYPOINT: 'swttch-jetbrains' });
+  });
+
+  it('names the standalone launcher otherwise', () => {
+    expect(buildEntrypointEnv({})).toEqual({ CLAUDE_CODE_ENTRYPOINT: 'swttch-standalone' });
+    expect(buildEntrypointEnv({ JETBRAINS_MODE: 'false' })).toEqual({ CLAUDE_CODE_ENTRYPOINT: 'swttch-standalone' });
+  });
+
+  it('passes nothing when the shell already answered, whatever the value', () => {
+    expect(buildEntrypointEnv({ CLAUDE_CODE_ENTRYPOINT: 'cli', JETBRAINS_MODE: 'true' })).toEqual({});
+    expect(buildEntrypointEnv({ CLAUDE_CODE_ENTRYPOINT: '' })).toEqual({});
+  });
+
+  it('passes nothing when the settings env block already answered, since it wins over the shell', () => {
+    const settings = { env: { CLAUDE_CODE_ENTRYPOINT: 'my-own' } };
+    expect(buildEntrypointEnv({ JETBRAINS_MODE: 'true' }, settings)).toEqual({});
   });
 });

@@ -20,6 +20,19 @@ interface SearchSessionResponse {
   truncated?: boolean;
 }
 
+/** What UPDATE_SESSIONS_ENTRYPOINT did to the sessions of one folder, as session ids. */
+export interface SessionsEntrypointUpdate {
+  updated: string[];
+  running: string[];
+  changedMeanwhile: string[];
+  failed: { sessionId: string; error: string }[];
+}
+
+interface UpdateSessionsEntrypointResponse extends Partial<SessionsEntrypointUpdate> {
+  status?: string;
+  error?: string;
+}
+
 /**
  * A non-fatal reason the backend could not list sessions for this working dir.
  * Currently only WSL_HOST_MISMATCH: a Windows-native backend was handed a WSL
@@ -216,6 +229,27 @@ export class SessionsApi {
   async destroy(sessionId: string, workingDir?: string): Promise<void> {
     const dir = workingDir ?? this.getConfig().workingDir;
     await this.bridge.request(MessageType.DELETE_SESSION, { sessionId, workingDir: dir });
+  }
+
+  /**
+   * Move the sessions of a folder that were started before this app named its entrypoint to that name, so Claude
+   * Desktop's "Import Claude Code CLI sessions" lists them (#647). Sessions a CLI is running are left as they are.
+   */
+  async updateEntrypoint(workingDir?: string): Promise<SessionsEntrypointUpdate> {
+    const dir = workingDir ?? this.getConfig().workingDir;
+    const response = await this.bridge.request<UpdateSessionsEntrypointResponse>(
+      MessageType.UPDATE_SESSIONS_ENTRYPOINT,
+      { workingDir: dir },
+    );
+    if (response?.status !== 'ok' || !Array.isArray(response.updated)) {
+      throw new Error(response?.error ?? 'Updating the sessions failed');
+    }
+    return {
+      updated: response.updated,
+      running: response.running ?? [],
+      changedMeanwhile: response.changedMeanwhile ?? [],
+      failed: response.failed ?? [],
+    };
   }
 
   /**

@@ -216,6 +216,18 @@
       "keys": "env: CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
       "managed": "Turned on in managed settings ({{path}}), which an administrator controls.",
       "saveFailed": "Could not save the setting"
+    },
+    "desktopSessions": {
+      "label": "Get sessions ready to import into Claude Desktop",
+      "description": "Sessions this folder already has must be prepared here before Claude Desktop's session import can see them. Sessions you start from now on can be imported without this.",
+      "action": "Prepare",
+      "busy": "Preparing…",
+      "done": "Sessions prepared: {{count}}",
+      "next": "In Claude Desktop, choose Help → Troubleshooting → Import Claude Code CLI Sessions…",
+      "none": "No earlier sessions to prepare in {{folder}}.",
+      "left": "Sessions left as they are because they are in use: {{count}}. Close them and try again.",
+      "failed": "Sessions that could not be prepared: {{count}}",
+      "error": "Could not prepare the sessions: {{message}}"
     }
   },
   "diffView": {

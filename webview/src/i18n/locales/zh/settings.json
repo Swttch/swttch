@@ -216,6 +216,18 @@
       "keys": "env: CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
       "managed": "已在由管理员控制的托管设置（{{path}}）中开启，无法更改。",
       "saveFailed": "无法保存设置"
+    },
+    "desktopSessions": {
+      "label": "为导入 Claude Desktop 准备会话",
+      "description": "此文件夹中已有的会话需要在这里准备，Claude Desktop 的会话导入才能看到。今后创建的会话无需准备即可导入。",
+      "action": "准备",
+      "busy": "准备中…",
+      "done": "已准备的会话：{{count}} 个",
+      "next": "在 Claude Desktop 中选择 Help → Troubleshooting → Import Claude Code CLI Sessions…",
+      "none": "{{folder}} 中没有需要准备的早期会话。",
+      "left": "因正在使用而保持原样的会话：{{count}} 个。请关闭后重试。",
+      "failed": "未能准备的会话：{{count}} 个",
+      "error": "无法准备会话：{{message}}"
     }
   },
   "diffView": {

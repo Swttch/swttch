@@ -51,3 +51,5 @@ NNN-짧은-주제.md      NNN = 이슈 또는 PR 번호
   CLI를 띄울 때 문서화되지 않은 환경변수 `CLAUDE_CODE_ARTIFACT=1`을 주어 터미널처럼 `/slides`와 `Artifact` 도구를 받는다. 게시할 수 없는 환경(게이트웨이·클라우드 공급자·사용자가 끈 경우)에는 주지 않는다
 - [593-attachments-env-for-sendfile.md](./593-attachments-env-for-sendfile.md) —
   CLI를 띄울 때 문서화되지 않은 환경변수 `CLAUDE_CODE_ATTACHMENTS_BY_PATH=1`을 주어 터미널처럼 `SendUserFile` 도구를 받는다
+- [647-entrypoint-for-desktop-import.md](./647-entrypoint-for-desktop-import.md) —
+  CLI를 띄울 때 문서화되지 않은 환경변수 `CLAUDE_CODE_ENTRYPOINT`에 우리 이름을 주어, 데스크탑의 "Claude Code CLI 세션 가져오기"가 플러그인 세션을 잡게 한다. 이미 쌓인 세션 기록의 `sdk-cli`도 사용자가 누를 때만 같은 이름으로 바꾼다
