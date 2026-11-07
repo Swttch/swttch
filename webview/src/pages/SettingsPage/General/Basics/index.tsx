@@ -16,6 +16,7 @@ import { ShowThinkingSummariesRow } from './ShowThinkingSummariesRow';
 import { NonessentialTrafficRow } from './NonessentialTrafficRow';
 import { GenerateSessionTitlesRow } from './GenerateSessionTitlesRow';
 import { SessionTitleFromLastPromptRow } from './SessionTitleFromLastPromptRow';
+import { DesktopSessionsRow } from './DesktopSessionsRow';
 
 /**
  * The settings that are about the app as a whole rather than about one surface
@@ -46,6 +47,7 @@ export function BasicsSection() {
       <ShowThinkingSummariesRow />
       <ClaudeConfigDirRow />
       <NonessentialTrafficRow />
+      <DesktopSessionsRow />
     </SettingSection>
   );
 }

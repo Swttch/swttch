@@ -28,6 +28,7 @@ import { getProjectSessionsPath } from './features/getProjectSessionsPath';
 import { isFolderGone } from './project-folder';
 import { removeSessionTitleOverride } from './features/sessionTitleOverrides';
 import { renamedSessionTitle } from './features/sessionRenamedReply';
+import { swttchEntrypointName } from './features/sessionEntrypoint';
 import { MessageType, SessionActivity } from '../shared';
 import { ingestRateLimitWindows } from './handlers/getUsage';
 
@@ -451,6 +452,24 @@ export function buildAttachmentsEnv(
   return { CLAUDE_CODE_ATTACHMENTS_BY_PATH: '1' };
 }
 
+/**
+ * The `entrypoint` the CLI writes on every line of a session's transcript. A `-p` spawn gets
+ * `sdk-cli`, and Claude Desktop's "Import Claude Code CLI sessions" leaves `sdk-cli` out, so a
+ * session started here never reaches the Desktop Code tab. Any value that is not on Desktop's
+ * list is imported (measured with three different names), so the session carries the name of the
+ * place it was started from. The user's own value, from the shell or the settings `env`
+ * block, wins; only an absent value is filled in (#647).
+ */
+export function buildEntrypointEnv(
+  inherited: NodeJS.ProcessEnv = process.env,
+  settings: Record<string, unknown> = {},
+  platform: NodeJS.Platform = process.platform,
+): { CLAUDE_CODE_ENTRYPOINT?: string } {
+  const env = effectiveEnv(inherited, settings, platform);
+  if (env.CLAUDE_CODE_ENTRYPOINT !== undefined) return {};
+  return { CLAUDE_CODE_ENTRYPOINT: swttchEntrypointName(isOn(env.JETBRAINS_MODE)) };
+}
+
 // result 이벤트 수신 여부 추적 (비정상 종료 시 에러 전파 판단용)
 const sessionsWithResult = new Set<string>();
 
@@ -809,6 +828,7 @@ export async function ensureClaudeProcess(
       ...buildCheckpointingEnv(claudeSettings),
       ...buildArtifactEnv(process.env, claudeSettings),
       ...buildAttachmentsEnv(),
+      ...buildEntrypointEnv(process.env, claudeSettings),
     },
     // win32: route this long-lived chat CLI through a Job Object wrapper so its
     // whole tree (incl. MSYS/git-bash workers that escape taskkill /F /T) dies with

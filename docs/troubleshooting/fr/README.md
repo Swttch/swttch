@@ -2,7 +2,7 @@
 
 🌐 [English](../en/README.md) | [한국어](../ko/README.md) | [日本語](../ja/README.md) | [中文](../zh/README.md) | [Español](../es/README.md) | [Deutsch](../de/README.md) | **Français**
 
-_Dernière mise à jour : 2026-10-05_
+_Dernière mise à jour : 2026-11-07_
 
 Vous trouverez ici des problèmes fréquents que nous n'avons pas encore pu corriger de notre côté, mais pour lesquels une solution connue existe.
 
@@ -16,6 +16,7 @@ Chaque document présente les symptômes, la cause, la solution et des liens ver
 | [Onglet de chat vide sous Linux](linux-jcef-blank-panel.md) | L'onglet de chat est entièrement vide sous Linux, et l'aperçu Markdown de l'IDE l'est aussi |
 | [JCEF dans Android Studio](android-studio-jcef.md) | Android Studio affiche un panneau d'information ou une exception au lieu du chat, ou une fenêtre vide |
 | [Couleurs de l'écran de revue](diff-colors-old-ide.md) | L'écran de revue s'affiche sans couleur sur les IDE 2025.2 et antérieurs |
+| [Sessions absentes de Claude Desktop](desktop-session-import.md) | Les sessions créées dans le plugin n'apparaissent pas dans l'onglet Code de Claude Desktop |
 
 ## Si votre problème ne figure pas ici
 

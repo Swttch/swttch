@@ -216,6 +216,18 @@
       "keys": "env: CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
       "managed": "관리자가 관리하는 관리형 설정({{path}})에서 켜 두어 바꿀 수 없습니다.",
       "saveFailed": "설정을 저장하지 못했습니다"
+    },
+    "desktopSessions": {
+      "label": "Claude Desktop 에서 세션을 가져올 수 있도록 준비하기",
+      "description": "이 폴더에 지금까지 만든 세션은 여기서 준비해야 Claude Desktop 의 세션 가져오기에서 보입니다. 앞으로 만드는 세션은 준비하지 않아도 바로 가져올 수 있습니다.",
+      "action": "준비",
+      "busy": "준비 중…",
+      "done": "준비한 세션: {{count}}개",
+      "next": "Claude Desktop에서 도움말 → 문제 해결 → Claude Code CLI 세션 가져오기…를 선택하세요.",
+      "none": "{{folder}}에 준비할 이전 세션이 없습니다.",
+      "left": "사용 중이라 그대로 둔 세션: {{count}}개. 세션을 닫고 다시 시도하세요.",
+      "failed": "준비하지 못한 세션: {{count}}개",
+      "error": "세션을 준비하지 못했습니다: {{message}}"
     }
   },
   "diffView": {

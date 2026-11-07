@@ -216,6 +216,18 @@
       "keys": "env: CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
       "managed": "مُشغَّل في الإعدادات المُدارة ({{path}}) التي يتحكم بها المسؤول.",
       "saveFailed": "تعذّر حفظ الإعداد"
+    },
+    "desktopSessions": {
+      "label": "تجهيز الجلسات لاستيرادها في Claude Desktop",
+      "description": "الجلسات الموجودة في هذا المجلد بالفعل يجب تجهيزها هنا حتى يراها استيراد الجلسات في Claude Desktop. أما الجلسات التي تبدأها من الآن فيمكن استيرادها دون هذه الخطوة.",
+      "action": "تجهيز",
+      "busy": "جارٍ التجهيز…",
+      "done": "الجلسات التي تم تجهيزها: {{count}}",
+      "next": "في Claude Desktop، اختر Help ← Troubleshooting ← Import Claude Code CLI Sessions…",
+      "none": "لا توجد جلسات سابقة لتجهيزها في {{folder}}.",
+      "left": "الجلسات التي تُركت كما هي لأنها قيد الاستخدام: {{count}}. أغلقها ثم حاول مرة أخرى.",
+      "failed": "الجلسات التي تعذّر تجهيزها: {{count}}",
+      "error": "تعذّر تجهيز الجلسات: {{message}}"
     }
   },
   "diffView": {

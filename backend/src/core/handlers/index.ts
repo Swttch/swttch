@@ -23,6 +23,7 @@ import { getSessionsHandler } from './getSessions';
 import { loadSessionHandler } from './loadSession';
 import { loadPromptHistoryHandler } from './loadPromptHistory';
 import { deleteSessionHandler } from './deleteSession';
+import { updateSessionsEntrypointHandler } from './updateSessionsEntrypoint';
 import { rewindCodeHandler } from './rewindCode';
 import { forkSessionHandler } from './forkSession';
 import { logDebug } from '../../logging/log-level';
@@ -284,6 +285,9 @@ export async function handleMessage(
       break;
     case MessageType.DELETE_SESSION:
       await deleteSessionHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.UPDATE_SESSIONS_ENTRYPOINT:
+      await updateSessionsEntrypointHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.REWIND_CODE:
       await rewindCodeHandler(connectionId, message, connections, bridge);

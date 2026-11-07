@@ -2,7 +2,7 @@
 
 🌐 **English** | [한국어](../ko/README.md) | [日本語](../ja/README.md) | [中文](../zh/README.md) | [Español](../es/README.md) | [Deutsch](../de/README.md) | [Français](../fr/README.md)
 
-_Last updated: 2026-10-05_
+_Last updated: 2026-11-07_
 
 This is a collection of problems that come up often, which we have not been able to fix on our side yet, but for which a known workaround exists.
 
@@ -16,6 +16,7 @@ Each document has the symptoms, the cause, how to fix it, and links to the relat
 | [Empty chat tab on Linux](linux-jcef-blank-panel.md) | The chat tab is completely empty on Linux, and the IDE's own Markdown preview is empty too |
 | [Android Studio JCEF](android-studio-jcef.md) | Android Studio shows a guidance panel or an exception instead of the chat UI, or a blank window |
 | [Review screen colours](diff-colors-old-ide.md) | The review screen comes out with no colour on IDE 2025.2 and older |
+| [Plugin sessions missing from Claude Desktop](desktop-session-import.md) | Sessions you started in the plugin do not appear in the Claude Desktop Code tab |
 
 ## If your problem is not here
 

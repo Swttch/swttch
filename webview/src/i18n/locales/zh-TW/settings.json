@@ -216,6 +216,18 @@
       "keys": "env: CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
       "managed": "已在由管理員控制的受管理設定（{{path}}）中開啟，無法變更。",
       "saveFailed": "無法儲存設定"
+    },
+    "desktopSessions": {
+      "label": "為匯入 Claude Desktop 準備工作階段",
+      "description": "此資料夾中已有的工作階段需要在這裡準備，Claude Desktop 的工作階段匯入才看得到。今後建立的工作階段不需準備即可匯入。",
+      "action": "準備",
+      "busy": "準備中…",
+      "done": "已準備的工作階段：{{count}} 個",
+      "next": "在 Claude Desktop 中選擇 Help → Troubleshooting → Import Claude Code CLI Sessions…",
+      "none": "{{folder}} 中沒有需要準備的早期工作階段。",
+      "left": "因正在使用而維持原樣的工作階段：{{count}} 個。請關閉後再試一次。",
+      "failed": "無法準備的工作階段：{{count}} 個",
+      "error": "無法準備工作階段：{{message}}"
     }
   },
   "diffView": {

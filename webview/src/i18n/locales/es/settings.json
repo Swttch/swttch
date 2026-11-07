@@ -216,6 +216,18 @@
       "keys": "env: CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
       "managed": "Activado en la configuración administrada ({{path}}), que controla un administrador.",
       "saveFailed": "No se pudo guardar la configuración"
+    },
+    "desktopSessions": {
+      "label": "Preparar las sesiones para importarlas en Claude Desktop",
+      "description": "Las sesiones que esta carpeta ya tiene deben prepararse aquí para que la importación de sesiones de Claude Desktop las vea. Las que inicie a partir de ahora se pueden importar sin este paso.",
+      "action": "Preparar",
+      "busy": "Preparando…",
+      "done": "Sesiones preparadas: {{count}}",
+      "next": "En Claude Desktop, elige Ayuda → Solución de problemas → Importar sesiones de la CLI de Claude Code…",
+      "none": "No hay sesiones anteriores que preparar en {{folder}}.",
+      "left": "Sesiones que se dejaron como estaban porque están en uso: {{count}}. Ciérralas y vuelve a intentarlo.",
+      "failed": "Sesiones que no se pudieron preparar: {{count}}",
+      "error": "No se pudieron preparar las sesiones: {{message}}"
     }
   },
   "diffView": {
