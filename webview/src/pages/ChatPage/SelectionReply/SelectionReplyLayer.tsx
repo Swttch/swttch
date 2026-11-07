@@ -156,16 +156,34 @@ export function SelectionReplyLayer({ containerRef }: Props) {
   // The bar and the card are fixed to the screen, so they follow the text when the chat scrolls or resizes.
   useEffect(() => {
     if (!picked) return;
+    // Scrolling fires many events a frame (the chat also scrolls itself while it streams), and each one used to
+    // measure the range, which forces a layout, and to set a new anchor object, which renders again. Once a frame
+    // is enough, and an anchor that has not moved is left as it is (#645).
+    let frame = 0;
     const follow = () => {
+      frame = 0;
+      if (!picked.range.commonAncestorContainer.isConnected) {
+        dismiss();
+        return;
+      }
       const next = anchorOf(picked.range);
-      if (next) setAnchor(next);
-      else dismiss();
+      if (!next) {
+        dismiss();
+        return;
+      }
+      setAnchor((prev) =>
+        prev && prev.top === next.top && prev.bottom === next.bottom && prev.centerX === next.centerX ? prev : next,
+      );
     };
-    window.addEventListener('scroll', follow, true);
-    window.addEventListener('resize', follow);
+    const schedule = () => {
+      if (frame === 0) frame = window.requestAnimationFrame(follow);
+    };
+    window.addEventListener('scroll', schedule, true);
+    window.addEventListener('resize', schedule);
     return () => {
-      window.removeEventListener('scroll', follow, true);
-      window.removeEventListener('resize', follow);
+      window.removeEventListener('scroll', schedule, true);
+      window.removeEventListener('resize', schedule);
+      if (frame !== 0) window.cancelAnimationFrame(frame);
     };
   }, [picked, dismiss]);
 
