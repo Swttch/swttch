@@ -161,6 +161,8 @@ curl -fsSL https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.sh |
 irm https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.ps1 | iex
 ```
 
+### Run
+
 Then from any project directory:
 
 ```bash
@@ -170,6 +172,8 @@ swttch browser
 Same backend, same UI, opened in your default browser on `http://localhost:19836`. Coexists with the JetBrains plugin on port 19836. See [cli/README.md](cli/README.md) for details.
 
 The previous command name, `ccg`, still works but is deprecated. Use `swttch browser` instead.
+
+### Other uses
 
 **Stopping `swttch`.** Press `Ctrl+C` in the terminal where `swttch` is running. If the process does not exit, open another terminal and run:
 

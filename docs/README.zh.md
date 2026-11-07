@@ -153,6 +153,8 @@ curl -fsSL https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.sh |
 irm https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.ps1 | iex
 ```
 
+### 运行
+
 安装后，在任意项目目录中运行:
 
 ```bash
@@ -162,6 +164,8 @@ swttch browser
 后端和界面与 IDE 插件相同，会在默认浏览器中打开 `http://localhost:19836`。端口 19836 与 JetBrains 插件共用，因此两者可以共存。详情请参阅 [cli/README.md](../cli/README.md)。
 
 旧的命令名 `ccg` 仍然可用，但已弃用（deprecated）。请改用 `swttch browser`。
+
+### 其他用法
 
 **停止 `swttch`。** 在运行 `swttch` 的终端中按 `Ctrl+C`。如果进程仍未退出，请打开另一个终端并运行:
 

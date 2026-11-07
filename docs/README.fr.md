@@ -154,6 +154,8 @@ curl -fsSL https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.sh |
 irm https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.ps1 | iex
 ```
 
+### Lancer
+
 Ensuite, depuis n'importe quel répertoire de projet :
 
 ```bash
@@ -163,6 +165,8 @@ swttch browser
 Le backend et l'interface sont les mêmes que ceux du plugin de l'IDE, et s'ouvrent dans votre navigateur par défaut à l'adresse `http://localhost:19836`. Le port 19836 est partagé avec le plugin JetBrains, les deux peuvent donc coexister. Voir [cli/README.md](../cli/README.md) pour plus de détails.
 
 L'ancien nom de commande, `ccg`, fonctionne toujours mais est obsolète (deprecated). Utilisez plutôt `swttch browser`.
+
+### Autres usages
 
 **Arrêter `swttch`.** Appuyez sur `Ctrl+C` dans le terminal où `swttch` s'exécute. Si le processus ne se termine pas, ouvrez un autre terminal et exécutez :
 

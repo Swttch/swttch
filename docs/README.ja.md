@@ -153,6 +153,8 @@ curl -fsSL https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.sh |
 irm https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.ps1 | iex
 ```
 
+### 実行する
+
 インストール後、任意のプロジェクトディレクトリで次を実行します:
 
 ```bash
@@ -162,6 +164,8 @@ swttch browser
 バックエンドと画面は IDE プラグインと同じで、既定のブラウザで `http://localhost:19836` が開きます。ポート 19836 は JetBrains プラグインと共有するため、両者は共存できます。詳細は [cli/README.md](../cli/README.md) を参照してください。
 
 以前のコマンド名 `ccg` も引き続き動作しますが、非推奨（deprecated）です。代わりに `swttch browser` を使用してください。
+
+### その他の使い方
 
 **`swttch` を終了する。** `swttch` を実行しているターミナルで `Ctrl+C` を押します。それでもプロセスが終了しない場合は、別のターミナルを開いて次を実行します:
 
