@@ -131,22 +131,24 @@ La misma interfaz gráfica de Claude Code que amas en Cursor y VS Code, ahora di
 - `Ctrl+Shift+C` — Abrir el panel de Claude Code
 - `Cmd+N` / `Ctrl+N` (con el panel enfocado) — Nueva pestaña de sesión
 
-### Empezar sin un IDE (Standalone, `swttch`)
+## Empezar sin un IDE (Standalone, `swttch`)
 
 Si prefieres usar tu propio navegador en lugar del panel del IDE, puedes instalar el lanzador de terminal `swttch` con una sola línea.
 
-Requisitos previos:
+### Instalación
+
+#### Requisitos previos:
 
 - [Node.js](https://nodejs.org/) 18 o superior
 - Claude Code CLI, instalado y con la sesión iniciada (`claude --version`)
 
-En entornos con `curl` y `bash`:
+#### Instalar en Unix/POSIX (con `curl` y `bash` disponibles):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.sh | bash
 ```
 
-En **PowerShell**:
+#### Instalar en PowerShell:
 
 ```powershell
 irm https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.ps1 | iex

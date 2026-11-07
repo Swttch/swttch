@@ -130,22 +130,24 @@ Cursor と VS Code で親しまれている Claude Code GUI が、JetBrains IDE 
 - `Ctrl+Shift+C` — Claude Code パネルを開く
 - `Cmd+N` / `Ctrl+N`（パネルフォーカス時）— 新規セッションタブ
 
-### IDE なしで始める（Standalone、`swttch`）
+## IDE なしで始める（Standalone、`swttch`）
 
 IDE パネルではなく普段使っているブラウザで使いたい場合は、1 行でターミナルランチャー `swttch` をインストールできます。
 
-次のものがインストールされている必要があります:
+### インストール
+
+#### 事前に必要なもの:
 
 - [Node.js](https://nodejs.org/) 18 以上
 - Claude Code CLI（インストールとログインを済ませたもの、`claude --version`）
 
-`curl` と `bash` が使える環境:
+#### Unix/POSIX 環境でのインストール（`curl` と `bash` が使える環境）:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.sh | bash
 ```
 
-**PowerShell** 環境:
+#### PowerShell 環境でのインストール:
 
 ```powershell
 irm https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.ps1 | iex

@@ -138,22 +138,24 @@ The same Claude Code GUI you love in Cursor and VS Code, now available in JetBra
 - `Cmd+N` / `Ctrl+N` (panel focused) — New session tab
 - `Alt+K` / `⌥K` (editor focused) — Send the current file and selected lines to the chat input
 
-### Getting Started Without an IDE (Standalone, `swttch`)
+## Getting Started Without an IDE (Standalone, `swttch`)
 
 Prefer your own browser over the IDE panel? Install the terminal launcher with one line.
 
-Pre required:
+### Install
+
+#### Pre required:
 
 - [Node.js](https://nodejs.org/) 18 or newer
 - Claude Code CLI, installed and signed in (`claude --version`)
 
-Where `curl` and `bash` are available:
+#### Install on Unix/POSIX (where `curl` and `bash` are available):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.sh | bash
 ```
 
-In **PowerShell**:
+#### Install in PowerShell:
 
 ```powershell
 irm https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.ps1 | iex

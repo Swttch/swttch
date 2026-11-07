@@ -130,22 +130,24 @@
 - `Ctrl+Shift+C` — 打开 Claude Code 面板
 - `Cmd+N` / `Ctrl+N`（面板聚焦时）— 新建会话标签页
 
-### 无需 IDE 即可使用（Standalone，`swttch`）
+## 无需 IDE 即可使用（Standalone，`swttch`）
 
 如果想用平时的浏览器而不是 IDE 面板，可以用一行命令安装终端启动器 `swttch`。
 
-需要预先安装:
+### 安装
+
+#### 先决条件:
 
 - [Node.js](https://nodejs.org/) 18 或更高版本
 - Claude Code CLI（已安装并登录，`claude --version`）
 
-在可使用 `curl` 和 `bash` 的环境中:
+#### 在 Unix/POSIX 环境中安装（可使用 `curl` 和 `bash`）:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.sh | bash
 ```
 
-在 **PowerShell** 环境中:
+#### 在 PowerShell 环境中安装:
 
 ```powershell
 irm https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.ps1 | iex
