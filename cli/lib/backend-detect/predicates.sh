@@ -30,6 +30,7 @@ _cmd_has_entry_token() {
   case $- in *f*) had_noglob=1 ;; esac
   set -f
   for token in $cmd; do
+    token=${token//\"/}   # Windows keeps the quotes around a path in the command line
     base=${token##*/}
     if [[ "$base" == "$marker" ]]; then
       (( had_noglob )) || set +f

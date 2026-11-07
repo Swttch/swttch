@@ -30,6 +30,7 @@ t() {
   printf -v _t_out "$template" "$@"
   # `swttch` runs the same modules: mention the program the user typed, not `ccg`.
   if [[ "${CCG_PROGRAM:-ccg}" != "ccg" ]]; then
+    _t_out=${_t_out//ccg run/${CCG_PROGRAM} browser}
     _t_out=${_t_out//ccg /${CCG_PROGRAM} }
   fi
   printf '%s' "$_t_out"

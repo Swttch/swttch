@@ -80,3 +80,15 @@ setup() {
   run "$CLI_BIN/swttch" frob
   [ "$status" -eq 1 ]
 }
+
+@test "swttch names the verb browser, not run, in messages and in the browser help" {
+  CCG_PROGRAM=swttch run t err_port_missing_value
+  assert_has "swttch browser -p 20000"
+  CCG_PROGRAM=swttch run cmd_run_help
+  assert_has "swttch browser -p, --port"
+  assert_lacks "swttch run"
+  assert_lacks "default"
+  # the deprecated name keeps its own help
+  run cmd_run_help
+  assert_has "ccg run"
+}

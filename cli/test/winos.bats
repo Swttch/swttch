@@ -161,3 +161,8 @@ EOF
   kill_tree 100 "$snap" --force
   [ "$(cat "$BATS_TEST_TMPDIR/taskkill.log")" = $'/PID 120 /F\n/PID 110 /F\n/PID 100 /F' ]
 }
+
+@test "backend detection: a quoted Windows path (as a native launcher starts node) is a backend entry" {
+  _is_backend_command 'node.exe "C:/Users/me/ccg/runtimes/0.35.3/backend.mjs"'
+  ! _is_backend_command 'node.exe "C:/Users/me/notes-about-backend.mjs.txt"'
+}

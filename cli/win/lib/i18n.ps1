@@ -31,6 +31,6 @@ function T {
     $out = $template
     if ($args.Count -gt 0) { $out = [string]::Format($template, $args) }
     # `swttch` runs the same modules: mention the program the user typed, not `ccg`.
-    if ($script:Program -ne 'ccg') { $out = $out.Replace('ccg ', $script:Program + ' ') }
+    if ($script:Program -ne 'ccg') { $out = $out.Replace('ccg run', $script:Program + ' browser').Replace('ccg ', $script:Program + ' ') }
     return $out
 }

@@ -43,9 +43,10 @@ function Test-LoopbackBind {
 function Invoke-CcgRun {
     param([string[]]$CcgArgs)
     if ($CcgArgs -contains '-h' -or $CcgArgs -contains '--help') {
-        Write-Host (T 'help_run_header')
+        $kind = if ($script:Program -eq 'swttch') { 'browser' } else { 'run' }
+        Write-Host (T "help_${kind}_header")
         Write-Host ''
-        Write-Host (T 'help_run_body')
+        Write-Host (T "help_${kind}_body")
         return 0
     }
 
