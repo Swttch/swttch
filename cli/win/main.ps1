@@ -16,10 +16,10 @@ $script:WinRoot = $PSScriptRoot
 $script:CcgRoot = Split-Path -Parent $script:WinRoot
 $script:CcgPort = if ($env:CCG_PORT) { [int]$env:CCG_PORT } else { 19836 }
 
-foreach ($m in 'i18n', 'version', 'node', 'port', 'runtime', 'browser', 'spawn') {
+foreach ($m in 'i18n', 'version', 'node', 'port', 'runtime', 'browser', 'spawn', 'proc', 'backend-tree') {
     . (Join-Path $script:WinRoot "lib\$m.ps1")
 }
-foreach ($m in 'help', 'version', 'doctor', 'run') {
+foreach ($m in 'help', 'version', 'doctor', 'run', 'list', 'stop') {
     . (Join-Path $script:WinRoot "commands\$m.ps1")
 }
 
@@ -38,7 +38,15 @@ function Invoke-Ccg {
             $code = Invoke-CcgRun $rest
             exit ([int]($code | Select-Object -Last 1))
         }
-        { $_ -in 'list', 'ls', 'update', 'stop', 'self-update', 'uninstall', 'account', 'acct' } {
+        { $_ -in 'list', 'ls' } {
+            $code = Invoke-CcgList $rest
+            exit ([int]($code | Select-Object -Last 1))
+        }
+        'stop' {
+            $code = Invoke-CcgStop $rest
+            exit ([int]($code | Select-Object -Last 1))
+        }
+        { $_ -in 'update', 'self-update', 'uninstall', 'account', 'acct' } {
             [Console]::Error.WriteLine((T 'cmd_not_yet' $cmd))
             exit 1
         }

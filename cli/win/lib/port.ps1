@@ -2,8 +2,9 @@
 
 # The version the backend on $CcgPort reports at /version, or $null.
 function Get-BackendVersion {
+    param([int]$Port = $script:CcgPort)
     try {
-        $r = Invoke-RestMethod -Uri "http://127.0.0.1:$($script:CcgPort)/version" -TimeoutSec 2
+        $r = Invoke-RestMethod -Uri "http://127.0.0.1:$Port/version" -TimeoutSec 2
         if ($r.version) { return [string]$r.version }
     } catch { }
     return $null
