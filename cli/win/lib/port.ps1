@@ -17,7 +17,20 @@ function Get-PortStatus {
     return 'free'
 }
 
-# Number of node processes running a backend.mjs.
+# Number of node processes running a backend.mjs (the cmd.exe wrapper that launches it also
+# has backend.mjs in its command line, so only node.exe counts).
 function Get-BackendProcessCount {
-    return @(Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'backend\.mjs' }).Count
+    return @(Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'node.exe' -and $_.CommandLine -match 'backend\.mjs' }).Count
+}
+
+# Stop whatever listens on $CcgPort and wait up to $TimeoutSec for the port to free.
+# Windows has no graceful signal for a console-less node, so this ends the process.
+function Stop-BackendOnPort {
+    param([int]$TimeoutSec = 3)
+    $pids = @(Get-NetTCPConnection -State Listen -LocalPort $script:CcgPort -ErrorAction SilentlyContinue | ForEach-Object { $_.OwningProcess } | Sort-Object -Unique)
+    foreach ($p in $pids) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue }
+    for ($i = 0; $i -lt ($TimeoutSec * 2); $i++) {
+        if (-not (Get-NetTCPConnection -State Listen -LocalPort $script:CcgPort -ErrorAction SilentlyContinue)) { return }
+        Start-Sleep -Milliseconds 500
+    }
 }

@@ -1,4 +1,7 @@
-﻿# ccg.ps1 - claude-code-gui terminal launcher for native Windows (PowerShell).
+﻿# main.ps1 - claude-code-gui terminal launcher for native Windows (PowerShell).
+#
+# Lives next to bin\, not in it: only bin\ccg.cmd is on PATH. If a ccg.ps1 sat on PATH,
+# PowerShell would prefer it over ccg.cmd and a restricted execution policy would block it.
 #
 # Usage: ccg [run | list | update | stop | version | doctor | self-update | uninstall | help]
 #
@@ -8,15 +11,15 @@
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-# Installation layout: <CcgRoot>\win\bin\ccg.ps1, <CcgRoot>\win\lib, <CcgRoot>\win\commands, ...
-$script:WinRoot = Split-Path -Parent $PSScriptRoot
+# Installation layout: <CcgRoot>\win\main.ps1, <CcgRoot>\win\bin\ccg.cmd, <CcgRoot>\win\lib, ...
+$script:WinRoot = $PSScriptRoot
 $script:CcgRoot = Split-Path -Parent $script:WinRoot
 $script:CcgPort = if ($env:CCG_PORT) { [int]$env:CCG_PORT } else { 19836 }
 
-foreach ($m in 'i18n', 'version', 'node', 'port', 'runtime') {
+foreach ($m in 'i18n', 'version', 'node', 'port', 'runtime', 'browser', 'spawn') {
     . (Join-Path $script:WinRoot "lib\$m.ps1")
 }
-foreach ($m in 'help', 'version', 'doctor') {
+foreach ($m in 'help', 'version', 'doctor', 'run') {
     . (Join-Path $script:WinRoot "commands\$m.ps1")
 }
 
@@ -31,7 +34,11 @@ function Invoke-Ccg {
         { $_ -in 'version', '--version', '-v' } { Invoke-CcgVersion $rest }
         'doctor' { Invoke-CcgDoctor $rest }
         { $_ -in 'help', '--help', '-h' } { Invoke-CcgHelp }
-        { $_ -in 'run', 'list', 'ls', 'update', 'stop', 'self-update', 'uninstall', 'account', 'acct' } {
+        'run' {
+            $code = Invoke-CcgRun $rest
+            exit ([int]($code | Select-Object -Last 1))
+        }
+        { $_ -in 'list', 'ls', 'update', 'stop', 'self-update', 'uninstall', 'account', 'acct' } {
             [Console]::Error.WriteLine((T 'cmd_not_yet' $cmd))
             exit 1
         }
