@@ -135,6 +135,11 @@ Die Claude Code GUI, die in Cursor und VS Code beliebt ist, ist jetzt auch in Je
 
 Wenn Sie lieber Ihren eigenen Browser statt des IDE-Panels verwenden möchten, können Sie den Terminal-Launcher `swttch` mit einer Zeile installieren.
 
+Voraussetzungen:
+
+- [Node.js](https://nodejs.org/) 18 oder neuer
+- Claude Code CLI, installiert und angemeldet (`claude --version`)
+
 In Umgebungen mit `curl` und `bash`:
 
 ```bash

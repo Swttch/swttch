@@ -134,6 +134,11 @@
 
 如果想用平时的浏览器而不是 IDE 面板，可以用一行命令安装终端启动器 `swttch`。
 
+需要预先安装:
+
+- [Node.js](https://nodejs.org/) 18 或更高版本
+- Claude Code CLI（已安装并登录，`claude --version`）
+
 在可使用 `curl` 和 `bash` 的环境中:
 
 ```bash

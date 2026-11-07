@@ -135,6 +135,11 @@ La misma interfaz gráfica de Claude Code que amas en Cursor y VS Code, ahora di
 
 Si prefieres usar tu propio navegador en lugar del panel del IDE, puedes instalar el lanzador de terminal `swttch` con una sola línea.
 
+Requisitos previos:
+
+- [Node.js](https://nodejs.org/) 18 o superior
+- Claude Code CLI, instalado y con la sesión iniciada (`claude --version`)
+
 En entornos con `curl` y `bash`:
 
 ```bash

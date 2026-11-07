@@ -134,6 +134,11 @@ Cursor와 VS Code에서 사랑받는 Claude Code GUI를 이제 JetBrains IDE에�
 
 IDE 패널 대신 평소 쓰는 브라우저로 사용하고 싶다면, 한 줄로 터미널 런처 `swttch`를 설치할 수 있습니다.
 
+다음이 설치되어 있어야 합니다:
+
+- [Node.js](https://nodejs.org/) 18 이상
+- Claude Code CLI (설치하고 로그인해 둔 상태, `claude --version`)
+
 `curl`과 `bash`를 사용할 수 있는 환경에서:
 
 ```bash

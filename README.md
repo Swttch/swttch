@@ -142,6 +142,11 @@ The same Claude Code GUI you love in Cursor and VS Code, now available in JetBra
 
 Prefer your own browser over the IDE panel? Install the terminal launcher with one line.
 
+Pre required:
+
+- [Node.js](https://nodejs.org/) 18 or newer
+- Claude Code CLI, installed and signed in (`claude --version`)
+
 Where `curl` and `bash` are available:
 
 ```bash
