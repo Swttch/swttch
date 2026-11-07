@@ -19,17 +19,24 @@
 
 : "${CCG_PORT:=19836}"
 
+_proc_win="$(dirname "${BASH_SOURCE[0]}")/../winos.sh"
+# shellcheck source=../winos.sh
+source "$_proc_win"
+unset _proc_win
+
 # ─── external seams ──────────────────────────────────────────────
 
 # Raw process table. Columns: PID PPID COMMAND (command may contain spaces).
 # Wrapped so bats can mock it (PATH override works for `ps`, an external tool).
 _ps_raw() {
+  if _is_windows_shell; then _win_ps_raw; return; fi
   ps -axo pid=,ppid=,command= 2>/dev/null
 }
 
 # Liveness probe. Returns 0 if the pid still exists. `kill -0` is the portable
 # idiom. Wrapped as a function so tests can force "still alive" / "dead".
 _pid_alive() {
+  if _is_windows_shell; then _win_pid_alive "$1"; return; fi
   kill -0 "$1" 2>/dev/null
 }
 

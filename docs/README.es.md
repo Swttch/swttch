@@ -131,6 +131,67 @@ La misma interfaz gráfica de Claude Code que amas en Cursor y VS Code, ahora di
 - `Ctrl+Shift+C` — Abrir el panel de Claude Code
 - `Cmd+N` / `Ctrl+N` (con el panel enfocado) — Nueva pestaña de sesión
 
+## Empezar sin un IDE (Standalone, `swttch`)
+
+Si prefieres usar tu propio navegador en lugar del panel del IDE, puedes instalar el lanzador de terminal `swttch` con una sola línea.
+
+### Instalación
+
+#### Requisitos previos:
+
+- [Node.js](https://nodejs.org/) 18 o superior
+- Claude Code CLI, instalado y con la sesión iniciada (`claude --version`)
+
+#### Instalar en Unix/POSIX (con `curl` y `bash` disponibles):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.sh | bash
+```
+
+#### Instalar en PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.ps1 | iex
+```
+
+### Ejecutar
+
+Después de instalarlo, ejecuta desde cualquier directorio de proyecto:
+
+```bash
+swttch browser
+```
+
+El backend y la interfaz son los mismos que los del plugin del IDE, y se abren en tu navegador predeterminado en `http://localhost:19836`. El puerto 19836 se comparte con el plugin de JetBrains, por lo que ambos conviven. Consulta [cli/README.md](../cli/README.md) para más detalles.
+
+El nombre de comando anterior, `ccg`, sigue funcionando pero está obsoleto (deprecated). Usa `swttch browser` en su lugar.
+
+### Otros usos
+
+#### Detener `swttch`
+
+Pulsa `Ctrl+C` en la terminal donde se ejecuta `swttch`. Si el proceso no termina, abre otra terminal y ejecuta:
+
+```bash
+swttch stop                  # detiene el backend del puerto 19836 y sus procesos hijos
+swttch stop --all --force    # detiene TODOS los backends (también los iniciados por el IDE) con SIGKILL, sin período de gracia; pregunta antes de detenerlos
+```
+
+En Windows, tras `Ctrl+C` puede aparecer `Terminate batch job (Y/N)?`; responde `Y`.
+
+#### Actualizar
+
+Detén primero el `swttch` en ejecución y luego ejecuta:
+
+```bash
+swttch self-update           # actualiza el propio comando swttch (vuelve a ejecutar el script de instalación)
+swttch update                # actualiza el runtime (backend e interfaz) a la última versión
+```
+
+#### Todos los comandos
+
+Ejecuta `swttch --help` para ver la lista completa y `swttch <comando> -h` (por ejemplo `swttch stop -h`) para ver las opciones de un comando.
+
 ## Solución de problemas
 
 Los problemas frecuentes que todavía no hemos podido corregir por nuestra parte, pero para los que existe una solución conocida, están recogidos en **[docs/troubleshooting](troubleshooting/es/README.md)**, cada uno con los síntomas, la causa, cómo solucionarlo y enlaces a los issues relacionados.

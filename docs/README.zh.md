@@ -130,6 +130,67 @@
 - `Ctrl+Shift+C` — 打开 Claude Code 面板
 - `Cmd+N` / `Ctrl+N`（面板聚焦时）— 新建会话标签页
 
+## 无需 IDE 即可使用（Standalone，`swttch`）
+
+如果想用平时的浏览器而不是 IDE 面板，可以用一行命令安装终端启动器 `swttch`。
+
+### 安装
+
+#### 先决条件:
+
+- [Node.js](https://nodejs.org/) 18 或更高版本
+- Claude Code CLI（已安装并登录，`claude --version`）
+
+#### 在 Unix/POSIX 环境中安装（可使用 `curl` 和 `bash`）:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.sh | bash
+```
+
+#### 在 PowerShell 环境中安装:
+
+```powershell
+irm https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.ps1 | iex
+```
+
+### 运行
+
+安装后，在任意项目目录中运行:
+
+```bash
+swttch browser
+```
+
+后端和界面与 IDE 插件相同，会在默认浏览器中打开 `http://localhost:19836`。端口 19836 与 JetBrains 插件共用，因此两者可以共存。详情请参阅 [cli/README.md](../cli/README.md)。
+
+旧的命令名 `ccg` 仍然可用，但已弃用（deprecated）。请改用 `swttch browser`。
+
+### 其他用法
+
+#### 停止 `swttch`
+
+在运行 `swttch` 的终端中按 `Ctrl+C`。如果进程仍未退出，请打开另一个终端并运行:
+
+```bash
+swttch stop                  # 停止端口 19836 上的后端及其子进程
+swttch stop --all --force    # 不等待宽限时间，用 SIGKILL 停止所有后端（包括 IDE 启动的）；停止前会先询问
+```
+
+在 Windows 上，按下 `Ctrl+C` 后可能会出现 `Terminate batch job (Y/N)?`，请输入 `Y`。
+
+#### 更新
+
+先停止正在运行的 `swttch`，然后运行:
+
+```bash
+swttch self-update           # 更新 swttch 命令本身（重新运行安装脚本）
+swttch update                # 将运行时（后端和界面）更新到最新版本
+```
+
+#### 所有命令
+
+运行 `swttch --help` 查看完整命令列表，运行 `swttch <命令> -h`（例如 `swttch stop -h`）查看单个命令的选项。
+
 ## 故障排查
 
 常见问题中，我们尚未能自行修复、但已有已知解决方法的那些，整理在 **[docs/troubleshooting](troubleshooting/zh/README.md)** 中，每篇都包含症状、原因、解决方法以及相关 Issue 的链接。

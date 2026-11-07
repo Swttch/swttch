@@ -13,6 +13,7 @@
 # which would surface a stranger's port. `-a` restricts the result to sockets
 # that are BOTH owned by <pid> AND listening TCP.
 _lsof_listen_for_pid() {
+  if _is_windows_shell; then _win_listen_rows_for_pid "$1"; return; fi
   lsof -nP -a -p "$1" -iTCP -sTCP:LISTEN 2>/dev/null
 }
 

@@ -14,6 +14,12 @@ source "$_run_dir/args.sh"
 unset _run_dir
 
 cmd_run_help() {
+  # `swttch browser` has its own text: it is not the default command, and there is no `run`.
+  if [[ "${CCG_PROGRAM:-ccg}" == "swttch" ]]; then
+    printf '%s\n\n' "$(t help_browser_header)"
+    printf '%b\n' "$(t help_browser_body)"
+    return
+  fi
   printf '%s\n\n' "$(t help_run_header)"
   printf '%b\n' "$(t help_run_body)"
 }

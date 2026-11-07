@@ -30,7 +30,7 @@ MSG_en_err_bind_missing_value="Error: -b/--bind requires an address (e.g. ccg ru
 MSG_en_warn_bind_exposed="WARNING: binding to %s — the backend (runs 'claude' + file I/O, no authentication)\n         will be reachable by other devices on your network. Only do this on a trusted network.\n         If a backend is already running on 127.0.0.1, run 'ccg stop' first so the new bind takes effect."
 
 # Errors
-MSG_en_err_port_foreign="Port 19836 is in use by another process (not claude-code-gui)."
+MSG_en_err_port_foreign="Port 19836 is in use by another process (not Swttch)."
 MSG_en_err_port_foreign_hint="Please stop that process and try again. (Hint: lsof -i :19836)"
 MSG_en_err_node_missing="Node.js is not installed or not on PATH."
 MSG_en_err_node_missing_hint="Install Node.js ≥ 18 from https://nodejs.org/ and re-run."
@@ -58,7 +58,7 @@ MSG_en_version_backend_running="running backend: v%s on port 19836"
 MSG_en_version_backend_none="running backend: (none)"
 
 # Install / uninstall
-MSG_en_install_welcome="Installing claude-code-gui (ccg) v%s..."
+MSG_en_install_welcome="Installing Swttch v%s..."
 MSG_en_install_path_added="Added %s to PATH via %s"
 MSG_en_install_path_already="PATH entry already present in %s"
 MSG_en_install_done="✔ Installation complete. Open a new terminal or run: source %s"
@@ -69,8 +69,8 @@ MSG_en_uninstall_path_removed="Removed PATH entry from %s"
 MSG_en_uninstall_done="✔ Uninstall complete. You may close any open ccg sessions."
 
 # List (process tree)
-MSG_en_list_header="claude-code-gui backend processes:"
-MSG_en_list_none="No claude-code-gui backend process is currently running."
+MSG_en_list_header="Swttch backend processes:"
+MSG_en_list_none="No Swttch backend process is currently running."
 MSG_en_list_root_with_port="● PID %s  port %s%s  [%s/%s]"
 MSG_en_list_root_no_port="● PID %s  [%s/%s]"
 MSG_en_list_port_confirmed=" ✔"
@@ -87,7 +87,7 @@ MSG_en_stop_force="Force mode: sending SIGKILL immediately (no graceful shutdown
 MSG_en_stop_all_prompt="This will stop ALL backend.mjs trees (%s found), including IDE-managed ones. Continue? (y/N): "
 MSG_en_stop_all_none="No backend.mjs trees found to stop."
 MSG_en_stop_no_roots="No backend.mjs trees found."
-MSG_en_stop_not_ours="⚠  PID %s does not belong to a claude-code-gui backend tree."
+MSG_en_stop_not_ours="⚠  PID %s does not belong to a Swttch backend tree."
 MSG_en_stop_not_ours_prompt="Kill it (and its children) anyway? (y/N): "
 MSG_en_stop_aborted="Aborted. Nothing was stopped."
 
@@ -113,7 +113,7 @@ MSG_en_help_doctor_body="  ccg doctor             Check node, PATH, cache, port 
 MSG_en_help_self_update_header="ccg self-update — update ccg itself"
 MSG_en_help_self_update_body="  ccg self-update             Re-run the install script to update the ccg cli.\n  ccg self-update -h, --help  Show this help."
 MSG_en_help_uninstall_header="ccg uninstall — remove ccg from this machine"
-MSG_en_help_uninstall_body="  ccg uninstall             Remove ccg from this machine (binary, runtimes, PATH entry).\n  ccg uninstall -h, --help  Show this help."
+MSG_en_help_uninstall_body="  ccg uninstall             Remove ccg from this machine (binary, runtimes, PATH entry).\n                            Your data (accounts, settings, licence) is kept.\n  ccg uninstall -h, --help  Show this help."
 
 # Restart loop (standalone foreground)
 MSG_en_backend_restarting="Backend exited with restart signal. Restarting..."
@@ -123,6 +123,11 @@ MSG_en_err_restart_loop="Backend restarted too quickly (crash loop detected). Ab
 MSG_en_abort="Aborted."
 MSG_en_unknown_command="Unknown command: %s"
 MSG_en_usage_header="Usage: ccg <command> [args]"
+MSG_en_help_browser_header="swttch browser — start (or reuse) the backend and open the browser"
+MSG_en_help_browser_body="  swttch browser       Check port 19836, spawn the backend (or reuse a running one),\n                       then open the WebView in your browser.\n  swttch browser -b, --bind <addr>\n                       Bind the backend to <addr> instead of loopback (127.0.0.1).\n                       Use 0.0.0.0 to let other devices on your network open the\n                       WebView at http://<this-machine-ip>:19836. WARNING: the backend\n                       runs 'claude' and file I/O with no authentication — only expose\n                       it on trusted networks.\n  swttch browser -p, --port <n>\n                       Bind the backend to port <n> instead of 19836. Affects the\n                       whole run (probe, reuse, kill, browser URL).\n  swttch browser -h, --help\n                       Show this help."
+MSG_en_swttch_usage_header="Usage: swttch <command> [args]"
+MSG_en_desktop_not_available="The Swttch desktop app is not available yet."
+MSG_en_help_swttch_body="  swttch browser        Open Swttch in your browser (starts or reuses the backend).\n                        Use -h for details. (The old name 'ccg' still works but is deprecated.)\n  swttch desktop        Open the Swttch desktop app (not available yet).\n  swttch list, ls       Show the backend process tree (PIDs, ports, source labels).\n  swttch account, acct  Manage saved Claude accounts (list/use/current/save/rm).\n  swttch update         Force-update runtime to the latest release.\n  swttch stop           Stop the backend on port 19836, descendants included.\n  swttch version, -v    Show installed swttch, cached runtimes, and running backend.\n  swttch doctor         Diagnose environment (node, PATH, cache, port).\n  swttch self-update    Re-run the install script to update swttch itself.\n  swttch uninstall      Remove swttch from this machine.\n  swttch help, -h       Show this message.\n\n  Run 'swttch <command> -h' for details on any command."
 
 # Account (ccg account)
 MSG_en_account_list_header="Saved Claude accounts:"

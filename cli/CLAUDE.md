@@ -17,7 +17,7 @@
 | 원칙 | 의미 |
 |------|------|
 | **단방향 의존** | `cli/`는 `backend/`, `webview/`의 빌드 산출물(`backend.mjs`, `webview/dist/`)만 소비. 소스 코드는 import 안 함. |
-| **런타임 독립** | `cli/` 내부 코드는 순수 Bash. Node/Python 의존 금지. (실행 대상인 backend는 당연히 node 필요) |
+| **런타임 독립** | `cli/` 내부 코드는 순수 Bash. Node/Python 의존 금지. (실행 대상인 backend는 당연히 node 필요) 예외: 윈도우 네이티브(PowerShell/CMD)용 런처는 bash가 없는 환경이라 `cli/win/`에 PowerShell로 따로 둔다. bash `ccg`와 같은 명령·옵션·메시지를 유지한다. |
 | **빌드 독립** | `cli/run-tests.sh`만으로 cli 단위 테스트가 돌아야 함. 다른 패키지 빌드 산출물을 요구하지 않음. |
 | **버전 동조** | `cli` 자체 버전은 두지 않음. 항상 GitHub Releases tag = plugin = backend = ccg. |
 

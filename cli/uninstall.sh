@@ -3,7 +3,9 @@
 #
 # What it does:
 #   1. Removes the PATH marker block from common shell rc files.
-#   2. Removes the entire CCG_HOME directory.
+#   2. Removes what ccg installed inside CCG_HOME (bin/ccg, lib, commands, locales, win,
+#      runtimes, uninstall.sh, .ccg-version). The user's data in the same folder (accounts,
+#      settings, licence, cloudflared in bin/) is shared with the JetBrains plugin and is kept.
 #
 # Env overrides:
 #   CCG_HOME — installation root (default: ~/.claude-code-gui)
@@ -52,9 +54,17 @@ for rc in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.bash_profile" "$HOME/.profile";
   fi
 done
 
-say "Removing $CCG_HOME..."
-rm -rf "$CCG_HOME"
+say "Removing ccg from $CCG_HOME..."
+for item in bin/ccg bin/swttch commands lib locales win runtimes uninstall.sh .ccg-version; do
+  rm -rf "${CCG_HOME:?}/$item"
+done
+# bin/ also holds files that are not ours (cloudflared); drop the folder only when it is empty.
+rmdir "$CCG_HOME/bin" 2>/dev/null || true
+rmdir "$CCG_HOME" 2>/dev/null || true
 
 say ""
 say "✔ Uninstall complete. You may close any open ccg sessions."
+if [[ -d "$CCG_HOME" ]]; then
+  say "  Your data in $CCG_HOME (accounts, settings, licence) was kept; delete that folder yourself to remove it too."
+fi
 say "  (Open a new terminal to refresh PATH.)"

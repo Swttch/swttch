@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# swttch — the Swttch terminal launcher (umbrella command).
+#
+#   swttch browser     open Swttch in your browser (what `ccg` does; `ccg` is deprecated)
+#   swttch desktop     reserved for the desktop app
+#   swttch <command>   list, stop, update, version, doctor, self-update, uninstall, account
+#
+# Thin entry: it loads everything through bin/ccg (which does not dispatch when sourced)
+# and runs swttch_main. CCG_PROGRAM makes messages say `swttch` instead of `ccg`.
+
+set -euo pipefail
+
+_swttch_self_dir() {
+  local src=${BASH_SOURCE[0]}
+  while [[ -L "$src" ]]; do
+    local dir
+    dir=$(cd -P "$(dirname "$src")" && pwd)
+    src=$(readlink "$src")
+    [[ "$src" != /* ]] && src="$dir/$src"
+  done
+  cd -P "$(dirname "$src")" && pwd
+}
+
+export CCG_PROGRAM=swttch
+# shellcheck source=ccg
+source "$(_swttch_self_dir)/ccg"
+swttch_main "$@"

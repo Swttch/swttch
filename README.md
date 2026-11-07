@@ -138,21 +138,66 @@ The same Claude Code GUI you love in Cursor and VS Code, now available in JetBra
 - `Cmd+N` / `Ctrl+N` (panel focused) — New session tab
 - `Alt+K` / `⌥K` (editor focused) — Send the current file and selected lines to the chat input
 
-### Terminal Launcher (`ccg`)
+## Getting Started Without an IDE (Standalone, `swttch`)
 
-Prefer your own browser over the IDE panel? Install the terminal launcher with one line:
+Prefer your own browser over the IDE panel? Install the terminal launcher with one line.
+
+### Install
+
+#### Pre required:
+
+- [Node.js](https://nodejs.org/) 18 or newer
+- Claude Code CLI, installed and signed in (`claude --version`)
+
+#### Install on Unix/POSIX (where `curl` and `bash` are available):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.sh | bash
 ```
 
+#### Install in PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.ps1 | iex
+```
+
+### Run
+
 Then from any project directory:
 
 ```bash
-ccg
+swttch browser
 ```
 
 Same backend, same UI, opened in your default browser on `http://localhost:19836`. Coexists with the JetBrains plugin on port 19836. See [cli/README.md](cli/README.md) for details.
+
+The previous command name, `ccg`, still works but is deprecated. Use `swttch browser` instead.
+
+### Other uses
+
+#### Stopping `swttch`
+
+Press `Ctrl+C` in the terminal where `swttch` is running. If the process does not exit, open another terminal and run:
+
+```bash
+swttch stop                  # stop the backend on port 19836 and its child processes
+swttch stop --all --force    # stop EVERY backend (IDE-launched ones too) with SIGKILL, no grace period; asks before killing
+```
+
+On Windows, after `Ctrl+C` you may see `Terminate batch job (Y/N)?`; answer `Y`.
+
+#### Updating
+
+Stop the running `swttch` first, then:
+
+```bash
+swttch self-update           # update the swttch command itself (re-runs the install script)
+swttch update                # update the runtime (backend + webview) to the latest release
+```
+
+#### All commands
+
+Run `swttch --help` for the full list, and `swttch <command> -h` (for example `swttch stop -h`) for the options of one command.
 
 ## Troubleshooting
 

@@ -29,7 +29,7 @@ MSG_ko_err_bind_missing_value="오류: -b/--bind 에는 주소가 필요합니�
 MSG_ko_warn_bind_exposed="경고: %s 로 바인딩합니다 — 백엔드(인증 없이 'claude' 실행 + 파일 I/O)가\n      같은 네트워크의 다른 기기에서 접근 가능해집니다. 신뢰할 수 있는 네트워크에서만 사용하세요.\n      이미 127.0.0.1에서 백엔드가 실행 중이면 'ccg stop' 후 다시 실행해야 새 바인딩이 적용됩니다."
 
 # Errors
-MSG_ko_err_port_foreign="19836 포트가 다른 프로세스에 점유되어 있습니다 (claude-code-gui가 아님)."
+MSG_ko_err_port_foreign="19836 포트가 다른 프로세스에 점유되어 있습니다 (Swttch가 아님)."
 MSG_ko_err_port_foreign_hint="해당 프로세스를 종료한 뒤 다시 시도하세요. (힌트: lsof -i :19836)"
 MSG_ko_err_node_missing="Node.js가 설치되어 있지 않거나 PATH에 없습니다."
 MSG_ko_err_node_missing_hint="https://nodejs.org/ 에서 Node.js 18 이상을 설치한 뒤 다시 실행하세요."
@@ -57,7 +57,7 @@ MSG_ko_version_backend_running="실행 중인 백엔드: v%s (19836 포트)"
 MSG_ko_version_backend_none="실행 중인 백엔드: (없음)"
 
 # Install / uninstall
-MSG_ko_install_welcome="claude-code-gui (ccg) v%s 설치를 시작합니다..."
+MSG_ko_install_welcome="Swttch v%s 설치를 시작합니다..."
 MSG_ko_install_path_added="%s 를 PATH에 추가했습니다 (%s)"
 MSG_ko_install_path_already="%s 에 PATH 항목이 이미 있습니다"
 MSG_ko_install_done="✔ 설치 완료. 새 터미널을 열거나 다음을 실행하세요: source %s"
@@ -68,8 +68,8 @@ MSG_ko_uninstall_path_removed="%s 에서 PATH 항목을 제거했습니다"
 MSG_ko_uninstall_done="✔ 제거 완료. 실행 중인 ccg 세션이 있다면 종료하세요."
 
 # List (process tree)
-MSG_ko_list_header="claude-code-gui 백엔드 프로세스:"
-MSG_ko_list_none="현재 실행 중인 claude-code-gui 백엔드 프로세스가 없습니다."
+MSG_ko_list_header="Swttch 백엔드 프로세스:"
+MSG_ko_list_none="현재 실행 중인 Swttch 백엔드 프로세스가 없습니다."
 MSG_ko_list_root_with_port="● PID %s  포트 %s%s  [%s/%s]"
 MSG_ko_list_root_no_port="● PID %s  [%s/%s]"
 MSG_ko_list_port_confirmed=" ✔"
@@ -86,7 +86,7 @@ MSG_ko_stop_force="강제 모드: 정상 종료 없이 즉시 SIGKILL을 보냅�
 MSG_ko_stop_all_prompt="IDE가 띄운 것을 포함해 모든 backend.mjs 트리(%s개)를 종료합니다. 계속할까요? (y/N): "
 MSG_ko_stop_all_none="종료할 backend.mjs 트리를 찾지 못했습니다."
 MSG_ko_stop_no_roots="backend.mjs 트리를 찾지 못했습니다."
-MSG_ko_stop_not_ours="⚠  PID %s는 claude-code-gui 백엔드 트리에 속하지 않습니다."
+MSG_ko_stop_not_ours="⚠  PID %s는 Swttch 백엔드 트리에 속하지 않습니다."
 MSG_ko_stop_not_ours_prompt="그래도 (자식까지 함께) 종료할까요? (y/N): "
 MSG_ko_stop_aborted="중단됐습니다. 아무것도 종료하지 않았습니다."
 
@@ -112,7 +112,7 @@ MSG_ko_help_doctor_body="  ccg doctor             node, PATH, 캐시, 19836 포�
 MSG_ko_help_self_update_header="ccg self-update — ccg 자체를 갱신합니다"
 MSG_ko_help_self_update_body="  ccg self-update             설치 스크립트를 다시 실행해 ccg cli를 갱신합니다.\n  ccg self-update -h, --help  이 도움말을 표시합니다."
 MSG_ko_help_uninstall_header="ccg uninstall — 이 머신에서 ccg를 제거합니다"
-MSG_ko_help_uninstall_body="  ccg uninstall             이 머신에서 ccg를 제거합니다(바이너리, 런타임, PATH 항목).\n  ccg uninstall -h, --help  이 도움말을 표시합니다."
+MSG_ko_help_uninstall_body="  ccg uninstall             이 머신에서 ccg를 제거합니다(바이너리, 런타임, PATH 항목).\n                            사용자 데이터(계정, 설정, 라이선스)는 남깁니다.\n  ccg uninstall -h, --help  이 도움말을 표시합니다."
 
 # Restart loop (standalone foreground)
 MSG_ko_backend_restarting="백엔드가 재시작 신호로 종료됐습니다. 재시작합니다..."
@@ -122,6 +122,11 @@ MSG_ko_err_restart_loop="백엔드가 너무 빨리 재시작됐습니다 (크�
 MSG_ko_abort="중단됐습니다."
 MSG_ko_unknown_command="알 수 없는 명령: %s"
 MSG_ko_usage_header="사용법: ccg <command> [args]"
+MSG_ko_help_browser_header="swttch browser — 백엔드를 시작(또는 재사용)하고 브라우저를 엽니다"
+MSG_ko_help_browser_body="  swttch browser       19836 포트를 확인하고 백엔드를 실행(이미 실행 중이면 재사용)한 뒤\n                       브라우저에서 WebView를 엽니다.\n  swttch browser -b, --bind <주소>\n                       백엔드를 loopback(127.0.0.1) 대신 <주소>로 바인딩합니다.\n                       0.0.0.0을 지정하면 같은 네트워크의 다른 기기가\n                       http://<이 머신의 IP>:19836 으로 WebView에 접속할 수 있습니다.\n                       경고: 백엔드는 인증 없이 'claude' 실행과 파일 I/O를 수행하므로\n                       신뢰할 수 있는 네트워크에서만 노출하세요.\n  swttch browser -p, --port <번호>\n                       백엔드를 19836 대신 <번호> 포트로 바인딩합니다. 실행 전체에\n                       적용됩니다(점유 확인, 재사용, 종료, 브라우저 URL).\n  swttch browser -h, --help\n                       이 도움말을 표시합니다."
+MSG_ko_swttch_usage_header="사용법: swttch <command> [args]"
+MSG_ko_desktop_not_available="Swttch 데스크탑 앱은 아직 제공되지 않습니다."
+MSG_ko_help_swttch_body="  swttch browser        브라우저에서 Swttch를 엽니다 (백엔드를 시작하거나 재사용).\n                        자세한 내용은 -h. (예전 이름 'ccg'도 동작하지만 더는 권장하지 않습니다.)\n  swttch desktop        Swttch 데스크탑 앱을 엽니다 (아직 제공되지 않음).\n  swttch list, ls       백엔드 프로세스 트리를 보여 줍니다 (PID, 포트, 출처 라벨).\n  swttch account, acct  저장된 Claude 계정을 관리합니다 (list/use/current/save/rm).\n  swttch update         런타임을 최신 릴리즈로 강제 업데이트합니다.\n  swttch stop           포트 19836의 백엔드를 자손까지 함께 종료합니다.\n  swttch version, -v    설치된 swttch, 캐시된 런타임, 실행 중인 백엔드를 보여 줍니다.\n  swttch doctor         환경을 진단합니다 (node, PATH, 캐시, 포트).\n  swttch self-update    설치 스크립트를 다시 실행해 swttch 자체를 업데이트합니다.\n  swttch uninstall      이 컴퓨터에서 swttch를 제거합니다.\n  swttch help, -h       이 도움말을 보여 줍니다.\n\n  각 명령의 자세한 설명은 'swttch <command> -h'로 볼 수 있습니다."
 
 # Account (ccg account)
 MSG_ko_account_list_header="저장된 Claude 계정:"

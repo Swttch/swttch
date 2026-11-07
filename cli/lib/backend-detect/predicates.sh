@@ -14,7 +14,7 @@ _exe_is_node() {
   local exe=${cmd%%[[:space:]]*}
   local exe_base=${exe##*/}
   case "$exe_base" in
-    node|nodejs|node[0-9]*) return 0 ;;
+    node|node.exe|nodejs|node[0-9]*) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -30,6 +30,7 @@ _cmd_has_entry_token() {
   case $- in *f*) had_noglob=1 ;; esac
   set -f
   for token in $cmd; do
+    token=${token//\"/}   # Windows keeps the quotes around a path in the command line
     base=${token##*/}
     if [[ "$base" == "$marker" ]]; then
       (( had_noglob )) || set +f

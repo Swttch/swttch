@@ -131,6 +131,67 @@ Die Claude Code GUI, die in Cursor und VS Code beliebt ist, ist jetzt auch in Je
 - `Ctrl+Shift+C` — Claude Code Panel öffnen
 - `Cmd+N` / `Ctrl+N` (Panel fokussiert) — Neuer Sitzungs-Tab
 
+## Ohne IDE starten (Standalone, `swttch`)
+
+Wenn Sie lieber Ihren eigenen Browser statt des IDE-Panels verwenden möchten, können Sie den Terminal-Launcher `swttch` mit einer Zeile installieren.
+
+### Installation
+
+#### Voraussetzungen:
+
+- [Node.js](https://nodejs.org/) 18 oder neuer
+- Claude Code CLI, installiert und angemeldet (`claude --version`)
+
+#### Installation unter Unix/POSIX (mit `curl` und `bash`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.sh | bash
+```
+
+#### Installation in PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.ps1 | iex
+```
+
+### Starten
+
+Führen Sie danach in einem beliebigen Projektverzeichnis aus:
+
+```bash
+swttch browser
+```
+
+Backend und Oberfläche sind dieselben wie beim IDE-Plugin und werden in Ihrem Standardbrowser unter `http://localhost:19836` geöffnet. Port 19836 wird mit dem JetBrains-Plugin geteilt, beide können also nebeneinander laufen. Weitere Details finden Sie in [cli/README.md](../cli/README.md).
+
+Der frühere Befehlsname `ccg` funktioniert weiterhin, ist aber veraltet (deprecated). Verwenden Sie stattdessen `swttch browser`.
+
+### Weitere Verwendung
+
+#### `swttch` beenden
+
+Drücken Sie `Ctrl+C` in dem Terminal, in dem `swttch` läuft. Wenn der Prozess nicht endet, öffnen Sie ein weiteres Terminal und führen Sie aus:
+
+```bash
+swttch stop                  # beendet das Backend auf Port 19836 samt Kindprozessen
+swttch stop --all --force    # beendet ALLE Backends (auch die vom IDE gestarteten) per SIGKILL ohne Schonfrist; fragt vorher nach
+```
+
+Unter Windows kann nach `Ctrl+C` die Frage `Terminate batch job (Y/N)?` erscheinen; antworten Sie mit `Y`.
+
+#### Aktualisieren
+
+Beenden Sie zuerst das laufende `swttch` und führen Sie dann aus:
+
+```bash
+swttch self-update           # aktualisiert den Befehl swttch selbst (führt das Installationsskript erneut aus)
+swttch update                # aktualisiert die Laufzeit (Backend und Oberfläche) auf das neueste Release
+```
+
+#### Alle Befehle
+
+`swttch --help` zeigt die vollständige Liste, `swttch <Befehl> -h` (zum Beispiel `swttch stop -h`) die Optionen eines einzelnen Befehls.
+
 ## Fehlerbehebung
 
 Häufig auftretende Probleme, die wir noch nicht selbst beheben konnten, für die es aber eine bekannte Lösung gibt, sind unter **[docs/troubleshooting](troubleshooting/de/README.md)** gesammelt — jeweils mit Symptomen, Ursache, Lösung und Links zu den zugehörigen Issues.

@@ -130,6 +130,67 @@ Cursor と VS Code で親しまれている Claude Code GUI が、JetBrains IDE 
 - `Ctrl+Shift+C` — Claude Code パネルを開く
 - `Cmd+N` / `Ctrl+N`（パネルフォーカス時）— 新規セッションタブ
 
+## IDE なしで始める（Standalone、`swttch`）
+
+IDE パネルではなく普段使っているブラウザで使いたい場合は、1 行でターミナルランチャー `swttch` をインストールできます。
+
+### インストール
+
+#### 事前に必要なもの:
+
+- [Node.js](https://nodejs.org/) 18 以上
+- Claude Code CLI（インストールとログインを済ませたもの、`claude --version`）
+
+#### Unix/POSIX 環境でのインストール（`curl` と `bash` が使える環境）:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.sh | bash
+```
+
+#### PowerShell 環境でのインストール:
+
+```powershell
+irm https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.ps1 | iex
+```
+
+### 実行する
+
+インストール後、任意のプロジェクトディレクトリで次を実行します:
+
+```bash
+swttch browser
+```
+
+バックエンドと画面は IDE プラグインと同じで、既定のブラウザで `http://localhost:19836` が開きます。ポート 19836 は JetBrains プラグインと共有するため、両者は共存できます。詳細は [cli/README.md](../cli/README.md) を参照してください。
+
+以前のコマンド名 `ccg` も引き続き動作しますが、非推奨（deprecated）です。代わりに `swttch browser` を使用してください。
+
+### その他の使い方
+
+#### `swttch` を終了する
+
+`swttch` を実行しているターミナルで `Ctrl+C` を押します。それでもプロセスが終了しない場合は、別のターミナルを開いて次を実行します:
+
+```bash
+swttch stop                  # ポート 19836 のバックエンドとその子プロセスを終了
+swttch stop --all --force    # IDE が起動したものを含むすべてのバックエンドを、猶予なしで SIGKILL により終了（終了前に確認します）
+```
+
+Windows では `Ctrl+C` を押したあとに `Terminate batch job (Y/N)?` と表示されることがあります。`Y` を入力してください。
+
+#### アップデートする
+
+実行中の `swttch` を先に終了してから、次を実行します:
+
+```bash
+swttch self-update           # swttch コマンド自体を更新（インストールスクリプトを再実行）
+swttch update                # ランタイム（バックエンドと画面）を最新リリースに更新
+```
+
+#### すべてのコマンド
+
+`swttch --help` で全コマンドの一覧、`swttch <コマンド> -h`（例: `swttch stop -h`）でコマンドごとのオプションを確認できます。
+
 ## トラブルシューティング
 
 よく発生する問題のうち、まだこちらで直せていないものの既知の解決方法があるものを、**[docs/troubleshooting](troubleshooting/ja/README.md)** に症状・原因・解決方法と関連 Issue へのリンクとともにまとめてあります。
