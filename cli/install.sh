@@ -76,7 +76,7 @@ else
   fi
 fi
 
-say "Installing claude-code-gui (ccg) v${version}..."
+say "Installing Swttch v${version}..."
 
 # ─── 3. confirm overwrite if already installed ─────────────────
 

@@ -30,7 +30,7 @@ MSG_en_err_bind_missing_value="Error: -b/--bind requires an address (e.g. ccg ru
 MSG_en_warn_bind_exposed="WARNING: binding to %s — the backend (runs 'claude' + file I/O, no authentication)\n         will be reachable by other devices on your network. Only do this on a trusted network.\n         If a backend is already running on 127.0.0.1, run 'ccg stop' first so the new bind takes effect."
 
 # Errors
-MSG_en_err_port_foreign="Port 19836 is in use by another process (not claude-code-gui)."
+MSG_en_err_port_foreign="Port 19836 is in use by another process (not Swttch)."
 MSG_en_err_port_foreign_hint="Please stop that process and try again. (Hint: lsof -i :19836)"
 MSG_en_err_node_missing="Node.js is not installed or not on PATH."
 MSG_en_err_node_missing_hint="Install Node.js ≥ 18 from https://nodejs.org/ and re-run."
@@ -58,7 +58,7 @@ MSG_en_version_backend_running="running backend: v%s on port 19836"
 MSG_en_version_backend_none="running backend: (none)"
 
 # Install / uninstall
-MSG_en_install_welcome="Installing claude-code-gui (ccg) v%s..."
+MSG_en_install_welcome="Installing Swttch v%s..."
 MSG_en_install_path_added="Added %s to PATH via %s"
 MSG_en_install_path_already="PATH entry already present in %s"
 MSG_en_install_done="✔ Installation complete. Open a new terminal or run: source %s"
@@ -69,8 +69,8 @@ MSG_en_uninstall_path_removed="Removed PATH entry from %s"
 MSG_en_uninstall_done="✔ Uninstall complete. You may close any open ccg sessions."
 
 # List (process tree)
-MSG_en_list_header="claude-code-gui backend processes:"
-MSG_en_list_none="No claude-code-gui backend process is currently running."
+MSG_en_list_header="Swttch backend processes:"
+MSG_en_list_none="No Swttch backend process is currently running."
 MSG_en_list_root_with_port="● PID %s  port %s%s  [%s/%s]"
 MSG_en_list_root_no_port="● PID %s  [%s/%s]"
 MSG_en_list_port_confirmed=" ✔"
@@ -87,7 +87,7 @@ MSG_en_stop_force="Force mode: sending SIGKILL immediately (no graceful shutdown
 MSG_en_stop_all_prompt="This will stop ALL backend.mjs trees (%s found), including IDE-managed ones. Continue? (y/N): "
 MSG_en_stop_all_none="No backend.mjs trees found to stop."
 MSG_en_stop_no_roots="No backend.mjs trees found."
-MSG_en_stop_not_ours="⚠  PID %s does not belong to a claude-code-gui backend tree."
+MSG_en_stop_not_ours="⚠  PID %s does not belong to a Swttch backend tree."
 MSG_en_stop_not_ours_prompt="Kill it (and its children) anyway? (y/N): "
 MSG_en_stop_aborted="Aborted. Nothing was stopped."
 

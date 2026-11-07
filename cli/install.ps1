@@ -46,7 +46,7 @@ function Install-Ccg {
         }
         $version = ([string]$release.tag_name).TrimStart('v')
     }
-    Write-Host "Installing claude-code-gui (ccg) v$version..."
+    Write-Host "Installing Swttch v$version..."
 
     # 3. confirm overwrite
     $stamp = Join-Path $ccgHome '.ccg-version'

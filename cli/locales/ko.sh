@@ -29,7 +29,7 @@ MSG_ko_err_bind_missing_value="오류: -b/--bind 에는 주소가 필요합니�
 MSG_ko_warn_bind_exposed="경고: %s 로 바인딩합니다 — 백엔드(인증 없이 'claude' 실행 + 파일 I/O)가\n      같은 네트워크의 다른 기기에서 접근 가능해집니다. 신뢰할 수 있는 네트워크에서만 사용하세요.\n      이미 127.0.0.1에서 백엔드가 실행 중이면 'ccg stop' 후 다시 실행해야 새 바인딩이 적용됩니다."
 
 # Errors
-MSG_ko_err_port_foreign="19836 포트가 다른 프로세스에 점유되어 있습니다 (claude-code-gui가 아님)."
+MSG_ko_err_port_foreign="19836 포트가 다른 프로세스에 점유되어 있습니다 (Swttch가 아님)."
 MSG_ko_err_port_foreign_hint="해당 프로세스를 종료한 뒤 다시 시도하세요. (힌트: lsof -i :19836)"
 MSG_ko_err_node_missing="Node.js가 설치되어 있지 않거나 PATH에 없습니다."
 MSG_ko_err_node_missing_hint="https://nodejs.org/ 에서 Node.js 18 이상을 설치한 뒤 다시 실행하세요."
@@ -57,7 +57,7 @@ MSG_ko_version_backend_running="실행 중인 백엔드: v%s (19836 포트)"
 MSG_ko_version_backend_none="실행 중인 백엔드: (없음)"
 
 # Install / uninstall
-MSG_ko_install_welcome="claude-code-gui (ccg) v%s 설치를 시작합니다..."
+MSG_ko_install_welcome="Swttch v%s 설치를 시작합니다..."
 MSG_ko_install_path_added="%s 를 PATH에 추가했습니다 (%s)"
 MSG_ko_install_path_already="%s 에 PATH 항목이 이미 있습니다"
 MSG_ko_install_done="✔ 설치 완료. 새 터미널을 열거나 다음을 실행하세요: source %s"
@@ -68,8 +68,8 @@ MSG_ko_uninstall_path_removed="%s 에서 PATH 항목을 제거했습니다"
 MSG_ko_uninstall_done="✔ 제거 완료. 실행 중인 ccg 세션이 있다면 종료하세요."
 
 # List (process tree)
-MSG_ko_list_header="claude-code-gui 백엔드 프로세스:"
-MSG_ko_list_none="현재 실행 중인 claude-code-gui 백엔드 프로세스가 없습니다."
+MSG_ko_list_header="Swttch 백엔드 프로세스:"
+MSG_ko_list_none="현재 실행 중인 Swttch 백엔드 프로세스가 없습니다."
 MSG_ko_list_root_with_port="● PID %s  포트 %s%s  [%s/%s]"
 MSG_ko_list_root_no_port="● PID %s  [%s/%s]"
 MSG_ko_list_port_confirmed=" ✔"
@@ -86,7 +86,7 @@ MSG_ko_stop_force="강제 모드: 정상 종료 없이 즉시 SIGKILL을 보냅�
 MSG_ko_stop_all_prompt="IDE가 띄운 것을 포함해 모든 backend.mjs 트리(%s개)를 종료합니다. 계속할까요? (y/N): "
 MSG_ko_stop_all_none="종료할 backend.mjs 트리를 찾지 못했습니다."
 MSG_ko_stop_no_roots="backend.mjs 트리를 찾지 못했습니다."
-MSG_ko_stop_not_ours="⚠  PID %s는 claude-code-gui 백엔드 트리에 속하지 않습니다."
+MSG_ko_stop_not_ours="⚠  PID %s는 Swttch 백엔드 트리에 속하지 않습니다."
 MSG_ko_stop_not_ours_prompt="그래도 (자식까지 함께) 종료할까요? (y/N): "
 MSG_ko_stop_aborted="중단됐습니다. 아무것도 종료하지 않았습니다."
 

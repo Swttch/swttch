@@ -65,7 +65,7 @@ swttch list                  # 먼저 무엇이 떠 있는지 보기 (PID, 포�
 ```
 
 ```
-claude-code-gui backend processes:
+Swttch backend processes:
 ● PID 13924  port 19836 ✔  [prod/standalone]
     node.exe "C:/Users/me/.claude-code-gui/runtimes/0.35.3/backend.mjs"
 ```

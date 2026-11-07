@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ccg — claude-code-gui terminal launcher.
+# ccg — Swttch terminal launcher (the deprecated name of `swttch browser`).
 #
 # Usage: ccg [run | list | update | stop | version | doctor | self-update | uninstall | help]
 #

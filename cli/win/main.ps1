@@ -1,4 +1,4 @@
-﻿# main.ps1 - claude-code-gui terminal launcher for native Windows (PowerShell).
+﻿# main.ps1 - Swttch terminal launcher for native Windows (PowerShell).
 #
 # Lives next to bin\, not in it: only bin\ccg.cmd is on PATH. If a ccg.ps1 sat on PATH,
 # PowerShell would prefer it over ccg.cmd and a restricted execution policy would block it.
