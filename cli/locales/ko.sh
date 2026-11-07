@@ -112,7 +112,7 @@ MSG_ko_help_doctor_body="  ccg doctor             node, PATH, 캐시, 19836 포�
 MSG_ko_help_self_update_header="ccg self-update — ccg 자체를 갱신합니다"
 MSG_ko_help_self_update_body="  ccg self-update             설치 스크립트를 다시 실행해 ccg cli를 갱신합니다.\n  ccg self-update -h, --help  이 도움말을 표시합니다."
 MSG_ko_help_uninstall_header="ccg uninstall — 이 머신에서 ccg를 제거합니다"
-MSG_ko_help_uninstall_body="  ccg uninstall             이 머신에서 ccg를 제거합니다(바이너리, 런타임, PATH 항목).\n  ccg uninstall -h, --help  이 도움말을 표시합니다."
+MSG_ko_help_uninstall_body="  ccg uninstall             이 머신에서 ccg를 제거합니다(바이너리, 런타임, PATH 항목).\n                            사용자 데이터(계정, 설정, 라이선스)는 남깁니다.\n  ccg uninstall -h, --help  이 도움말을 표시합니다."
 
 # Restart loop (standalone foreground)
 MSG_ko_backend_restarting="백엔드가 재시작 신호로 종료됐습니다. 재시작합니다..."

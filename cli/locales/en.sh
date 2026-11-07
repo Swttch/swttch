@@ -113,7 +113,7 @@ MSG_en_help_doctor_body="  ccg doctor             Check node, PATH, cache, port 
 MSG_en_help_self_update_header="ccg self-update — update ccg itself"
 MSG_en_help_self_update_body="  ccg self-update             Re-run the install script to update the ccg cli.\n  ccg self-update -h, --help  Show this help."
 MSG_en_help_uninstall_header="ccg uninstall — remove ccg from this machine"
-MSG_en_help_uninstall_body="  ccg uninstall             Remove ccg from this machine (binary, runtimes, PATH entry).\n  ccg uninstall -h, --help  Show this help."
+MSG_en_help_uninstall_body="  ccg uninstall             Remove ccg from this machine (binary, runtimes, PATH entry).\n                            Your data (accounts, settings, licence) is kept.\n  ccg uninstall -h, --help  Show this help."
 
 # Restart loop (standalone foreground)
 MSG_en_backend_restarting="Backend exited with restart signal. Restarting..."

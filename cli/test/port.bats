@@ -192,3 +192,20 @@ EOF
   grep -q -- '-TERM 88888' "$BATS_TEST_TMPDIR/kill.log"
   grep -q -- '-TERM 99999' "$BATS_TEST_TMPDIR/kill.log"
 }
+
+# ─── only LISTENing sockets own a port ────────────────────────
+
+@test "find_pids_on_port: asks lsof for LISTENing sockets only, so a client that merely connects is not an owner" {
+  # lsof lists a stuck curl (SYN_SENT) or a reconnecting browser unless it is told -sTCP:LISTEN.
+  mock_cmd_with_logic lsof 'case "$*" in *-sTCP:LISTEN*) exit 1 ;; *) printf "%s\n" "999" ;; esac'
+  run find_pids_on_port 19836
+  [ "$status" -eq 1 ]
+  [ -z "$output" ]
+}
+
+@test "port_status: free when only a client (not a listener) touches the port" {
+  mock_cmd_with_logic curl 'exit 7'
+  mock_cmd_with_logic lsof 'case "$*" in *-sTCP:LISTEN*) exit 1 ;; *) printf "%s\n" "999" ;; esac'
+  run port_status
+  [ "$output" = "free" ]
+}

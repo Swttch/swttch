@@ -86,7 +86,7 @@ Windows native is not supported in this version. Use WSL or git-bash as a best-e
 ccg uninstall
 ```
 
-Removes `~/.claude-code-gui/` and strips the PATH block from `~/.zshrc` / `~/.bashrc`.
+Removes the launcher, the downloaded runtimes and the PATH block from `~/.zshrc` / `~/.bashrc`. Your data in `~/.claude-code-gui/` (accounts, settings, licence) is shared with the JetBrains plugin and is kept; delete that folder yourself to remove it too.
 
 ## Development
 

@@ -9,7 +9,7 @@ find_pid_on_port() {
   if _is_windows_shell; then
     raw=$(_win_pids_on_port "${CCG_PORT}")
   elif command -v lsof >/dev/null 2>&1; then
-    raw=$(lsof -ti ":${CCG_PORT}" 2>/dev/null) || return 1
+    raw=$(lsof -ti "TCP:${CCG_PORT}" -sTCP:LISTEN 2>/dev/null) || return 1
   elif command -v netstat >/dev/null 2>&1; then
     # netstat fallback (Linux/BSD variants differ; best-effort)
     raw=$(netstat -anp 2>/dev/null | awk -v p=":${CCG_PORT}" '$4 ~ p {print $7}' | sed 's|/.*||' | grep -E '^[0-9]+$' | head -1)
@@ -41,7 +41,7 @@ find_pids_on_port() {
   if _is_windows_shell; then
     raw=$(_win_pids_on_port "${port}")
   elif command -v lsof >/dev/null 2>&1; then
-    raw=$(lsof -ti ":${port}" 2>/dev/null) || return 1
+    raw=$(lsof -ti "TCP:${port}" -sTCP:LISTEN 2>/dev/null) || return 1
   elif command -v netstat >/dev/null 2>&1; then
     raw=$(netstat -anp 2>/dev/null | awk -v p=":${port}" '$4 ~ p {print $7}' | sed 's|/.*||' | grep -E '^[0-9]+$')
   else
