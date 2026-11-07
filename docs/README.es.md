@@ -131,6 +131,38 @@ La misma interfaz gráfica de Claude Code que amas en Cursor y VS Code, ahora di
 - `Ctrl+Shift+C` — Abrir el panel de Claude Code
 - `Cmd+N` / `Ctrl+N` (con el panel enfocado) — Nueva pestaña de sesión
 
+### Empezar sin un IDE (Standalone, `ccg`)
+
+Si prefieres usar tu propio navegador en lugar del panel del IDE, puedes instalar el lanzador de terminal `ccg` con una sola línea:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.sh | bash
+```
+
+Después de instalarlo, ejecuta desde cualquier directorio de proyecto:
+
+```bash
+ccg
+```
+
+El backend y la interfaz son los mismos que los del plugin del IDE, y se abren en tu navegador predeterminado en `http://localhost:19836`. El puerto 19836 se comparte con el plugin de JetBrains, por lo que ambos conviven. Consulta [cli/README.md](../cli/README.md) para más detalles.
+
+**Detener `ccg`.** Pulsa `Ctrl+C` en la terminal donde se ejecuta `ccg`. Si el proceso no termina, abre otra terminal y ejecuta:
+
+```bash
+ccg stop                  # detiene el backend del puerto 19836 y sus procesos hijos
+ccg stop --all --force    # detiene TODOS los backends (también los iniciados por el IDE) con SIGKILL, sin período de gracia; pregunta antes de detenerlos
+```
+
+**Actualizar.** Detén primero el `ccg` en ejecución y luego ejecuta:
+
+```bash
+ccg self-update           # actualiza el propio comando ccg (vuelve a ejecutar el script de instalación)
+ccg update                # actualiza el runtime (backend e interfaz) a la última versión
+```
+
+**Todos los comandos.** Ejecuta `ccg --help` para ver la lista completa y `ccg <comando> -h` (por ejemplo `ccg stop -h`) para ver las opciones de un comando.
+
 ## Solución de problemas
 
 Los problemas frecuentes que todavía no hemos podido corregir por nuestra parte, pero para los que existe una solución conocida, están recogidos en **[docs/troubleshooting](troubleshooting/es/README.md)**, cada uno con los síntomas, la causa, cómo solucionarlo y enlaces a los issues relacionados.

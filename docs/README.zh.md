@@ -130,6 +130,38 @@
 - `Ctrl+Shift+C` — 打开 Claude Code 面板
 - `Cmd+N` / `Ctrl+N`（面板聚焦时）— 新建会话标签页
 
+### 无需 IDE 即可使用（Standalone，`ccg`）
+
+如果想用平时的浏览器而不是 IDE 面板，可以用一行命令安装终端启动器 `ccg`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.sh | bash
+```
+
+安装后，在任意项目目录中运行:
+
+```bash
+ccg
+```
+
+后端和界面与 IDE 插件相同，会在默认浏览器中打开 `http://localhost:19836`。端口 19836 与 JetBrains 插件共用，因此两者可以共存。详情请参阅 [cli/README.md](../cli/README.md)。
+
+**停止 `ccg`。** 在运行 `ccg` 的终端中按 `Ctrl+C`。如果进程仍未退出，请打开另一个终端并运行:
+
+```bash
+ccg stop                  # 停止端口 19836 上的后端及其子进程
+ccg stop --all --force    # 不等待宽限时间，用 SIGKILL 停止所有后端（包括 IDE 启动的）；停止前会先询问
+```
+
+**更新。** 先停止正在运行的 `ccg`，然后运行:
+
+```bash
+ccg self-update           # 更新 ccg 命令本身（重新运行安装脚本）
+ccg update                # 将运行时（后端和界面）更新到最新版本
+```
+
+**所有命令。** 运行 `ccg --help` 查看完整命令列表，运行 `ccg <命令> -h`（例如 `ccg stop -h`）查看单个命令的选项。
+
 ## 故障排查
 
 常见问题中，我们尚未能自行修复、但已有已知解决方法的那些，整理在 **[docs/troubleshooting](troubleshooting/zh/README.md)** 中，每篇都包含症状、原因、解决方法以及相关 Issue 的链接。

@@ -130,6 +130,38 @@ Cursor と VS Code で親しまれている Claude Code GUI が、JetBrains IDE 
 - `Ctrl+Shift+C` — Claude Code パネルを開く
 - `Cmd+N` / `Ctrl+N`（パネルフォーカス時）— 新規セッションタブ
 
+### IDE なしで始める（Standalone、`ccg`）
+
+IDE パネルではなく普段使っているブラウザで使いたい場合は、1 行でターミナルランチャー `ccg` をインストールできます:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.sh | bash
+```
+
+インストール後、任意のプロジェクトディレクトリで次を実行します:
+
+```bash
+ccg
+```
+
+バックエンドと画面は IDE プラグインと同じで、既定のブラウザで `http://localhost:19836` が開きます。ポート 19836 は JetBrains プラグインと共有するため、両者は共存できます。詳細は [cli/README.md](../cli/README.md) を参照してください。
+
+**`ccg` を終了する。** `ccg` を実行しているターミナルで `Ctrl+C` を押します。それでもプロセスが終了しない場合は、別のターミナルを開いて次を実行します:
+
+```bash
+ccg stop                  # ポート 19836 のバックエンドとその子プロセスを終了
+ccg stop --all --force    # IDE が起動したものを含むすべてのバックエンドを、猶予なしで SIGKILL により終了（終了前に確認します）
+```
+
+**アップデートする。** 実行中の `ccg` を先に終了してから、次を実行します:
+
+```bash
+ccg self-update           # ccg コマンド自体を更新（インストールスクリプトを再実行）
+ccg update                # ランタイム（バックエンドと画面）を最新リリースに更新
+```
+
+**すべてのコマンド。** `ccg --help` で全コマンドの一覧、`ccg <コマンド> -h`（例: `ccg stop -h`）でコマンドごとのオプションを確認できます。
+
 ## トラブルシューティング
 
 よく発生する問題のうち、まだこちらで直せていないものの既知の解決方法があるものを、**[docs/troubleshooting](troubleshooting/ja/README.md)** に症状・原因・解決方法と関連 Issue へのリンクとともにまとめてあります。
