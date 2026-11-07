@@ -132,7 +132,7 @@ Cursor と VS Code で親しまれている Claude Code GUI が、JetBrains IDE 
 
 ### IDE なしで始める（Standalone、`swttch`）
 
-IDE パネルではなく普段使っているブラウザで使いたい場合は、1 行でターミナルランチャー `swttch` をインストールできます.
+IDE パネルではなく普段使っているブラウザで使いたい場合は、1 行でターミナルランチャー `swttch` をインストールできます。
 
 `curl` と `bash` が使える環境:
 
