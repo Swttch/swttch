@@ -8,7 +8,7 @@ import { timeAgo } from '@/utils/timeAgo';
 import { CopyIcon, ForkIcon } from '../message-renderers/components/MessageFooter';
 
 const BUTTON =
-  'flex h-[26px] w-[26px] cursor-pointer items-center justify-center rounded-md text-[#9c9c9c] transition-colors hover:bg-surface-hover hover:text-[#efefef]';
+  'flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-md text-[#9c9c9c] transition-colors hover:bg-surface-hover hover:text-[#efefef]';
 
 /** A tooltip with a title and, under it, what the button does. */
 function Hint({ title, text }: { title: string; text?: string }): ReactNode {
@@ -77,15 +77,15 @@ export function TranscriptUserFooter({
   if (copyText === undefined && !onFork && !onRewind && !known) return null;
   return (
     <div
-      className={`${alwaysDisplay ? '' : 'invisible group-hover:visible'} inline-flex select-none items-center gap-0.5 text-sm text-[#9c9c9c]`}
+      className={`${alwaysDisplay ? '' : 'invisible group-hover:visible'} inline-flex select-none items-center gap-0.5 text-xs text-[#9c9c9c]`}
       data-copy-ignore="true"
       onClick={(event) => event.stopPropagation()}
     >
       {known && (
         <>
           <Tooltip content={t('transcript.userFooter.read')} placement="top">
-            <span className="flex h-[26px] w-6 items-center justify-center">
-              <ReadIcon className="h-[18px] w-[18px]" />
+            <span className="flex h-[22px] w-5 items-center justify-center">
+              <ReadIcon className="h-[14px] w-[14px]" />
             </span>
           </Tooltip>
           <Tooltip content={exact} placement="top">
@@ -97,21 +97,21 @@ export function TranscriptUserFooter({
       {copyText !== undefined && (
         <Tooltip content={t('transcript.userFooter.copy')} placement="top">
           <button type="button" onClick={copy} aria-label={t('transcript.userFooter.copy')} className={BUTTON}>
-            <CopyIcon className="h-[18px] w-[18px]" />
+            <CopyIcon className="h-[14px] w-[14px]" />
           </button>
         </Tooltip>
       )}
       {onRewind && (
         <Tooltip content={<Hint title={t('transcript.userFooter.rewind')} text={t('transcript.userFooter.rewindHint')} />} placement="top">
           <button type="button" onClick={onRewind} aria-label={t('transcript.userFooter.rewind')} className={BUTTON}>
-            <ArrowUturnLeftIcon className="h-[18px] w-[18px]" />
+            <ArrowUturnLeftIcon className="h-[14px] w-[14px]" />
           </button>
         </Tooltip>
       )}
       {onFork && (
         <Tooltip content={<Hint title={t('transcript.userFooter.fork')} text={t('transcript.userFooter.forkHint')} />} placement="top">
           <button type="button" onClick={fork} aria-label={t('transcript.userFooter.fork')} className={BUTTON}>
-            <ForkIcon className="h-[18px] w-[18px]" />
+            <ForkIcon className="h-[14px] w-[14px]" />
           </button>
         </Tooltip>
       )}

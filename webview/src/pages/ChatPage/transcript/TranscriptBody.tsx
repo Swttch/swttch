@@ -12,7 +12,6 @@ import { ToolRenderer } from '../message-renderers/ToolRenderer';
 import { MessageFooter } from '../message-renderers/components/MessageFooter';
 import { ContextUsageCard } from '../message-renderers/components/ContextUsageCard';
 import { parseContextUsage } from '@/utils/parseContextUsage';
-import { useLastEntryUuid } from '../LastEntryContext';
 import { useSendActionsValue } from '../SendActionsContext';
 import { APP_EVENT_TOOL, buildSegments, PEER_MESSAGE_TOOL, type Segment } from './buildSegments';
 import { TranscriptToolRun } from './TranscriptToolRun';
@@ -28,16 +27,13 @@ import { isCliNotice, isCompactBoundary, isCompactSummaryEntry } from './compact
 function TranscriptBlocks({
   message,
   blocks,
-  endsEntry,
   showFooter,
 }: {
   message: LoadedMessageDto;
   blocks: AnyContentBlockDto[];
-  endsEntry: boolean;
   showFooter: boolean;
 }) {
   const { t } = useTranslation('chat');
-  const isLastEntry = useLastEntryUuid() === message.uuid;
   const sendActions = useSendActionsValue();
   const streaming = message.isStreaming ?? false;
 
@@ -61,7 +57,7 @@ function TranscriptBlocks({
               plain
               content={thinking.thinking}
               isStreaming={streaming}
-              className="text-[#efefef] text-[1rem] leading-relaxed"
+              className="text-[#efefef] text-[1.02rem] leading-[1.3]"
               message={message}
             />
           );
@@ -79,16 +75,17 @@ function TranscriptBlocks({
               plain
               content={text}
               isStreaming={streaming}
-              className="text-[#efefef] text-[1rem] leading-relaxed"
+              className="text-[#efefef] text-[1.02rem] leading-[1.3]"
               message={message}
               footer={
                 streaming || !showFooter ? undefined : (
                   <MessageFooter
+                    className="mt-1.5"
                     copyText={text}
                     timestamp={message.timestamp}
                     relativeTime
                     onFork={sendActions && message.uuid && sendActions.canForkReply(message.uuid) ? () => sendActions.forkAtReply(message.uuid as string) : undefined}
-                    alwaysDisplay={isLastEntry && endsEntry && index === blocks.length - 1}
+                    alwaysDisplay
                   />
                 )
               }
@@ -113,7 +110,7 @@ function SegmentView({ segment, endsTurn, onRetry }: { segment: Segment; endsTur
     case 'blocks':
       return (
         <div className="group transcript-prose px-4 [&_.markdown-content_p:first-child]:mt-0">
-          <TranscriptBlocks message={segment.message} blocks={segment.blocks} endsEntry={segment.endsEntry} showFooter={endsTurn} />
+          <TranscriptBlocks message={segment.message} blocks={segment.blocks} showFooter={endsTurn} />
         </div>
       );
     case 'tools':

@@ -150,7 +150,7 @@ export function TranscriptArea(props: TranscriptAreaProps) {
                     </SectionKeyContext.Provider>
                   </>
                 )}
-                <div data-section-body data-after-send={section.head ? '' : undefined} className={isStreaming && sectionIndex === sections.length - 1 ? 'pb-0' : 'pb-[54px]'}>
+                <div data-section-body data-after-send={section.head ? '' : undefined} className={`max-w-[604px] pl-[31px] ${sectionIndex < sections.length - 1 ? 'pb-[13px]' : isStreaming ? 'pb-0' : 'pb-[54px]'}`}>
                   <TranscriptBody body={section.body} mergedMessages={mergedMessages} onRetry={onRetry} turnRunning={isStreaming && sectionIndex === sections.length - 1} />
                   {/* The turn's wrap-up is drawn here, after its last message, not where its call sits: a recap as text until the closing message begins, then the question and its answers. */}
                   <TranscriptWrapUp body={section.body} next={sections[sectionIndex + 1]?.head ?? null} />
@@ -160,7 +160,11 @@ export function TranscriptArea(props: TranscriptAreaProps) {
           </LastEntryContext.Provider>
         </SendActionsContext.Provider>
       </SectionFoldContext.Provider>
-      {isStreaming && <TranscriptStreamingIndicator countdownSeconds={disconnectCountdown} apiRetry={apiRetry} />}
+      {isStreaming && (
+        <div className="max-w-[604px] pl-[31px]">
+          <TranscriptStreamingIndicator countdownSeconds={disconnectCountdown} apiRetry={apiRetry} />
+        </div>
+      )}
       <StreamErrorBanner />
     </div>
   );

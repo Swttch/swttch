@@ -6,6 +6,8 @@
   background-color: #2b2b2b !important;
   color: #efefef !important;
   border-radius: 4px !important;
+  font-size: 0.82em !important;
+  padding: 0.05em 0.35em !important;
 }
 
 .transcript-prose a {
@@ -39,3 +41,13 @@
 [data-after-send] > [data-seg="tools"]:not(:empty):not(:not(:empty) ~ *) {
   margin-top: -24px;
 }
+
+/* The desktop app sets the reply's lines closer than the classic chat's 1.6; the chat's own line spacing variable is
+   read by every paragraph and list item in the markdown, so it is set here, for the reply only. */
+.transcript-prose {
+  --chat-line-height: 1.44;
+}
+
+/* The reply's paragraphs stand a little closer than the classic chat's. */
+.transcript-prose p { margin: 0.65em 0 0 !important; }
+.transcript-prose p:first-child { margin-top: 0 !important; }

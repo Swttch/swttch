@@ -439,7 +439,7 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
     // A capture on its own is shown open, as the desktop app shows it: its line has nothing to fold and no thumbnail,
     // since the picture itself is right under it.
     return (
-      <div className="px-4 py-[17px]" data-transcript-tool-run-single>
+      <div className="px-4 pt-3 pb-[11px]" data-transcript-tool-run-single>
         <div className="py-[10px] text-[0.9375rem] text-[#9c9c9c]">{rowLabel(calls[0], t).before}</div>
         <PlainDetail call={calls[0]} />
       </div>
@@ -448,14 +448,14 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
 
   if (calls.length === 1) {
     return (
-      <div className="px-4 py-[17px]" data-transcript-tool-run-single>
+      <div className="px-4 pt-3 pb-[11px]" data-transcript-tool-run-single>
         <TranscriptToolRow calls={[calls[0]]} defaultOpen={verbose} inBox={false} />
       </div>
     );
   }
 
   return (
-    <div className="px-4 py-[17px]" data-transcript-tool-run>
+    <div className="px-4 pt-3 pb-[11px]" data-transcript-tool-run>
       <button
         type="button"
         aria-expanded={open}

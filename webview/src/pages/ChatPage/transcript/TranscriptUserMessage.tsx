@@ -16,7 +16,6 @@ import { toolResultText } from '../message-renderers/ToolRenderers/common/toolSt
 import { stripSessionMentionTags } from '../ChatInput/sessionMentionTag';
 import { commandSendText } from '../sendText';
 import { useSendActionsValue } from '../SendActionsContext';
-import { useLastEntryUuid } from '../LastEntryContext';
 import { isCompactSummaryEntry } from './compact';
 import { TranscriptSessionBrief } from './TranscriptSessionBrief';
 import { TranscriptUserFooter } from './TranscriptUserFooter';
@@ -51,7 +50,6 @@ export function TranscriptUserMessage(props: Props) {
 
 function SendBubble({ message, sectionKey }: Props) {
   const sendActions = useSendActionsValue();
-  const isLastEntry = useLastEntryUuid() === message.uuid;
   const text = getTextContent(message);
   const parsed = parseUserContent(text);
 
@@ -104,7 +102,7 @@ function SendBubble({ message, sectionKey }: Props) {
           : undefined
       }
       timestamp={message.timestamp}
-      alwaysDisplay={isLastEntry}
+      alwaysDisplay
     />
   );
   // The copy / fork / time row is invisible until the pointer is on the send, but an invisible row still takes
@@ -117,11 +115,11 @@ function SendBubble({ message, sectionKey }: Props) {
     <IfVisible
       extra={imageBlocks.length > 0 || contexts.length > 0 || parsed.replies.length > 0 || parsed.excerpts.length > 0}
     >
-      <div className="group flex flex-col items-end gap-1.5 pt-2 pb-[32px] px-4" data-transcript-user>
+      <div className="group flex flex-col items-end gap-1.5 pt-2 pb-[32px] pl-4 pr-7" data-transcript-user>
         {parsed.excerpts.length > 0 && <ExcerptCards excerpts={parsed.excerpts} />}
 
         {hasBubble && (
-          <div className="max-w-[85%] min-w-0 rounded-2xl bg-surface-hover px-3.5 py-2">
+          <div className="max-w-[37rem] min-w-0 rounded-2xl bg-surface-hover px-3.5 py-2">
             {parsed.replies.length > 0 && <ReplyQuotes replies={parsed.replies} followedByText={parsed.text !== ''} />}
             <div className="text-text-primary/80 text-[1rem] leading-[1.5] whitespace-pre-wrap break-words">
               {isCommand ? (
