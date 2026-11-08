@@ -15,7 +15,7 @@ import { restoreSchedulesForSession } from './features/scheduled-messages';
 import { takeMessagesForFinishedTurn, clearMessagesForSession } from './features/afterTurn';
 import { dequeueNextMessage, getQueuedMessages, clearQueuedMessages } from './features/messageQueue';
 import { rememberPreview, resolveDiffPreview } from './features/diffPreview';
-import { readMergedSettings } from './features/settings';
+import { readMergedSettings, readSettingsFile } from './features/settings';
 import { readMergedClaudeSettings } from './features/claude-settings';
 import { readLastRecordedSend } from './features/lastRecordedSend';
 import { readLastRecordedEffort } from './features/lastRecordedEffort';
@@ -196,9 +196,25 @@ export function resolveLegacyEffortLevel(settings: Record<string, unknown>): str
  * same setting, rather than adding one of ours. The official Agent SDK passes
  * the same flag for its documented `thinking.display` option. Nothing is passed
  * when the setting is off, matching the REPL, which also leaves the default then.
+ *
+ * The Thinking and Verbose chat views also ask for the summaries (`wantedByViewMode`): they draw what Claude
+ * thought as text, and an empty thinking block has nothing to draw. The desktop app does the same when it
+ * starts a session in one of those views.
  */
-export function resolveThinkingDisplayFlag(settings: Record<string, unknown>): string | undefined {
-  return settings.showThinkingSummaries === true ? 'summarized' : undefined;
+export function resolveThinkingDisplayFlag(settings: Record<string, unknown>, wantedByViewMode = false): string | undefined {
+  return settings.showThinkingSummaries === true || wantedByViewMode ? 'summarized' : undefined;
+}
+
+/**
+ * Whether the chat view this session is shown in draws thinking: the view picked for the session itself, or, when
+ * none was, the one picked for all chats. `classic` and no pick at all draw none.
+ */
+export function viewModeShowsThinking(ownSettings: Record<string, unknown>, sessionId: string): boolean {
+  const bySession = ownSettings.transcriptViewModeBySession;
+  const picked =
+    bySession && typeof bySession === 'object' ? (bySession as Record<string, unknown>)[sessionId] : undefined;
+  const mode = picked ?? ownSettings.transcriptViewMode;
+  return mode === 'thinking' || mode === 'verbose';
 }
 
 /**
@@ -721,7 +737,10 @@ export async function ensureClaudeProcess(
     pickedEffort,
     resolveEffortFlag(pickedEffort) === undefined ? true : await cliTakesEffortFlag(),
   );
-  const thinkingDisplay = resolveThinkingDisplayFlag(claudeSettings);
+  const thinkingDisplay = resolveThinkingDisplayFlag(
+    claudeSettings,
+    viewModeShowsThinking(await readSettingsFile().catch(() => ({})), targetSessionId),
+  );
 
   const existingSession = connections.getSession(targetSessionId);
   if (existingSession?.process) {

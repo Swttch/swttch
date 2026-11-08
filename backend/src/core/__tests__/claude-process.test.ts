@@ -14,6 +14,7 @@ import {
   resolveLegacyEffortLevel,
   resolveThinkingDisplayFlag,
   stopWorkflowsForSession,
+  viewModeShowsThinking,
 } from '../claude-process';
 
 // What an upgraded user's sessions keep running at (#604). Every slider before it wrote the top-level
@@ -219,6 +220,22 @@ describe('thinking display', () => {
     expect(resolveThinkingDisplayFlag({ showThinkingSummaries: false })).toBeUndefined();
     expect(resolveThinkingDisplayFlag({})).toBeUndefined();
     expect(resolveThinkingDisplayFlag({ showThinkingSummaries: 'true' })).toBeUndefined();
+  });
+
+  // The Thinking and Verbose chat views draw thinking as text, so they ask for the summaries themselves.
+  it('asks for summarized thinking when the chat view draws thinking', () => {
+    expect(resolveThinkingDisplayFlag({}, true)).toBe('summarized');
+    expect(resolveThinkingDisplayFlag({}, false)).toBeUndefined();
+  });
+
+  it('knows which chat views draw thinking: the session\'s own pick first, then the one for all chats', () => {
+    expect(viewModeShowsThinking({ transcriptViewMode: 'thinking' }, 's1')).toBe(true);
+    expect(viewModeShowsThinking({ transcriptViewMode: 'verbose' }, 's1')).toBe(true);
+    expect(viewModeShowsThinking({ transcriptViewMode: 'normal' }, 's1')).toBe(false);
+    expect(viewModeShowsThinking({ transcriptViewMode: null }, 's1')).toBe(false);
+    expect(viewModeShowsThinking({ transcriptViewMode: 'thinking', transcriptViewModeBySession: { s1: 'classic' } }, 's1')).toBe(false);
+    expect(viewModeShowsThinking({ transcriptViewMode: 'normal', transcriptViewModeBySession: { s1: 'verbose' } }, 's1')).toBe(true);
+    expect(viewModeShowsThinking({ transcriptViewMode: 'thinking', transcriptViewModeBySession: { other: 'normal' } }, 's1')).toBe(true);
   });
 
   it('puts --thinking-display in the argv only when a value is given', () => {
