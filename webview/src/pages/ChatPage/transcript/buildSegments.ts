@@ -111,7 +111,28 @@ function sessionReports(message: LoadedMessageDto): { name: string; body: string
  * answer for them (`<side-sessions-event>`).
  */
 export function isAppEvent(message: LoadedMessageDto): boolean {
+  return carriesAppEvent(message) && !carriesUserSend(message);
+}
+
+/** An entry that holds a report on a session Claude started or the request to answer for it, alone or with a send. */
+export function carriesAppEvent(message: LoadedMessageDto): boolean {
   return message.type === 'user' && (APP_EVENT_TAG.test(getTextContent(message)) || sessionReports(message).length > 0);
+}
+
+/**
+ * An entry of the app's that also holds something the user typed or attached. The app writes its reports into the
+ * entry of the next send, ahead of the user's own text, so one entry can be both: the reports are drawn in the run
+ * before the send, and the send is drawn as a send.
+ */
+export function carriesUserSend(message: LoadedMessageDto): boolean {
+  if (!carriesAppEvent(message)) return false;
+  const content = message.message?.content;
+  if (isContentBlockArray(content) && content.some((block) => block.type === 'image')) return true;
+  const typed = getTextContent(message)
+    .replace(SESSION_REPORT, '')
+    .replace(/<side-sessions-event>[\s\S]*?<\/side-sessions-event>/g, '')
+    .replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, '');
+  return typed.trim() !== '';
 }
 
 /** What an app entry is drawn as: a message from each session it reports on, then the request for a report. */
@@ -205,7 +226,7 @@ export function buildSegments(body: LoadedMessageDto[]): Segment[] {
       run.push(peerCall(message, key));
       return;
     }
-    if (isAppEvent(message)) {
+    if (carriesAppEvent(message)) {
       if (!run) run = [];
       run.push(...appEventCalls(message, key));
       return;

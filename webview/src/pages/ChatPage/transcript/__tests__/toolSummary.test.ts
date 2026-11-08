@@ -49,7 +49,7 @@ describe('groupLabel', () => {
 
   it('adds how many calls failed', () => {
     const calls = [call('1', 'Bash'), call('2', 'Bash', {}, true)];
-    expect(groupLabel(calls, t)).toBe('ranCommands:2, failed:1');
+    expect(groupLabel(calls, t)).toBe('ranCommands:2 (failed:1)');
   });
 });
 

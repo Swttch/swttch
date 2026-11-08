@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS, SettingKey } from '@/types/settings';
+import { DEFAULT_SETTINGS, NO_PAGINATION_LIMIT, SettingKey } from '@/types/settings';
 import {
   TRANSCRIPT_PAGE_SIZE,
   applyUrlOverridesToSettings,
@@ -44,6 +44,10 @@ describe('with the URL carrying values', () => {
     mirrorSettingsForOverrides({ ...DEFAULT_SETTINGS, [SettingKey.TRANSCRIPT_VIEW_MODE]: 'normal' });
     expect(resolveMessagePageSize('s1')).toBe(100);
     expect(resolveMessagePageSize('s1', 30)).toBe(100);
+  });
+
+  it('leaves alone the load-everything size used when pagination is off', () => {
+    expect(resolveMessagePageSize('s1', NO_PAGINATION_LIMIT)).toBe(NO_PAGINATION_LIMIT);
   });
 
   it('keeps the value after the query has gone from the address', () => {

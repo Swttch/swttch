@@ -277,6 +277,6 @@ export class SessionsApi {
    */
   async reclaim(sessionId: string, workingDir?: string, limit?: number): Promise<void> {
     const dir = workingDir ?? this.getConfig().workingDir;
-    await this.bridge.request(MessageType.RECLAIM_SESSION, { sessionId, workingDir: dir, limit });
+    await this.bridge.request(MessageType.RECLAIM_SESSION, { sessionId, workingDir: dir, limit: resolveMessagePageSize(sessionId, limit) });
   }
 }

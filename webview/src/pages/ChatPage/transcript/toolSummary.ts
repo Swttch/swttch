@@ -591,9 +591,10 @@ export function groupLabel(calls: ToolCall[], t: TFunction): string {
       }
     });
 
+  const line = parts.filter(Boolean).join(', ');
+  // How many failed goes after the line in parentheses, as the desktop app writes it ("Ran 2 commands (1 failed)").
   const failed = calls.filter(hasFailed).length;
-  if (failed > 0) parts.push(t('transcript.tools.failed', { ns: 'chat', count: failed }));
-  return parts.filter(Boolean).join(', ');
+  return failed > 0 ? `${line} (${t('transcript.tools.failed', { ns: 'chat', count: failed })})` : line;
 }
 
 function pageGroupPhrase(kind: ToolKind, t: TFunction, unfinished: boolean): string {

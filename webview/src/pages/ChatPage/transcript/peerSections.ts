@@ -1,5 +1,5 @@
 import type { SendSection } from '../groupIntoSendSections';
-import { isAppEvent, isPeerMessage } from './buildSegments';
+import { carriesAppEvent, carriesUserSend, isAppEvent, isPeerMessage } from './buildSegments';
 
 /**
  * The sections of a transcript with a message from another session taken out as sections of their own.
@@ -20,6 +20,12 @@ export function withoutPeerSections(sections: SendSection[]): SendSection[] {
         result.push({ key: section.key, head: null, body: entries });
       }
       continue;
+    }
+    if (section.head && carriesAppEvent(section.head) && carriesUserSend(section.head)) {
+      // The app's reports ride in the entry of the user's next send: they join the run before it, and the send stays.
+      const previous = result[result.length - 1];
+      if (previous) result[result.length - 1] = { ...previous, body: [...previous.body, section.head] };
+      else result.push({ key: `${section.key}-reports`, head: null, body: [section.head] });
     }
     result.push(section);
   }

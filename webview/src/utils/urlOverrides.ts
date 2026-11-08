@@ -11,7 +11,7 @@
  * setting, or a resolver like `resolveMessagePageSize` for a value that is not one). A value that is not a
  * number in its range is ignored, as if the parameter were not there.
  */
-import { SettingKey, TRANSCRIPT_VIEW_MODES, type SettingsState } from '@/types/settings';
+import { NO_PAGINATION_LIMIT, SettingKey, TRANSCRIPT_VIEW_MODES, type SettingsState } from '@/types/settings';
 
 export const URL_OVERRIDE_KEYS = {
   PAGE_SIZE: 'pageSize',
@@ -93,11 +93,13 @@ function usesTranscriptView(sessionId: string | undefined): boolean {
  * How many entries to ask the backend for in one page, or undefined to leave it to the backend (50, which is
  * what the classic chat has always loaded).
  *
- * In order: the URL's `pageSize`; a size the caller asked for on purpose (a jump that has to reach a given entry,
+ * With pagination switched off (`NO_PAGINATION_LIMIT`) that size is kept as it is. Otherwise, in order: the URL's `pageSize`; a size the caller asked for on purpose (a jump that has to reach a given entry,
  * say); 150 in the Transcript view modes, which draw many entries in the space of a few classic ones; otherwise
  * undefined.
  */
 export function resolveMessagePageSize(sessionId: string | undefined, explicit?: number): number | undefined {
+  // Pagination switched off in the settings means "load everything": no page size applies, the URL's included.
+  if (explicit === NO_PAGINATION_LIMIT) return explicit;
   const fromUrl = getUrlOverrides().pageSize;
   if (fromUrl !== undefined) return fromUrl;
   if (explicit !== undefined) return explicit;
