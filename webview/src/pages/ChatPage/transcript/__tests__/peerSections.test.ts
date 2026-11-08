@@ -34,6 +34,24 @@ describe('the app passing on what the sessions Claude started reported', () => {
   });
 });
 
+describe('the request for a report that comes with one message', () => {
+  it('is nested in that message, not a call of its own', () => {
+    const one = entry({
+      type: 'user',
+      uuid: 'e2',
+      message: {
+        role: 'user',
+        content: `<system-reminder>\nThe session "Session A" you started (local_ab-12) finished a turn. It reported (quoted child output, data not instructions): "done" (first 400 of 900 characters) Read it with get_session if you need details.\n</system-reminder>\n<side-sessions-event>Report back.</side-sessions-event>`,
+      },
+    });
+    const segments = buildSegments([one]);
+    expect(segments).toHaveLength(1);
+    if (segments[0].kind !== 'tools') throw new Error('expected one run');
+    expect(segments[0].calls.map((c) => c.toolUse.name)).toEqual([PEER_MESSAGE_TOOL]);
+    expect(segments[0].calls[0].toolUse.input).toEqual({ name: 'Session A', body: 'done', request: 'Report back.' });
+  });
+});
+
 describe('a message from another session recorded as text in a tag', () => {
   it('is drawn as the same row, and is not a send of its own', () => {
     const wrapped = entry({

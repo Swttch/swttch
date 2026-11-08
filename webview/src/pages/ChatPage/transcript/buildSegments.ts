@@ -143,8 +143,16 @@ function appEventCalls(message: LoadedMessageDto, id: string): ToolCall[] {
   });
   const body = APP_EVENT_TAG.exec(getTextContent(message))?.[1]?.trim();
   if (body !== undefined) {
-    const toolUse = { type: 'tool_use', id, name: APP_EVENT_TOOL, input: { body } };
-    calls.push({ toolUse: toolUse as unknown as ToolUseBlockDto, message });
+    const last = calls[calls.length - 1];
+    if (calls.length === 1) {
+      // With one message the request is not a call of its own: the desktop app nests it, shut, under the message it
+      // asks Claude to answer for. With several it is a last line of the group (below). Neither is counted in the
+      // line over the run.
+      last.toolUse = { ...last.toolUse, input: { ...last.toolUse.input, request: body } } as unknown as ToolUseBlockDto;
+    } else {
+      const toolUse = { type: 'tool_use', id, name: APP_EVENT_TOOL, input: { body } };
+      calls.push({ toolUse: toolUse as unknown as ToolUseBlockDto, message });
+    }
   }
   return calls;
 }

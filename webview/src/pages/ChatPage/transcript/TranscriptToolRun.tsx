@@ -9,7 +9,7 @@ import { ToolRenderer } from '../message-renderers/ToolRenderer';
 import { toolResultText } from '../message-renderers/ToolRenderers/common/toolStatus';
 import { HighlightedCode } from '../message-renderers/ToolRenderers/Mcp/Generic/HighlightedCode';
 import { useTranscriptViewMode } from '../message-renderers/transcriptViewMode';
-import type { ToolCall } from './buildSegments';
+import { APP_EVENT_TOOL, type ToolCall } from './buildSegments';
 import { FileChangeDetail } from './FileChangeDetail';
 import { useDesktopSession } from '@/hooks/useDesktopSession';
 import { StreamingMessage } from '../StreamingMessage';
@@ -297,7 +297,19 @@ function ToolDetail({ calls }: { calls: ToolCall[] }) {
   }
   if (kind === 'receivedMessage') {
     const body = typeof call.toolUse.input?.body === 'string' ? (call.toolUse.input.body as string) : '';
-    return <MarkdownDetail text={body} message={call.message} />;
+    const request = typeof call.toolUse.input?.request === 'string' ? (call.toolUse.input.request as string) : undefined;
+    if (request === undefined) return <MarkdownDetail text={body} message={call.message} />;
+    // The app's request for a report rides with the message it asks about: a shut line under the message, as in the desktop app.
+    const requestCall: ToolCall = {
+      toolUse: { type: 'tool_use', id: `${call.toolUse.id}-request`, name: APP_EVENT_TOOL, input: { body: request } } as unknown as ToolCall['toolUse'],
+      message: call.message,
+    };
+    return (
+      <>
+        <MarkdownDetail text={body} message={call.message} />
+        <TranscriptToolRow calls={[requestCall]} defaultOpen={false} inBox={false} />
+      </>
+    );
   }
   if (kind === 'appRequest') {
     const body = typeof call.toolUse.input?.body === 'string' ? (call.toolUse.input.body as string) : '';
