@@ -70,6 +70,8 @@ export interface DesktopSessionInfo {
   cwd?: string;
   isArchived?: boolean;
   lastActivityAt?: number;
+  /** Whether the session's last turn ended on a question for the person (`turnWrapUp.needsUser` in its file holds one). */
+  awaitingPerson?: boolean;
 }
 
 function text(value: unknown): string | undefined {
@@ -95,6 +97,7 @@ export async function findDesktopSession(
     ...(cwd !== undefined && { cwd }),
     ...(typeof session.isArchived === 'boolean' && { isArchived: session.isArchived }),
     ...(typeof session.lastActivityAt === 'number' && { lastActivityAt: session.lastActivityAt }),
+    ...(session.turnWrapUp !== undefined && { awaitingPerson: text((session.turnWrapUp as { needsUser?: unknown } | null)?.needsUser) !== undefined }),
   };
 }
 
@@ -114,6 +117,14 @@ export async function findDesktopParentSessionTitle(
   cliSessionId: string,
   root: string = desktopSessionsRoot(),
 ): Promise<string | undefined> {
+  return (await findDesktopParentSession(cliSessionId, root))?.title;
+}
+
+/** The Desktop session that started the CLI session `cliSessionId`, as its own file describes it; undefined when there is none to read. */
+export async function findDesktopParentSession(
+  cliSessionId: string,
+  root: string = desktopSessionsRoot(),
+): Promise<DesktopSessionInfo | undefined> {
   const files = await listSessionFiles(root);
 
   let parentId: string | undefined;
@@ -138,5 +149,5 @@ export async function findDesktopParentSessionTitle(
     if (typeof spawnedFrom?.sessionId === 'string') parentId = spawnedFrom.sessionId;
     break;
   }
-  return parentId ? findDesktopSessionTitle(parentId, root) : undefined;
+  return parentId ? findDesktopSession(parentId, root) : undefined;
 }

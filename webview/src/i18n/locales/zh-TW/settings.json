@@ -281,6 +281,14 @@
       "label": "隱藏工具呼叫",
       "description": "隱藏指令與讀取操作的卡片。檔案變更、提問與計畫仍會顯示。"
     },
+    "transcriptViewMode": {
+      "label": "對話記錄檢視",
+      "description": "聊天的顯示方式。「經典」是目前已發布的聊天介面；「一般」「思考」「詳細」是 Claude 桌面應用程式的對話記錄檢視。你傳送的訊息顯示在右側，沒有摺疊箭頭，也不會固定在頂端。",
+      "classic": "經典",
+      "normal": "一般",
+      "thinking": "思考",
+      "verbose": "詳細"
+    },
     "chat": {
       "sectionTitle": "聊天",
       "spinnerVerbs": {

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { EllipsisVerticalIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '@/i18n';
 import { DockEditor } from './DockEditor';
+import { TranscriptViewMenuSection, TRANSCRIPT_VIEW_SUBMENU_ATTRIBUTE } from './TranscriptViewMenuSection';
 import { OPEN_DOCK_EDITOR_EVENT } from '../../Onboarding/openDockEditor';
 
 /**
@@ -27,7 +28,10 @@ export function OverflowMenu() {
   useEffect(() => {
     if (!open) return;
     const onMouseDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Element;
+      // The Transcript view menu is drawn into <body>, outside this box, yet is part of this menu.
+      if (target.closest?.(`[${TRANSCRIPT_VIEW_SUBMENU_ATTRIBUTE}]`)) return;
+      if (ref.current && !ref.current.contains(target)) setOpen(false);
     };
     document.addEventListener('mousedown', onMouseDown);
     return () => document.removeEventListener('mousedown', onMouseDown);
@@ -54,8 +58,9 @@ export function OverflowMenu() {
       </button>
 
       {open && (
-        <div className="absolute end-0 top-full mt-1 w-[17rem] bg-surface-raised border border-border-default rounded-md shadow-xl overflow-hidden z-50">
+        <div className="absolute end-0 top-full mt-1 w-[17rem] bg-surface-raised border border-border-default rounded-md shadow-xl z-50">
           <DockEditor onRun={() => setOpen(false)} />
+          <TranscriptViewMenuSection onPick={() => setOpen(false)} />
         </div>
       )}
     </div>

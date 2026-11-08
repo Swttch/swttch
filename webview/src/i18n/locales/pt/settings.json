@@ -281,6 +281,14 @@
       "label": "Ocultar chamadas de ferramentas",
       "description": "Oculta os cartões dos comandos e das leituras. As alterações de ficheiros, as perguntas e os planos continuam visíveis."
     },
+    "transcriptViewMode": {
+      "label": "Visualização de transcrição",
+      "description": "Como o chat é exibido. Clássico é o chat lançado até agora; Normal, Raciocínio e Detalhado são as visualizações de transcrição do app de desktop do Claude. A mensagem enviada fica à direita, sem seta de recolher e sem fixação no topo.",
+      "classic": "Clássico",
+      "normal": "Normal",
+      "thinking": "Raciocínio",
+      "verbose": "Detalhado"
+    },
     "chat": {
       "sectionTitle": "Chat",
       "spinnerVerbs": {

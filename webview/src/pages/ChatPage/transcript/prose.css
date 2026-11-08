@@ -1,0 +1,28 @@
+/* Inline code and links in the reply, as the desktop app draws them: code is a quiet grey chip with the reply's own
+   light text (the classic chat tints it), and a link is a muted blue underlined. The classic chat's rules for these
+   are `!important` and are written against the markdown's own attributes, so these have to be as well. */
+.transcript-prose :not(pre) > code,
+.transcript-prose [data-streamdown="inline-code"] {
+  background-color: #2b2b2b !important;
+  color: #efefef !important;
+  border-radius: 4px !important;
+}
+
+.transcript-prose a {
+  color: #7b9bd8 !important;
+  text-decoration: underline !important;
+  text-underline-offset: 2px;
+}
+
+/* A link to a session is the same underlined text, not the classic chat's chip on a blue background. */
+.transcript-prose a.richInputChip {
+  background: transparent !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+
+/* The cards of the sessions Claude started are spaced 22px apart, and the text after the last of them stands as far
+   from it as they stand from each other. */
+[data-seg]:has(> [data-transcript-started-session]) + [data-seg]:not(:has(> [data-transcript-started-session])):not(:empty) {
+  padding-top: 11px;
+}

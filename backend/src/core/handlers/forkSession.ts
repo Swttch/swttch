@@ -27,7 +27,7 @@ import { MessageType } from '../../shared';
  */
 async function copyTranscriptForFork(
   sourcePath: string,
-  sendUuid: string,
+  cut: { sendUuid?: string; throughUuid?: string },
 ): Promise<string[] | null> {
   const lines = (await readFile(sourcePath, 'utf8')).split('\n');
 
@@ -48,12 +48,14 @@ async function copyTranscriptForFork(
       continue;
     }
 
-    if (entry.uuid === sendUuid) break;
+    if (cut.sendUuid !== undefined && entry.uuid === cut.sendUuid) break;
 
     kept.push(line);
     if (typeof entry.uuid === 'string' && (entry.type === 'assistant' || entry.type === 'user')) {
       lastMessageIndex = kept.length - 1;
     }
+    // A branch from a reply keeps the reply: the copy ends with the entry it was asked for.
+    if (cut.throughUuid !== undefined && entry.uuid === cut.throughUuid) break;
   }
 
   if (lastMessageIndex < 0) return null;
@@ -93,6 +95,8 @@ export async function forkSessionHandler(
 ): Promise<void> {
   const sessionId = message.payload?.sessionId as string | undefined;
   const sendUuid = message.payload?.sendUuid as string | undefined;
+  // Instead of `sendUuid`: the entry the branch ends with, a reply the user wants to continue from.
+  const throughUuid = message.payload?.throughUuid as string | undefined;
   const workingDir = message.payload?.workingDir as string | undefined;
 
   const fail = (error: string) =>
@@ -103,7 +107,7 @@ export async function forkSessionHandler(
     });
 
   if (!sessionId) return fail('Missing sessionId');
-  if (!sendUuid) return fail('Missing sendUuid');
+  if (!sendUuid && !throughUuid) return fail('Missing sendUuid');
   if (!workingDir) return fail('workingDir is required');
 
   // `sessionId` becomes a path component, so anything that is not a plain file
@@ -118,7 +122,7 @@ export async function forkSessionHandler(
 
   try {
     const sessionsDir = await getProjectSessionsPath(workingDir);
-    const kept = await copyTranscriptForFork(join(sessionsDir, `${sessionId}.jsonl`), sendUuid);
+    const kept = await copyTranscriptForFork(join(sessionsDir, `${sessionId}.jsonl`), { sendUuid, throughUuid });
 
     if (!kept) {
       return fail('This message opens the conversation, so there is nothing to branch from');

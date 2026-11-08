@@ -1,5 +1,6 @@
 import { SettingSection } from '../../common';
 import { HideToolCallsRow } from './HideToolCallsRow';
+import { TranscriptViewModeRow } from './TranscriptViewModeRow';
 import { SpinnerVerbsRow } from './SpinnerVerbsRow';
 import { useTranslation } from '@/i18n';
 
@@ -9,6 +10,7 @@ export function ChatSection() {
 
   return (
     <SettingSection title={t('appearance.chat.sectionTitle')}>
+      <TranscriptViewModeRow />
       <HideToolCallsRow />
       <SpinnerVerbsRow />
     </SettingSection>

@@ -27,6 +27,7 @@ const mockChatStreamContext = {
 
 vi.mock('../../../contexts/SessionContext', () => ({
   useSessionContext: () => mockSessionContext,
+  useSessionContextOrNull: () => mockSessionContext,
 }));
 
 // The send menu's rewind entry talks to the backend through the bridge, and its

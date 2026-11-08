@@ -8,6 +8,7 @@ import { mergeToolResults } from '../mergeToolResults';
 import { groupIntoSendSections } from '../groupIntoSendSections';
 
 vi.mock('../../../contexts/SessionContext', () => ({
+  useSessionContextOrNull: () => null,
   useSessionContext: () => ({
     workingDirectory: '/test/path',
     setWorkingDirectory: vi.fn(),

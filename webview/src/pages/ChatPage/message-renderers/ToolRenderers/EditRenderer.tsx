@@ -17,7 +17,7 @@ class EditToolUseDto extends ToolUseBlockDto {
     };
 }
 
-interface StructuredPatch {
+export interface StructuredPatch {
     oldStart?: number;
     oldLines?: number;
     newStart?: number;
@@ -25,17 +25,17 @@ interface StructuredPatch {
     lines: string[];
 }
 
-interface EditToolUseResult {
+export interface EditToolUseResult {
     structuredPatch?: StructuredPatch[];
 }
 
-enum DiffLineType {
+export enum DiffLineType {
     Add = 'add',
     Delete = 'delete',
     Context = 'context',
 }
 
-interface DiffLine {
+export interface DiffLine {
     type: DiffLineType;
     content: string;
     // Line numbers in the file before and after the edit. A removed line has
@@ -50,7 +50,7 @@ function parseLine(line: string): DiffLine {
     return {type: DiffLineType.Context, content: line.startsWith(' ') ? line.slice(1) : line};
 }
 
-function fromStructuredPatch(patches: StructuredPatch[]): DiffLine[] {
+export function fromStructuredPatch(patches: StructuredPatch[]): DiffLine[] {
     return patches.flatMap((patch) => {
         let oldNo = patch.oldStart;
         let newNo = patch.newStart;
@@ -66,7 +66,7 @@ function fromStructuredPatch(patches: StructuredPatch[]): DiffLine[] {
 // The fallback diff compares only `old_string` against `new_string`, so its
 // hunk headers count from the top of that snippet, not of the file. Those
 // numbers would point at the wrong lines, so this path carries none.
-function fromDiffText(diffText: string): DiffLine[] {
+export function fromDiffText(diffText: string): DiffLine[] {
     return diffText.split('\n')
         .filter((line) => !line.startsWith('---') && !line.startsWith('+++') && !line.startsWith('@@'))
         .map(parseLine);

@@ -281,6 +281,14 @@
       "label": "Tool-Aufrufe ausblenden",
       "description": "Blendet die Karten für Befehle und Lesezugriffe aus. Dateiänderungen, Fragen und Pläne bleiben sichtbar."
     },
+    "transcriptViewMode": {
+      "label": "Transkript-Ansicht",
+      "description": "Wie der Chat dargestellt wird. Klassisch ist der bisher veröffentlichte Chat; Normal, Denkprozess und Ausführlich sind die Transkript-Ansichten der Claude-Desktop-App. Die gesendete Nachricht steht rechts, ohne Falt-Pfeil und ohne Fixierung am oberen Rand.",
+      "classic": "Klassisch",
+      "normal": "Normal",
+      "thinking": "Denkprozess",
+      "verbose": "Ausführlich"
+    },
     "chat": {
       "sectionTitle": "Chat",
       "spinnerVerbs": {

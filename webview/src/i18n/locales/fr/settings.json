@@ -281,6 +281,14 @@
       "label": "Masquer les appels d'outils",
       "description": "Masque les cartes des commandes et des lectures. Les modifications de fichiers, les questions et les plans restent visibles."
     },
+    "transcriptViewMode": {
+      "label": "Vue de la transcription",
+      "description": "Comment la discussion est affichée. Classique est la discussion publiée jusqu'ici ; Normale, Raisonnement et Détaillé sont les vues de transcription de l'application de bureau Claude. Le message envoyé se place à droite, sans flèche de repli ni épinglage en haut.",
+      "classic": "Classique",
+      "normal": "Normale",
+      "thinking": "Raisonnement",
+      "verbose": "Détaillé"
+    },
     "chat": {
       "sectionTitle": "Chat",
       "spinnerVerbs": {

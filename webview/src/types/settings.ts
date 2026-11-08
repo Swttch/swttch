@@ -9,6 +9,10 @@ import {
   ContextBadgeDisplay,
 } from '@/shared';
 
+/** The desktop app's Transcript view modes. `null` in the setting means the released (classic) chat UI. */
+export type TranscriptViewMode = 'normal' | 'thinking' | 'verbose';
+export const TRANSCRIPT_VIEW_MODES: readonly TranscriptViewMode[] = ['normal', 'thinking', 'verbose'];
+
 /**
  * Chat message line-height (unitless multiplier). Matches the CSS default in
  * streaming.css (`.streaming-message` etc.) so turning the setting off/absent
@@ -72,6 +76,16 @@ export enum SettingKey {
   // view does. File changes and anything addressed to the user stay; the list
   // is in hideToolCalls.ts.
   HIDE_TOOL_CALLS = 'hideToolCalls',
+
+  // How the chat is drawn: null keeps the released chat UI ("classic"); 'normal' | 'thinking' |
+  // 'verbose' are the desktop app's Transcript view modes and all three move the user
+  // bubble to the right and drop its collapse and sticky behaviour.
+  TRANSCRIPT_VIEW_MODE = 'transcriptViewMode',
+
+  // The view the user picked from the header menu for one session, by session id. A session
+  // that has no entry here follows TRANSCRIPT_VIEW_MODE. The value 'classic' stands for the
+  // released chat UI, since a map value cannot be told apart from a missing entry as null.
+  TRANSCRIPT_VIEW_MODE_BY_SESSION = 'transcriptViewModeBySession',
 
   // List sessions from directories nested under the one being browsed, not just
   // that directory itself. Off by default: it widens what the session dropdown
@@ -429,6 +443,8 @@ export interface SettingsState {
   [SettingKey.OPEN_SETTINGS_AS]: OpenSettingsMode;
   [SettingKey.CHAT_PAGINATION]: boolean;
   [SettingKey.HIDE_TOOL_CALLS]: boolean;
+  [SettingKey.TRANSCRIPT_VIEW_MODE]: TranscriptViewMode | null;
+  [SettingKey.TRANSCRIPT_VIEW_MODE_BY_SESSION]: Record<string, TranscriptViewMode | 'classic'>;
   [SettingKey.INCLUDE_NESTED_SESSIONS]: boolean;
   [SettingKey.UI_DIRECTION]: UiDirection;
   [SettingKey.UI_LANGUAGE]: string | null;
@@ -478,6 +494,8 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.OPEN_SETTINGS_AS]: OpenSettingsMode.OVERLAY,
   [SettingKey.CHAT_PAGINATION]: true,
   [SettingKey.HIDE_TOOL_CALLS]: false,
+  [SettingKey.TRANSCRIPT_VIEW_MODE]: null,
+  [SettingKey.TRANSCRIPT_VIEW_MODE_BY_SESSION]: {},
   [SettingKey.INCLUDE_NESTED_SESSIONS]: false,
   [SettingKey.UI_DIRECTION]: UiDirection.LTR,
   [SettingKey.UI_LANGUAGE]: null,

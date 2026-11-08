@@ -281,6 +281,14 @@
       "label": "도구 호출 숨기기",
       "description": "명령 실행과 조회 카드를 숨긴다. 파일 변경, 질문, 계획은 계속 보인다."
     },
+    "transcriptViewMode": {
+      "label": "트랜스크립트 보기",
+      "description": "채팅을 그리는 방식입니다. 클래식은 지금까지 출시된 채팅이고, 일반·사고 과정·자세히는 Claude 데스크탑 앱의 트랜스크립트 보기입니다. 보낸 메시지가 오른쪽에 놓이고 접기 화살표와 상단 고정이 없습니다.",
+      "classic": "클래식",
+      "normal": "일반",
+      "thinking": "사고 과정",
+      "verbose": "자세히"
+    },
     "chat": {
       "sectionTitle": "채팅",
       "spinnerVerbs": {

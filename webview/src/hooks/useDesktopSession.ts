@@ -11,6 +11,8 @@ export interface DesktopSession {
   cwd?: string;
   isArchived?: boolean;
   lastActivityAt?: number;
+  /** Whether it stopped to wait for the person. */
+  awaitingPerson?: boolean;
 }
 
 interface DesktopSessionResponse {

@@ -118,6 +118,41 @@ export function useSendActions(messages: LoadedMessageDto[]): SendActionsValue {
     [sendByKey, currentSessionId, workingDirectory, bridge, t, addNewSession, api, sessions],
   );
 
+  const canForkReply = useCallback(
+    (replyUuid: string) => {
+      const reply = messages.find((message) => message.uuid === replyUuid);
+      return reply !== undefined && !reply.isStreaming && Boolean(currentSessionId);
+    },
+    [messages, currentSessionId],
+  );
+
+  // The same branch as `openFork`, cut after the reply instead of before a send; nothing goes back into the composer.
+  const forkAtReply = useCallback(
+    async (replyUuid: string) => {
+      if (!currentSessionId || !workingDirectory) {
+        toast.error(t('sendActions.forkFailed'));
+        return;
+      }
+      try {
+        const response = await bridge.send<{ status?: string; error?: string; sessionId?: string }>(
+          MessageType.FORK_SESSION,
+          { sessionId: currentSessionId, throughUuid: replyUuid, workingDir: workingDirectory },
+        );
+        if (response?.status === 'error' || !response?.sessionId) {
+          toast.error(response?.error || t('sendActions.forkFailed'));
+          return;
+        }
+        const originTitle = sessions.find((s) => s.id === currentSessionId)?.title ?? '';
+        addNewSession(response.sessionId, originTitle, { promptText: '' });
+        void api.sessions.load(response.sessionId, workingDirectory);
+        toast.success(t('sendActions.forkDone'));
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : t('sendActions.forkFailed'));
+      }
+    },
+    [currentSessionId, workingDirectory, bridge, t, addNewSession, api, sessions],
+  );
+
   const runRewind = useCallback(
     async (sendUuid: string): Promise<boolean> => {
       const recorded = recordedUuidOf(sendByKey(sendUuid));
@@ -166,7 +201,7 @@ export function useSendActions(messages: LoadedMessageDto[]): SendActionsValue {
   );
 
   return useMemo(
-    () => ({ canFork, canRewind, rewindCode, forkConversation: openFork, forkAndRewind }),
-    [canFork, canRewind, rewindCode, openFork, forkAndRewind],
+    () => ({ canFork, canRewind, rewindCode, forkConversation: openFork, forkAndRewind, canForkReply, forkAtReply: (replyUuid: string) => void forkAtReply(replyUuid) }),
+    [canFork, canRewind, rewindCode, openFork, forkAndRewind, canForkReply, forkAtReply],
   );
 }

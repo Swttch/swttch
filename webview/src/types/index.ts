@@ -66,6 +66,10 @@ export class LoadedMessageDto {
 
   // result-specific
   subtype?: string;
+  // `system` entries: how serious the CLI rated it (`notice`, `info`, ...), and, on a `compact_boundary`, what
+  // the compaction did. Named as the CLI names them, per the original-data rule.
+  level?: string;
+  compactMetadata?: { cumulativeDroppedTokens?: number; preTokens?: number; postTokens?: number; [key: string]: unknown };
   result?: unknown;
   toolUseResult?: unknown;
 

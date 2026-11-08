@@ -281,6 +281,14 @@
       "label": "隐藏工具调用",
       "description": "隐藏命令和读取操作的卡片。文件改动、提问和计划仍会显示。"
     },
+    "transcriptViewMode": {
+      "label": "对话记录视图",
+      "description": "聊天的显示方式。“经典”是目前已发布的聊天界面；“普通”“思考”“详细”是 Claude 桌面应用的对话记录视图。你发送的消息显示在右侧，没有折叠箭头，也不会固定在顶部。",
+      "classic": "经典",
+      "normal": "普通",
+      "thinking": "思考",
+      "verbose": "详细"
+    },
     "chat": {
       "sectionTitle": "聊天",
       "spinnerVerbs": {

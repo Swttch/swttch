@@ -281,6 +281,14 @@
       "label": "Hide tool calls",
       "description": "Hide the cards for commands and lookups. File changes, questions and plans stay visible."
     },
+    "transcriptViewMode": {
+      "label": "Transcript view",
+      "description": "How the chat is drawn. Classic is the chat as released so far. Normal, Thinking and Verbose are the Claude desktop app's Transcript views: the message you sent sits on the right, with no fold arrow and no pinning to the top.",
+      "classic": "Classic",
+      "normal": "Normal",
+      "thinking": "Thinking",
+      "verbose": "Verbose"
+    },
     "chat": {
       "sectionTitle": "Chat",
       "spinnerVerbs": {

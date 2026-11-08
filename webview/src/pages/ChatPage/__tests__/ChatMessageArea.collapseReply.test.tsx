@@ -63,6 +63,7 @@ const mockChatStreamContext = {
 
 vi.mock('../../../contexts/SessionContext', () => ({
   useSessionContext: () => mockSessionContext,
+  useSessionContextOrNull: () => mockSessionContext,
 }));
 
 vi.mock('../../../contexts/ChatStreamContext', () => ({

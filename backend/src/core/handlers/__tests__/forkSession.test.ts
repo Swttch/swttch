@@ -89,6 +89,31 @@ describe('forkSessionHandler', () => {
     expect(lines.map((line) => JSON.parse(line).uuid)).toEqual(['u1', 'a1']);
   });
 
+  it('keeps a reply when the branch is asked to end with it', async () => {
+    const dir = await writeSession('origin', [
+      user('u1', 'first question'),
+      assistant('a1', 'first answer'),
+      user('u2', 'second question'),
+      assistant('a2', 'second answer'),
+    ]);
+    const connections = createMockConnections();
+
+    await fork(connections, { sessionId: 'origin', throughUuid: 'a1', workingDir: '/repo' });
+
+    const ack = ackOf(connections);
+    expect(ack?.status).toBe('ok');
+    expect((await branchLines(dir, ack!.sessionId!)).map((line) => JSON.parse(line).uuid)).toEqual(['u1', 'a1']);
+  });
+
+  it('keeps the last reply of a session too, which has no send after it to cut before', async () => {
+    const dir = await writeSession('origin', [user('u1', 'question'), assistant('a1', 'answer')]);
+    const connections = createMockConnections();
+
+    await fork(connections, { sessionId: 'origin', throughUuid: 'a1', workingDir: '/repo' });
+
+    expect((await branchLines(dir, ackOf(connections)!.sessionId!)).map((line) => JSON.parse(line).uuid)).toEqual(['u1', 'a1']);
+  });
+
   // The uuids are what `--rewind-files` and `--resume-session-at` name, and the
   // CLI resumes this file afterwards — rewriting them would break both.
   it('copies each line byte for byte', async () => {

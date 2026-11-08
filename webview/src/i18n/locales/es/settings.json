@@ -281,6 +281,14 @@
       "label": "Ocultar llamadas a herramientas",
       "description": "Oculta las tarjetas de los comandos y las lecturas. Los cambios de archivos, las preguntas y los planes siguen visibles."
     },
+    "transcriptViewMode": {
+      "label": "Vista de transcripción",
+      "description": "Cómo se muestra el chat. Clásico es el chat publicado hasta ahora; Normal, Pensamiento y Detallado son las vistas de transcripción de la aplicación de escritorio de Claude. El mensaje enviado queda a la derecha, sin flecha para plegar y sin fijarse arriba.",
+      "classic": "Clásico",
+      "normal": "Normal",
+      "thinking": "Pensamiento",
+      "verbose": "Detallado"
+    },
     "chat": {
       "sectionTitle": "Chat",
       "spinnerVerbs": {
