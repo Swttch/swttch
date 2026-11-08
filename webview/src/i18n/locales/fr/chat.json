@@ -136,7 +136,8 @@
     "placeholder": {
       "queueMessage": "Mettre un autre message en file d'attente...",
       "hint": "@ pour les fichiers, / pour les commandes, !! pour insérer des prompts, @@ pour interroger une autre session, {{send}} pour envoyer",
-      "steerMessage": "Ajuster l’exécution en cours..."
+      "steerMessage": "Ajuster l’exécution en cours...",
+      "followUp": "{{send}} pour envoyer, {{queue}} pour mettre en file d’attente"
     },
     "renameSuggestion": {
       "hint": "(Tab pour valider)"
@@ -1119,6 +1120,10 @@
       "forkHint": "Démarre une nouvelle session à partir de ce point. Celle-ci reste telle quelle.",
       "rewindHint": "Remet les fichiers modifiés depuis ce message dans leur état d’alors. La conversation reste telle quelle.",
       "read": "Lu"
+    },
+    "streaming": {
+      "seconds": "{{seconds}} s",
+      "thinking": "Réflexion en cours"
     }
   }
 }

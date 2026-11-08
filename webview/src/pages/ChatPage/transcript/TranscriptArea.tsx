@@ -7,7 +7,7 @@ import { ProjectSelectorPage } from '@/pages/ProjectSelectorPage';
 import { useSessionContext } from '../../../contexts/SessionContext';
 import { useChatStreamContext } from '../../../contexts/ChatStreamContext';
 import { StreamErrorBanner } from '../StreamErrorBanner';
-import { StreamingIndicator } from '../StreamingIndicator/index.tsx';
+import { TranscriptStreamingIndicator } from './TranscriptStreamingIndicator';
 import { EmptyState } from '../EmptyState';
 import { isJetBrains } from '@/config/environment';
 import { SectionFoldContext, SectionKeyContext } from '../SectionFoldContext';
@@ -23,6 +23,7 @@ import { SEND_JUMP_SCROLL_MARGIN } from '../SendIndex/scrollToSend';
 import { TranscriptUserMessage } from './TranscriptUserMessage';
 import { TranscriptBody } from './TranscriptBody';
 import { TranscriptWrapUp } from './TranscriptWrapUp';
+import './prose.css';
 import '../streaming.css';
 
 /** The find bar's source when the page offers none: it counts what is loaded. */
@@ -159,7 +160,7 @@ export function TranscriptArea(props: TranscriptAreaProps) {
           </LastEntryContext.Provider>
         </SendActionsContext.Provider>
       </SectionFoldContext.Provider>
-      {isStreaming && <StreamingIndicator countdownSeconds={disconnectCountdown} apiRetry={apiRetry} />}
+      {isStreaming && <TranscriptStreamingIndicator countdownSeconds={disconnectCountdown} apiRetry={apiRetry} />}
       <StreamErrorBanner />
     </div>
   );

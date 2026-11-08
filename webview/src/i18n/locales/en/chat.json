@@ -136,7 +136,8 @@
     "placeholder": {
       "queueMessage": "Queue another message...",
       "hint": "@ to reference files, / for commands, !! to insert prompts, @@ to ask another session, {{send}} to send",
-      "steerMessage": "Steer the current run..."
+      "steerMessage": "Steer the current run...",
+      "followUp": "{{send}} to send, {{queue}} to queue for later"
     },
     "renameSuggestion": {
       "hint": "(Tab to accept)"
@@ -1115,6 +1116,10 @@
       "forkHint": "Starts a new session from this point. This one stays as it is.",
       "rewindHint": "Puts the files this message and what came after it changed back as they were. The conversation stays.",
       "read": "Read"
+    },
+    "streaming": {
+      "seconds": "{{seconds}}s",
+      "thinking": "Thinking"
     }
   }
 }

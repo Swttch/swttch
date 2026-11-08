@@ -26,3 +26,9 @@
 [data-seg]:has(> [data-transcript-started-session]) + [data-seg]:not(:has(> [data-transcript-started-session])):not(:empty) {
   padding-top: 11px;
 }
+
+/* The three dots of the streaming indicator breathe in turn. */
+@keyframes transcript-dot {
+  0%, 80%, 100% { opacity: 0.25; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1); }
+}

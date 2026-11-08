@@ -11,7 +11,6 @@ import { ImageAttachments } from '../message-renderers/components/ImageAttachmen
 import { ReplyQuotes } from '../message-renderers/components/ReplyQuotes';
 import { ExcerptCards } from '../message-renderers/components/ExcerptCards';
 import { UserMessageText } from '../message-renderers/components/UserMessageText';
-import { MessageFooter } from '../message-renderers/components/MessageFooter';
 import { IfVisible, hasVisibleGlyph } from '../message-renderers/components/IfVisible';
 import { toolResultText } from '../message-renderers/ToolRenderers/common/toolStatus';
 import { stripSessionMentionTags } from '../ChatInput/sessionMentionTag';

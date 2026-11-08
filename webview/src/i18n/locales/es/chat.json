@@ -136,7 +136,8 @@
     "placeholder": {
       "queueMessage": "Encolar otro mensaje...",
       "hint": "@ para archivos, / para comandos, !! para insertar prompts, @@ para preguntar a otra sesión, {{send}} para enviar",
-      "steerMessage": "Ajustar la ejecución actual..."
+      "steerMessage": "Ajustar la ejecución actual...",
+      "followUp": "{{send}} para enviar, {{queue}} para añadir a la cola"
     },
     "renameSuggestion": {
       "hint": "(Tab para completar)"
@@ -1119,6 +1120,10 @@
       "forkHint": "Inicia una nueva sesión a partir de este punto. Esta se queda como está.",
       "rewindHint": "Devuelve los archivos modificados desde este mensaje a su estado de entonces. La conversación se mantiene.",
       "read": "Leído"
+    },
+    "streaming": {
+      "seconds": "{{seconds}} s",
+      "thinking": "Pensando"
     }
   }
 }

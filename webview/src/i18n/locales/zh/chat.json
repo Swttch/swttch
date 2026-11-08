@@ -136,7 +136,8 @@
     "placeholder": {
       "queueMessage": "排队发送下一条消息...",
       "hint": "@ 引用文件，/ 命令，!! 插入提示词，@@ 询问其他会话，{{send}} 发送",
-      "steerMessage": "调整当前任务..."
+      "steerMessage": "调整当前任务...",
+      "followUp": "{{send}} 发送，{{queue}} 加入队列稍后发送"
     },
     "renameSuggestion": {
       "hint": "(按 Tab 补全)"
@@ -1103,6 +1104,10 @@
       "forkHint": "从这一点开始一个新会话。当前会话保持不变。",
       "rewindHint": "将此消息及之后更改的文件恢复到这一时刻。对话保持不变。",
       "read": "已读"
+    },
+    "streaming": {
+      "seconds": "{{seconds}} 秒",
+      "thinking": "思考中"
     }
   }
 }

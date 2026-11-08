@@ -88,9 +88,11 @@ import {
   composerBindings,
   composerKeyAction,
   sendKeyLabel,
+  invertKeyLabel,
   ComposerKeyAction,
 } from '@/utils/composerShortcut';
 import { FollowUpBehavior, resolveFollowUpBehavior } from '@/shared';
+import { useTranscriptViewMode } from '../message-renderers/transcriptViewMode';
 import { arrowRecallsHistory } from './caretAtEdge';
 import { basename } from './basename';
 import {
@@ -200,6 +202,13 @@ export function ChatInput() {
   } = useClaudeSettings();
   // useCtrlEnterToSend + focusInputOnEditorContext migrated to the app settings.
   const { settings: appSettings } = useSettings();
+  // The Transcript view modes name both keys while a turn runs, as the desktop app does.
+  const transcriptViewMode = useTranscriptViewMode();
+  const queueKey = invertKeyLabel(appSettings);
+  const followUpKeys =
+    transcriptViewMode !== null && queueKey !== ''
+      ? t('chatInput.placeholder.followUp', { send: sendKeyLabel(appSettings), queue: queueKey })
+      : null;
 
   const { cycle: cycleEffort } = useEffort();
   const [showModelSwitch, setShowModelSwitch] = useState(false);
@@ -1529,9 +1538,11 @@ export function ChatInput() {
               // actually do. Saying "Queue another message" with steering on
               // would describe the setting the user turned off.
               isStreaming
-                ? resolveFollowUpBehavior(appSettings) === FollowUpBehavior.Steer
-                  ? t('chatInput.placeholder.steerMessage')
-                  : t('chatInput.placeholder.queueMessage')
+                ? followUpKeys !== null
+                  ? followUpKeys
+                  : resolveFollowUpBehavior(appSettings) === FollowUpBehavior.Steer
+                    ? t('chatInput.placeholder.steerMessage')
+                    : t('chatInput.placeholder.queueMessage')
                 : t('chatInput.placeholder.hint', {
                     send: sendKeyLabel(appSettings),
                   })

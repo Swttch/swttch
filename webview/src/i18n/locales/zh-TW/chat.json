@@ -136,7 +136,8 @@
     "placeholder": {
       "queueMessage": "排入下一則訊息...",
       "hint": "@ 引用檔案，/ 命令，!! 插入提示詞，@@ 詢問其他工作階段，{{send}} 傳送",
-      "steerMessage": "調整目前的工作..."
+      "steerMessage": "調整目前的工作...",
+      "followUp": "{{send}} 傳送，{{queue}} 加入佇列稍後傳送"
     },
     "renameSuggestion": {
       "hint": "(按 Tab 補全)"
@@ -1103,6 +1104,10 @@
       "forkHint": "從這個時間點開始新的工作階段。目前的工作階段保持不變。",
       "rewindHint": "將此訊息及之後變更的檔案還原到這個時間點。對話保持不變。",
       "read": "已讀"
+    },
+    "streaming": {
+      "seconds": "{{seconds}} 秒",
+      "thinking": "思考中"
     }
   }
 }

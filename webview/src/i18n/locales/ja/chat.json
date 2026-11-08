@@ -136,7 +136,8 @@
     "placeholder": {
       "queueMessage": "次のメッセージをキューに追加...",
       "hint": "@ ファイル参照、/ コマンド、!! プロンプト挿入、@@ 他のセッションに問い合わせ、{{send}} で送信",
-      "steerMessage": "現在の作業を調整します..."
+      "steerMessage": "現在の作業を調整します...",
+      "followUp": "{{send}} で送信、{{queue}} でキューに追加して後で送信"
     },
     "renameSuggestion": {
       "hint": "(Tabで補完)"
@@ -1103,6 +1104,10 @@
       "forkHint": "この時点から新しいセッションを開始します。このセッションはそのまま残ります。",
       "rewindHint": "このメッセージとそれ以降に変更されたファイルをこの時点に戻します。会話はそのまま残ります。",
       "read": "既読"
+    },
+    "streaming": {
+      "seconds": "{{seconds}} 秒",
+      "thinking": "考え中"
     }
   }
 }
