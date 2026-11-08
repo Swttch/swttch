@@ -172,7 +172,7 @@ export const TranscriptBody = memo(function TranscriptBody({ body, mergedMessage
       {segments.map((segment) => (
         <div
           key={segment.key}
-          // What kind of segment this is, for transcript.css: some entries draw nothing and leave an empty
+          // What kind of segment this is, for prose.css: some entries draw nothing and leave an empty
           // wrapper, so "the first thing under the bubble" cannot be read off the position in this list.
           data-seg={segment.kind}
           onClick={() => {

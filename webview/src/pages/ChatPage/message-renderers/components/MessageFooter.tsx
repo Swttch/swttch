@@ -76,7 +76,7 @@ const buttonClass =
 
 /** The same, a size larger: what `relativeTime` (the Transcript view modes) draws. */
 const largeButtonClass =
-  'flex items-center justify-center w-[26px] h-[26px] rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors cursor-pointer';
+  'flex items-center justify-center w-6 h-6 rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors cursor-pointer';
 
 export function MessageFooter({ className = '', copyText, onFork, timestamp, expanded = false, alwaysDisplay = false, relativeTime = false }: MessageFooterProps) {
   const { t, i18n } = useTranslation('chat');
@@ -144,7 +144,7 @@ export function MessageFooter({ className = '', copyText, onFork, timestamp, exp
             aria-label={relativeTime ? t('transcript.userFooter.copy') : t('sendActions.copyMessage')}
             className={relativeTime ? largeButtonClass : buttonClass}
           >
-            <CopyIcon className={relativeTime ? 'w-[18px] h-[18px]' : 'w-4 h-4'} />
+            <CopyIcon className={relativeTime ? 'w-4 h-4' : 'w-4 h-4'} />
           </button>
         </Tooltip>
       )}
@@ -169,7 +169,7 @@ export function MessageFooter({ className = '', copyText, onFork, timestamp, exp
             aria-label={relativeTime ? t('transcript.userFooter.fork') : t('sendActions.forkConversation')}
             className={relativeTime ? largeButtonClass : buttonClass}
           >
-            <ForkIcon className={relativeTime ? 'w-[18px] h-[18px]' : 'w-4 h-4'} />
+            <ForkIcon className={relativeTime ? 'w-4 h-4' : 'w-4 h-4'} />
           </button>
         </Tooltip>
       )}

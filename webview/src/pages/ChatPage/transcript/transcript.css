@@ -1,7 +1,0 @@
-/* The gap under a send's bubble is the same whether the reply starts with text or with a run of calls.
-   The bubble leaves the room that text needs. A run of calls brings 17px of its own above its line, so
-   right under the bubble it would be 24px too far; this takes that back. Some entries draw nothing and
-   leave an empty wrapper, so the run is picked as the first wrapper that is not empty, not as the first. */
-[data-after-send] > [data-seg="tools"]:not(:empty):not(:not(:empty) ~ *) {
-  margin-top: -24px;
-}
