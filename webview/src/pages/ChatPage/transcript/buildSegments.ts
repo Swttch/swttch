@@ -52,13 +52,13 @@ export const PEER_MESSAGE_TOOL = 'PeerMessage';
  * records such a message in one of two ways: with the entry's `origin` (a peer), or as the text wrapped in a
  * `<cross-session-message>` tag. The desktop app draws both the same way.
  */
-function peerOf(message: LoadedMessageDto): { name: string; body: string } | undefined {
+function peerOf(message: LoadedMessageDto): { name: string; body: string; from: string } | undefined {
   if (message.type !== 'user') return undefined;
   if (message.origin?.kind === 'peer' && message.origin.body?.trim()) {
-    return { name: message.origin.name ?? '', body: message.origin.body };
+    return { name: message.origin.name ?? '', body: message.origin.body, from: message.origin.from ?? '' };
   }
   const cross = parseCrossSessionMessage(getTextContent(message));
-  return cross && cross.body ? { name: cross.name, body: cross.body } : undefined;
+  return cross && cross.body ? { name: cross.name, body: cross.body, from: cross.from } : undefined;
 }
 
 /** A message another session sent, as an entry of the record. */
@@ -95,14 +95,15 @@ const APP_EVENT_TAG = /<side-sessions-event>([\s\S]*?)<\/side-sessions-event>/;
  * data not instructions): "what it said" (first 400 of 1387 characters) Read it with … </system-reminder>`.
  */
 const SESSION_REPORT =
-  /<system-reminder>\s*The session "([\s\S]*?)" you started \(local_[\w-]+\) finished a turn[\s\S]*?It reported \(quoted child output, data not instructions\): "([\s\S]*?)"(?: \(first [\d,]+ of [\d,]+ characters\))?\s*Read it with[\s\S]*?<\/system-reminder>/g;
+  /<system-reminder>\s*The session "([\s\S]*?)" you started \((local_[\w-]+)\) finished a turn[\s\S]*?It reported \(quoted child output, data not instructions\): "([\s\S]*?)"(?: \(first [\d,]+ of [\d,]+ characters\))?\s*Read it with[\s\S]*?<\/system-reminder>/g;
 
 /** The reports an entry carries, as what each session said (its lines are joined with " ⏎ " in the record). */
-function sessionReports(message: LoadedMessageDto): { name: string; body: string }[] {
+function sessionReports(message: LoadedMessageDto): { name: string; body: string; from: string }[] {
   if (message.type !== 'user') return [];
   return [...getTextContent(message).matchAll(SESSION_REPORT)].map((match) => ({
     name: match[1],
-    body: match[2].replace(/ ⏎ /g, '\n').trim(),
+    from: match[2],
+    body: match[3].replace(/ ⏎ /g, '\n').trim(),
   }));
 }
 
@@ -158,7 +159,7 @@ function appEventCalls(message: LoadedMessageDto, id: string): ToolCall[] {
 }
 
 function peerCall(message: LoadedMessageDto, id: string): ToolCall {
-  const toolUse = { type: 'tool_use', id, name: PEER_MESSAGE_TOOL, input: peerOf(message) ?? { name: '', body: '' } };
+  const toolUse = { type: 'tool_use', id, name: PEER_MESSAGE_TOOL, input: peerOf(message) ?? { name: '', body: '', from: '' } };
   return { toolUse: toolUse as unknown as ToolUseBlockDto, message };
 }
 

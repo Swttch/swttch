@@ -12,6 +12,7 @@ import { useTranscriptViewMode } from '../message-renderers/transcriptViewMode';
 import { APP_EVENT_TOOL, type ToolCall } from './buildSegments';
 import { FileChangeDetail } from './FileChangeDetail';
 import { useDesktopSession } from '@/hooks/useDesktopSession';
+import { DesktopSessionLink } from '../message-renderers/components/DesktopSessionLink';
 import { StreamingMessage } from '../StreamingMessage';
 import { parseSessionDelivery } from '../message-renderers/ToolRenderers/SendMessageRenderer';
 import './prose.css';
@@ -344,6 +345,16 @@ function RowMeta({ call, meta }: { call: ToolCall; meta?: string }) {
   const looked = useDesktopSession(isSent ? to : '', isSent && answered === '')?.title;
   const shown = isSent ? answered || looked || meta : meta;
   if (!shown) return null;
+  // The session a message came from is a way into that session, named by the title it has now.
+  const fromInput = call.toolUse.input?.from;
+  const from = toolKindOf(call) === 'receivedMessage' && typeof fromInput === 'string' ? fromInput : '';
+  if (from.startsWith('local_')) {
+    return (
+      <span className={`ms-2 ${LINK_TEXT}`}>
+        <DesktopSessionLink id={from} plain>{shown}</DesktopSessionLink>
+      </span>
+    );
+  }
   return <span className={`ms-2 ${LINK_TEXT}`}>{shown}</span>;
 }
 

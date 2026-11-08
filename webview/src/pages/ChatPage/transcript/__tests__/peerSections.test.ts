@@ -27,7 +27,7 @@ describe('the app passing on what the sessions Claude started reported', () => {
     expect(segments).toHaveLength(1);
     if (segments[0].kind === 'tools') {
       expect(segments[0].calls.map((c) => c.toolUse.name)).toEqual([PEER_MESSAGE_TOOL, PEER_MESSAGE_TOOL, 'AppEvent']);
-      expect(segments[0].calls[0].toolUse.input).toEqual({ name: 'Session A', body: 'line one\nline two' });
+      expect(segments[0].calls[0].toolUse.input).toEqual({ name: 'Session A', from: 'local_ab-12', body: 'line one\nline two' });
     } else {
       throw new Error('expected one run');
     }
@@ -48,7 +48,7 @@ describe('the request for a report that comes with one message', () => {
     expect(segments).toHaveLength(1);
     if (segments[0].kind !== 'tools') throw new Error('expected one run');
     expect(segments[0].calls.map((c) => c.toolUse.name)).toEqual([PEER_MESSAGE_TOOL]);
-    expect(segments[0].calls[0].toolUse.input).toEqual({ name: 'Session A', body: 'done', request: 'Report back.' });
+    expect(segments[0].calls[0].toolUse.input).toEqual({ name: 'Session A', from: 'local_ab-12', body: 'done', request: 'Report back.' });
   });
 });
 
@@ -63,7 +63,7 @@ describe('a message from another session recorded as text in a tag', () => {
     expect(segments).toHaveLength(1);
     if (segments[0].kind === 'tools') {
       expect(segments[0].calls[0].toolUse.name).toBe(PEER_MESSAGE_TOOL);
-      expect(segments[0].calls[0].toolUse.input).toEqual({ name: 'Other', body: 'Hello there' });
+      expect(segments[0].calls[0].toolUse.input).toEqual({ name: 'Other', from: 'local_x', body: 'Hello there' });
     } else {
       throw new Error('expected a run');
     }

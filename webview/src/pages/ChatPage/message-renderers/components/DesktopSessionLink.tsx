@@ -7,6 +7,7 @@ import { i18n, useTranslation } from '@/i18n';
 import { Tooltip } from '@/components/Tooltip';
 import { useDesktopSession, type DesktopSession } from '@/hooks/useDesktopSession';
 import { timeAgo } from '@/utils/timeAgo';
+import { useTranscriptViewMode } from '../transcriptViewMode';
 
 /** A link to a Claude Desktop session as the chat text writes it: `[title](#local_<id>)`. */
 const DESKTOP_SESSION_HREF = /^#?(local_[0-9A-Za-z-]+)$/;
@@ -46,16 +47,21 @@ export const SessionFacts: React.FC<{ session: DesktopSession }> =({ session }) 
  * The session is named in Desktop's id, which this app does not use: Desktop's own file for it says which CLI
  * session it runs and where. Until that is known, or when Desktop's files are not here, it is the name alone on
  * the same background, with nothing to open.
+ *
+ * `plain` draws it as an underlined link in the text around it, not on the background: a name in a line of a run.
  */
-export const DesktopSessionLink: React.FC<{ id: string; children?: ReactNode }> = ({ id, children }) => {
+export const DesktopSessionLink: React.FC<{ id: string; children?: ReactNode; plain?: boolean }> = ({ id, children, plain }) => {
   const session = useDesktopSession(id);
   const sessionId = session?.cliSessionId;
+  // In the Transcript view the desktop app names the session by its own title, whatever the text called it.
+  const inTranscript = useTranscriptViewMode() !== null;
+  const name = inTranscript && session?.title ? session.title : children;
 
   // Nothing to say about the session (no folder, no time, not archived) means no tooltip, rather than an empty one.
   const hasFacts = session !== undefined && (session.isArchived === true || session.cwd !== undefined || session.lastActivityAt !== undefined);
   const chip = (element: React.ReactElement) => (hasFacts ? <Tooltip desktop content={<SessionFacts session={session} />}>{element}</Tooltip> : element);
 
-  if (!sessionId) return chip(<span className="richInputChip">{children}</span>);
+  if (!sessionId) return chip(<span className={plain ? '' : 'richInputChip'}>{name}</span>);
 
   const href = `${window.location.origin}/sessions/${sessionId}${session.cwd ? `?workingDir=${encodeURIComponent(session.cwd)}` : ''}`;
   const open = (event: React.MouseEvent) => {
@@ -74,8 +80,8 @@ export const DesktopSessionLink: React.FC<{ id: string; children?: ReactNode }> 
   };
 
   return chip(
-    <a href={href} target="_blank" rel="noreferrer" className="richInputChip cursor-pointer" onClick={open}>
-      {children}
+    <a href={href} target="_blank" rel="noreferrer" className={plain ? 'cursor-pointer underline' : 'richInputChip cursor-pointer'} onClick={open}>
+      {name}
     </a>,
   );
 };
