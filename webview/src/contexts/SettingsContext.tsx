@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { SettingsState, DEFAULT_SETTINGS, SettingKey, ThemeMode, UiDirection } from '@/types/settings';
 import { useBridgeContext } from '@/contexts/BridgeContext';
@@ -7,6 +7,7 @@ import { isJetBrains, isMobile, getIdeTheme, subscribeIdeTheme } from '@/config/
 import { applyZoom, MOBILE_BASE_ZOOM, ZOOM_DEFAULT } from '@/utils/zoom';
 import { MessageType } from '@/shared';
 import { setCurrentSettings } from '@/utils/openSettingsAt';
+import { applyUrlOverridesToSettings, mirrorSettingsForOverrides } from '@/utils/urlOverrides';
 import { isShadowedByProject } from '@/utils/settingsScope';
 
 interface SettingsContextValue {
@@ -88,7 +89,9 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     enabled: isConnected,
   });
 
-  const settings = mergedQuery.data?.settings ?? DEFAULT_SETTINGS;
+  // A value the page's URL carries wins over every source below (see utils/urlOverrides.ts).
+  const mergedSettings = mergedQuery.data?.settings ?? DEFAULT_SETTINGS;
+  const settings = useMemo(() => applyUrlOverridesToSettings(mergedSettings), [mergedSettings]);
   const overrides = mergedQuery.data?.overrides ?? [];
   const ideAttached = mergedQuery.data?.ideAttached ?? false;
   const ideProduct = mergedQuery.data?.ideProduct ?? '';
@@ -102,6 +105,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
   // the localStorage cache directly (issue #280: stale per-tab cache in JetBrains).
   useEffect(() => {
     setCurrentSettings(settings);
+    mirrorSettingsForOverrides(settings);
   }, [settings]);
 
   // Apply font size to root element so rem-based sizes scale globally
