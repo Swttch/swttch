@@ -29,6 +29,12 @@ export type ToolKind =
   | 'sessionArchive'
   | 'appRequest'
   | 'skill'
+  | 'webFetch'
+  | 'viewSwitch'
+  | 'paneOpen'
+  | 'webSearch'
+  | 'agent'
+  | 'stopTask'
   | 'sessionLookup'
   | 'sessionRead'
   | 'messageSent'
@@ -89,6 +95,21 @@ export function toolKindOf(call: ToolCall): ToolKind {
       return 'toolLoad';
     case 'Skill':
       return 'skill';
+    case 'mcp__ccd_view__set_transcript_view':
+      return 'viewSwitch';
+    case 'mcp__ccd_view__show_pane':
+      return 'paneOpen';
+    case 'WebFetch':
+      return 'webFetch';
+    case 'WebSearch':
+      return 'webSearch';
+    case 'Task':
+    case 'Agent':
+      return 'agent';
+    case 'TaskStop':
+    case 'KillShell':
+    case 'KillBash':
+      return 'stopTask';
     case 'SendMessage':
       return 'messageSent';
     case 'Bash':
@@ -223,6 +244,18 @@ export function siteOf(call: ToolCall): string {
   }
 }
 
+/** The panes `show_pane` can open: each has a phrase of its own. */
+const PANES = ['diff', 'file', 'terminal', 'pr', 'tasks', 'plan', 'artifact', 'preview'];
+
+/** The host of a URL ("code.claude.com"), or the text as it is when it is no URL. */
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
+}
+
 /** `mcp__ccd_session_mgmt__set_session_title` as `ccd session mgmt: set session title`; a plain name stays as it is. */
 export function toolNameLabel(name: string): string {
   const match = /^mcp__(.+?)__(.+)$/.exec(name);
@@ -333,6 +366,22 @@ export function rowLabel(call: ToolCall, t: TFunction): RowLabel {
     case 'sessionStart':
       // A start the app refused ("start sessions only on the user's own words") is a line of its own that says so.
       return { ...plain(t(hasFailed(call) ? 'transcript.tools.sessionNotStarted' : 'transcript.tools.startedSession', { ns: 'chat' })), meta: inputString(call, 'title') };
+    case 'viewSwitch': {
+      const view = inputString(call, 'view');
+      return plain(['normal', 'thinking', 'verbose'].includes(view) ? t(`transcript.tools.view_${view}`, { ns: 'chat' }) : toolNameLabel(call.toolUse.name));
+    }
+    case 'paneOpen': {
+      const pane = inputString(call, 'pane');
+      return plain(PANES.includes(pane) ? t(`transcript.tools.pane_${pane}`, { ns: 'chat' }) : toolNameLabel(call.toolUse.name));
+    }
+    case 'webFetch':
+      return { ...plain(t('transcript.tools.fetched', { ns: 'chat' })), meta: hostOf(inputString(call, 'url')) };
+    case 'webSearch':
+      return { ...plain(t('transcript.tools.searchedWeb', { ns: 'chat' })), meta: inputString(call, 'query') };
+    case 'agent':
+      return { ...plain(t('transcript.tools.ranAgent', { ns: 'chat' })), meta: inputString(call, 'description') || inputString(call, 'subagent_type') };
+    case 'stopTask':
+      return plain(t('transcript.tools.stoppedTask', { ns: 'chat' }));
     case 'skill':
       return { ...plain(t('transcript.tools.skillRan', { ns: 'chat' })), meta: inputString(call, 'skill') ? `/${inputString(call, 'skill')}` : '' };
     case 'sessionLookup':
@@ -390,7 +439,10 @@ export function rowLabel(call: ToolCall, t: TFunction): RowLabel {
     case 'pageOpen':
       return plain(t('transcript.tools.pageOpened', { ns: 'chat' }));
     default:
-      return plain(browserToolOf(call.toolUse.name) || call.toolUse.name);
+      // A tool of some server the app did not give a phrase to is "Used {server}: {tool}"; one of the CLI's own stays by its name.
+      return call.toolUse.name.startsWith('mcp__')
+        ? plain(t('transcript.tools.usedLabel', { ns: 'chat', label: toolNameLabel(call.toolUse.name) }))
+        : plain(browserToolOf(call.toolUse.name) || call.toolUse.name);
   }
 }
 
@@ -448,6 +500,10 @@ export function groupLabel(calls: ToolCall[], t: TFunction): string {
       case 'command':
         return 2;
       case 'skill':
+      case 'agent':
+      case 'webFetch':
+      case 'webSearch':
+      case 'stopTask':
         return 4;
       case 'toolLoad':
         return 5;
@@ -495,6 +551,13 @@ export function groupLabel(calls: ToolCall[], t: TFunction): string {
         case 'appRequest':
           // The app's request for a report is not counted in the line over the group: the desktop app leaves it out.
           return '';
+        case 'agent':
+          return count === 1 ? t('transcript.tools.ranAgent', { ns: 'chat' }) : t('transcript.tools.ranAgents', { ns: 'chat', count });
+        case 'viewSwitch':
+        case 'paneOpen':
+        case 'webFetch':
+        case 'webSearch':
+        case 'stopTask':
         case 'skill':
         case 'sessionLookup':
         case 'sessionRead':
