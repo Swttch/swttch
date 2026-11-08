@@ -151,7 +151,7 @@ export function TranscriptArea(props: TranscriptAreaProps) {
                   </>
                 )}
                 <div data-section-body data-after-send={section.head ? '' : undefined} className="pb-[54px]">
-                  <TranscriptBody body={section.body} mergedMessages={mergedMessages} onRetry={onRetry} />
+                  <TranscriptBody body={section.body} mergedMessages={mergedMessages} onRetry={onRetry} turnRunning={isStreaming && sectionIndex === sections.length - 1} />
                   {/* The turn's wrap-up is drawn here, after its last message, not where its call sits: a recap as text until the closing message begins, then the question and its answers. */}
                   <TranscriptWrapUp body={section.body} next={sections[sectionIndex + 1]?.head ?? null} />
                 </div>

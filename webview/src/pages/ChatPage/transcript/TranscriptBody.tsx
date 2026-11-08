@@ -143,10 +143,12 @@ interface Props {
   body: LoadedMessageDto[];
   mergedMessages: LoadedMessageDto[];
   onRetry?: (messageId: string) => void;
+  /** The model is still working on this reply, so no text in it ends the turn yet. */
+  turnRunning?: boolean;
 }
 
 /** One send's reply, drawn as the transcript's segments: text, gathered tool calls, cards. */
-export const TranscriptBody = memo(function TranscriptBody({ body, mergedMessages, onRetry }: Props) {
+export const TranscriptBody = memo(function TranscriptBody({ body, mergedMessages, onRetry, turnRunning = false }: Props) {
   const segments = useMemo(() => buildSegments(body), [body]);
   // The copy / fork / time line is under the text a turn ends on, and only there. A turn is what the model does
   // from the moment someone else speaks (the user, another session, the app) to the moment it is done, with any
@@ -160,10 +162,10 @@ export const TranscriptBody = memo(function TranscriptBody({ body, mergedMessage
       const following = segments[next];
       const someoneSpeaks =
         following?.kind === 'tools' && [PEER_MESSAGE_TOOL, APP_EVENT_TOOL].includes(following.calls[0].toolUse.name);
-      if (!following || someoneSpeaks) ends.add(segment.key);
+      if ((!following && !turnRunning) || someoneSpeaks) ends.add(segment.key);
     });
     return ends;
-  }, [segments]);
+  }, [segments, turnRunning]);
 
   return (
     <>
