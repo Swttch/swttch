@@ -66,6 +66,24 @@ export function isPeerMessage(message: LoadedMessageDto): boolean {
   return peerOf(message) !== undefined;
 }
 
+/** The name a background command's completion notice goes by in a run of calls. */
+export const BACKGROUND_DONE_TOOL = 'BackgroundDone';
+
+/**
+ * The completion notice of a command Claude ran in the background, or undefined when the entry is not one. The CLI
+ * records it as an `attachment` entry that queued a `<task-notification>` whose status is `completed`; the desktop
+ * app counts it in the line over the run it arrives in ("finished a background command").
+ */
+function backgroundDoneOf(message: LoadedMessageDto): { summary: string; taskId: string } | undefined {
+  const attachment = (message as unknown as { attachment?: { type?: string; prompt?: unknown } }).attachment;
+  if ((message.type as string) !== 'attachment' || attachment?.type !== 'queued_command' || typeof attachment.prompt !== 'string') return undefined;
+  const prompt = attachment.prompt;
+  if (!prompt.includes('<task-notification>') || !/<status>completed<\/status>/.test(prompt)) return undefined;
+  const summary = /<summary>([\s\S]*?)<\/summary>/.exec(prompt)?.[1]?.trim() ?? '';
+  if (!/^Background command/.test(summary)) return undefined;
+  return { summary, taskId: /<task-id>([\s\S]*?)<\/task-id>/.exec(prompt)?.[1]?.trim() ?? '' };
+}
+
 /** The name an event the app sends Claude (the report on the sessions it started) goes by in a run of calls. */
 export const APP_EVENT_TOOL = 'AppEvent';
 
@@ -175,6 +193,13 @@ export function buildSegments(body: LoadedMessageDto[]): Segment[] {
   body.forEach((message, entryIndex) => {
     const key = message.uuid ?? `entry-${entryIndex}`;
     const content = message.message?.content;
+    const backgroundDone = backgroundDoneOf(message);
+    if (backgroundDone) {
+      if (!run) run = [];
+      const toolUse = { type: 'tool_use', id: key, name: BACKGROUND_DONE_TOOL, input: backgroundDone };
+      run.push({ toolUse: toolUse as unknown as ToolUseBlockDto, message });
+      return;
+    }
     if (isPeerMessage(message)) {
       if (!run) run = [];
       run.push(peerCall(message, key));

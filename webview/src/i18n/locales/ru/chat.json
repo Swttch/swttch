@@ -1122,7 +1122,11 @@
       "pane_tasks": "Открыты фоновые задачи",
       "pane_plan": "Открыт план",
       "pane_artifact": "Открыты артефакты",
-      "pane_preview": "Открыт браузер"
+      "pane_preview": "Открыт браузер",
+      "finishedBackgroundCommands_one": "Завершена {{count}} фоновая команда",
+      "finishedBackgroundCommands_few": "Завершено {{count}} фоновые команды",
+      "finishedBackgroundCommands_many": "Завершено {{count}} фоновых команд",
+      "finishedBackgroundCommands_other": "Завершено {{count}} фоновой команды"
     },
     "compact": {
       "title": "Сжатый сеанс",

@@ -1106,7 +1106,10 @@
       "pane_tasks": "Tâches en arrière-plan ouvertes",
       "pane_plan": "Plan ouvert",
       "pane_artifact": "Artéfacts ouverts",
-      "pane_preview": "Navigateur ouvert"
+      "pane_preview": "Navigateur ouvert",
+      "finishedBackgroundCommands_one": "a terminé 1 commande en arrière-plan",
+      "finishedBackgroundCommands_many": "a terminé {{count}} commandes en arrière-plan",
+      "finishedBackgroundCommands_other": "a terminé {{count}} commandes en arrière-plan"
     },
     "compact": {
       "title": "Session compactée",

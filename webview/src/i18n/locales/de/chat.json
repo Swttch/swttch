@@ -1098,7 +1098,9 @@
       "pane_tasks": "Hintergrundaufgaben geöffnet",
       "pane_plan": "Plan geöffnet",
       "pane_artifact": "Artefakte geöffnet",
-      "pane_preview": "Browser geöffnet"
+      "pane_preview": "Browser geöffnet",
+      "finishedBackgroundCommands_one": "beendet Befehl im Hintergrund",
+      "finishedBackgroundCommands_other": "beendet {{count}} Befehle im Hintergrund"
     },
     "compact": {
       "title": "Komprimierte Sitzung",

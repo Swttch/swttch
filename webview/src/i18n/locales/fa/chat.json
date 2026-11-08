@@ -1098,7 +1098,9 @@
       "pane_tasks": "وظایف پس‌زمینه باز شد",
       "pane_plan": "طرح باز شد",
       "pane_artifact": "آرتیفکت‌ها باز شد",
-      "pane_preview": "مرورگر باز شد"
+      "pane_preview": "مرورگر باز شد",
+      "finishedBackgroundCommands_one": "{{count}} دستور پس‌زمینه به پایان رسید",
+      "finishedBackgroundCommands_other": "{{count}} دستور پس‌زمینه به پایان رسید"
     },
     "compact": {
       "title": "جلسهٔ فشرده‌شده",

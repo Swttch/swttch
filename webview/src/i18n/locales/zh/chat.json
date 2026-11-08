@@ -1090,7 +1090,8 @@
       "pane_tasks": "已打开后台任务",
       "pane_plan": "已打开计划",
       "pane_artifact": "已打开 Artifacts",
-      "pane_preview": "已打开浏览器"
+      "pane_preview": "已打开浏览器",
+      "finishedBackgroundCommands_other": "已完成 {{count}} 条后台命令"
     },
     "compact": {
       "title": "已压缩的会话",

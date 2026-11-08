@@ -1146,7 +1146,13 @@
       "pane_tasks": "تم فتح المهام الخلفية",
       "pane_plan": "تم فتح الخطة",
       "pane_artifact": "تم فتح الأدوات الاصطناعية",
-      "pane_preview": "تم فتح المتصفح"
+      "pane_preview": "تم فتح المتصفح",
+      "finishedBackgroundCommands_zero": "اكتمل {{count}} أمر في الخلفية",
+      "finishedBackgroundCommands_one": "اكتمل أمر واحد في الخلفية",
+      "finishedBackgroundCommands_two": "اكتمل أمران في الخلفية",
+      "finishedBackgroundCommands_few": "اكتملت {{count}} أوامر في الخلفية",
+      "finishedBackgroundCommands_many": "اكتمل {{count}} أمرًا في الخلفية",
+      "finishedBackgroundCommands_other": "اكتمل {{count}} أمر في الخلفية"
     },
     "compact": {
       "title": "جلسة مضغوطة",

@@ -1090,7 +1090,8 @@
       "pane_tasks": "バックグラウンドタスクを開きました",
       "pane_plan": "計画を開きました",
       "pane_artifact": "Artifacts を開きました",
-      "pane_preview": "ブラウザを開きました"
+      "pane_preview": "ブラウザを開きました",
+      "finishedBackgroundCommands_other": "完了しました {{count}} 件のバックグラウンドコマンド"
     },
     "compact": {
       "title": "圧縮されたセッション",

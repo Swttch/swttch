@@ -1102,7 +1102,9 @@
       "pane_tasks": "Opened background tasks",
       "pane_plan": "Opened plan",
       "pane_artifact": "Opened artifacts",
-      "pane_preview": "Opened browser"
+      "pane_preview": "Opened browser",
+      "finishedBackgroundCommands_one": "Finished a background command",
+      "finishedBackgroundCommands_other": "Finished {{count}} background commands"
     },
     "compact": {
       "title": "Compacted session",

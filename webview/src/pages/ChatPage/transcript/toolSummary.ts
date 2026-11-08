@@ -2,7 +2,7 @@ import type { TFunction } from 'i18next';
 import type { LoadedMessageDto } from '../../../types';
 import { parseSessionDelivery } from '../message-renderers/ToolRenderers/SendMessageRenderer';
 import { toolResultText, toolStatus } from '../message-renderers/ToolRenderers/common/toolStatus';
-import { APP_EVENT_TOOL, PEER_MESSAGE_TOOL, type ToolCall } from './buildSegments';
+import { APP_EVENT_TOOL, BACKGROUND_DONE_TOOL, PEER_MESSAGE_TOOL, type ToolCall } from './buildSegments';
 import { changedLineCounts } from './fileDiff';
 
 /** The kinds of call the summary line tells apart. Anything else is counted as "other actions". */
@@ -25,6 +25,7 @@ export type ToolKind =
   | 'sessionList'
   | 'sessionMessage'
   | 'receivedMessage'
+  | 'backgroundDone'
   | 'toolLoad'
   | 'sessionArchive'
   | 'appRequest'
@@ -91,6 +92,8 @@ export function toolKindOf(call: ToolCall): ToolKind {
       return 'receivedMessage';
     case APP_EVENT_TOOL:
       return 'appRequest';
+    case BACKGROUND_DONE_TOOL:
+      return 'backgroundDone';
     case 'ToolSearch':
       return 'toolLoad';
     case 'Skill':
@@ -392,6 +395,9 @@ export function rowLabel(call: ToolCall, t: TFunction): RowLabel {
       return plain(t('transcript.tools.listedSessions', { ns: 'chat' }));
     case 'sessionMessage':
       return plain(t('transcript.tools.messagedAnotherSession', { ns: 'chat' }));
+    case 'backgroundDone':
+      // The CLI's own sentence about the command, as it wrote it.
+      return plain(inputString(call, 'summary'));
     case 'receivedMessage':
       return { ...plain(t('transcript.tools.receivedMessageFrom', { ns: 'chat' })), meta: inputString(call, 'name') };
     case 'sessionArchive':
@@ -515,6 +521,8 @@ export function groupLabel(calls: ToolCall[], t: TFunction): string {
       case 'sessionLookup':
       case 'sessionRead':
         return 6;
+      case 'backgroundDone':
+        return 8;
       case 'other':
         return 9;
       default:
@@ -542,6 +550,8 @@ export function groupLabel(calls: ToolCall[], t: TFunction): string {
           return t('transcript.tools.createdFiles', { ns: 'chat', count });
         case 'edit':
           return t('transcript.tools.editedFiles', { ns: 'chat', count });
+        case 'backgroundDone':
+          return t('transcript.tools.finishedBackgroundCommands', { ns: 'chat', count });
         case 'receivedMessage':
           return t('transcript.tools.receivedMessages', { ns: 'chat', count });
         case 'toolLoad':
@@ -614,6 +624,8 @@ export { toolResultImages as imagesOfResult } from "../message-renderers/ToolRen
  */
 export function isExpandable(call: ToolCall): boolean {
   switch (toolKindOf(call)) {
+    case 'backgroundDone':
+      return false;
     case 'resize':
       return call.toolUse.input?.width === undefined || call.toolUse.input?.height === undefined;
     case 'click':

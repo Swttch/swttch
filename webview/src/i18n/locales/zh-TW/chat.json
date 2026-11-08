@@ -1090,7 +1090,8 @@
       "pane_tasks": "已開啟背景工作",
       "pane_plan": "已開啟計畫",
       "pane_artifact": "已開啟 Artifacts",
-      "pane_preview": "已開啟瀏覽器"
+      "pane_preview": "已開啟瀏覽器",
+      "finishedBackgroundCommands_other": "已完成 {{count}} 個背景指令"
     },
     "compact": {
       "title": "已壓縮的工作階段",

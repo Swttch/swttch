@@ -1105,7 +1105,10 @@
       "pane_tasks": "Abriu as tarefas em segundo plano",
       "pane_plan": "Abriu o plano",
       "pane_artifact": "Abriu os artefatos",
-      "pane_preview": "Abriu o navegador"
+      "pane_preview": "Abriu o navegador",
+      "finishedBackgroundCommands_one": "finalizou 1 comando em segundo plano",
+      "finishedBackgroundCommands_many": "finalizou {{count}} comandos em segundo plano",
+      "finishedBackgroundCommands_other": "finalizou {{count}} comandos em segundo plano"
     },
     "compact": {
       "title": "Sessão compactada",

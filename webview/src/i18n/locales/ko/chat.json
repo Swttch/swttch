@@ -1090,7 +1090,8 @@
       "pane_tasks": "백그라운드 작업 열림",
       "pane_plan": "계획 열림",
       "pane_artifact": "아티팩트 열림",
-      "pane_preview": "브라우저 열림"
+      "pane_preview": "브라우저 열림",
+      "finishedBackgroundCommands_other": "완료함 백그라운드 명령어 {{count}}개"
     },
     "compact": {
       "title": "압축된 세션",

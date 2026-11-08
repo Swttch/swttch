@@ -1106,7 +1106,10 @@
       "pane_tasks": "Se han abierto las tareas en segundo plano",
       "pane_plan": "Plan abierto",
       "pane_artifact": "Artefactos abiertos",
-      "pane_preview": "Navegador abierto"
+      "pane_preview": "Navegador abierto",
+      "finishedBackgroundCommands_one": "finalizó comando en segundo plano",
+      "finishedBackgroundCommands_many": "finalizó {{count}} comandos en segundo plano",
+      "finishedBackgroundCommands_other": "finalizó {{count}} comandos en segundo plano"
     },
     "compact": {
       "title": "Sesión compactada",
