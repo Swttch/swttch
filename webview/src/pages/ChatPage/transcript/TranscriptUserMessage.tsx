@@ -102,7 +102,6 @@ function SendBubble({ message, sectionKey }: Props) {
           : undefined
       }
       timestamp={message.timestamp}
-      alwaysDisplay
     />
   );
   // The copy / fork / time row is invisible until the pointer is on the send, but an invisible row still takes
@@ -115,7 +114,7 @@ function SendBubble({ message, sectionKey }: Props) {
     <IfVisible
       extra={imageBlocks.length > 0 || contexts.length > 0 || parsed.replies.length > 0 || parsed.excerpts.length > 0}
     >
-      <div className="group flex flex-col items-end gap-1.5 pt-2 pb-[32px] pl-4 pr-7" data-transcript-user>
+      <div className="group flex flex-col items-end gap-1.5 pt-2 pb-[32px] pl-4" data-transcript-user>
         {parsed.excerpts.length > 0 && <ExcerptCards excerpts={parsed.excerpts} />}
 
         {hasBubble && (

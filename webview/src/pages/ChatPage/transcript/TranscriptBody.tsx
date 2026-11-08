@@ -9,7 +9,7 @@ import { useTranslation } from '@/i18n';
 import { MessageBubble } from '../MessageBubble';
 import { StreamingMessage } from '../StreamingMessage';
 import { ToolRenderer } from '../message-renderers/ToolRenderer';
-import { MessageFooter } from '../message-renderers/components/MessageFooter';
+import { TranscriptReplyFooter } from './TranscriptReplyFooter';
 import { ContextUsageCard } from '../message-renderers/components/ContextUsageCard';
 import { parseContextUsage } from '@/utils/parseContextUsage';
 import { useSendActionsValue } from '../SendActionsContext';
@@ -79,13 +79,11 @@ function TranscriptBlocks({
               message={message}
               footer={
                 streaming || !showFooter ? undefined : (
-                  <MessageFooter
+                  <TranscriptReplyFooter
                     className="mt-1.5"
                     copyText={text}
                     timestamp={message.timestamp}
-                    relativeTime
                     onFork={sendActions && message.uuid && sendActions.canForkReply(message.uuid) ? () => sendActions.forkAtReply(message.uuid as string) : undefined}
-                    alwaysDisplay
                   />
                 )
               }

@@ -3,7 +3,6 @@ import { useTranslation } from '@/i18n';
 import { Tooltip } from '@/components/Tooltip';
 import { useConfirmDialog } from '@/components/ConfirmDialog/useConfirmDialog';
 import { formatMessageTimestamp } from '@/utils/time';
-import { timeAgo } from '@/utils/timeAgo';
 import { useScrollFoldValue } from '../../ScrollFoldContext';
 
 /**
@@ -38,11 +37,6 @@ interface MessageFooterProps {
    * A pinned, folded send still drops it — folding outranks this.
    */
   alwaysDisplay?: boolean;
-  /**
-   * Say how long ago the message was sent ("2 hours ago") and show the exact time in a tooltip on the pointer,
-   * instead of writing the weekday and the time. The Transcript view modes set it.
-   */
-  relativeTime?: boolean;
 }
 
 /*
@@ -51,7 +45,7 @@ interface MessageFooterProps {
   squares for copy, and for fork a line that turns up and away from a second
   arrow heading down.
 */
-export function CopyIcon({ className }: { className?: string }) {
+function CopyIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
       <path d="M7.5 5V4.5A1.5 1.5 0 0 1 9 3h6.5A1.5 1.5 0 0 1 17 4.5V11a1.5 1.5 0 0 1-1.5 1.5H15" />
@@ -60,7 +54,7 @@ export function CopyIcon({ className }: { className?: string }) {
   );
 }
 
-export function ForkIcon({ className }: { className?: string }) {
+function ForkIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
       <path d="M3 10h6.5L17 3" />
@@ -74,22 +68,9 @@ export function ForkIcon({ className }: { className?: string }) {
 const buttonClass =
   'flex items-center justify-center w-6 h-6 rounded text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors cursor-pointer';
 
-/** The same, a size larger: what `relativeTime` (the Transcript view modes) draws. */
-const largeButtonClass =
-  'flex items-center justify-center w-6 h-6 rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors cursor-pointer';
-
-export function MessageFooter({ className = '', copyText, onFork, timestamp, expanded = false, alwaysDisplay = false, relativeTime = false }: MessageFooterProps) {
+export function MessageFooter({ className = '', copyText, onFork, timestamp, expanded = false, alwaysDisplay = false }: MessageFooterProps) {
   const { t, i18n } = useTranslation('chat');
-  const sentAt = timestamp ? Date.parse(timestamp) : NaN;
-  const time = timestamp
-    ? relativeTime && !Number.isNaN(sentAt)
-      ? timeAgo(sentAt, i18n.language)
-      : formatMessageTimestamp(timestamp, i18n.language)
-    : '';
-  const exactTime =
-    relativeTime && !Number.isNaN(sentAt)
-      ? new Intl.DateTimeFormat(i18n.language, { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(sentAt)
-      : '';
+  const time = timestamp ? formatMessageTimestamp(timestamp, i18n.language) : '';
   // Set while the send is pinned to the top and folded by the scroll. The
   // footer is taken out entirely then, even under the pointer: the pinned
   // bubble is a signpost for the reply below it, not the message to act on.
@@ -132,50 +113,37 @@ export function MessageFooter({ className = '', copyText, onFork, timestamp, exp
     // The line is not part of the message, so a copy that reaches over it leaves it out (#648):
     // `select-none` for the selected text, `data-copy-ignore` for the HTML built from the page.
     <div
-      className={`${className} ${folded ? (expanded ? '' : 'hidden') : (alwaysDisplay ? '' : 'invisible group-hover:visible')} select-none transition-all inline-flex items-center gap-1 ${relativeTime ? 'text-sm' : 'text-xs'} text-text-secondary -top-0.5`}
+      className={`${className} ${folded ? (expanded ? '' : 'hidden') : (alwaysDisplay ? '' : 'invisible group-hover:visible')} select-none transition-all inline-flex items-center gap-1 text-xs text-text-secondary -top-0.5`}
       data-copy-ignore="true"
       onClick={e => e.stopPropagation()}
     >
       {copyText !== undefined && (
-        <Tooltip content={relativeTime ? t('transcript.userFooter.copy') : t('sendActions.copyMessage')} placement="top">
+        <Tooltip content={t('sendActions.copyMessage')} placement="top">
           <button
             type="button"
             onClick={handleCopy}
-            aria-label={relativeTime ? t('transcript.userFooter.copy') : t('sendActions.copyMessage')}
-            className={relativeTime ? largeButtonClass : buttonClass}
+            aria-label={t('sendActions.copyMessage')}
+            className={buttonClass}
           >
-            <CopyIcon className={relativeTime ? 'w-4 h-4' : 'w-4 h-4'} />
+            <CopyIcon className="w-4 h-4" />
           </button>
         </Tooltip>
       )}
 
       {onFork && (
-        <Tooltip
-          content={
-            relativeTime ? (
-              <div className="max-w-[16rem] text-start">
-                <div className="font-medium">{t('transcript.userFooter.fork')}</div>
-                <div className="mt-0.5 opacity-70">{t('transcript.userFooter.forkHint')}</div>
-              </div>
-            ) : (
-              t('sendActions.forkConversation')
-            )
-          }
-          placement="top"
-        >
+        <Tooltip content={t('sendActions.forkConversation')} placement="top">
           <button
             type="button"
             onClick={handleFork}
-            aria-label={relativeTime ? t('transcript.userFooter.fork') : t('sendActions.forkConversation')}
-            className={relativeTime ? largeButtonClass : buttonClass}
+            aria-label={t('sendActions.forkConversation')}
+            className={buttonClass}
           >
-            <ForkIcon className={relativeTime ? 'w-4 h-4' : 'w-4 h-4'} />
+            <ForkIcon className="w-4 h-4" />
           </button>
         </Tooltip>
       )}
 
-      {time && relativeTime && (copyText !== undefined || onFork) && <span aria-hidden="true">·</span>}
-      {time && (exactTime ? <Tooltip content={exactTime} placement="top"><span className="px-1.5">{time}</span></Tooltip> : <span className="px-1">{time}</span>)}
+      {time && <span className="px-1">{time}</span>}
 
       {confirmDialog}
     </div>
