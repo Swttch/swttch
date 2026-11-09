@@ -316,7 +316,7 @@
       "announcement": {
         "title": "L’interface du chat fait peau neuve !",
         "description": "Le chat ressemble désormais à l’application de bureau de Claude : les réponses se lisent sans bulles et les appels d’outils se replient en une seule ligne. La réflexion et chaque étape sont à un changement de vue.",
-        "shortcut": "Appuyez sur Ctrl+I pour passer d’une vue à l’autre.",
+        "shortcut": "Appuyez sur Ctrl+Alt+I pour passer d’une vue à l’autre.",
         "howTo": "Pour revenir à l’ancien chat, réglez {{path}} sur « {{classic}} ».",
         "openSetting": "Ouvrir ce réglage"
       }

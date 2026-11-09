@@ -1,12 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import type { LoadedMessageDto } from '../../../types';
-import { isContentBlockArray } from '../../../types';
-import { ContentBlockType } from '../../../dto/message/ContentBlockDto';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useSessionContextOrNull } from '@/contexts/SessionContext';
-import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { getBridge } from '@/api/bridge/Bridge';
+import { isJetBrains } from '@/config/environment';
 import { setPendingTranscriptView } from '@/utils/pendingTranscriptView';
 import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
@@ -25,27 +22,23 @@ export const OFFER_DELAY_MS = 2000;
 /** How long the offer stays before it takes itself away. */
 export const OFFER_VISIBLE_MS = 5000;
 
-/** Whether Claude has produced thinking anywhere in the messages loaded for this session. */
-export function sessionHasThinking(messages: LoadedMessageDto[]): boolean {
-  return messages.some((message) => {
-    const content = message.message?.content;
-    return isContentBlockArray(content) && content.some((block) => block.type === ContentBlockType.Thinking);
-  });
+/**
+ * The view after `current` when the shortcut is pressed: Normal, Thinking, Verbose, the classic chat, and round
+ * to Normal again. Every view is in the cycle whether or not the session has thinking in it yet: a view the
+ * press never lands on cannot be chosen, and the user who wants Thinking for the next answer has to be able to
+ * pick it before that answer exists. The classic chat is in the cycle so that a press never leaves the user
+ * somewhere the keyboard cannot get out of.
+ */
+export function nextTranscriptViewChoice(current: ViewChoice): ViewChoice {
+  return CYCLE[(CYCLE.indexOf(current) + 1) % CYCLE.length];
 }
 
 /**
- * The view after `current` when the shortcut is pressed: Normal, Thinking, Verbose, the classic chat, and round
- * to Normal again. The desktop app lists Thinking only once the session has thinking in it, so the cycle skips
- * it until then. The classic chat is in the cycle so that a press never leaves the user somewhere the keyboard
- * cannot get out of.
+ * Whether a key press is the cycle shortcut: Control and Alt together with the physical I key, and nothing else
+ * held. Ctrl+I alone is not it (Chrome keeps that key), and neither is Command or Shift with them.
  */
-export function nextTranscriptViewChoice(current: ViewChoice, hasThinking: boolean): ViewChoice {
-  const from = CYCLE.indexOf(current);
-  for (let step = 1; step <= CYCLE.length; step++) {
-    const candidate = CYCLE[(from + step) % CYCLE.length];
-    if (hasThinking || candidate !== 'thinking') return candidate;
-  }
-  return current;
+export function isCycleShortcut(event: Pick<KeyboardEvent, 'code' | 'ctrlKey' | 'altKey' | 'metaKey' | 'shiftKey'>): boolean {
+  return event.ctrlKey && event.altKey && !event.metaKey && !event.shiftKey && event.code === 'KeyI';
 }
 
 export interface DefaultViewOffer {
@@ -56,12 +49,14 @@ export interface DefaultViewOffer {
 }
 
 /**
- * Ctrl+I cycles the view of the session on screen, from anywhere in the app: the classic chat, a text field
- * being typed in, the settings page. It acts through `window`, so no screen has to carry it.
+ * Ctrl+Alt+I (Ctrl+Option+I on a Mac) cycles the view of the session on screen, from anywhere in the app: the
+ * classic chat, a text field being typed in, the settings page. It acts through `window`, so no screen has to
+ * carry it.
  *
- * Control, not Command, on every platform, and the physical key (`code`) rather than the letter, because on a
- * Korean or other non-Latin layout the letter is not "i". The browser's own answer to the key (a Tab character
- * in a macOS text field) is stopped.
+ * Control and Alt together, not Command, on every platform, and the physical key (`code`) rather than the letter,
+ * because on a Korean or other non-Latin layout the letter is not "i", and with Option held a Mac types a
+ * different character. Ctrl+I alone is not used: Chrome takes it before the page sees it and moves to another
+ * tab, and a page cannot stop a key the browser keeps for itself.
  *
  * The pick is the session's, kept by session id as the header menu keeps it (a chat not started yet holds it in the page). When the pressing has stopped for
  * two seconds on a view that is not yet the default, `offer` says so, and it goes away after five seconds
@@ -71,9 +66,8 @@ export function useCycleTranscriptViewMode(): DefaultViewOffer {
   const { settings, updateSetting } = useSettings();
   const sessionId = useSessionContextOrNull()?.currentSessionId ?? null;
   const current: ViewChoice = useTranscriptViewMode() ?? 'classic';
-  const messages = useChatStreamContext().messages;
-  const latest = useRef({ settings, updateSetting, sessionId, current, messages });
-  latest.current = { settings, updateSetting, sessionId, current, messages };
+  const latest = useRef({ settings, updateSetting, sessionId, current });
+  latest.current = { settings, updateSetting, sessionId, current };
 
   const [offer, setOffer] = useState<ViewChoice | null>(null);
   const waitTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -104,8 +98,8 @@ export function useCycleTranscriptViewMode(): DefaultViewOffer {
   useEffect(() => {
     /** Moves the chat on screen to the next view: its session's, or the waiting pick of a chat not started yet. */
     const cycle = (): boolean => {
-      const { settings, updateSetting, sessionId, current, messages } = latest.current;
-      const next = nextTranscriptViewChoice(current, sessionHasThinking(messages));
+      const { settings, updateSetting, sessionId, current } = latest.current;
+      const next = nextTranscriptViewChoice(current);
       // A press that follows before the setting has come back must continue from this one, not from the old view.
       latest.current.current = next;
       if (sessionId) {
@@ -131,18 +125,40 @@ export function useCycleTranscriptViewMode(): DefaultViewOffer {
       }, OFFER_DELAY_MS);
       return true;
     };
+    // The view moves when the I key comes up, once per hold. Moving on the press made a held key repeat many
+    // times a second and spin the view through every choice. The press only marks the hold (and stops the
+    // browser's own answer to the key, which on a Mac is a typed character); modifiers are often let go before
+    // the I key, so the release is recognised by the physical key alone.
+    let held = false;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
-      if (event.code !== 'KeyI') return;
-      if (cycle()) event.preventDefault();
+      if (!isCycleShortcut(event)) return;
+      held = true;
+      event.preventDefault();
     };
-    window.addEventListener('keydown', onKeyDown);
-    // In the IDE the key never reaches the page: the IDE claims Ctrl+I and says so over the bridge.
+    const onKeyUp = (event: KeyboardEvent) => {
+      if (event.code !== 'KeyI' || !held) return;
+      held = false;
+      cycle();
+    };
+    const onBlur = () => {
+      held = false;
+    };
+    // In the IDE the keystroke has one road, the bridge: the IDE claims Ctrl+Alt+I and says so. The page can see
+    // the same key press as well, and listening to both cycled the view twice for one press (measured: a save
+    // of the setting 15 to 20 ms before every bridge message). A browser has no bridge message, so the page
+    // listens there.
+    if (!isJetBrains()) {
+      window.addEventListener('keydown', onKeyDown);
+      window.addEventListener('keyup', onKeyUp);
+      window.addEventListener('blur', onBlur);
+    }
     const unsubscribe = getBridge().subscribe(MessageType.CYCLE_TRANSCRIPT_VIEW, () => {
       cycle();
     });
     return () => {
       window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', onBlur);
       unsubscribe();
       clearTimers();
     };

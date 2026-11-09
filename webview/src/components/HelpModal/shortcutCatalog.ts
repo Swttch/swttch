@@ -139,8 +139,8 @@ export const SHORTCUT_CATALOG: readonly ShortcutEntry[] = [
   { id: ShortcutId.RotateModel, group: ShortcutGroup.General, descriptionKey: k('rotateModel'), keys: fixed('Mod+Shift+.') },
   { id: ShortcutId.ClearConversation, group: ShortcutGroup.General, descriptionKey: k('clearConversation'), keys: fixed('Mod+Shift+C') },
   { id: ShortcutId.OpenSideQuestion, group: ShortcutGroup.General, descriptionKey: k('openSideQuestion'), keys: fixed('Mod+Shift+B') },
-  // Control on a Mac as well: Cmd+I is the browser's and the editor's own, and the chat claims Ctrl+I.
-  { id: ShortcutId.CycleTranscriptView, group: ShortcutGroup.General, descriptionKey: k('cycleTranscriptView'), keys: fixed('Ctrl+I') },
+  // Control on a Mac as well: Cmd+I is the browser's and the editor's own, and Ctrl+I alone is taken by Chrome (it moves to another tab), so the chat claims Ctrl+Alt+I.
+  { id: ShortcutId.CycleTranscriptView, group: ShortcutGroup.General, descriptionKey: k('cycleTranscriptView'), keys: fixed('Ctrl+Alt+I') },
   { id: ShortcutId.FindInChat, group: ShortcutGroup.General, descriptionKey: k('findInChat'), keys: fixed('Mod+F') },
   { id: ShortcutId.RefreshSessionList, group: ShortcutGroup.General, descriptionKey: k('refreshSessionList'), keys: fixed('Mod+Shift+P') },
   { id: ShortcutId.ZoomIn, group: ShortcutGroup.General, descriptionKey: k('zoomIn'), keys: fixed('Mod++') },

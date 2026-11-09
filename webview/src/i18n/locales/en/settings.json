@@ -316,7 +316,7 @@
       "announcement": {
         "title": "The chat UI is new!",
         "description": "The chat now looks like the Claude desktop app: replies read without bubbles, and tool calls fold into a single line. Thinking and every step are one view switch away.",
-        "shortcut": "Press Ctrl+I to switch between views.",
+        "shortcut": "Press Ctrl+Alt+I to switch between views.",
         "howTo": "To go back to the old chat, set {{path}} to “{{classic}}”.",
         "openSetting": "Open this setting"
       }

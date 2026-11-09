@@ -316,7 +316,7 @@
       "announcement": {
         "title": "聊天界面焕然一新！",
         "description": "现在聊天看起来就像 Claude 桌面应用：回复不再有气泡，工具调用折叠成一行。想看思考过程或每一个步骤，只需切换视图。",
-        "shortcut": "按 Ctrl+I 即可在各视图之间切换。",
+        "shortcut": "按 Ctrl+Alt+I 即可在各视图之间切换。",
         "howTo": "如需恢复为原来的聊天界面，请将{{path}}改为“{{classic}}”。",
         "openSetting": "打开此设置"
       }

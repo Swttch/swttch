@@ -316,7 +316,7 @@
       "announcement": {
         "title": "Die Chat-Oberfläche ist neu!",
         "description": "Der Chat sieht jetzt aus wie die Claude-Desktop-App: Antworten erscheinen ohne Sprechblasen, und Tool-Aufrufe werden zu einer Zeile zusammengefasst. Denkvorgänge und jeden einzelnen Schritt erreichen Sie mit einem Wechsel der Ansicht.",
-        "shortcut": "Mit Ctrl+I wechseln Sie zwischen den Ansichten.",
+        "shortcut": "Mit Ctrl+Alt+I wechseln Sie zwischen den Ansichten.",
         "howTo": "Um zum alten Chat zurückzukehren, stellen Sie {{path}} auf „{{classic}}“.",
         "openSetting": "Diese Einstellung öffnen"
       }

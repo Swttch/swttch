@@ -13,7 +13,7 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 
 /**
- * Guards [TranscriptViewShortcutGuard]: the shortcut action claims Ctrl+I, on every platform and without Shift,
+ * Guards [TranscriptViewShortcutGuard]: the shortcut action claims Ctrl+Alt+I, on every platform and without Shift,
  * is registered once per browser component however many panels wire it, and a press is reported through the
  * panel that installed last.
  */
@@ -30,7 +30,7 @@ class TranscriptViewShortcutGuardTest {
     }
 
     @Test
-    fun `claims Control I and nothing else`() {
+    fun `claims Control Alt I and nothing else`() {
         TranscriptViewShortcutGuard.install(component, register = record) { }
 
         val only = registrations.single()
@@ -39,7 +39,8 @@ class TranscriptViewShortcutGuardTest {
         assertEquals(1, strokes.size)
         assertEquals(KeyEvent.VK_I, strokes.single().keyCode)
         assertEquals(InputEvent.CTRL_DOWN_MASK, strokes.single().modifiers and InputEvent.CTRL_DOWN_MASK)
-        assertEquals(0, strokes.single().modifiers and InputEvent.SHIFT_DOWN_MASK, "Shift+Ctrl+I is not the shortcut")
+        assertEquals(InputEvent.ALT_DOWN_MASK, strokes.single().modifiers and InputEvent.ALT_DOWN_MASK, "Ctrl+I alone is Chrome's, not ours")
+        assertEquals(0, strokes.single().modifiers and InputEvent.SHIFT_DOWN_MASK, "Shift+Ctrl+Alt+I is not the shortcut")
     }
 
     @Test
@@ -51,10 +52,32 @@ class TranscriptViewShortcutGuardTest {
 
         assertEquals(1, registrations.size, "a re-wired panel must not stack a second action")
 
-        TranscriptViewShortcutGuard.receiverOf(component)!!.deliver()
+        val receiver = TranscriptViewShortcutGuard.receiverOf(component)!!
+        receiver.press()
+        receiver.release()
 
         assertEquals(0, first, "the panel that installed first must no longer be told")
         assertEquals(1, second)
+    }
+
+    @Test
+    fun `a held key is reported once, when it is released`() {
+        var reports = 0
+        TranscriptViewShortcutGuard.install(component, register = record) { reports++ }
+        val receiver = TranscriptViewShortcutGuard.receiverOf(component)!!
+
+        repeat(30) { receiver.press() }
+        assertEquals(0, reports, "a press, and the repeats of a held key, report nothing")
+
+        receiver.release()
+        assertEquals(1, reports, "the release reports the hold once")
+
+        receiver.release()
+        assertEquals(1, reports, "a release that no press armed reports nothing")
+
+        receiver.press()
+        receiver.release()
+        assertEquals(2, reports, "the next press and release is a new hold")
     }
 
     @Test

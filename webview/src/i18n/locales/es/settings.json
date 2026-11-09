@@ -316,7 +316,7 @@
       "announcement": {
         "title": "¡La interfaz del chat es nueva!",
         "description": "El chat ahora se ve como la app de escritorio de Claude: las respuestas se leen sin burbujas y las llamadas a herramientas se pliegan en una sola línea. El razonamiento y cada paso están a un cambio de vista.",
-        "shortcut": "Pulsa Ctrl+I para cambiar entre vistas.",
+        "shortcut": "Pulsa Ctrl+Alt+I para cambiar entre vistas.",
         "howTo": "Para volver al chat anterior, cambia {{path}} a «{{classic}}».",
         "openSetting": "Abrir este ajuste"
       }

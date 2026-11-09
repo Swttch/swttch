@@ -6,7 +6,7 @@
 
 ## What changed
 
-The chat can now be drawn the way the Claude desktop app draws its transcript. There are three new views, **Normal**, **Thinking** and **Verbose**, next to the chat you already know, which is now called **Classic**. You pick one for every session in Settings, or for one session at a time from the session's menu, or by pressing `Ctrl+I`.
+The chat can now be drawn the way the Claude desktop app draws its transcript. There are three new views, **Normal**, **Thinking** and **Verbose**, next to the chat you already know, which is now called **Classic**. You pick one for every session in Settings, or for one session at a time from the session's menu, or by pressing `Ctrl+Alt+I`.
 
 **Normal is the default.** The chat opens in Normal until you choose another view. A card titled **“The chat UI is new!”** appears in the middle of an empty chat to say so, and tells you how to go back: set **Settings → Appearance → Chat → Transcript view** to **Classic**. Close the card with its **X** and it does not come back; it is not shown at all to someone who already chose Classic.
 
@@ -29,7 +29,7 @@ The chat can now be drawn the way the Claude desktop app draws its transcript. T
 
 ![Settings, Appearance page, the Chat section: the Transcript view row with a drop-down that reads Normal.](./assets/settings-transcript-view.png)
 
-**By keyboard: `Ctrl+I`.** Each press moves the current session to the next view: Normal, Thinking, Verbose, Classic, and around again. It works everywhere in the chat: while you type in the input, while the settings page is open, and in the Classic view. In JetBrains IDEs the default keymap binds `Ctrl+I` to other actions (such as Implement Methods); while the chat has focus, the chat takes the key instead. A short toast at the top names the view you landed on.
+**By keyboard: `Ctrl+Alt+I` (`Ctrl+Option+I` on a Mac).** It is not plain `Ctrl+I`, because Chrome keeps that key for itself and the standalone page would never see it. Each press moves the current session to the next view: Normal, Thinking, Verbose, Classic, and around again. The view changes when you let go of the key, so holding it down moves only one step. It works everywhere in the chat: while you type in the input, while the settings page is open, and in the Classic view. In JetBrains IDEs the default keymap binds `Ctrl+Alt+I` to other actions ((Auto-Indent Lines)); while the chat has focus, the chat takes the key instead. A short toast at the top names the view you landed on.
 
 About two seconds after you stop pressing it, a small banner asks **"Make … your default view?"**. Click **Make default** to apply that view to every session, or close it with the **X**. It closes itself after five seconds. The same option is in the session menu as **Make … the default**.
 
