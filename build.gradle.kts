@@ -188,6 +188,13 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.36.1 - Chat view modes, read aloud, and send index and imported session title improvements</h3>
+            <ul>
+                <li>Add chat view modes (Normal, Thinking, Verbose) with a shortcut to cycle them (#608)</li>
+                <li>Add reading replies aloud (#608)</li>
+                <li>Fix the send index so it stays above the input, lists every prompt, and offers a full list (#657, reported by @tianguanlong)</li>
+                <li>Fix sessions imported into Claude Desktop being titled with the IDE context sentence instead of the title shown in the plugin (#647, reported by @josueaponte7)</li>
+            </ul>
             <h3>0.36.0 - Chat freeze fix, formatted copy, and Claude Desktop session compatibility</h3>
             <ul>
                 <li>Fix the chat panel freezing when you select text (#645, reported by @Zach0126)</li>
