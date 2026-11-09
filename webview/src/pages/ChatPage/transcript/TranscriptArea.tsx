@@ -102,7 +102,7 @@ export function TranscriptArea(props: TranscriptAreaProps) {
   if (isEmpty) return <EmptyState />;
 
   return (
-    <div ref={containerRef} className="flex-1 w-full max-w-[var(--chat-column-max,70rem)] mx-auto sm:px-4 text-xs antialiased">
+    <div ref={containerRef} className="flex-1 w-full max-w-[calc(var(--chat-column-max,70rem)_-_var(--chat-column-px,2rem))] mx-auto sm:px-4 text-xs antialiased">
       <ChatSearchBar search={search} />
       <SelectionReplyLayer containerRef={containerRef} />
       {(isLoadingMore || hasMore) && (
@@ -152,7 +152,7 @@ export function TranscriptArea(props: TranscriptAreaProps) {
                     </SectionKeyContext.Provider>
                   </>
                 )}
-                <div data-section-body data-after-send={section.head ? '' : undefined} className={`max-w-[604px] ${sectionIndex < sections.length - 1 ? 'pb-[13px]' : isStreaming ? 'pb-0' : 'pb-[54px]'}`}>
+                <div data-section-body data-after-send={section.head ? '' : undefined} className={`${sectionIndex < sections.length - 1 ? 'pb-[13px]' : isStreaming ? 'pb-0' : 'pb-[54px]'}`}>
                   <TranscriptBody body={section.body} mergedMessages={mergedMessages} onRetry={onRetry} turnRunning={isStreaming && sectionIndex === sections.length - 1} />
                   {/* The turn's wrap-up is drawn here, after its last message, not where its call sits: a recap as text until the closing message begins, then the question and its answers. */}
                   <TranscriptWrapUp body={section.body} next={sections[sectionIndex + 1]?.head ?? null} />
@@ -164,7 +164,7 @@ export function TranscriptArea(props: TranscriptAreaProps) {
       </SectionFoldContext.Provider>
       {/* While a call is being waited on, the run of calls that holds it is the working indicator (see TranscriptToolRun); this line is for the rest of the turn, when the model thinks or writes. A dropped connection and the CLI's retries still say so here. */}
       {isStreaming && (waitedCall === null || disconnectCountdown !== null || apiRetry !== null) && (
-        <div className="max-w-[604px]">
+        <div>
           <TranscriptStreamingIndicator countdownSeconds={disconnectCountdown} apiRetry={apiRetry} />
         </div>
       )}
