@@ -7,6 +7,8 @@ function Invoke-CcgSelfUpdate {
         Write-Host (T 'help_self_update_header'); Write-Host ''; Write-Host (T 'help_self_update_body')
         return 0
     }
+    # -y / --yes: install.ps1 runs through iex and cannot take arguments, so it reads CCG_YES.
+    if ($CcgArgs -contains '-y' -or $CcgArgs -contains '--yes') { $env:CCG_YES = '1' }
     $url = "https://raw.githubusercontent.com/$(Get-ReleaseRepo)/main/cli/install.ps1"
     try {
         [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12

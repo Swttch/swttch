@@ -13,6 +13,7 @@
 #   CCG_HOME          - installation root (default: %USERPROFILE%\.claude-code-gui)
 #   CCG_RELEASE_REPO  - GitHub owner/repo (default: Swttch/swttch)
 #   CCG_VERSION       - pin to a specific version (default: latest)
+#   CCG_YES           - set to 1 to skip the overwrite question (ccg self-update -y sets it)
 #
 # Intentionally English-only and ASCII-only: it runs through `iex`, before ccg exists.
 # Everything lives in one function so a failure uses `return`, never `exit`
@@ -53,7 +54,8 @@ function Install-Ccg {
     if (Test-Path $stamp) {
         $existing = (Get-Content $stamp -Raw).Trim()
         $answer = 'Y'
-        try { $answer = Read-Host "Existing installation v$existing detected. Overwrite? (Y/n)" } catch { Write-Host '(no console available; proceeding with Y)' }
+        if ($env:CCG_YES -eq '1') { Write-Host "Existing installation v$existing detected. Overwriting (-y)." }
+        else { try { $answer = Read-Host "Existing installation v$existing detected. Overwrite? (Y/n)" } catch { Write-Host '(no console available; proceeding with Y)' } }
         if ($answer -match '^(n|no)$') { Write-Host 'Aborted.'; return }
     }
 

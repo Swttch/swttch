@@ -13,6 +13,16 @@ cmd_swttch_help() {
   printf '\n'
 }
 
+# `ccg` is the deprecated name of `swttch browser`. Tell people on a terminal, on stderr, so scripts
+# and piped output are untouched. CCG_NO_DEPRECATION_NOTICE=1 hides it. Only ccg_main calls this.
+_ccg_stderr_is_tty() { [[ -t 2 ]]; }
+
+ccg_deprecation_notice() {
+  [[ -n "${CCG_NO_DEPRECATION_NOTICE:-}" ]] && return 0
+  _ccg_stderr_is_tty || return 0
+  printf '%s\n' "$(t ccg_deprecated_notice)" >&2
+}
+
 swttch_main() {
   local cmd=${1:-help}
   shift || true
