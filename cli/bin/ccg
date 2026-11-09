@@ -66,6 +66,7 @@ load_locale "$(detect_locale)"
 # ─── main dispatcher ─────────────────────────────────────────
 
 ccg_main() {
+  ccg_deprecation_notice
   local cmd=${1:-run}
   shift || true
 

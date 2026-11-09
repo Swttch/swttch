@@ -8,10 +8,15 @@ cmd_self_update_help() {
 }
 
 cmd_self_update() {
-  case "${1:-}" in
-    -h|--help) cmd_self_update_help; return 0 ;;
-  esac
+  local arg yes=()
+  for arg in "$@"; do
+    case "$arg" in
+      -h|--help) cmd_self_update_help; return 0 ;;
+      -y|--yes)  yes=(-y) ;;
+    esac
+  done
 
   local url="https://raw.githubusercontent.com/${CCG_RELEASE_REPO:-Swttch/swttch}/main/cli/install.sh"
-  curl -fsSL "$url" | bash
+  # `bash -s --` hands -y to install.sh, which then skips the overwrite question.
+  curl -fsSL "$url" | bash -s -- ${yes[@]+"${yes[@]}"}
 }

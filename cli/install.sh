@@ -3,6 +3,7 @@
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.sh | bash -s -- -y
 #
 # What it does:
 #   1. Checks for curl + tar.
@@ -16,6 +17,7 @@
 #   CCG_HOME            — installation root (default: ~/.claude-code-gui)
 #   CCG_RELEASE_REPO    — GitHub owner/repo (default: Swttch/swttch)
 #   CCG_VERSION         — pin to a specific version (default: latest)
+#   CCG_YES             — set to 1 to skip the overwrite question (same as -y / --yes)
 #
 # This installer is intentionally English-only. Once ccg is installed,
 # the CLI itself respects $LANG / $CCG_LANG.
@@ -24,6 +26,15 @@ set -euo pipefail
 
 CCG_HOME="${CCG_HOME:-$HOME/.claude-code-gui}"
 CCG_RELEASE_REPO="${CCG_RELEASE_REPO:-Swttch/swttch}"
+
+# -y / --yes: answer Y to the overwrite question without asking (`ccg self-update -y` passes it through).
+assume_yes=0
+[[ "${CCG_YES:-}" == "1" ]] && assume_yes=1
+for arg in "$@"; do
+  case "$arg" in
+    -y|--yes) assume_yes=1 ;;
+  esac
+done
 
 say() { printf '%s\n' "$*"; }
 err() { printf 'Error: %s\n' "$*" >&2; }
@@ -82,16 +93,21 @@ say "Installing Swttch v${version}..."
 
 if [[ -f "$CCG_HOME/.ccg-version" ]]; then
   existing=$(cat "$CCG_HOME/.ccg-version" 2>/dev/null || printf 'unknown')
-  printf 'Existing installation v%s detected. Overwrite? (Y/n): ' "$existing"
-  # `curl | bash` makes stdin a pipe (not a TTY), so [[ -t 0 ]] is false even
-  # when a human is at the keyboard. Read from /dev/tty so the prompt is
-  # honored. Only when /dev/tty is unreadable (true non-interactive env like
-  # CI) do we default to Y.
-  if [[ -r /dev/tty ]]; then
-    read -r answer < /dev/tty
-  else
+  if (( assume_yes == 1 )); then
+    say "Existing installation v$existing detected. Overwriting (-y)."
     answer="Y"
-    say "(no TTY available; proceeding with Y)"
+  else
+    printf 'Existing installation v%s detected. Overwrite? (Y/n): ' "$existing"
+    # `curl | bash` makes stdin a pipe (not a TTY), so [[ -t 0 ]] is false even
+    # when a human is at the keyboard. Read from /dev/tty so the prompt is
+    # honored. Only when /dev/tty is unreadable (true non-interactive env like
+    # CI) do we default to Y.
+    if [[ -r /dev/tty ]]; then
+      read -r answer < /dev/tty
+    else
+      answer="Y"
+      say "(no TTY available; proceeding with Y)"
+    fi
   fi
   case "${answer:-Y}" in
     n|N|no|NO) say "Aborted."; exit 0 ;;

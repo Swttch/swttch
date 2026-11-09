@@ -31,6 +31,10 @@ function Invoke-Ccg {
     param([string[]]$CcgArgs)
     # `swttch` has no default action (browser and desktop are peers): bare `swttch` prints help.
     $isSwttch = $script:Program -eq 'swttch'
+    # `ccg` is the deprecated name: say so on stderr, only on a terminal. CCG_NO_DEPRECATION_NOTICE=1 hides it.
+    if (-not $isSwttch -and -not $env:CCG_NO_DEPRECATION_NOTICE -and -not [Console]::IsErrorRedirected) {
+        [Console]::Error.WriteLine((T 'ccg_deprecated_notice'))
+    }
     $cmd = if ($CcgArgs.Count -gt 0) { $CcgArgs[0] } elseif ($isSwttch) { 'help' } else { 'run' }
     $rest = if ($CcgArgs.Count -gt 1) { $CcgArgs[1..($CcgArgs.Count - 1)] } else { @() }
 

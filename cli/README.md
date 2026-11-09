@@ -49,7 +49,7 @@ The same port (19836) is shared with the JetBrains plugin, so opening the IDE or
 | `swttch stop`       | Stop the backend on port 19836, child processes included. Options: `--all` (every backend, IDE-launched ones too; asks first), `--force` (SIGKILL immediately), `<pid>`, `--port <n>`, `--no-tree`. |
 | `swttch version`    | Show installed swttch, cached runtimes, and running backend. |
 | `swttch doctor`     | Diagnose environment (node, PATH, cache, port). |
-| `swttch self-update`| Re-run the installer to update swttch itself. |
+| `swttch self-update`| Re-run the installer to update swttch itself. `-y`/`--yes` skips the overwrite question. |
 | `swttch uninstall`  | Remove swttch from this machine. |
 
 Run `swttch --help` for the list and `swttch <command> -h` for the options of one command. The deprecated `ccg` takes the same commands (`ccg` alone is `swttch browser`).

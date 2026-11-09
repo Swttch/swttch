@@ -185,7 +185,7 @@ webview↔backend(및 Node↔Kotlin) 사이를 오가는 모든 IPC 메시지 `t
 
 같은 이유로 **`ccg` 명령어와 `CCG_*` 환경변수 29종도 없애거나 바꾸지 않는다.** `ccg`는 사용자가 직접 타이핑하고 PATH에 등록해 쓰는 이름이라, 없애면 이미 설치된 사용자의 명령이 사라진다. `CCG_*`도 공개된 계약이므로 리브랜딩을 이유로 건드리지 않는다.
 
-**새 이름 `swttch`는 `ccg`를 대체하지 않고 옆에 추가한다 (#649).** `swttch`는 우산 명령이다. `swttch browser`가 브라우저로 여는 독립 실행(지금의 `ccg`)이고, 앞으로의 데스크탑 앱은 `swttch desktop`이다. 둘은 대등하므로 `swttch`만 치면 도움말만 나오고 아무것도 실행하지 않는다. `ccg`는 **문서에서 deprecated로 안내**하며 `swttch browser`를 쓰라고 하지만, 실행 시 경고를 내거나 동작을 바꾸지 않고 오래 남긴다. 새 문서와 안내는 `swttch`를 쓴다.
+**새 이름 `swttch`는 `ccg`를 대체하지 않고 옆에 추가한다 (#649).** `swttch`는 우산 명령이다. `swttch browser`가 브라우저로 여는 독립 실행(지금의 `ccg`)이고, 앞으로의 데스크탑 앱은 `swttch desktop`이다. 둘은 대등하므로 `swttch`만 치면 도움말만 나오고 아무것도 실행하지 않는다. `ccg`는 **문서와 실행 시 모두 deprecated로 안내**한다. 터미널에서 실행하면 stderr에 한 줄(`swttch browser`를 쓰라는 안내)을 내고, 파이프·리다이렉트일 때와 `CCG_NO_DEPRECATION_NOTICE=1`일 때는 내지 않는다. 안내 외에 동작은 바꾸지 않고 오래 남긴다. 새 문서와 안내는 `swttch`를 쓴다.
 
 ## 상태 머신
 

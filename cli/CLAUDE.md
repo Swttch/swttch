@@ -108,7 +108,7 @@ ccg stop           # 백엔드 트리 종료 (자손 포함, SIGTERM → 3초 �
                    #   변형: <pid> / --port <p> / --all / --force / --no-tree
 ccg version        # 설치된 ccg / 캐시된 런타임 / 실행 중 백엔드 버전 표시
 ccg doctor         # 환경 진단 (node 경로, PATH, 캐시, 포트, 백엔드 프로세스 수)
-ccg self-update    # cli 자체 업데이트 (install.sh 재실행)
+ccg self-update    # cli 자체 업데이트 (install.sh 재실행). -y/--yes: 덮어쓰기 질문 생략
 ccg uninstall      # 제거
 ```
 

@@ -92,3 +92,82 @@ setup() {
   run cmd_run_help
   assert_has "ccg run"
 }
+
+bats_require_minimum_version 1.5.0
+
+# ─── ccg deprecation notice ──────────────────────────────────
+
+@test "ccg prints the deprecation notice on stderr when stderr is a terminal" {
+  _ccg_stderr_is_tty() { return 0; }
+  run --separate-stderr ccg_main
+  [ "$output" = "RUN " ]
+  case "$stderr" in *"'ccg' is the old name"*"swttch browser"*) ;; *) echo "stderr: $stderr"; return 1 ;; esac
+}
+
+@test "ccg stays silent when stderr is not a terminal (scripts and pipes)" {
+  _ccg_stderr_is_tty() { return 1; }
+  run --separate-stderr ccg_main
+  [ "$output" = "RUN " ]
+  [ -z "$stderr" ]
+}
+
+@test "CCG_NO_DEPRECATION_NOTICE=1 hides the notice" {
+  _ccg_stderr_is_tty() { return 0; }
+  CCG_NO_DEPRECATION_NOTICE=1 run --separate-stderr ccg_main
+  [ -z "$stderr" ]
+}
+
+@test "swttch never prints the deprecation notice" {
+  _ccg_stderr_is_tty() { return 0; }
+  CCG_PROGRAM=swttch run --separate-stderr swttch_main browser
+  [ -z "$stderr" ]
+}
+
+@test "the notice is localized (ko) and falls back to en" {
+  _ccg_stderr_is_tty() { return 0; }
+  CCG_LANG=ko load_locale ko
+  run --separate-stderr ccg_main
+  case "$stderr" in *"예전 이름"*) ;; *) echo "stderr: $stderr"; return 1 ;; esac
+}
+
+# ─── self-update -y ──────────────────────────────────────────
+
+# curl stand-in that serves an "install script" which just echoes the arguments it was given.
+mock_install_script() {
+  cat > "$MOCK_BIN/curl" <<'MOCK'
+#!/usr/bin/env bash
+printf 'echo "INSTALL-ARGS:[$*]"\n'
+MOCK
+  chmod +x "$MOCK_BIN/curl"
+}
+
+@test "self-update passes -y through to the install script" {
+  mock_install_script
+  run cmd_self_update -y
+  [ "$status" -eq 0 ]
+  assert_has "INSTALL-ARGS:[-y]"
+  run cmd_self_update --yes
+  assert_has "INSTALL-ARGS:[-y]"
+}
+
+@test "self-update without -y passes nothing" {
+  mock_install_script
+  run cmd_self_update
+  assert_has "INSTALL-ARGS:[]"
+}
+
+@test "install.sh -y skips the overwrite question" {
+  mkdir -p "$CCG_HOME"; printf '0.1.0' > "$CCG_HOME/.ccg-version"
+  mock_cmd curl 1 ""   # fail the download: only the overwrite step matters here
+  CCG_VERSION=9.9.9 run bash "$CLI_ROOT/install.sh" -y
+  assert_has "Overwriting (-y)"
+  assert_lacks "Overwrite? (Y/n)"
+}
+
+@test "install.sh CCG_YES=1 skips the overwrite question too" {
+  mkdir -p "$CCG_HOME"; printf '0.1.0' > "$CCG_HOME/.ccg-version"
+  mock_cmd curl 1 ""
+  CCG_YES=1 CCG_VERSION=9.9.9 run bash "$CLI_ROOT/install.sh"
+  assert_has "Overwriting (-y)"
+  assert_lacks "Overwrite? (Y/n)"
+}
