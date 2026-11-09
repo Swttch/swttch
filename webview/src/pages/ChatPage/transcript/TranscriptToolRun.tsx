@@ -142,15 +142,60 @@ function CodeBox({ title, code, language, output }: { title: string; code: strin
  * The pictures behind a line, as small thumbnails at its end, one for each. They are shown only while the line is
  * shut: once it is open the pictures themselves are under it.
  */
-function Thumbnails({ srcs }: { srcs: string[] }) {
-  if (srcs.length === 0) return null;
+function Thumbnails({ pictures, onOpen }: { pictures: PictureRef[]; onOpen: (picture: PictureRef) => void }) {
+  if (pictures.length === 0) return null;
   return (
     <span className="ms-auto flex flex-shrink-0 items-center gap-1.5">
-      {srcs.map((src, index) => (
-        <img key={index} src={src} alt="" className="h-7 w-auto max-w-[56px] rounded-[3px] border border-border-default/70 object-contain" />
+      {pictures.map((picture) => (
+        // The line these sit in opens and shuts on a click; a click on a thumbnail opens the picture in the viewer instead and goes no further.
+        <span
+          key={`${picture.call.toolUse.id}:${picture.index}`}
+          role="button"
+          tabIndex={0}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpen(picture);
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            event.stopPropagation();
+            onOpen(picture);
+          }}
+          className="flex cursor-zoom-in"
+        >
+          <img src={picture.src} alt="" className="h-7 w-auto max-w-[56px] rounded-[3px] border border-border-default/70 object-contain" />
+        </span>
       ))}
     </span>
   );
+}
+
+/** One picture a call's result carries: which call, its place among that result's pictures, and its source. */
+interface PictureRef {
+  call: ToolCall;
+  index: number;
+  src: string;
+}
+
+function picturesOfCalls(calls: ToolCall[]): PictureRef[] {
+  return calls.flatMap((call) => imagesOfResult(call.toolUse.tool_result as LoadedMessageDto | undefined).map((src, index) => ({ call, index, src })));
+}
+
+/** The viewer for a thumbnail that was clicked. The element goes beside the line, not inside it, so a click in the viewer never reaches the line's own click. */
+function useThumbnailViewer() {
+  const [viewing, setViewing] = useState<PictureRef | null>(null);
+  const result = viewing?.call.toolUse.tool_result as LoadedMessageDto | undefined;
+  const viewer = viewing ? (
+    <SessionGalleryViewer
+      entryUuid={result?.uuid}
+      localSrcs={imagesOfResult(result)}
+      localKeys={toolResultPictureKeys(result, viewing.call.toolUse.id)}
+      openedIndex={viewing.index}
+      onClose={() => setViewing(null)}
+    />
+  ) : null;
+  return [setViewing, viewer] as const;
 }
 
 /**
@@ -470,7 +515,8 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live }: { calls: ToolCal
   const label = rowLabel(call, t);
   const path = pathOf(call);
   const expandable = isExpandable(call);
-  const pictures = imagesOfResult(call.toolUse.tool_result as LoadedMessageDto | undefined);
+  const pictures = picturesOfCalls([call]);
+  const [openPicture, thumbnailViewer] = useThumbnailViewer();
 
   return (
     <div>
@@ -510,8 +556,9 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live }: { calls: ToolCal
         {wasStopped(call) && <span className="flex-shrink-0">{t('transcript.tools.stoppedMark')}</span>}
         <LineStatsView stats={sumLineStats(calls)} />
         {expandable && <Chevron open={open} />}
-        {(!open && inBox) && <Thumbnails srcs={pictures} />}
+        {(!open && inBox) && <Thumbnails pictures={pictures} onOpen={openPicture} />}
       </button>
+      {thumbnailViewer}
       {/* A call of its own that read a picture shows the picture under its line at its own size, as the desktop app does; in a run, the lines carry thumbnails and the picture is under the call once it is opened. */}
       {!inBox && pictures.length > 0 && <div className="pb-2"><ResultPictures call={call} /></div>}
       {open && expandable && <div className={inBox ? 'px-2' : ''}><ToolDetail calls={calls} withPictures={inBox} /></div>}
@@ -543,7 +590,8 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
   const label = useActivityLabel();
   const formatElapsed = useFormatElapsed();
   const seconds = useTurnSeconds();
-  const pictures = calls.flatMap((call) => imagesOfResult(call.toolUse.tool_result as LoadedMessageDto | undefined));
+  const pictures = picturesOfCalls(calls);
+  const [openPicture, thumbnailViewer] = useThumbnailViewer();
 
   if (calls.length === 1 && toolKindOf(calls[0]) === 'sessionStart' && !hasFailed(calls[0])) {
     return <StartedSessionCard call={calls[0]} />;
@@ -594,8 +642,9 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
           </>
         )}
         <Chevron open={open} />
-        {!open && <Thumbnails srcs={pictures} />}
+        {!open && <Thumbnails pictures={pictures} onOpen={openPicture} />}
       </button>
+      {thumbnailViewer}
       {open && (
         <div className={`mt-3 rounded-lg border ${BOX_BORDER} divide-y divide-border-default/70 overflow-hidden`}>
           {groupIntoRows(calls).map((row) => (
