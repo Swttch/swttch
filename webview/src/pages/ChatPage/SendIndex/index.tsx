@@ -493,6 +493,26 @@ export function SendIndex(props: Props) {
     if (readingKey) {
       const at = entries.findIndex(entry => entry.key === readingKey);
       if (at !== -1) return at;
+      /*
+        The reading line is inside a section that has no tick of its own: one
+        that opens with something the CLI wrote (an interrupt marker, a note
+        from the app), which the rail leaves out. The reader is then still on
+        the send before it, so walk back through the transcript for the nearest
+        section that has a tick. Falling through to the top instead parked the
+        marker on the first send of a long session that had just opened at its
+        end.
+      */
+      const inTranscript = sections.findIndex(section => section.key === readingKey);
+      for (let i = inTranscript - 1; i >= 0; i--) {
+        const before = entries.findIndex(entry => entry.key === sections[i].key);
+        if (before !== -1) return before;
+      }
+      // Nothing earlier in the loaded run has a tick, so the reader is past
+      // every loaded send: on the last one the index holds before the run.
+      if (inTranscript !== -1) {
+        const firstLoaded = entries.findIndex(entry => entry.loaded);
+        return firstLoaded === -1 ? entries.length - 1 : Math.max(firstLoaded - 1, 0);
+      }
     }
     /*
       Nothing has reached the line, so the reader is above the first send in the
@@ -506,7 +526,7 @@ export function SendIndex(props: Props) {
     const firstLoaded = entries.findIndex(entry => entry.loaded);
     if (firstLoaded !== -1) return firstLoaded;
     return entries.length > 0 ? 0 : -1;
-  }, [entries, readingKey, pendingJump]);
+  }, [entries, sections, readingKey, pendingJump]);
 
   /*
     The toggle is listened for on the window because its whole purpose is to
