@@ -61,7 +61,7 @@ import { AutoResumeProvider } from '@/contexts/AutoResumeContext';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { ChatInput } from './ChatInput';
 import { AccountSwitchErrorBanner } from './AccountSwitchErrorBanner';
-import { SendIndex, SEND_INDEX_RAIL_WIDTH } from './SendIndex';
+import { SendIndex } from './SendIndex';
 import { carriedSend } from './SendIndex/carriedSend';
 import { useSessionSends } from '@/hooks/useSessionSends';
 import type { SessionSend } from '@/shared';
@@ -437,16 +437,16 @@ function ChatPageContent() {
         transcript moves. Inside, it would scroll away with the content it is
         describing.
 
-        `paddingInlineEnd` is what keeps the ticks beside the transcript instead
-        of on top of it. It is read from the rail's own constant so the two
-        cannot drift; see SEND_INDEX_RAIL_WIDTH.
+        The rail sits on the start edge, drawn over the transcript rather than
+        beside it: the container reserves no room for it. The room it used to
+        take was the scrollbar's, and the scrollbar is on the end side.
       */}
       <SendIndex sections={sections} sessionSends={sessionSends} />
       <div
         ref={scrollContainerRef}
         data-chat-scroll
         onScroll={handleScroll}
-        style={{ paddingInlineEnd: SEND_INDEX_RAIL_WIDTH, paddingTop: topBarHeight }}
+        style={{ paddingTop: topBarHeight }}
         className="flex flex-col flex-1 overflow-y-auto w-full h-screen pb-0 bg-surface-base z-0"
       >
         {transcriptViewMode === null ? (
@@ -488,16 +488,10 @@ function ChatPageContent() {
             collapse button first of all. Capping the footer at the scroll
             container lets each panel shrink its own middle and scroll there,
             with no height worked out by hand, at any zoom or window size. */}
-        {/* It stays in here so the transcript runs on behind it and shows around
-            it. What it must not do is give up the room the container reserves
-            for the send index: the end margin takes that room back, and the
-            strip, stretched across the container, ends up centred instead of
-            sitting a rail's width off to the start side. No `w-full`: a fixed
-            width would hold the strip at the padded width and ignore the margin. */}
+        {/* It stays in here so the transcript runs on behind it and shows around it. */}
         <div
           id={CHAT_FOOTER_ID}
           className="sticky start-0 bottom-0 z-10 flex flex-col max-h-full"
-          style={{ marginInlineEnd: -SEND_INDEX_RAIL_WIDTH }}
         >
           {showScrollButton && (
               <button

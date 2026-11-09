@@ -34,7 +34,7 @@ export const SEND_INDEX_RAIL_WIDTH = 24;
  * reserves only SEND_INDEX_RAIL_WIDTH, so this inset is taken out of the gap
  * between the two rather than added to what the text gives up.
  */
-export const SEND_INDEX_RAIL_INSET = 14;
+export const SEND_INDEX_RAIL_INSET = 6;
 
 /** Each tick is a hairline; the stack reads as a ruler rather than a list. */
 const TICK_HEIGHT = 2;
@@ -260,7 +260,7 @@ function SendIndexCard({ text }: { text: string }) {
       gap does not leave the element either — with margin the card would flicker
       out from under the cursor halfway across.
     */
-    <div className="absolute end-full top-1/2 -translate-y-1/2 pe-2">
+    <div className="absolute start-full top-1/2 -translate-y-1/2 ps-2">
       <div
         className="bg-surface-raised border border-border-default rounded-lg shadow-md px-3 py-2 space-y-0.5 select-text cursor-auto"
         style={{ width: CARD_WIDTH }}
@@ -564,10 +564,10 @@ export function SendIndex(props: Props) {
         changes with focus; padding that appeared with it would shift every
         tick at the moment the user is trying to read where they are.
       */
-      className={`absolute top-1/2 -translate-y-1/2 z-20 flex flex-col items-end py-2 rounded-full outline-none transition-colors duration-150 ${
+      className={`absolute top-1/2 -translate-y-1/2 z-20 flex flex-col items-start py-2 rounded-full outline-none transition-colors duration-150 ${
         focused ? 'bg-surface-raised' : 'bg-transparent'
       }`}
-      style={{ width: SEND_INDEX_RAIL_WIDTH, insetInlineEnd: SEND_INDEX_RAIL_INSET }}
+      style={{ width: SEND_INDEX_RAIL_WIDTH, insetInlineStart: SEND_INDEX_RAIL_INSET }}
     >
       {entries.map((entry, i) => {
         const isPointed = i === pointed;
@@ -590,7 +590,7 @@ export function SendIndex(props: Props) {
               it without asking React where it is. See moveBy.
             */
             data-send-index-current={i === current ? 'true' : undefined}
-            className="relative flex items-center justify-end pe-0.5 cursor-pointer"
+            className="relative flex items-center justify-start ps-0.5 cursor-pointer"
             style={{ height: TICK_HEIGHT + TICK_GAP, width: SEND_INDEX_RAIL_WIDTH }}
             onMouseEnter={() => setPointed(i)}
             onMouseLeave={() => setPointed(at => (at === i ? null : at))}
