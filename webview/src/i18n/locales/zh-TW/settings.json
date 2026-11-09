@@ -228,6 +228,26 @@
       "left": "因正在使用而維持原樣的工作階段：{{count}} 個。請關閉後再試一次。",
       "failed": "無法準備的工作階段：{{count}} 個",
       "error": "無法準備工作階段：{{message}}"
+    },
+    "readAloud": {
+      "title": "朗讀",
+      "description": "按下回覆下方的喇叭按鈕時朗讀回覆的聲音的設定。在你修改之前，聲音和語速是你的 Claude 帳號中儲存的值。",
+      "language": {
+        "label": "語言",
+        "description": "朗讀回覆所用的語言。選擇自動時，每則回覆依其文字所用的語言朗讀。",
+        "auto": "自動"
+      },
+      "voice": {
+        "label": "風格",
+        "description": "用哪種聲音朗讀。"
+      },
+      "speed": {
+        "label": "語速",
+        "description": "回覆朗讀的快慢。",
+        "slow": "慢",
+        "normal": "正常",
+        "fast": "快"
+      }
     }
   },
   "diffView": {

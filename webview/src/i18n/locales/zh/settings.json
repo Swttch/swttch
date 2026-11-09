@@ -228,6 +228,26 @@
       "left": "因正在使用而保持原样的会话：{{count}} 个。请关闭后重试。",
       "failed": "未能准备的会话：{{count}} 个",
       "error": "无法准备会话：{{message}}"
+    },
+    "readAloud": {
+      "title": "朗读",
+      "description": "点击回复下方的扬声器按钮时朗读回复的声音的设置。在你修改之前，声音和语速是你的 Claude 账号中保存的值。",
+      "language": {
+        "label": "语言",
+        "description": "朗读回复所用的语言。选择自动时，每条回复按其文字所用的语言朗读。",
+        "auto": "自动"
+      },
+      "voice": {
+        "label": "风格",
+        "description": "用哪种声音朗读。"
+      },
+      "speed": {
+        "label": "语速",
+        "description": "回复朗读的快慢。",
+        "slow": "慢",
+        "normal": "正常",
+        "fast": "快"
+      }
     }
   },
   "diffView": {

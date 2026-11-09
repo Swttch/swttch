@@ -53,3 +53,5 @@ NNN-짧은-주제.md      NNN = 이슈 또는 PR 번호
   CLI를 띄울 때 문서화되지 않은 환경변수 `CLAUDE_CODE_ATTACHMENTS_BY_PATH=1`을 주어 터미널처럼 `SendUserFile` 도구를 받는다
 - [647-entrypoint-for-desktop-import.md](./647-entrypoint-for-desktop-import.md) —
   CLI를 띄울 때 문서화되지 않은 환경변수 `CLAUDE_CODE_ENTRYPOINT`에 우리 이름을 주어, 데스크탑의 "Claude Code CLI 세션 가져오기"가 플러그인 세션을 잡게 한다. 이미 쌓인 세션 기록의 `sdk-cli`도 사용자가 누를 때만 같은 이름으로 바꾼다
+- [608-read-aloud-speech-endpoint.md](./608-read-aloud-speech-endpoint.md) —
+  답변을 소리로 읽을 때 미문서화 음성 합성 엔드포인트 `wss://api.anthropic.com/api/ws/text_to_speech/text_stream`을 확장킷(`swttch-ext tts`)으로 부른다. 토큰은 확장킷 안에서만 쓰이고 플러그인은 소리만 받는다

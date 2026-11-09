@@ -1032,6 +1032,8 @@
       "readAndEditedFile": "읽음 및 편집함 {{name}}",
       "runningCommand": "실행 중 명령어",
       "failedMark": "실패",
+      "stoppedMark": "중지됨",
+      "interruptedNote": "중단됨",
       "exitCode": "종료 코드 {{code}}",
       "pageScript": "페이지 스크립트 실행함",
       "pageScriptRunning": "페이지 스크립트 실행 중",
@@ -1130,5 +1132,17 @@
         "agent": "에이전트 실행 중"
       }
     }
+  },
+  "readAloud": {
+    "label": "소리 내어 읽기",
+    "pause": "일시 중지",
+    "resume": "재개",
+    "loading": "로딩 중...",
+    "failed": "소리 내어 읽지 못했어요.",
+    "unsupported": "이 브라우저에서는 소리를 재생할 수 없어요.",
+    "kitMissing": "소리 내어 읽으려면 확장킷(@swttch/extend-kit)이 필요해요. 설정 → 일반 → 음성 입력에서 설치하세요.",
+    "kitTooOld": "소리 내어 읽으려면 더 새로운 확장킷(@swttch/extend-kit)이 필요해요. 설정 → 일반 → 음성 입력에서 업데이트하세요.",
+    "notLoggedIn": "소리 내어 읽으려면 Claude 계정 로그인이 필요해요. 먼저 Claude Code에 로그인하세요.",
+    "codeBlock": "코드 블록"
   }
 }

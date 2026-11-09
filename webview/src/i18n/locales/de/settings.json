@@ -228,6 +228,26 @@
       "left": "Sitzungen, die wegen laufender Nutzung unverändert blieben: {{count}}. Schließen Sie sie und versuchen Sie es erneut.",
       "failed": "Sitzungen, die nicht vorbereitet werden konnten: {{count}}",
       "error": "Die Sitzungen konnten nicht vorbereitet werden: {{message}}"
+    },
+    "readAloud": {
+      "title": "Vorlesen",
+      "description": "Einstellungen für die Stimme, die eine Antwort vorliest, wenn Sie auf die Lautsprechertaste darunter drücken. Bis Sie sie ändern, sind Stimme und Tempo die in Ihrem Claude-Konto gespeicherten Werte.",
+      "language": {
+        "label": "Sprache",
+        "description": "Die Sprache, in der eine Antwort vorgelesen wird. Bei „Automatisch“ wird jede Antwort in der Sprache vorgelesen, in der sie geschrieben ist.",
+        "auto": "Automatisch"
+      },
+      "voice": {
+        "label": "Stil",
+        "description": "Welche Stimme vorliest."
+      },
+      "speed": {
+        "label": "Tempo",
+        "description": "Wie schnell eine Antwort vorgelesen wird.",
+        "slow": "Langsam",
+        "normal": "Normal",
+        "fast": "Schnell"
+      }
     }
   },
   "diffView": {

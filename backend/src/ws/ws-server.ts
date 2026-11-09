@@ -17,6 +17,7 @@ import { isJetBrainsMode } from '../config/environment';
 import { getPluginVersion } from '../core/handlers/getVersion';
 import { cancelLogin } from '../core/handlers/login';
 import { releaseDictation } from '../core/handlers/dictation';
+import { releaseReadAloud } from '../core/handlers/readAloud';
 import { unwatchAllForConnection } from '../core/features/backgroundTaskOutputWatcher';
 import { reportBackendError, trackActivity } from '../core/features/telemetry';
 import { tunnelPairing, issueLocalPairCode } from '../core/features/tunnel-pairing';
@@ -396,6 +397,8 @@ export function startWebSocketServer(
         // Same reasoning for dictation: the transcription socket is ours, not
         // the webview's, so a closed tab would leave it open and billing.
         releaseDictation(connectionId);
+        // A reading that nobody hears is the same waste.
+        releaseReadAloud(connectionId);
         // And for background-task output watchers: fs.watch handles are ours
         // too, so a closed tab must not leave them running forever.
         unwatchAllForConnection(connectionId);

@@ -1042,6 +1042,8 @@
       "readAndEditedFile": "Read and edited {{name}}",
       "runningCommand": "Running command",
       "failedMark": "Failed",
+      "stoppedMark": "Stopped",
+      "interruptedNote": "Interrupted",
       "exitCode": "Exit code {{code}}",
       "pageScript": "Ran page script",
       "pageScriptRunning": "Running page script",
@@ -1143,5 +1145,17 @@
         "agent": "Running an agent"
       }
     }
+  },
+  "readAloud": {
+    "label": "Read aloud",
+    "pause": "Pause",
+    "resume": "Resume",
+    "loading": "Loading…",
+    "failed": "Could not read this aloud.",
+    "unsupported": "This browser cannot play the voice.",
+    "kitMissing": "Reading aloud needs the Swttch companion (@swttch/extend-kit). Install it in Settings → General → Voice input.",
+    "kitTooOld": "Reading aloud needs a newer Swttch companion (@swttch/extend-kit). Update it in Settings → General → Voice input.",
+    "notLoggedIn": "Reading aloud needs a Claude account login. Sign in to Claude Code first.",
+    "codeBlock": "code block"
   }
 }

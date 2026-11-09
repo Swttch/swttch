@@ -1078,6 +1078,8 @@
       "readAndEditedFile": "تمت قراءة {{name}} وتعديله",
       "runningCommand": "جارٍ تنفيذ أمر",
       "failedMark": "فشل",
+      "stoppedMark": "أُوقف",
+      "interruptedNote": "تمت المقاطعة",
       "exitCode": "رمز الخروج {{code}}",
       "pageScript": "تم تشغيل نص الصفحة",
       "pageScriptRunning": "جارٍ تشغيل نص الصفحة",
@@ -1191,5 +1193,17 @@
         "agent": "تشغيل وكيل"
       }
     }
+  },
+  "readAloud": {
+    "label": "القراءة بصوت عالٍ",
+    "pause": "إيقاف مؤقت",
+    "resume": "استئناف",
+    "loading": "جارٍ التحميل…",
+    "failed": "تعذّرت القراءة بصوت عالٍ.",
+    "unsupported": "لا يستطيع هذا المتصفح تشغيل الصوت.",
+    "kitMissing": "تحتاج القراءة بصوت عالٍ إلى أداة Swttch المساعدة (@swttch/extend-kit). ثبّتها من الإعدادات → عام → الإدخال الصوتي.",
+    "kitTooOld": "تحتاج القراءة بصوت عالٍ إلى إصدار أحدث من أداة Swttch المساعدة (@swttch/extend-kit). حدّثها من الإعدادات → عام → الإدخال الصوتي.",
+    "notLoggedIn": "تحتاج القراءة بصوت عالٍ إلى تسجيل الدخول بحساب Claude. سجّل الدخول إلى Claude Code أولًا.",
+    "codeBlock": "كتلة برمجية"
   }
 }

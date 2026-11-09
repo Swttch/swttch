@@ -1044,6 +1044,8 @@
       "readAndEditedFile": "{{name}} leído y editado",
       "runningCommand": "Ejecutando comando",
       "failedMark": "Fallido",
+      "stoppedMark": "Detenido",
+      "interruptedNote": "Interrumpido",
       "exitCode": "Código de salida {{code}}",
       "pageScript": "Ejecutó un script de la página",
       "pageScriptRunning": "Ejecutando script de página",
@@ -1148,5 +1150,17 @@
         "agent": "Ejecutando un agente"
       }
     }
+  },
+  "readAloud": {
+    "label": "Leer en voz alta",
+    "pause": "Pausar",
+    "resume": "Reanudar",
+    "loading": "Cargando…",
+    "failed": "No se pudo leer en voz alta.",
+    "unsupported": "Este navegador no puede reproducir la voz.",
+    "kitMissing": "Leer en voz alta necesita el complemento de Swttch (@swttch/extend-kit). Instálalo en Configuración → General → Entrada de voz.",
+    "kitTooOld": "Leer en voz alta necesita un complemento de Swttch más reciente (@swttch/extend-kit). Actualízalo en Configuración → General → Entrada de voz.",
+    "notLoggedIn": "Leer en voz alta necesita iniciar sesión con una cuenta de Claude. Inicia sesión primero en Claude Code.",
+    "codeBlock": "bloque de código"
   }
 }

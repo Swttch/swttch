@@ -1032,6 +1032,8 @@
       "readAndEditedFile": "读取并编辑了 {{name}}",
       "runningCommand": "正在运行命令",
       "failedMark": "失败",
+      "stoppedMark": "已停止",
+      "interruptedNote": "已中断",
       "exitCode": "退出码 {{code}}",
       "pageScript": "运行了页面脚本",
       "pageScriptRunning": "正在运行页面脚本",
@@ -1130,5 +1132,17 @@
         "agent": "正在运行代理"
       }
     }
+  },
+  "readAloud": {
+    "label": "朗读",
+    "pause": "暂停",
+    "resume": "继续",
+    "loading": "加载中…",
+    "failed": "无法朗读。",
+    "unsupported": "此浏览器无法播放语音。",
+    "kitMissing": "朗读需要 Swttch 配套工具（@swttch/extend-kit）。请在 设置 → 通用 → 语音输入 中安装。",
+    "kitTooOld": "朗读需要更新版本的 Swttch 配套工具（@swttch/extend-kit）。请在 设置 → 通用 → 语音输入 中更新。",
+    "notLoggedIn": "朗读需要登录 Claude 账号。请先登录 Claude Code。",
+    "codeBlock": "代码块"
   }
 }

@@ -420,7 +420,60 @@ export interface VoiceSettings {
   silenceTimeout?: number;
   /** Keystroke that toggles recording, e.g. 'Alt+D'. */
   shortcut?: string | null;
+  /** The language replies are read aloud in, e.g. 'ko'. Null: the language of each reply, found from its text. */
+  readAloudLanguage?: string | null;
+  /** The voice replies are read aloud in, e.g. 'buttery'. Null: the voice chosen in the Claude account (the desktop app). */
+  readAloudVoice?: string | null;
+  /** How fast replies are read aloud, 0.7..1.5. Null: the speed chosen in the Claude account. */
+  readAloudSpeed?: number | null;
 }
+
+/**
+ * The languages the speech service reads in, and the voices it names for each, with the names it gives them in that
+ * language. This is the list the Claude desktop app shows in its voice settings; it comes from the service's own
+ * configuration, read once from a signed-in claude.ai session on 2026-11-09, and is not something this app can ask
+ * for. A voice name is shown as the service writes it, in the language it belongs to.
+ */
+export const READ_ALOUD_LANGUAGES: ReadonlyArray<{ code: string; voices: ReadonlyArray<{ id: string; name: string; previewUrl: string }> }> = [
+  { code: 'en', voices: [{ id: 'buttery', name: 'Buttery', previewUrl: 'https://assets.claude.ai/voice/selection/buttery-v8.mp3' }, { id: 'airy', name: 'Airy', previewUrl: 'https://assets.claude.ai/voice/selection/airy-v8.mp3' }, { id: 'mellow', name: 'Mellow', previewUrl: 'https://assets.claude.ai/voice/selection/mellow-v8.mp3' }, { id: 'glassy', name: 'Glassy', previewUrl: 'https://assets.claude.ai/voice/selection/glassy-v8.mp3' }, { id: 'rounded', name: 'Rounded', previewUrl: 'https://assets.claude.ai/voice/selection/rounded-v8.mp3' }] },
+  { code: 'en-IN', voices: [{ id: 'buttery', name: 'Buttery', previewUrl: 'https://assets.claude.ai/voice/selection/buttery-v8.mp3' }, { id: 'airy', name: 'Airy', previewUrl: 'https://assets.claude.ai/voice/selection/airy-v8.mp3' }, { id: 'mellow', name: 'Mellow', previewUrl: 'https://assets.claude.ai/voice/selection/mellow-v8.mp3' }, { id: 'glassy', name: 'Glassy', previewUrl: 'https://assets.claude.ai/voice/selection/glassy-v8.mp3' }, { id: 'rounded', name: 'Rounded', previewUrl: 'https://assets.claude.ai/voice/selection/rounded-v8.mp3' }] },
+  { code: 'en-GB', voices: [{ id: 'buttery', name: 'Buttery', previewUrl: 'https://assets.claude.ai/voice/selection/buttery-v8.mp3' }, { id: 'airy', name: 'Airy', previewUrl: 'https://assets.claude.ai/voice/selection/airy-v8.mp3' }, { id: 'mellow', name: 'Mellow', previewUrl: 'https://assets.claude.ai/voice/selection/mellow-v8.mp3' }, { id: 'glassy', name: 'Glassy', previewUrl: 'https://assets.claude.ai/voice/selection/glassy-v8.mp3' }, { id: 'rounded', name: 'Rounded', previewUrl: 'https://assets.claude.ai/voice/selection/rounded-v8.mp3' }] },
+  { code: 'zh-CN', voices: [{ id: 'zh-CN-rouhe', name: '柔和', previewUrl: 'https://assets.claude.ai/voice/selection/zh-CN-rouhe-v6.mp3' }, { id: 'zh-CN-mingkuai', name: '明快', previewUrl: 'https://assets.claude.ai/voice/selection/zh-CN-mingkuai-v5.mp3' }] },
+  { code: 'yue', voices: [{ id: 'yue-seonhau', name: '醇厚', previewUrl: 'https://assets.claude.ai/voice/selection/yue-seonhau-v7.mp3' }, { id: 'yue-mingloeng', name: '明亮', previewUrl: 'https://assets.claude.ai/voice/selection/yue-mingloeng-v6.mp3' }] },
+  { code: 'fr', voices: [{ id: 'fr-douce', name: 'Douce', previewUrl: 'https://assets.claude.ai/voice/selection/fr-douce-v6.mp3' }, { id: 'fr-claire', name: 'Claire', previewUrl: 'https://assets.claude.ai/voice/selection/fr-claire-v5.mp3' }] },
+  { code: 'fr-CA', voices: [{ id: 'fr-CA-douce', name: 'Douce', previewUrl: 'https://assets.claude.ai/voice/selection/fr-CA-douce-v6.mp3' }, { id: 'fr-CA-claire', name: 'Claire', previewUrl: 'https://assets.claude.ai/voice/selection/fr-CA-claire-v5.mp3' }] },
+  { code: 'de', voices: [{ id: 'de-hell', name: 'Hell', previewUrl: 'https://assets.claude.ai/voice/selection/de-hell-v5.mp3' }, { id: 'de-sanft', name: 'Sanft', previewUrl: 'https://assets.claude.ai/voice/selection/de-sanft-v6.mp3' }] },
+  { code: 'de-AT', voices: [{ id: 'de-AT-hell', name: 'Hell', previewUrl: 'https://assets.claude.ai/voice/selection/de-AT-hell-v5.mp3' }, { id: 'de-AT-sanft', name: 'Sanft', previewUrl: 'https://assets.claude.ai/voice/selection/de-AT-sanft-v6.mp3' }] },
+  { code: 'hi', voices: [{ id: 'hi-shant', name: 'शांत', previewUrl: 'https://assets.claude.ai/voice/selection/hi-shant-v6.mp3' }, { id: 'hi-ujjwal', name: 'उज्ज्वल', previewUrl: 'https://assets.claude.ai/voice/selection/hi-ujjwal-v5.mp3' }] },
+  { code: 'id', voices: [{ id: 'id-lembut', name: 'Lembut', previewUrl: 'https://assets.claude.ai/voice/selection/id-lembut-v6.mp3' }, { id: 'id-ringan', name: 'Ringan', previewUrl: 'https://assets.claude.ai/voice/selection/id-ringan-v5.mp3' }] },
+  { code: 'it', voices: [{ id: 'it-dolce', name: 'Dolce', previewUrl: 'https://assets.claude.ai/voice/selection/it-dolce-v6.mp3' }, { id: 'it-chiara', name: 'Chiara', previewUrl: 'https://assets.claude.ai/voice/selection/it-chiara-v2.mp3' }] },
+  { code: 'ja', voices: [{ id: 'ja-maroyaka', name: 'まろやか', previewUrl: 'https://assets.claude.ai/voice/selection/ja-maroyaka-v6.mp3' }, { id: 'ja-akarui', name: '明るい', previewUrl: 'https://assets.claude.ai/voice/selection/ja-akarui-v5.mp3' }] },
+  { code: 'ko', voices: [{ id: 'ko-balgeun', name: '밝은', previewUrl: 'https://assets.claude.ai/voice/selection/ko-balgeun-v5.mp3' }, { id: 'ko-chabunhan', name: '차분한', previewUrl: 'https://assets.claude.ai/voice/selection/ko-chabunhan-v6.mp3' }] },
+  { code: 'pt', voices: [{ id: 'pt-BR-clara', name: 'Clara', previewUrl: 'https://assets.claude.ai/voice/selection/pt-BR-clara-v5.mp3' }, { id: 'pt-BR-suave', name: 'Suave', previewUrl: 'https://assets.claude.ai/voice/selection/pt-BR-suave-v6.mp3' }] },
+  { code: 'pt-BR', voices: [{ id: 'pt-BR-clara', name: 'Clara', previewUrl: 'https://assets.claude.ai/voice/selection/pt-BR-clara-v5.mp3' }, { id: 'pt-BR-suave', name: 'Suave', previewUrl: 'https://assets.claude.ai/voice/selection/pt-BR-suave-v6.mp3' }] },
+  { code: 'pt-PT', voices: [{ id: 'pt-PT-clara', name: 'Clara', previewUrl: 'https://assets.claude.ai/voice/selection/pt-PT-clara-v6.mp3' }, { id: 'pt-PT-suave', name: 'Suave', previewUrl: 'https://assets.claude.ai/voice/selection/pt-PT-suave-v7.mp3' }] },
+  { code: 'ru', voices: [{ id: 'ru-zvonkiy', name: 'Звонкий', previewUrl: 'https://assets.claude.ai/voice/selection/ru-zvonkiy-v5.mp3' }, { id: 'ru-myagkiy', name: 'Мягкий', previewUrl: 'https://assets.claude.ai/voice/selection/ru-myagkiy-v6.mp3' }] },
+  { code: 'es', voices: [{ id: 'es-suave', name: 'Suave', previewUrl: 'https://assets.claude.ai/voice/selection/es-suave-v6.mp3' }, { id: 'es-clara', name: 'Clara', previewUrl: 'https://assets.claude.ai/voice/selection/es-clara-v5.mp3' }] },
+  { code: 'es-419', voices: [{ id: 'es-419-clara', name: 'Clara', previewUrl: 'https://assets.claude.ai/voice/selection/es-419-clara-v5.mp3' }, { id: 'es-419-suave', name: 'Suave', previewUrl: 'https://assets.claude.ai/voice/selection/es-419-suave-v6.mp3' }] },
+  { code: 'tr', voices: [{ id: 'tr-yumusak', name: 'Yumuşak', previewUrl: 'https://assets.claude.ai/voice/selection/tr-yumusak-v6.mp3' }, { id: 'tr-parlak', name: 'Parlak', previewUrl: 'https://assets.claude.ai/voice/selection/tr-parlak-v5.mp3' }] },
+  { code: 'uk', voices: [{ id: 'uk-yaskravyi', name: 'Яскравий', previewUrl: 'https://assets.claude.ai/voice/selection/uk-yaskravyi-v5.mp3' }, { id: 'uk-lahidnyi', name: 'Лагідний', previewUrl: 'https://assets.claude.ai/voice/selection/uk-lahidnyi-v7.mp3' }] },
+];
+
+/** The voices to offer for a language: its own, else the ones the service names for English. */
+export function readAloudVoicesFor(language: string): ReadonlyArray<{ id: string; name: string; previewUrl: string }> {
+  const code = language.replace(/_/g, '-');
+  const exact = READ_ALOUD_LANGUAGES.find((entry) => entry.code.toLowerCase() === code.toLowerCase());
+  const primary = code.split('-')[0].toLowerCase();
+  const near = exact ?? READ_ALOUD_LANGUAGES.find((entry) => entry.code.toLowerCase() === primary);
+  return (near ?? READ_ALOUD_LANGUAGES[0]).voices;
+}
+
+/** The speeds the desktop app offers, with the playback speed each stands for. */
+export const READ_ALOUD_SPEEDS = [
+  { id: 'slow', value: 0.8 },
+  { id: 'normal', value: 1 },
+  { id: 'fast', value: 1.2 },
+] as const;
 
 /**
  * 설정 상태 인터페이스

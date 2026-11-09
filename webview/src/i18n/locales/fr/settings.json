@@ -228,6 +228,26 @@
       "left": "Sessions laissées telles quelles car elles sont en cours d'utilisation : {{count}}. Fermez-les puis réessayez.",
       "failed": "Sessions qui n'ont pas pu être préparées : {{count}}",
       "error": "Impossible de préparer les sessions : {{message}}"
+    },
+    "readAloud": {
+      "title": "Lire à voix haute",
+      "description": "Réglages de la voix qui lit une réponse quand vous appuyez sur le bouton haut-parleur placé dessous. Tant que vous ne les changez pas, la voix et la vitesse sont celles enregistrées dans votre compte Claude.",
+      "language": {
+        "label": "Langue",
+        "description": "La langue dans laquelle une réponse est lue. En automatique, chaque réponse est lue dans la langue dans laquelle elle est écrite.",
+        "auto": "Automatique"
+      },
+      "voice": {
+        "label": "Style",
+        "description": "Quelle voix lit."
+      },
+      "speed": {
+        "label": "Vitesse",
+        "description": "À quelle vitesse une réponse est lue.",
+        "slow": "Lent",
+        "normal": "Normale",
+        "fast": "Rapide"
+      }
     }
   },
   "diffView": {

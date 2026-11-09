@@ -228,6 +228,26 @@
       "left": "Sessions left as they are because they are in use: {{count}}. Close them and try again.",
       "failed": "Sessions that could not be prepared: {{count}}",
       "error": "Could not prepare the sessions: {{message}}"
+    },
+    "readAloud": {
+      "title": "Read aloud",
+      "description": "Settings for the voice that reads a reply aloud when you press the speaker button under it. Until you change them, the voice and the speed are the ones stored in your Claude account.",
+      "language": {
+        "label": "Language",
+        "description": "The language a reply is read in. Auto reads each reply in the language it is written in.",
+        "auto": "Auto"
+      },
+      "voice": {
+        "label": "Style",
+        "description": "Which voice reads."
+      },
+      "speed": {
+        "label": "Speed",
+        "description": "How fast a reply is read.",
+        "slow": "Slow",
+        "normal": "Normal",
+        "fast": "Fast"
+      }
     }
   },
   "diffView": {

@@ -1038,6 +1038,8 @@
       "readAndEditedFile": "{{name}} خوانده و ویرایش شد",
       "runningCommand": "دستور در حال اجراست",
       "failedMark": "ناموفق",
+      "stoppedMark": "متوقف شد",
+      "interruptedNote": "قطع شد",
       "exitCode": "کد خروج {{code}}",
       "pageScript": "اسکریپت صفحه اجرا شد",
       "pageScriptRunning": "اسکریپت صفحه در حال اجراست",
@@ -1139,5 +1141,17 @@
         "agent": "اجرای عامل"
       }
     }
+  },
+  "readAloud": {
+    "label": "خواندن با صدای بلند",
+    "pause": "توقف",
+    "resume": "ادامه",
+    "loading": "در حال بارگذاری…",
+    "failed": "خواندن با صدای بلند ممکن نشد.",
+    "unsupported": "این مرورگر نمی‌تواند صدا را پخش کند.",
+    "kitMissing": "خواندن با صدای بلند به ابزار همراه Swttch (@swttch/extend-kit) نیاز دارد. آن را از تنظیمات → عمومی → ورودی صوتی نصب کنید.",
+    "kitTooOld": "خواندن با صدای بلند به نسخهٔ جدیدتر ابزار همراه Swttch (@swttch/extend-kit) نیاز دارد. آن را از تنظیمات → عمومی → ورودی صوتی به‌روز کنید.",
+    "notLoggedIn": "خواندن با صدای بلند به ورود با حساب Claude نیاز دارد. نخست وارد Claude Code شوید.",
+    "codeBlock": "بلوک کد"
   }
 }

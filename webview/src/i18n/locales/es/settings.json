@@ -228,6 +228,26 @@
       "left": "Sesiones que se dejaron como estaban porque están en uso: {{count}}. Ciérralas y vuelve a intentarlo.",
       "failed": "Sesiones que no se pudieron preparar: {{count}}",
       "error": "No se pudieron preparar las sesiones: {{message}}"
+    },
+    "readAloud": {
+      "title": "Leer en voz alta",
+      "description": "Ajustes de la voz que lee una respuesta cuando pulsas el botón del altavoz que hay debajo. Hasta que los cambies, la voz y la velocidad son las guardadas en tu cuenta de Claude.",
+      "language": {
+        "label": "Idioma",
+        "description": "El idioma en que se lee una respuesta. En automático, cada respuesta se lee en el idioma en que está escrita.",
+        "auto": "Automático"
+      },
+      "voice": {
+        "label": "Estilo",
+        "description": "Qué voz lee."
+      },
+      "speed": {
+        "label": "Velocidad",
+        "description": "Con qué rapidez se lee una respuesta.",
+        "slow": "Lenta",
+        "normal": "Normal",
+        "fast": "Rápido"
+      }
     }
   },
   "diffView": {

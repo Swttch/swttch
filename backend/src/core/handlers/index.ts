@@ -112,6 +112,7 @@ import {
   getDictationAvailabilityHandler,
   getExtendKitInfoHandler,
 } from './dictation';
+import { startReadAloudHandler, stopReadAloudHandler, getReadAloudAvailabilityHandler, getReadAloudVoiceSettingsHandler } from './readAloud';
 import { getCcbInstallHintHandler } from './getCcbInstallHint';
 import { getAccountHandler } from './getAccount';
 import { getAccountsHandler } from './getAccounts';
@@ -535,6 +536,18 @@ export async function handleMessage(
       break;
     case MessageType.GET_DICTATION_AVAILABILITY:
       await getDictationAvailabilityHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.START_READ_ALOUD:
+      await startReadAloudHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.STOP_READ_ALOUD:
+      await stopReadAloudHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_READ_ALOUD_VOICE_SETTINGS:
+      await getReadAloudVoiceSettingsHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_READ_ALOUD_AVAILABILITY:
+      await getReadAloudAvailabilityHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_EXTEND_KIT_INFO:
       await getExtendKitInfoHandler(connectionId, message, connections, bridge);

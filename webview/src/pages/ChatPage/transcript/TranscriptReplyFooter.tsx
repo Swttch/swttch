@@ -4,7 +4,9 @@ import { useTranslation } from '@/i18n';
 import { Tooltip } from '@/components/Tooltip';
 import { useConfirmDialog } from '@/components/ConfirmDialog/useConfirmDialog';
 import { timeAgo } from '@/utils/timeAgo';
-import { CopyIcon, ForkIcon } from './footerIcons';
+import { useReadAloud } from '@/hooks/useReadAloud';
+import { speakableText } from '@/utils/readAloud/speakableText';
+import { CopyIcon, ForkIcon, PauseIcon, PlayIcon, SpeakerIcon } from './footerIcons';
 
 const BUTTON =
   'flex w-6 h-6 cursor-pointer items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary';
@@ -31,14 +33,24 @@ export function TranscriptReplyFooter({
   copyText,
   onFork,
   timestamp,
+  readAloudKey,
 }: {
   className?: string;
+  /** Names this reply for "Read aloud", which reads `copyText`. Without it the button is not drawn. */
+  readAloudKey?: string;
   copyText?: string;
   onFork?: () => void;
   timestamp?: string;
 }) {
   const { t, i18n } = useTranslation('chat');
   const { confirmDialog, confirm } = useConfirmDialog();
+  const reading = useReadAloud(readAloudKey ?? '');
+  const canRead = readAloudKey !== undefined && copyText !== undefined && copyText.trim() !== '';
+  const readLabel =
+    reading.status === 'loading' ? t('readAloud.loading')
+    : reading.status === 'playing' ? t('readAloud.pause')
+    : reading.status === 'paused' ? t('readAloud.resume')
+    : t('readAloud.label');
   const sentAt = timestamp ? Date.parse(timestamp) : NaN;
   const known = !Number.isNaN(sentAt);
   const exact = known
@@ -64,11 +76,13 @@ export function TranscriptReplyFooter({
   };
 
   if (copyText === undefined && !onFork && !known) return null;
+  // While it is being read the line stays on screen, so the pause button does not vanish with the pointer.
+  const visible = reading.status === 'idle' ? 'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100' : 'opacity-100';
   return (
     // The click stops here: the chat logs the raw entry on any click that reaches it. The line is not part of the
     // message, so a copy that reaches over it leaves it out: `select-none` and `data-copy-ignore`.
     <div
-      className={`${className} pointer-events-none opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 select-none inline-flex items-center gap-1.5 text-xs text-text-secondary -ms-1`}
+      className={`${className} ${visible} transition-opacity duration-150 select-none inline-flex items-center gap-1.5 text-xs text-text-secondary -ms-1`}
       data-copy-ignore="true"
       onClick={(event) => event.stopPropagation()}
     >
@@ -77,6 +91,26 @@ export function TranscriptReplyFooter({
           <Tooltip content={t('transcript.userFooter.copy')} placement="top">
             <button type="button" onClick={copy} aria-label={t('transcript.userFooter.copy')} className={BUTTON}>
               <CopyIcon className="w-[0.95rem] h-[0.95rem]" />
+            </button>
+          </Tooltip>
+        )}
+        {canRead && (
+          <Tooltip content={readLabel} placement="top">
+            <button
+              type="button"
+              onClick={() => reading.toggle(speakableText(copyText ?? '', t('readAloud.codeBlock')))}
+              aria-label={readLabel}
+              className={BUTTON}
+            >
+              {reading.status === 'loading' ? (
+                <span className="h-[0.95rem] w-[0.95rem] animate-spin rounded-full border-2 border-border-default border-t-text-secondary" />
+              ) : reading.status === 'playing' ? (
+                <PauseIcon className="w-[0.95rem] h-[0.95rem]" />
+              ) : reading.status === 'paused' ? (
+                <PlayIcon className="w-[0.95rem] h-[0.95rem]" />
+              ) : (
+                <SpeakerIcon className="w-[0.95rem] h-[0.95rem]" />
+              )}
             </button>
           </Tooltip>
         )}

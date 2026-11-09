@@ -1032,6 +1032,8 @@
       "readAndEditedFile": "{{name}} を読み取り、編集",
       "runningCommand": "コマンドを実行中",
       "failedMark": "失敗",
+      "stoppedMark": "停止済み",
+      "interruptedNote": "中断されました",
       "exitCode": "終了コード{{code}}",
       "pageScript": "ページスクリプトを実行しました",
       "pageScriptRunning": "ページスクリプトを実行しています",
@@ -1130,5 +1132,17 @@
         "agent": "エージェントを実行しています"
       }
     }
+  },
+  "readAloud": {
+    "label": "読み上げ",
+    "pause": "一時停止",
+    "resume": "再開",
+    "loading": "読み込み中...",
+    "failed": "読み上げに失敗しました。",
+    "unsupported": "このブラウザでは音声を再生できません。",
+    "kitMissing": "読み上げには Swttch の補助ツール（@swttch/extend-kit）が必要です。設定 → 一般 → 音声入力からインストールしてください。",
+    "kitTooOld": "読み上げには新しい Swttch の補助ツール（@swttch/extend-kit）が必要です。設定 → 一般 → 音声入力から更新してください。",
+    "notLoggedIn": "読み上げには Claude アカウントへのログインが必要です。先に Claude Code にサインインしてください。",
+    "codeBlock": "コードブロック"
   }
 }

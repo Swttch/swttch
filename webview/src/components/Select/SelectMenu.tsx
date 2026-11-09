@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useState, type RefObject } from 'react';
 import { Portal } from '../Portal';
 import type { SelectOption } from './types';
+import { useOptionPreview } from './useOptionPreview';
 
 /** Stable id for the active option, wired to the listbox's aria-activedescendant. */
 const OPTION_ID_PREFIX = 'select-option-';
@@ -64,6 +65,7 @@ export function SelectMenu(props: Props) {
     onSearchKeyDown,
   } = props;
   const [pos, setPos] = useState<Position | null>(null);
+  const preview = useOptionPreview();
 
   useLayoutEffect(() => {
     const anchor = anchorRef.current;
@@ -155,15 +157,38 @@ export function SelectMenu(props: Props) {
               }`}
             >
               <span className="truncate">{option.label}</span>
-              {isSelected && (
-                <span aria-hidden className="flex-shrink-0 text-accent-primary">
-                  ✓
-                </span>
-              )}
+              <span className="flex flex-shrink-0 items-center gap-2">
+                {option.previewUrl && (
+                  // The sample plays while the pointer is on this icon, not on the row: moving down a list to pick
+                  // a voice must stay quiet.
+                  <span
+                    data-option-preview
+                    className="-m-1 rounded p-1"
+                    onMouseEnter={() => preview.start(option.previewUrl as string)}
+                    onMouseLeave={() => preview.stop()}
+                  >
+                    <SoundIcon className={`h-4 w-4 ${preview.playingUrl === option.previewUrl ? 'text-accent-primary' : isActive ? 'text-text-tertiary' : 'opacity-0'}`} />
+                  </span>
+                )}
+                {isSelected && (
+                  <span aria-hidden className="text-accent-primary">
+                    ✓
+                  </span>
+                )}
+              </span>
             </button>
           );
         })}
       </div>
     </Portal>
+  );
+}
+
+/** Four bars of different heights: the mark of an option that plays a sample. */
+function SoundIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" className={className} aria-hidden="true">
+      <path d="M4 8.5v3M7.5 5.5v9M11 3.5v13M14.5 7v6M18 9v2" />
+    </svg>
   );
 }

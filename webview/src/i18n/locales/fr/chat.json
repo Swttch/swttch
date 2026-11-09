@@ -1044,6 +1044,8 @@
       "readAndEditedFile": "{{name}} lu et modifié",
       "runningCommand": "Commande en cours d’exécution",
       "failedMark": "Échec",
+      "stoppedMark": "Arrêté",
+      "interruptedNote": "Interrompu",
       "exitCode": "Code de sortie {{code}}",
       "pageScript": "Script de page exécuté",
       "pageScriptRunning": "Exécution du script de la page",
@@ -1148,5 +1150,17 @@
         "agent": "Exécution d’un agent"
       }
     }
+  },
+  "readAloud": {
+    "label": "Lire à voix haute",
+    "pause": "Pause",
+    "resume": "Reprendre",
+    "loading": "Chargement…",
+    "failed": "Impossible de lire à voix haute.",
+    "unsupported": "Ce navigateur ne peut pas lire la voix.",
+    "kitMissing": "La lecture à voix haute nécessite le module complémentaire de Swttch (@swttch/extend-kit). Installez-le dans Paramètres → Général → Saisie vocale.",
+    "kitTooOld": "La lecture à voix haute nécessite une version plus récente du module complémentaire de Swttch (@swttch/extend-kit). Mettez-le à jour dans Paramètres → Général → Saisie vocale.",
+    "notLoggedIn": "La lecture à voix haute nécessite une connexion à un compte Claude. Connectez-vous d’abord à Claude Code.",
+    "codeBlock": "bloc de code"
   }
 }

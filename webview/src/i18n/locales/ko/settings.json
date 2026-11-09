@@ -228,6 +228,26 @@
       "left": "사용 중이라 그대로 둔 세션: {{count}}개. 세션을 닫고 다시 시도하세요.",
       "failed": "준비하지 못한 세션: {{count}}개",
       "error": "세션을 준비하지 못했습니다: {{message}}"
+    },
+    "readAloud": {
+      "title": "소리 내어 읽기",
+      "description": "답변 아래의 스피커 버튼을 눌렀을 때 답변을 읽어 주는 목소리의 설정입니다. 바꾸기 전까지 목소리와 속도는 Claude 계정에 저장된 값입니다.",
+      "language": {
+        "label": "언어",
+        "description": "답변을 읽는 언어입니다. 자동이면 답변마다 그 글이 쓰인 언어로 읽습니다.",
+        "auto": "자동"
+      },
+      "voice": {
+        "label": "스타일",
+        "description": "읽는 목소리입니다."
+      },
+      "speed": {
+        "label": "속도",
+        "description": "답변을 읽는 속도입니다.",
+        "slow": "느림",
+        "normal": "보통",
+        "fast": "빠름"
+      }
     }
   },
   "diffView": {

@@ -75,6 +75,7 @@ function TranscriptBlocks({
                   <TranscriptReplyFooter
                     className="mt-1.5"
                     copyText={text}
+                    readAloudKey={message.uuid ? `${message.uuid}:${index}` : undefined}
                     timestamp={message.timestamp}
                     onFork={sendActions && message.uuid && sendActions.canForkReply(message.uuid) ? () => sendActions.forkAtReply(message.uuid as string) : undefined}
                   />
