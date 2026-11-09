@@ -3,6 +3,7 @@ import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { basename, join } from 'path';
 import { isPowerShellUsable } from './win-job';
 import { ccgHomeDir } from '../config/ccg-home';
+import { getBackendEndpoint } from './backend-endpoint';
 
 /**
  * On-disk registry of live chat CLI processes.
@@ -47,6 +48,13 @@ export interface CliRegistryEntry {
    * CLI is still using.
    */
   mcpContainers?: string[];
+  /**
+   * How to reach the backend that holds this CLI: its port and the token its /internal/* routes
+   * ask for. Lets another program on this machine (the session-management MCP) act on the
+   * session through that backend. Absent while the backend has no server listening. The file is
+   * written readable by the user only, since the token is a secret.
+   */
+  control?: { port: number; token: string };
 }
 
 function registryDir(): string {
@@ -188,9 +196,11 @@ export function registerCliProcess(proc: ChildProcess, sessionId: string, workin
     startedAt: new Date().toISOString(),
     owner: { pid: process.pid, argv1: process.argv[1] ?? '' },
   };
+  const endpoint = getBackendEndpoint();
+  if (endpoint) entry.control = { port: endpoint.port, token: endpoint.token };
   try {
-    mkdirSync(registryDir(), { recursive: true });
-    writeFileSync(join(registryDir(), `${proc.pid}.json`), JSON.stringify(entry, null, 2) + '\n');
+    mkdirSync(registryDir(), { recursive: true, mode: 0o700 });
+    writeFileSync(join(registryDir(), `${proc.pid}.json`), JSON.stringify(entry, null, 2) + '\n', { mode: 0o600 });
   } catch (err) {
     // Best-effort: a failed registry write must never block the chat itself.
     console.error('[node-backend]', 'CLI registry write failed:', err);

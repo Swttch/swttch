@@ -486,6 +486,51 @@ export function buildEntrypointEnv(
   return { CLAUDE_CODE_ENTRYPOINT: swttchEntrypointName(isOn(env.JETBRAINS_MODE)) };
 }
 
+/**
+ * The session-management MCP, handed to the CLI the documented way: `--mcp-config` with stdio
+ * servers. A host that ships the MCP (Swttch Desktop) names the program in
+ * `SWTTCH_SESSION_MCP_BIN`; everyone else leaves it unset and gets no extra argument.
+ *
+ * One server per area, named `swttch_<area>`, so the model sees `mcp__swttch_<area>__<tool>`.
+ * Each is told which session is calling (`SWTTCH_SESSION_ID`) because the server cannot learn
+ * that from the CLI, and gets the data and config folders this backend runs with, so both sides
+ * read and write the same files. `--strict-mcp-config` is deliberately not passed: the user's
+ * own servers keep loading.
+ *
+ * Optional: `SWTTCH_SESSION_MCP_NODE` (the node to run it with, default `node`) and
+ * `SWTTCH_SESSION_MCP_AREAS` (comma-separated area names, default all). Area names that are not
+ * plain identifiers are dropped.
+ */
+/** The areas the session-management MCP serves, one server each; see packages/session-mcp (Swttch Desktop). */
+const SESSION_MCP_AREAS = ['session_mgmt', 'session', 'sidebar', 'window', 'view', 'host', 'pr', 'settings', 'directory', 'connectors', 'turn'] as const;
+
+export function buildSessionMcpArgs(
+  inherited: NodeJS.ProcessEnv,
+  sessionId: string,
+): string[] {
+  const bin = inherited.SWTTCH_SESSION_MCP_BIN;
+  if (!bin) return [];
+  const requested = inherited.SWTTCH_SESSION_MCP_AREAS
+    ? inherited.SWTTCH_SESSION_MCP_AREAS.split(',').map((a) => a.trim())
+    : [...SESSION_MCP_AREAS];
+  const areas = requested.filter((a) => /^[a-z][a-z0-9_]*$/.test(a));
+  if (areas.length === 0) return [];
+  const env: Record<string, string> = { SWTTCH_SESSION_ID: sessionId };
+  if (inherited.CCG_HOME) env.CCG_HOME = inherited.CCG_HOME;
+  if (inherited.CLAUDE_CONFIG_DIR) env.CLAUDE_CONFIG_DIR = inherited.CLAUDE_CONFIG_DIR;
+  // A host that runs this backend with Electron as node needs the server to run the same way.
+  if (inherited.ELECTRON_RUN_AS_NODE) env.ELECTRON_RUN_AS_NODE = inherited.ELECTRON_RUN_AS_NODE;
+  const mcpServers: Record<string, unknown> = {};
+  for (const area of areas) {
+    mcpServers[`swttch_${area}`] = {
+      command: inherited.SWTTCH_SESSION_MCP_NODE || 'node',
+      args: [bin, '--area', area],
+      env,
+    };
+  }
+  return ['--mcp-config', JSON.stringify({ mcpServers })];
+}
+
 // result 이벤트 수신 여부 추적 (비정상 종료 시 에러 전파 판단용)
 const sessionsWithResult = new Set<string>();
 
@@ -824,6 +869,7 @@ export async function ensureClaudeProcess(
   console.error('[node-backend]', `Session: ${targetSessionId} (${sessionFlag})`);
 
   const args = buildClaudeArgs(sessionFlag, targetSessionId, inputMode, model, effortLevel, thinkingDisplay);
+  args.push(...buildSessionMcpArgs(process.env, targetSessionId));
 
   console.error('[node-backend]', `Command: ${Claude.command} ${args.join(' ')}`);
 

@@ -4,6 +4,8 @@ import { join, extname, resolve, sep } from 'path';
 import { timingSafeEqual } from 'crypto';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { authToken, projectRoot } from '../config/environment';
+import { setBackendEndpoint } from '../core/backend-endpoint';
+import { handleSessionControlRequest } from './session-control-route';
 import { ConnectionManager } from './connection-manager';
 import { ConnectionHeartbeat, type HeartbeatSocket } from './connection-heartbeat';
 import { handleEditorContextRequest } from './editor-context-route';
@@ -504,6 +506,23 @@ export function startWebSocketServer(
           return;
         }
 
+        // Another program on this machine (the session-management MCP) acting on a session whose CLI this
+        // backend holds. Behind the /internal/* token gate above.
+        if (req.method === 'POST' && urlPath === '/internal/session-control') {
+          let rawBody: string;
+          try {
+            rawBody = await readRequestBody(req);
+          } catch {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Failed to read request body' }));
+            return;
+          }
+          const result = handleSessionControlRequest(connections, rawBody);
+          res.writeHead(result.status, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(result.body));
+          return;
+        }
+
         // IDE → backend editor selection push. Kotlin POSTs the active editor
         // selection here (loopback only); we route it to the webview as
         // EDITOR_CONTEXT, buffering it if no webview is connected yet.
@@ -651,6 +670,7 @@ export function startWebSocketServer(
       const addr = httpServer.address();
       const assignedPort = typeof addr === 'object' && addr !== null ? addr.port : port;
       console.error('[node-backend]', `WebSocket server listening on ${host}:${assignedPort}`);
+      setBackendEndpoint({ port: assignedPort, token: authToken });
 
       resolve({
         connections,
