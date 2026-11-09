@@ -498,6 +498,23 @@ async function main() {
     connections.sendTo(connectionId, MessageType.EDIT_HISTORY_COMMAND_REQUESTED, { command });
   });
 
+  // Ctrl+I pressed in a chat tab: the chat's Transcript view cycles. The IDE's
+  // keymap would run its own action for the key, and the page cannot read it
+  // under off-screen rendering, so the IDE claims it and says so here; the
+  // tab's own webview cycles the view of the session on screen. Not stashed
+  // when the panel is absent, like EMACS_TEXT_KEY_PRESSED: a press nobody is
+  // looking at must not cycle a view later.
+  (bridges[ClientEnv.JETBRAINS] as JetBrainsBridge).onNotification(MessageType.CYCLE_TRANSCRIPT_VIEW, (_method, params) => {
+    const panelId = typeof params.panelId === 'string' ? params.panelId : '';
+    if (!panelId) return;
+    const connectionId = connections.getConnectionIdByPanelId(panelId);
+    if (!connectionId) {
+      console.error('[node-backend]', `[CYCLE_TRANSCRIPT_VIEW] no connection for panelId=${panelId}`);
+      return;
+    }
+    connections.sendTo(connectionId, MessageType.CYCLE_TRANSCRIPT_VIEW, {});
+  });
+
   // Parent-death watchdog — installed after `shutdown` is defined (below), since
   // its callback calls it. See the comment at that call site for the rule.
 

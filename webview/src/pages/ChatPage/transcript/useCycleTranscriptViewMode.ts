@@ -6,6 +6,8 @@ import { ContentBlockType } from '../../../dto/message/ContentBlockDto';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useSessionContextOrNull } from '@/contexts/SessionContext';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
+import { getBridge } from '@/api/bridge/Bridge';
+import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
 import { SettingKey, TRANSCRIPT_VIEW_MODES, type TranscriptViewMode } from '@/types/settings';
 import { useTranscriptViewMode } from '../message-renderers/transcriptViewMode';
@@ -99,12 +101,10 @@ export function useCycleTranscriptViewMode(): DefaultViewOffer {
   }, [offer, dismiss]);
 
   useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (!event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
-      if (event.code !== 'KeyI') return;
+    /** Moves the session on screen to the next view. False when there is no session to move. */
+    const cycle = (): boolean => {
       const { settings, updateSetting, sessionId, current, messages } = latest.current;
-      if (!sessionId) return;
-      event.preventDefault();
+      if (!sessionId) return false;
       const next = nextTranscriptViewChoice(current, sessionHasThinking(messages));
       // A press that follows before the setting has come back must continue from this one, not from the old view.
       latest.current.current = next;
@@ -124,10 +124,21 @@ export function useCycleTranscriptViewMode(): DefaultViewOffer {
         setOffer(next);
         hideTimer.current = setTimeout(() => setOffer(null), OFFER_VISIBLE_MS);
       }, OFFER_DELAY_MS);
+      return true;
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+      if (event.code !== 'KeyI') return;
+      if (cycle()) event.preventDefault();
     };
     window.addEventListener('keydown', onKeyDown);
+    // In the IDE the key never reaches the page: the IDE claims Ctrl+I and says so over the bridge.
+    const unsubscribe = getBridge().subscribe(MessageType.CYCLE_TRANSCRIPT_VIEW, () => {
+      cycle();
+    });
     return () => {
       window.removeEventListener('keydown', onKeyDown);
+      unsubscribe();
       clearTimers();
     };
   }, [clearTimers]);

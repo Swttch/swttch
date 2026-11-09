@@ -908,6 +908,18 @@ export enum MessageType {
    */
   EDIT_HISTORY_COMMAND_REQUESTED = 'EDIT_HISTORY_COMMAND_REQUESTED',
   /**
+   * Node↔Kotlin notification, then outbound backend→webview. The user pressed
+   * Ctrl+I, the keystroke that cycles the chat's Transcript view (Normal,
+   * Thinking, Verbose, classic), while this tab's webview had focus. Carries
+   * nothing but the { panelId } Kotlin sends so the backend can route it to
+   * that panel only. It exists because the IDE's keymap binds Ctrl+I to its
+   * own actions ("Implement Methods" in an editor) and JCEF off-screen
+   * rendering reports every Ctrl+letter to the page as Ctrl+A, so a DOM keydown
+   * never says Ctrl+I was pressed. The IDE claims the keystroke for the
+   * webview, and the webview cycles the view of the session on screen.
+   */
+  CYCLE_TRANSCRIPT_VIEW = 'CYCLE_TRANSCRIPT_VIEW',
+  /**
    * The webview reports the name the user confirmed for this tab, carrying
    * { name }. An empty name clears the manual name, returning the tab to
    * following its conversation title. The IDE side owns the value: it is what
