@@ -96,7 +96,7 @@ export function useCycleTranscriptViewMode(): DefaultViewOffer {
     const choice = offer;
     if (!choice) return;
     dismiss();
-    void latest.current.updateSetting(SettingKey.TRANSCRIPT_VIEW_MODE, choice === 'classic' ? null : choice);
+    void latest.current.updateSetting(SettingKey.TRANSCRIPT_VIEW_MODE, choice);
     const name = tRef.current(`sessionHeader.transcriptView.${choice}`);
     toast.success(tRef.current('sessionHeader.transcriptView.defaultOffer.saved', { mode: name }));
   }, [offer, dismiss]);
@@ -124,7 +124,7 @@ export function useCycleTranscriptViewMode(): DefaultViewOffer {
       clearTimeout(hideTimer.current);
       setOffer(null);
       waitTimer.current = setTimeout(() => {
-        const defaultChoice = latest.current.settings[SettingKey.TRANSCRIPT_VIEW_MODE] ?? 'classic';
+        const defaultChoice = latest.current.settings[SettingKey.TRANSCRIPT_VIEW_MODE] ?? 'normal';
         if (next === defaultChoice) return;
         setOffer(next);
         hideTimer.current = setTimeout(() => setOffer(null), OFFER_VISIBLE_MS);

@@ -292,6 +292,13 @@
       "hint": {
         "title": "切換檢視模式",
         "body": "Normal：工具呼叫摺疊成摘要，具有完整文字回應\nThinking：工具呼叫摺疊成摘要，加上 Claude 的思考\nVerbose：Claude 採取的每個工具呼叫、檔案讀取和中間步驟，加上 Claude 的思考\n\n使用 Thinking 來追蹤 Claude 的推理，工具呼叫仍然摺疊。在除錯 Claude 為什麼採取特定操作時使用 Verbose。\n\n「經典」是目前已發布的聊天介面；「一般」「思考」「詳細」是 Claude 桌面應用程式的對話記錄檢視。你傳送的訊息顯示在右側，沒有摺疊箭頭，也不會固定在頂端。"
+      },
+      "announcement": {
+        "title": "聊天介面煥然一新！",
+        "description": "現在聊天看起來就像 Claude 桌面應用程式：回覆不再有氣泡，工具呼叫摺疊成一行。想看思考過程或每個步驟，只需切換檢視。",
+        "shortcut": "按 Ctrl+I 即可在各檢視之間切換。",
+        "howTo": "如需恢復為原本的聊天介面，請將{{path}}改為「{{classic}}」。",
+        "openSetting": "開啟此設定"
       }
     },
     "chat": {

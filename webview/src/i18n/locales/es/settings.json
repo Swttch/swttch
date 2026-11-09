@@ -292,6 +292,13 @@
       "hint": {
         "title": "Cambiar modos de vista",
         "body": "Normal: Llamadas a herramientas contraídas en resúmenes, con respuestas de texto completo\nThinking: Llamadas a herramientas contraídas en resúmenes, más el pensamiento de Claude\nVerbose: Cada llamada a herramienta, lectura de archivo y paso intermedio que Claude realiza, más el pensamiento de Claude\n\nUsa Thinking para seguir el razonamiento de Claude con las llamadas a herramientas aún contraídas. Usa Verbose cuando depures por qué Claude tomó una acción particular.\n\nClásico es el chat publicado hasta ahora; Normal, Pensamiento y Detallado son las vistas de transcripción de la aplicación de escritorio de Claude. El mensaje enviado queda a la derecha, sin flecha para plegar y sin fijarse arriba."
+      },
+      "announcement": {
+        "title": "¡La interfaz del chat es nueva!",
+        "description": "El chat ahora se ve como la app de escritorio de Claude: las respuestas se leen sin burbujas y las llamadas a herramientas se pliegan en una sola línea. El razonamiento y cada paso están a un cambio de vista.",
+        "shortcut": "Pulsa Ctrl+I para cambiar entre vistas.",
+        "howTo": "Para volver al chat anterior, cambia {{path}} a «{{classic}}».",
+        "openSetting": "Abrir este ajuste"
       }
     },
     "chat": {

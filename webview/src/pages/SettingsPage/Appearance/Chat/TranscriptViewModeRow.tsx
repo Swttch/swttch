@@ -25,7 +25,7 @@ export function TranscriptViewModeRow() {
   const { updateSetting } = useSettings();
   const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
-  const mode = displaySettings[SettingKey.TRANSCRIPT_VIEW_MODE] ?? null;
+  const mode = displaySettings[SettingKey.TRANSCRIPT_VIEW_MODE] ?? 'normal';
   const options: SelectOption[] = [
     { value: CLASSIC, label: t('appearance.transcriptViewMode.classic') },
     ...TRANSCRIPT_VIEW_MODES.map((value) => ({ value, label: t(`appearance.transcriptViewMode.${value}`) })),
@@ -54,12 +54,12 @@ export function TranscriptViewModeRow() {
       onResetToGlobal={resetFor(SettingKey.TRANSCRIPT_VIEW_MODE)}
     >
       <Select
-        value={mode ?? CLASSIC}
+        value={mode}
         options={options}
         ariaLabel={t('appearance.transcriptViewMode.label')}
         className="bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary"
         onChange={(value) =>
-          updateSetting(SettingKey.TRANSCRIPT_VIEW_MODE, value === CLASSIC ? null : (value as TranscriptViewMode))
+          updateSetting(SettingKey.TRANSCRIPT_VIEW_MODE, value as TranscriptViewMode | typeof CLASSIC)
         }
       />
     </SettingRow>

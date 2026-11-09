@@ -86,7 +86,8 @@ function usesTranscriptView(sessionId: string | undefined): boolean {
   const picked = sessionId ? mirroredSettings?.[SettingKey.TRANSCRIPT_VIEW_MODE_BY_SESSION]?.[sessionId] : undefined;
   if (picked === 'classic') return false;
   if (TRANSCRIPT_VIEW_MODES.includes(picked as never)) return true;
-  return TRANSCRIPT_VIEW_MODES.includes(mirroredSettings?.[SettingKey.TRANSCRIPT_VIEW_MODE] as never);
+  if (!mirroredSettings) return false;
+  return mirroredSettings[SettingKey.TRANSCRIPT_VIEW_MODE] !== 'classic';
 }
 
 /**

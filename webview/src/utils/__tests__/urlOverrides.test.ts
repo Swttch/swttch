@@ -66,7 +66,7 @@ describe('without the URL carrying values', () => {
   });
 
   it('leaves the classic chat to the backend default', () => {
-    mirrorSettingsForOverrides({ ...DEFAULT_SETTINGS, [SettingKey.TRANSCRIPT_VIEW_MODE]: null });
+    mirrorSettingsForOverrides({ ...DEFAULT_SETTINGS, [SettingKey.TRANSCRIPT_VIEW_MODE]: 'classic' });
     expect(resolveMessagePageSize('s1')).toBeUndefined();
   });
 

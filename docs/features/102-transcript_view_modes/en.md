@@ -8,7 +8,7 @@
 
 The chat can now be drawn the way the Claude desktop app draws its transcript. There are three new views, **Normal**, **Thinking** and **Verbose**, next to the chat you already know, which is now called **Classic**. You pick one for every session in Settings, or for one session at a time from the session's menu, or by pressing `Ctrl+I`.
 
-Classic is still the default. Nothing changes for you until you choose one of the new views.
+**Normal is the default.** The chat opens in Normal until you choose another view. A card titled **“The chat UI is new!”** appears in the middle of an empty chat to say so, and tells you how to go back: set **Settings → Appearance → Chat → Transcript view** to **Classic**. Close the card with its **X** and it does not come back; it is not shown at all to someone who already chose Classic.
 
 | View | What the chat shows |
 |------|---------------------|
@@ -25,7 +25,7 @@ Classic is still the default. Nothing changes for you until you choose one of th
 
 ![The ⋮ menu of the top bar with the Transcript view row open: Normal (checked), Thinking, Verbose and Classic.](./assets/header-menu.png)
 
-**For every session: Settings.** Open **Settings → Appearance → Chat → Transcript view** and pick a view. Sessions that you have not given a view of their own follow this one. The same row appears in the settings of Claude Desktop, so the label carries the "Claude Desktop app setting" badge.
+**For every session: Settings.** Open **Settings → Appearance → Chat → Transcript view** and pick a view. Sessions that you have not given a view of their own follow this one. Until you choose, it is Normal. The same row appears in the settings of Claude Desktop, so the label carries the "Claude Desktop app setting" badge.
 
 ![Settings, Appearance page, the Chat section: the Transcript view row with a drop-down that reads Normal.](./assets/settings-transcript-view.png)
 
@@ -71,7 +71,7 @@ While a turn runs, the input placeholder names both keys: `↵ to send, ⌘↵ t
 
 | Setting | Where | Effect |
 |---------|-------|--------|
-| **Transcript view** | Settings → Appearance → Chat | The view of every session without a view of its own. Empty means Classic. |
+| **Transcript view** | Settings → Appearance → Chat | The view of every session without a view of its own. Normal until you choose another. |
 | **Hide tool calls** | Settings → Appearance → Chat | Hides the cards of commands and lookups. File changes, questions and plans stay visible. |
 | The session's own view | Top bar ⋮ → Transcript view | Overrides the setting above for that session only. |
 

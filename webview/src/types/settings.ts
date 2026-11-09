@@ -9,7 +9,7 @@ import {
   ContextBadgeDisplay,
 } from '@/shared';
 
-/** The desktop app's Transcript view modes. `null` in the setting means the released (classic) chat UI. */
+/** The desktop app's Transcript view modes. The setting is one of them or `classic` (the chat UI released before them); empty means Normal. */
 export type TranscriptViewMode = 'normal' | 'thinking' | 'verbose';
 export const TRANSCRIPT_VIEW_MODES: readonly TranscriptViewMode[] = ['normal', 'thinking', 'verbose'];
 
@@ -443,7 +443,7 @@ export interface SettingsState {
   [SettingKey.OPEN_SETTINGS_AS]: OpenSettingsMode;
   [SettingKey.CHAT_PAGINATION]: boolean;
   [SettingKey.HIDE_TOOL_CALLS]: boolean;
-  [SettingKey.TRANSCRIPT_VIEW_MODE]: TranscriptViewMode | null;
+  [SettingKey.TRANSCRIPT_VIEW_MODE]: TranscriptViewMode | 'classic' | null;
   [SettingKey.TRANSCRIPT_VIEW_MODE_BY_SESSION]: Record<string, TranscriptViewMode | 'classic'>;
   [SettingKey.INCLUDE_NESTED_SESSIONS]: boolean;
   [SettingKey.UI_DIRECTION]: UiDirection;
@@ -494,7 +494,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.OPEN_SETTINGS_AS]: OpenSettingsMode.OVERLAY,
   [SettingKey.CHAT_PAGINATION]: true,
   [SettingKey.HIDE_TOOL_CALLS]: false,
-  [SettingKey.TRANSCRIPT_VIEW_MODE]: null,
+  [SettingKey.TRANSCRIPT_VIEW_MODE]: 'normal',
   [SettingKey.TRANSCRIPT_VIEW_MODE_BY_SESSION]: {},
   [SettingKey.INCLUDE_NESTED_SESSIONS]: false,
   [SettingKey.UI_DIRECTION]: UiDirection.LTR,

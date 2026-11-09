@@ -57,9 +57,9 @@ export function TranscriptViewMenuSection({ onPick }: { onPick: () => void }) {
     onPick();
   };
 
-  const defaultChoice: Choice = settings[SettingKey.TRANSCRIPT_VIEW_MODE] ?? CLASSIC;
+  const defaultChoice: Choice = settings[SettingKey.TRANSCRIPT_VIEW_MODE] ?? 'normal';
   const makeDefault = () => {
-    void updateSetting(SettingKey.TRANSCRIPT_VIEW_MODE, current === CLASSIC ? null : current);
+    void updateSetting(SettingKey.TRANSCRIPT_VIEW_MODE, current);
     toast.success(t('sessionHeader.transcriptView.defaultOffer.saved', { mode: t(`sessionHeader.transcriptView.${current}`) }));
     onPick();
   };

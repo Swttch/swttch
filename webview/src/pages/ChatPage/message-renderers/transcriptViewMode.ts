@@ -28,8 +28,11 @@ export function useTranscriptViewMode(): TranscriptViewMode | null {
     : (waiting ?? undefined);
   if (picked === 'classic') return null;
   if (isTranscriptViewMode(picked)) return picked;
-  const value = context?.settings[SettingKey.TRANSCRIPT_VIEW_MODE];
-  return isTranscriptViewMode(value) ? value : null;
+  // Without a settings provider the classic chat is drawn; with one, a default that was never chosen is Normal.
+  if (!context) return null;
+  const value = context.settings[SettingKey.TRANSCRIPT_VIEW_MODE];
+  if (value === 'classic') return null;
+  return isTranscriptViewMode(value) ? value : 'normal';
 }
 
 export function isTranscriptViewMode(value: unknown): value is TranscriptViewMode {

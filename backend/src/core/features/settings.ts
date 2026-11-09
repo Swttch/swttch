@@ -78,7 +78,7 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   openSettingsAs: 'overlay',
   chatPagination: true,
   hideToolCalls: false,
-  transcriptViewMode: null,
+  transcriptViewMode: 'normal',
   transcriptViewModeBySession: {},
   includeNestedSessions: false,
   uiDirection: 'ltr',
@@ -161,7 +161,7 @@ const COMMENT_MAP: Record<string, string> = {
   openSettingsAs: '설정 화면을 여는 방식: "overlay" | "new-tab"',
   chatPagination: '채팅 기록을 페이지 단위로 로드(스크롤 시 이전 메시지 추가). false면 전체를 한 번에 로드',
   hideToolCalls: '명령 실행·조회처럼 과정에 해당하는 도구 카드를 채팅에서 숨긴다(CLI의 focus view와 같은 자리). 파일 변경(Edit/Write)과 질문·계획처럼 사용자를 향한 것은 계속 보인다',
-  transcriptViewMode: '채팅 보기 방식: "normal" | "thinking" | "verbose". null이면 이전 버전(클래식) 채팅 UI. 데스크탑 앱의 Transcript view와 같은 세 값이며, 세 값 모두 사용자 말풍선을 오른쪽에 두고 접기·상단 고정을 없앤다',
+  transcriptViewMode: '채팅 보기 방식: "normal" | "thinking" | "verbose" | "classic". 비어 있으면(null) normal. classic은 이전 버전 채팅 UI이고, 나머지 셋은 데스크탑 앱의 Transcript view와 같으며 사용자 말풍선을 오른쪽에 두고 접기·상단 고정을 없앤다',
   transcriptViewModeBySession: '헤더 메뉴에서 세션마다 고른 보기 방식. { 세션id: "normal" | "thinking" | "verbose" | "classic" }. 항목이 없는 세션은 transcriptViewMode를 따른다',
   includeNestedSessions: '세션 목록에 하위 작업 디렉터리의 세션까지 포함. false면 현재 디렉터리의 세션만',
   uiDirection: 'UI 미러링(레이아웃 방향): "ltr" | "rtl"',
@@ -494,8 +494,8 @@ function validateSetting(key: string, value: unknown): string | null {
       }
       break;
     case 'transcriptViewMode':
-      if (value !== null && !TRANSCRIPT_VIEW_MODES.includes(value as string)) {
-        return 'transcriptViewMode must be null or one of "normal", "thinking", "verbose"';
+      if (value !== null && value !== 'classic' && !TRANSCRIPT_VIEW_MODES.includes(value as string)) {
+        return 'transcriptViewMode must be null or one of "normal", "thinking", "verbose", "classic"';
       }
       break;
     case 'transcriptViewModeBySession':
