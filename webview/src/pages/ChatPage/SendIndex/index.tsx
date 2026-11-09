@@ -191,21 +191,29 @@ export function buildEntries(
   }
 
   /*
-    Where the loaded run begins inside the index.
+    Where the loaded run begins inside the index: the first loaded send the index
+    knows. The loaded run can open with sends the index has no entry for (a send
+    typed while a turn was running, which only the transcript can name), so
+    looking up only its very first send would miss and throw the whole index
+    away, leaving a rail that grows by one tick per page scrolled (#657).
 
-    A miss means the index is stale against the transcript — a rewind or an edit
-    rebuilt the chain under it. Showing the loaded half alone is the honest
-    answer there: it is the half we can still vouch for, and the query refetches
-    on its own.
+    No send found at all means the index is stale against the transcript — a
+    rewind or an edit rebuilt the chain under it. Showing the loaded half alone
+    is the honest answer there: it is the half we can still vouch for, and the
+    query refetches on its own.
   */
-  const boundary = sessionSends.findIndex(send => send.uuid === loaded[0].key);
-  if (boundary === -1) return loaded;
+  const indexed = new Set(sessionSends.map(send => send.uuid));
+  const anchor = loaded.find(entry => indexed.has(entry.key));
+  if (!anchor) return loaded;
+  const boundary = sessionSends.findIndex(send => send.uuid === anchor.key);
 
   const older = sessionSends
     .slice(0, boundary)
     .map(send => ({ key: send.uuid, text: send.preview, loaded: false }));
 
-  return [...older, ...loaded];
+  // What the index holds before the anchor comes first, minus anything the transcript already has.
+  const loadedKeys = new Set(loaded.map(entry => entry.key));
+  return [...older.filter(entry => !loadedKeys.has(entry.key)), ...loaded];
 }
 
 /**

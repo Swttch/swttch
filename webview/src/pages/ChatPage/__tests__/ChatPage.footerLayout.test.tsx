@@ -140,17 +140,16 @@ describe('ChatPage bottom strip layout', () => {
     expect(scrollerOf(container).contains(footerOf(container))).toBe(true);
   });
 
-  it('reaches the strip over the room the rail reserves, so its two sides have the same space', () => {
+  it('takes no end margin for the strip, since the rail no longer reserves room beside the transcript', () => {
     const { container } = renderPage();
 
-    // The mocked rail is 16px wide: the strip takes exactly that much back.
-    expect(footerOf(container).style.marginInlineEnd).toBe('-16px');
+    expect(footerOf(container).style.marginInlineEnd).toBe('');
   });
 
-  it('still reserves the rail width beside the transcript itself', () => {
+  it('reserves no room for the rail beside the transcript: the rail is drawn over it', () => {
     const { container } = renderPage();
 
-    expect(scrollerOf(container).style.paddingInlineEnd).toBe('16px');
+    expect(scrollerOf(container).style.paddingInlineEnd).toBe('');
   });
 
   it('keeps the rail a sibling of the scroll container, not a child of it', () => {
