@@ -1,6 +1,7 @@
 import { useTranslation } from '@/i18n';
 import { parseCrossSessionPreview } from '../message-renderers/CrossSessionMessageRenderer';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { CHAT_FOOTER_ID } from '../chatFooter';
 import { matchesShortcut, shouldToggleOnShortcut } from '@/utils/shortcut';
 import type { SessionSend } from '@/shared';
 import { useApi } from '@/contexts/ApiContext';
@@ -252,7 +253,7 @@ function isMoveKey(key: string): boolean {
  * is nothing outside it to open into. Covering the transcript is what this
  * shape costs, and it is the same cost the products that ship it already pay.
  */
-function SendIndexCard({ text }: { text: string }) {
+function SendIndexCard({ text, top, onEnter, onLeave }: { text: string; top: number; onEnter: () => void; onLeave: () => void }) {
   const { t } = useTranslation('chatTools');
   // A message from another session is shown by who sent it and what it says, not with its tags.
   const cross = parseCrossSessionPreview(text);
@@ -268,7 +269,12 @@ function SendIndexCard({ text }: { text: string }) {
       gap does not leave the element either — with margin the card would flicker
       out from under the cursor halfway across.
     */
-    <div className="absolute start-full top-1/2 -translate-y-1/2 ps-2">
+    <div
+      className="absolute start-full -translate-y-1/2 ps-2 pointer-events-auto"
+      style={{ top }}
+      onMouseEnter={onEnter}
+      onMouseLeave={onLeave}
+    >
       <div
         className="bg-surface-raised border border-border-default rounded-lg shadow-md px-3 py-2 space-y-0.5 select-text cursor-auto"
         style={{ width: CARD_WIDTH }}
@@ -374,6 +380,51 @@ export function SendIndex(props: Props) {
   const [readingKey, setReadingKey] = useState<string | null>(null);
   const { topBarHeight } = useTopBar();
 
+  /*
+    The vertical stretch the rail may occupy, in pixels from the top of the
+    rail's positioned parent.
+
+    Its top is the lower edge of the send pinned under the top bar, its bottom
+    the upper edge of the composer. Measured rather than assumed because both
+    move: the pinned send folds as the reader scrolls, and the composer grows
+    with what is typed and with the panels stacked on it. The rail takes
+    whatever is left between them, so a taller window shows more ticks and a
+    shorter one scrolls them; no count of ticks is ever fixed.
+  */
+  const [bounds, setBounds] = useState<{ top: number; height: number } | null>(null);
+  const outerRef = useRef<HTMLDivElement>(null);
+
+  const measureBounds = (readingSection: string | null) => {
+    const outer = outerRef.current;
+    const parent = outer?.offsetParent as HTMLElement | null;
+    if (!outer || !parent) return;
+    const parentTop = parent.getBoundingClientRect().top;
+    // The page can be zoomed (the zoom control scales the root), and measured
+    // boxes come back in screen pixels while top/height are set in the page's
+    // own. The ratio between the two is the zoom.
+    const zoom = outer.getBoundingClientRect().width / (outer.offsetWidth || 1) || 1;
+
+    let top = topBarHeight * zoom;
+    if (readingSection) {
+      const header = document.querySelector<HTMLElement>(
+        `[data-send-section="${CSS.escape(readingSection)}"] [data-send-pinned-header]`,
+      );
+      const box = header?.getBoundingClientRect();
+      // Only a header that is stuck to the top covers anything; one still in
+      // its place in the flow is just part of the transcript.
+      if (box && box.top <= parentTop + top + 2 * zoom) top = Math.max(top, box.bottom - parentTop);
+    }
+
+    const footer = document.getElementById(CHAT_FOOTER_ID);
+    const bottom = footer ? footer.getBoundingClientRect().top - parentTop : parent.clientHeight * zoom;
+
+    const next = {
+      top: Math.round(top / zoom) + 4,
+      height: Math.max(Math.round((bottom - top) / zoom) - 8, 0),
+    };
+    setBounds(prev => (prev && prev.top === next.top && prev.height === next.height ? prev : next));
+  };
+
   useEffect(() => {
     const scroller = document.querySelector<HTMLElement>('[data-chat-scroll]');
     if (!scroller) return;
@@ -381,22 +432,32 @@ export function SendIndex(props: Props) {
     let frame = 0;
     const measure = () => {
       frame = 0;
-      setReadingKey(readingLineSectionKey(topBarHeight));
+      const key = readingLineSectionKey(topBarHeight);
+      setReadingKey(key);
+      measureBounds(key);
     };
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(measure);
     };
 
     scroller.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    // The composer changes height without anyone scrolling.
+    const footer = document.getElementById(CHAT_FOOTER_ID);
+    const observer = footer ? new ResizeObserver(onScroll) : null;
+    if (footer) observer?.observe(footer);
     // Also measure now: arriving at a session, and every page of older messages
     // prepended into it, moves the sends without anyone scrolling.
     measure();
 
     return () => {
       scroller.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      observer?.disconnect();
       if (frame) cancelAnimationFrame(frame);
     };
-  }, [sections, topBarHeight]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sections, topBarHeight, entries.length > 0]);
 
   /*
     The entry being read is the LAST one past the reading line, not the first.
@@ -545,85 +606,183 @@ export function SendIndex(props: Props) {
   */
   const onKeyUp = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (!isMoveKey(e.key) || pointed === null) return;
-    const row = railRef.current?.querySelectorAll<HTMLElement>('[role="option"]')[pointed];
-    row?.click();
+    const tick = railRef.current?.querySelectorAll<HTMLElement>('[data-send-index-tick]')[pointed];
+    tick?.click();
   };
 
+  /*
+    Ticks that the stretch has no room for are reached by scrolling the rail,
+    and the rail says so: the edge that has more behind it fades out. A fade
+    rather than an arrow or a count because it takes no room of its own, and
+    ticks thinning out toward an edge read as "this goes on" without a legend.
+  */
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [more, setMore] = useState({ before: false, after: false });
+
+  const measureMore = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const before = el.scrollTop > 1;
+    const after = el.scrollTop + el.clientHeight < el.scrollHeight - 1;
+    setMore(prev => (prev.before === before && prev.after === after ? prev : { before, after }));
+  };
+
+  // The tick being read, or the one the keyboard walked to, stays inside the
+  // visible part of the rail. Not while the mouse is on a tick: the rail must
+  // not move under the pointer.
+  const followed = pointed ?? current;
+  const mouseOnTick = useRef(false);
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    const row = el?.children[followed] as HTMLElement | undefined;
+    if (!el || !row || mouseOnTick.current) return;
+    if (row.offsetTop < el.scrollTop) el.scrollTop = row.offsetTop - 8;
+    else if (row.offsetTop + row.offsetHeight > el.scrollTop + el.clientHeight) {
+      el.scrollTop = row.offsetTop + row.offsetHeight - el.clientHeight + 8;
+    }
+  }, [followed, entries.length, bounds?.height]);
+
+  useLayoutEffect(measureMore, [entries.length, bounds?.height]);
+
+  /*
+    The card is drawn beside the rail, not inside the scrolling list: a list
+    that scrolls clips what sticks out of it sideways, and the card sticks out
+    by design. Its height follows the tick it belongs to.
+  */
+  const [cardTop, setCardTop] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const outer = outerRef.current;
+    const row = pointed === null ? null : (scrollRef.current?.children[pointed] as HTMLElement | undefined);
+    if (!outer || !row) { setCardTop(null); return; }
+    const box = row.getBoundingClientRect();
+    const outerBox = outer.getBoundingClientRect();
+    // Screen pixels back to the page's own, as in measureBounds.
+    const zoom = outerBox.width / (outer.offsetWidth || 1) || 1;
+    setCardTop((box.top - outerBox.top + box.height / 2) / zoom);
+  }, [pointed, more, bounds?.top, bounds?.height]);
+
+  // Leaving a tick for the card must not drop the pointer on the way across
+  // the gap between them, so letting go is deferred a moment and the card
+  // cancels it.
+  const leaveTimer = useRef<ReturnType<typeof setTimeout>>();
+  const holdPointer = (i: number) => {
+    clearTimeout(leaveTimer.current);
+    mouseOnTick.current = true;
+    setPointed(i);
+  };
+  const releasePointer = (i: number) => {
+    clearTimeout(leaveTimer.current);
+    leaveTimer.current = setTimeout(() => {
+      mouseOnTick.current = false;
+      setPointed(at => (at === i ? null : at));
+    }, 120);
+  };
+  useEffect(() => () => clearTimeout(leaveTimer.current), []);
+
   // A session with nothing sent yet has no ruler to draw, and an empty rail
-  // would still take its padding out of the transcript.
+  // would take room for nothing.
   if (entries.length === 0) return null;
 
-  return (
-    <div
-      ref={railRef}
-      data-send-index
-      role="listbox"
-      tabIndex={0}
-      aria-label="Send index"
-      aria-activedescendant={`send-index-entry-${current}`}
-      onFocus={() => setFocused(true)}
-      // Leaving the rail takes the pointer with it, so a card cannot be left
-      // hanging over the transcript once the keyboard has gone elsewhere.
-      onBlur={() => { setFocused(false); setPointed(null); }}
-      onKeyDown={onKeyDown}
-      onKeyUp={onKeyUp}
-      /*
-        `py-2` is unconditional so the rows never move. Only the background
-        changes with focus; padding that appeared with it would shift every
-        tick at the moment the user is trying to read where they are.
-      */
-      className={`absolute top-1/2 -translate-y-1/2 z-20 flex flex-col items-start py-2 rounded-full outline-none transition-colors duration-150 ${
-        focused ? 'bg-surface-raised' : 'bg-transparent'
-      }`}
-      style={{ width: SEND_INDEX_RAIL_WIDTH, insetInlineStart: SEND_INDEX_RAIL_INSET }}
-    >
-      {entries.map((entry, i) => {
-        const isPointed = i === pointed;
-        const fromPointer = pointed === null ? null : Math.abs(i - pointed);
-        const fromCurrent = Math.abs(i - current);
+  const fade = (more.before ? 'transparent 0, #000 18px' : '#000 0') + ', ' + (more.after ? '#000 calc(100% - 18px), transparent 100%' : '#000 100%');
+  const mask = `linear-gradient(to bottom, ${fade})`;
 
-        return (
-          /*
-            The row, not the tick, is what the pointer has to find. A 2px target
-            is unhittable, so each row claims the full width of the rail and the
-            whole gap below its tick.
-          */
-          <div
-            key={entry.key}
-            id={`send-index-entry-${i}`}
-            role="option"
-            aria-selected={i === current}
-            /*
-              The marker lives on the row itself so the keyboard walk can find
-              it without asking React where it is. See moveBy.
-            */
-            data-send-index-current={i === current ? 'true' : undefined}
-            className="relative flex items-center justify-start ps-0.5 cursor-pointer"
-            style={{ height: TICK_HEIGHT + TICK_GAP, width: SEND_INDEX_RAIL_WIDTH }}
-            onMouseEnter={() => setPointed(i)}
-            onMouseLeave={() => setPointed(at => (at === i ? null : at))}
-            /*
-              Clicking takes the keyboard too, so the jumps that follow a click
-              land somewhere. Arriving by pointer and then pressing Shift+J is
-              the ordinary way to walk on from where you looked.
-            */
-            onClick={() => {
-              jumpTo(i);
-              railRef.current?.focus();
-            }}
-          >
+  return (
+    /*
+      The strip is empty space around the ticks, so it takes no pointer events
+      of its own: only a tick itself (and the card) answers the mouse. The
+      pointer passing over the rail on its way elsewhere does nothing.
+    */
+    <div
+      ref={outerRef}
+      className="absolute z-20 flex flex-col justify-center pointer-events-none"
+      style={{
+        width: SEND_INDEX_RAIL_WIDTH,
+        insetInlineStart: SEND_INDEX_RAIL_INSET,
+        top: bounds?.top ?? 0,
+        height: bounds?.height ?? 0,
+        visibility: bounds ? 'visible' : 'hidden',
+      }}
+    >
+      <div
+        ref={(node) => { (railRef as React.MutableRefObject<HTMLDivElement | null>).current = node; (scrollRef as React.MutableRefObject<HTMLDivElement | null>).current = node; }}
+        data-send-index
+        role="listbox"
+        tabIndex={0}
+        aria-label="Send index"
+        aria-activedescendant={`send-index-entry-${current}`}
+        onFocus={() => setFocused(true)}
+        // Leaving the rail takes the pointer with it, so a card cannot be left
+        // hanging over the transcript once the keyboard has gone elsewhere.
+        onBlur={() => { setFocused(false); setPointed(null); }}
+        onKeyDown={onKeyDown}
+        onKeyUp={onKeyUp}
+        onScroll={measureMore}
+        /*
+          `py-2` is unconditional so the rows never move. Only the background
+          changes with focus; padding that appeared with it would shift every
+          tick at the moment the user is trying to read where they are.
+
+          The scrollbar is hidden: the fade at the edges is what says there is
+          more, and a bar would sit beside ticks that are themselves a ruler.
+        */
+        className={`flex flex-col items-start py-2 rounded-full outline-none transition-colors duration-150 max-h-full overflow-y-auto shrink-0 ${
+          focused ? 'bg-surface-raised' : 'bg-transparent'
+        }`}
+        style={{ width: SEND_INDEX_RAIL_WIDTH, scrollbarWidth: 'none', msOverflowStyle: 'none', maskImage: mask, WebkitMaskImage: mask }}
+      >
+        {entries.map((entry, i) => {
+          const isPointed = i === pointed;
+          const fromPointer = pointed === null ? null : Math.abs(i - pointed);
+          const fromCurrent = Math.abs(i - current);
+
+          return (
             <div
-              className="rounded-full bg-text-primary transition-[width,opacity] duration-150"
-              style={{
-                height: TICK_HEIGHT,
-                width: tickLength(fromPointer, focused),
-                opacity: tickOpacity(fromCurrent, isPointed),
-              }}
-            />
-            {isPointed && <SendIndexCard text={entry.text} />}
-          </div>
-        );
-      })}
+              key={entry.key}
+              id={`send-index-entry-${i}`}
+              role="option"
+              aria-selected={i === current}
+              data-send-index-current={i === current ? 'true' : undefined}
+              className="relative flex items-center justify-start ps-0.5 shrink-0"
+              style={{ height: TICK_HEIGHT + TICK_GAP, width: SEND_INDEX_RAIL_WIDTH }}
+            >
+              {/*
+                The tick is the target, and it is as long as it is drawn: a 2px
+                line is hard to land on, so it is as tall as its row, but it is
+                no wider than the line itself. Beside it the row is empty.
+              */}
+              <div
+                data-send-index-tick
+                className="h-full flex items-center cursor-pointer transition-[width] duration-150 pointer-events-auto"
+                style={{ width: tickLength(fromPointer, focused) }}
+                onMouseEnter={() => holdPointer(i)}
+                onMouseLeave={() => releasePointer(i)}
+                /*
+                  Clicking takes the keyboard too, so the jumps that follow a
+                  click land somewhere. Arriving by pointer and then pressing
+                  Shift+J is the ordinary way to walk on from where you looked.
+                */
+                onClick={() => {
+                  jumpTo(i);
+                  railRef.current?.focus();
+                }}
+              >
+                <div
+                  className="rounded-full bg-text-primary w-full"
+                  style={{ height: TICK_HEIGHT, opacity: tickOpacity(fromCurrent, isPointed) }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {pointed !== null && cardTop !== null && entries[pointed] && (
+        <SendIndexCard
+          text={entries[pointed].text}
+          top={cardTop}
+          onEnter={() => holdPointer(pointed)}
+          onLeave={() => releasePointer(pointed)}
+        />
+      )}
     </div>
   );
 }
