@@ -4,6 +4,7 @@ import { ChevronRightIcon, ClipboardDocumentIcon } from '@heroicons/react/20/sol
 import { getAdapter } from '@/adapters';
 import { ClientEnv } from '@/shared';
 import { useTranslation } from '@/i18n';
+import { openChatFile } from '@/utils/openChatFile';
 import type { LoadedMessageDto } from '../../../types';
 import { ToolRenderer } from '../message-renderers/ToolRenderer';
 import { toolResultText } from '../message-renderers/ToolRenderers/common/toolStatus';
@@ -143,7 +144,7 @@ function Thumbnails({ srcs }: { srcs: string[] }) {
   return (
     <span className="ms-auto flex flex-shrink-0 items-center gap-1.5">
       {srcs.map((src, index) => (
-        <img key={index} src={src} alt="" className="h-7 w-[22px] rounded-[3px] border border-border-default/70 object-cover" />
+        <img key={index} src={src} alt="" className="h-7 w-auto max-w-[56px] rounded-[3px] border border-border-default/70 object-contain" />
       ))}
     </span>
   );
@@ -154,15 +155,26 @@ function Thumbnails({ srcs }: { srcs: string[] }) {
  * A click or a screenshot has no code to show, so there is no box, only its result.
  */
 function PlainDetail({ call }: { call: ToolCall }) {
-  const [viewing, setViewing] = useState<number | null>(null);
   const result = call.toolUse.tool_result as LoadedMessageDto | undefined;
-  const images = imagesOfResult(result);
   // The note that says where a picture was saved ("[Image: source: …]") is never shown, whether or not the picture itself came with the result.
   // The text parts are joined without a break, so the note can sit at the front of a line of text; it is cut out wherever it is.
   const text = toolKindOf(call) === 'capture' ? '' : stripImageNotes(toolResultText(result).replace(/\[Image: source: [^\]]*\]/g, '\n')).trim();
   return (
     <div className="px-1 pb-3 text-[0.9375rem] leading-[1.5] text-[var(--tr-muted)]">
       {text && <div className="whitespace-pre-wrap break-words">{text}</div>}
+      <ResultPictures call={call} />
+    </div>
+  );
+}
+
+/** The pictures a call's result carries, drawn under it at their own size (no wider than the chat); a click opens the viewer. */
+function ResultPictures({ call }: { call: ToolCall }) {
+  const [viewing, setViewing] = useState<number | null>(null);
+  const result = call.toolUse.tool_result as LoadedMessageDto | undefined;
+  const images = imagesOfResult(result);
+  if (images.length === 0) return null;
+  return (
+    <>
       {images.map((src, index) => (
         <button key={index} type="button" onClick={() => setViewing(index)} className="mt-2 block max-w-full cursor-zoom-in">
           <img src={src} alt="" className="block max-w-full rounded-md" />
@@ -177,7 +189,7 @@ function PlainDetail({ call }: { call: ToolCall }) {
           onClose={() => setViewing(null)}
         />
       )}
-    </div>
+    </>
   );
 }
 
@@ -233,12 +245,13 @@ function InputDetail({ call }: { call: ToolCall }) {
  * What a call was given, and what it printed: "Input" with its entries, a rule, and "Output" with the text that came
  * back. How the desktop app draws a skill that was started. The output is left out until there is one.
  */
-function InputOutputDetail({ call }: { call: ToolCall }) {
+function InputOutputDetail({ call, withPictures = true }: { call: ToolCall; withPictures?: boolean }) {
   const { t } = useTranslation('chat');
   const output = toolResultText(call.toolUse.tool_result as LoadedMessageDto | undefined).trim();
   return (
     <>
       <InputDetail call={call} />
+      {withPictures && <div className="px-1 pb-3"><ResultPictures call={call} /></div>}
       {output && (
         <div className={`mx-1 mb-3 border-t ${BOX_BORDER} pt-3 text-[0.9375rem] leading-[1.5]`}>
           <div className="pb-1 text-[var(--tr-muted)]">{t('transcript.tools.outputHeading')}</div>
@@ -314,7 +327,7 @@ function SessionFactsDetail({ call }: { call: ToolCall }) {
 }
 
 /** What a row shows once it is opened. */
-function ToolDetail({ calls }: { calls: ToolCall[] }) {
+function ToolDetail({ calls, withPictures = true }: { calls: ToolCall[]; withPictures?: boolean }) {
   const call = calls[0];
   const kind = toolKindOf(call);
   // The CLI answers a command that printed nothing with a sentence saying so; the desktop app shows its own line for it.
@@ -375,7 +388,7 @@ function ToolDetail({ calls }: { calls: ToolCall[] }) {
   if (browserToolOf(call.toolUse.name) !== '') return <PlainDetail call={call} />;
   // Every other call, as the desktop app draws the ones it has no design of their own for: what the call was given,
   // and what it printed.
-  return <InputOutputDetail call={call} />;
+  return <InputOutputDetail call={call} withPictures={withPictures} />;
 }
 
 /**
@@ -479,7 +492,7 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live }: { calls: ToolCal
               tabIndex={0}
               onClick={(event) => {
                 event.stopPropagation();
-                if (path) getAdapter().openFile(path);
+                if (path) void openChatFile(path);
               }}
               className={`${LINK_TEXT} cursor-pointer hover:underline`}
             >
@@ -493,9 +506,11 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live }: { calls: ToolCal
         {hasFailed(call) && toolKindOf(call) !== 'sessionStart' && <span className="flex-shrink-0 text-red-400">{t('transcript.tools.failedMark')}</span>}
         <LineStatsView stats={sumLineStats(calls)} />
         {expandable && <Chevron open={open} />}
-        {!open && <Thumbnails srcs={pictures} />}
+        {(!open && inBox) && <Thumbnails srcs={pictures} />}
       </button>
-      {open && expandable && <div className={inBox ? 'px-2' : ''}><ToolDetail calls={calls} /></div>}
+      {/* A call of its own that read a picture shows the picture under its line at its own size, as the desktop app does; in a run, the lines carry thumbnails and the picture is under the call once it is opened. */}
+      {!inBox && pictures.length > 0 && <div className="pb-2"><ResultPictures call={call} /></div>}
+      {open && expandable && <div className={inBox ? 'px-2' : ''}><ToolDetail calls={calls} withPictures={inBox} /></div>}
     </div>
   );
 }

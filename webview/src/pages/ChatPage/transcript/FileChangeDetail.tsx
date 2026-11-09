@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
+import { openChatFile } from '@/utils/openChatFile';
 import toast from 'react-hot-toast';
 import { ClipboardDocumentIcon } from '@heroicons/react/20/solid';
 import { Tooltip } from '@/components/Tooltip';
 import { useTranslation } from '@/i18n';
-import { getAdapter } from '@/adapters';
 import { DiffLineType, type DiffLine } from '../message-renderers/ToolRenderers/EditRenderer';
 import { HighlightedCode } from '../message-renderers/ToolRenderers/Mcp/Generic/HighlightedCode';
 import type { ToolCall } from './buildSegments';
@@ -68,7 +68,7 @@ function PathLine({ path }: { path: string }) {
     <div dir="ltr" className="group mb-3 mt-1 flex min-w-0 items-center gap-2 text-[0.8461rem] text-[var(--tr-text)]">
       {/* The whole path is in the tooltip: the line itself may have cut the folders out of the middle. */}
       <Tooltip content={path} placement="top">
-        <div role="link" tabIndex={0} onClick={() => getAdapter().openFile(path)} className="flex min-w-0 cursor-pointer hover:underline">
+        <div role="link" tabIndex={0} onClick={() => void openChatFile(path)} className="flex min-w-0 cursor-pointer hover:underline">
           <span className="min-w-0 truncate">{shown.slice(0, cut)}</span>
           <span className="flex-shrink-0">{shown.slice(cut)}</span>
         </div>

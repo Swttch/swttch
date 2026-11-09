@@ -174,7 +174,8 @@ const FILE_CHANGE_TOOLS = new Set(['Edit', 'Write', 'NotebookEdit']);
  * The turn's checklist (`update_plan`) is one: the desktop app draws it as a box of its own, not as a tool call.
  */
 export function isCardTool(name: string): boolean {
-  return (isAlwaysVisibleTool(name) && !FILE_CHANGE_TOOLS.has(name)) || name === UPDATE_PLAN_TOOL;
+  // An Artifact (a page or a deck Claude made) is what the turn produced: its card opens it in the preview pane.
+  return (isAlwaysVisibleTool(name) && !FILE_CHANGE_TOOLS.has(name)) || name === UPDATE_PLAN_TOOL || name === 'Artifact';
 }
 
 /**

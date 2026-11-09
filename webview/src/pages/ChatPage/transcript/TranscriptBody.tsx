@@ -107,7 +107,11 @@ function SegmentView({ segment, endsTurn, onRetry }: { segment: Segment; endsTur
     case 'tools':
       return <TranscriptToolRun calls={segment.calls} />;
     case 'card':
-      return <ToolRenderer toolUse={segment.call.toolUse} message={segment.call.message} />;
+      return (
+        <div data-transcript-card className="px-4">
+          <ToolRenderer toolUse={segment.call.toolUse} message={segment.call.message} />
+        </div>
+      );
     case 'chapter':
       return <h3 className="px-4 pb-[29px] pt-3 text-[1rem] font-semibold leading-relaxed text-[var(--tr-text)]">{segment.title}</h3>;
   }

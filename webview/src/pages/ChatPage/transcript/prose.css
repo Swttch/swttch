@@ -100,3 +100,9 @@
   0% { background-position: 100% 0; }
   100% { background-position: 0 0; }
 }
+
+/* A card drawn by the classic renderers (a file Claude sent, an Artifact) sits in the reply like the text does: no
+   bullet before it and none of the room the classic chat leaves for the bullet. */
+[data-transcript-card] [data-message-bullet] { display: none; }
+[data-transcript-card] > .group { padding-inline: 0; }
+[data-transcript-card] > .group > .flex { gap: 0; }
