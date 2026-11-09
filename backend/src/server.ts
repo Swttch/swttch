@@ -498,7 +498,7 @@ async function main() {
     connections.sendTo(connectionId, MessageType.EDIT_HISTORY_COMMAND_REQUESTED, { command });
   });
 
-  // Ctrl+I pressed in a chat tab: the chat's Transcript view cycles. The IDE's
+  // Ctrl+Alt+I pressed in a chat tab: the chat's Transcript view cycles. The IDE's
   // keymap would run its own action for the key, and the page cannot read it
   // under off-screen rendering, so the IDE claims it and says so here; the
   // tab's own webview cycles the view of the session on screen. Not stashed

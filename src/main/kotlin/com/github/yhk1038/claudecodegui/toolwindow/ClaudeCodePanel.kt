@@ -953,7 +953,7 @@ class ClaudeCodePanel(
         EmacsTextKeyShortcutGuard.install(b.component) { letter, shift -> sendEmacsTextKey(letter, shift) }
         // Undo/Redo keystrokes (issue #495), installed and re-pointed the same way.
         EditHistoryShortcutGuard.install(b.component) { command -> sendEditHistoryCommand(command) }
-        // Ctrl+I cycles the chat's Transcript view, installed and re-pointed the same way.
+        // Ctrl+Alt+I cycles the chat's Transcript view, installed and re-pointed the same way.
         TranscriptViewShortcutGuard.install(b.component) { sendCycleTranscriptView() }
 
         // Install native (Swing/IDE) drag-and-drop bridge once per holder.
@@ -2117,7 +2117,7 @@ class ClaudeCodePanel(
 
     /**
      * Ask this panel's webview to cycle the chat's Transcript view. The IDE's
-     * keymap binds Ctrl+I to its own actions and the page cannot read the key
+     * keymap binds Ctrl+Alt+I to its own action and the page cannot read the key
      * itself under off-screen rendering, so [TranscriptViewShortcutGuard]
      * claims it and this tells the webview.
      *

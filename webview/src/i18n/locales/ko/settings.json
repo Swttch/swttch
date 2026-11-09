@@ -316,7 +316,7 @@
       "announcement": {
         "title": "채팅 UI가 새로워졌어요!",
         "description": "이제 채팅이 Claude 데스크탑처럼 보여요. 답변은 말풍선 없이 읽기 편하게 나오고, 도구 호출은 한 줄로 접혀요. 생각 과정이나 모든 단계를 보고 싶다면 보기만 바꾸면 돼요.",
-        "shortcut": "Ctrl+I를 누르면 보기가 차례로 바뀌어요.",
+        "shortcut": "Ctrl+Alt+I를 누르면 보기가 차례로 바뀌어요.",
         "howTo": "원래대로 되돌리려면 {{path}}를 ‘{{classic}}’으로 바꾸세요.",
         "openSetting": "이 설정 열기"
       }
