@@ -2,7 +2,7 @@
 
 🌐 **English** | [한국어](../ko/desktop-session-import.md) | [日本語](../ja/desktop-session-import.md) | [中文](../zh/desktop-session-import.md) | [Español](../es/desktop-session-import.md) | [Deutsch](../de/desktop-session-import.md) | [Français](../fr/desktop-session-import.md)
 
-_Last updated: 2026-11-07_
+_Last updated: 2026-11-09_
 
 A session created in the plugin does not show up in the Claude Desktop Code tab by itself. The other direction, opening a session that Desktop created inside the plugin, has always worked. The file Desktop builds its list from is undocumented, so we cannot write to it for you. What you can do is **press Desktop's own "import sessions" once**. From v0.36.0 on, new sessions are started so that this import picks them up, and the sessions you made before that can be prepared with one button in Settings.
 
@@ -52,7 +52,7 @@ Do not run one session in both places **at the same time**. Two programs would w
 - Only sessions **in folders you trust** are imported. "No CLI sessions to import" means the sessions that could be imported are already in your list, were deleted before, or are in folders Claude does not trust yet. If a plugin session does not show up, first check that you did step 1
 - A session you **deleted** in Desktop is not imported again
 - An imported session keeps its history and permission mode (except bypass permissions mode), but not its archive status or permission grants
-- The button in step 1 only changes the `sdk-cli` written on each line of the record file to the new name, and leaves everything else as it was. A session made by another SDK tool in the same folder is changed with it
+- The button in step 1 changes the `sdk-cli` written on each line of the record file to the new name, and **adds one line with the session's title** (the name the plugin shows for it) to every session that has no name chosen with `/rename`. Without that line, Desktop names an imported session from its first message and shows the IDE context line (for example "The user opened the file .env in the IDE") as the title. Everything else stays as it was. A session made by another SDK tool in the same folder is changed with it
 - We do not write to Desktop's own files to put sessions in its list. Those files are undocumented and an update of Desktop could break that quietly
 
 ### If it still does not work

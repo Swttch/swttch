@@ -2,7 +2,7 @@
 
 🌐 [English](../en/desktop-session-import.md) | [한국어](../ko/desktop-session-import.md) | [日本語](../ja/desktop-session-import.md) | [中文](../zh/desktop-session-import.md) | **Español** | [Deutsch](../de/desktop-session-import.md) | [Français](../fr/desktop-session-import.md)
 
-_Última actualización: 2026-11-07_
+_Última actualización: 2026-11-09_
 
 Una sesión creada en el plugin no aparece por sí sola en la pestaña Code de Claude Desktop. En el sentido contrario, abrir en el plugin una sesión creada en Desktop, funciona desde el principio. El archivo con el que Desktop arma su lista no está documentado y no podemos escribir en él por usted. Lo que sí puede hacer es **ejecutar una vez la función de importar sesiones que trae el propio Desktop**. Desde la v0.36.0, las sesiones nuevas se inician de modo que esa importación las reconozca, y las que creó antes se pueden preparar con un botón en Configuración.
 
@@ -52,7 +52,7 @@ No ejecute una misma sesión en los dos sitios **a la vez**. Dos programas escri
 - Solo se importan las sesiones de **carpetas de confianza**. "No hay sesiones de la CLI para importar" significa que las sesiones importables ya están en su lista, se eliminaron antes o están en carpetas que Claude aún no considera de confianza. Si una sesión del plugin no aparece, compruebe primero que hizo el paso 1
 - Una sesión que **eliminó** en Desktop no se vuelve a importar
 - Una sesión importada conserva su historial y su modo de permisos (excepto el modo de omisión de permisos), pero no su estado de archivo ni los permisos concedidos
-- El botón del paso 1 solo cambia el `sdk-cli` que figura en cada línea del archivo de registro por el nombre nuevo y deja todo lo demás igual. Si en la misma carpeta hay una sesión creada por otra herramienta SDK, también se cambia
+- El botón del paso 1 cambia el `sdk-cli` que figura en cada línea del archivo de registro por el nombre nuevo y **añade una línea con el título de la sesión** (el nombre que el plugin muestra para ella) a toda sesión que no tenga un nombre elegido con `/rename`. Sin esa línea, Desktop nombra la sesión importada con su primer mensaje y muestra como título la frase del contexto del IDE (por ejemplo "The user opened the file .env in the IDE"). Todo lo demás queda como estaba. Una sesión creada por otra herramienta SDK en la misma carpeta se cambia con ella
 - No escribimos en los archivos propios de Desktop para meter sesiones en su lista. Esos archivos no están documentados y una actualización de Desktop podría romperlo sin avisar
 
 ### Si sigue sin funcionar

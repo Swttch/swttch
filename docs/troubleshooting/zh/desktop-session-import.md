@@ -2,7 +2,7 @@
 
 🌐 [English](../en/desktop-session-import.md) | [한국어](../ko/desktop-session-import.md) | [日本語](../ja/desktop-session-import.md) | **中文** | [Español](../es/desktop-session-import.md) | [Deutsch](../de/desktop-session-import.md) | [Français](../fr/desktop-session-import.md)
 
-_最后更新: 2026-11-07_
+_最后更新: 2026-11-09_
 
 在插件中创建的会话不会自动出现在 Claude Desktop 的 Code 标签页。反方向,也就是在插件中打开 Desktop 创建的会话,一直都可以。Desktop 用来生成列表的文件没有公开文档,我们无法替您写入。不过有一个办法:**把 Desktop 自带的"导入会话"执行一次**。从 v0.36.0 起,新建的会话在启动时就能被这个导入识别;在此之前创建的会话,可以在设置里点一个按钮完成准备。
 
@@ -54,7 +54,7 @@ Claude Desktop 没有中文界面,这个菜单会以英文显示。
 - 只会导入**您信任的文件夹**中的会话。如果提示"No CLI sessions to import",说明可导入的会话已经在列表中、之前被删除过,或位于 Claude 尚未信任的文件夹中。如果插件中的会话没有被识别,请先确认是否已完成第 1 步
 - 在 Desktop 中**删除过**的会话不会再次导入
 - 导入的会话会保留历史记录和权限模式(绕过权限模式除外),但不会保留归档状态和已授予的权限
-- 第 1 步的按钮只做一件事:把记录文件每一行里的 `sdk-cli` 改成新名字,其余内容保持不变。同一文件夹中由插件以外的其他 SDK 工具创建的会话也会一起被改动
+- 第 1 步的按钮会把记录文件每一行里的 `sdk-cli` 改成新名称,并给没有用 `/rename` 命名的会话**追加一行会话标题(插件为该会话显示的名称)。** 没有这一行时,Desktop 会用第一条消息给导入的会话命名,于是 IDE 上下文那句话(例如 "The user opened the file .env in the IDE")会成为标题。其余内容保持原样。同一文件夹里由其他 SDK 工具创建的会话也会一并被修改
 - 我们不会直接写入 Desktop 应用自己的文件来把会话加入列表。这些文件没有公开文档,Desktop 更新后可能悄悄失效
 
 ### 仍然不行的话

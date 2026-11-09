@@ -2,7 +2,7 @@
 
 🌐 [English](../en/desktop-session-import.md) | [한국어](../ko/desktop-session-import.md) | [日本語](../ja/desktop-session-import.md) | [中文](../zh/desktop-session-import.md) | [Español](../es/desktop-session-import.md) | [Deutsch](../de/desktop-session-import.md) | **Français**
 
-_Dernière mise à jour : 2026-11-07_
+_Dernière mise à jour : 2026-11-09_
 
 Une session créée dans le plugin n'apparaît pas d'elle-même dans l'onglet Code de Claude Desktop. Dans l'autre sens, ouvrir dans le plugin une session créée dans Desktop, cela fonctionne depuis le début. Le fichier dont Desktop tire sa liste n'est pas documenté, et nous ne pouvons pas y écrire à votre place. Il existe en revanche une solution : **lancer une fois l'import de sessions intégré à Desktop**. À partir de la v0.36.0, les nouvelles sessions sont démarrées de façon que cet import les reconnaisse, et celles créées avant peuvent être préparées d'un clic dans les paramètres.
 
@@ -52,7 +52,7 @@ N'exécutez pas une même session aux deux endroits **en même temps**. Deux pro
 - Seules les sessions situées dans des **dossiers approuvés** sont importées. « Aucune session CLI à importer » signifie que les sessions importables figurent déjà dans votre liste, ont été supprimées auparavant ou se trouvent dans des dossiers que Claude n'a pas encore approuvés. Si une session du plugin n'apparaît pas, vérifiez d'abord que vous avez effectué l'étape 1
 - Une session que vous avez **supprimée** dans Desktop n'est pas importée de nouveau
 - Une session importée conserve son historique et son mode d'autorisation (sauf le mode Contournement des permissions), mais pas son statut d'archivage ni ses autorisations accordées
-- Le bouton de l'étape 1 se contente de remplacer le `sdk-cli` inscrit sur chaque ligne du fichier d'enregistrement par le nouveau nom, et laisse tout le reste inchangé. Une session créée par un autre outil SDK dans le même dossier est modifiée avec les autres
+- Le bouton de l'étape 1 remplace le `sdk-cli` écrit sur chaque ligne du fichier d'enregistrement par le nouveau nom et **ajoute une ligne avec le titre de la session** (le nom que le plugin affiche pour elle) à toute session sans nom choisi avec `/rename`. Sans cette ligne, Desktop nomme une session importée d'après son premier message et affiche la phrase de contexte de l'IDE (par exemple "The user opened the file .env in the IDE") comme titre. Tout le reste est laissé tel quel. Une session créée par un autre outil SDK dans le même dossier est modifiée avec elle
 - Nous n'écrivons pas dans les fichiers propres de Desktop pour placer des sessions dans sa liste. Ces fichiers ne sont pas documentés, et une mise à jour de Desktop pourrait casser cela sans prévenir
 
 ### Si cela ne fonctionne toujours pas
