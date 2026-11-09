@@ -359,6 +359,7 @@
       "rotateModel": "Switch to the next model",
       "clearConversation": "Clear the conversation",
       "openSideQuestion": "Ask a side question (/btw)",
+      "cycleTranscriptView": "Switch the transcript view (Normal, Thinking, Verbose, Classic)",
       "refreshSessionList": "Refresh the session list while it is open",
       "zoomIn": "Zoom in",
       "findInChat": "Search the conversation",

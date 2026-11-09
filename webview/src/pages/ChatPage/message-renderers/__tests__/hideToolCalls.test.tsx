@@ -9,6 +9,7 @@ let hideToolCalls = false;
 vi.mock('@/adapters', () => ({ getAdapter: () => ({ openFile: vi.fn() }) }));
 vi.mock('@/contexts/SessionContext', () => ({
   useSessionContext: () => ({ workingDirectory: '/repo' }),
+  useSessionContextOrNull: () => null,
 }));
 vi.mock('@/contexts/CliConfigContext', () => ({
   useCliConfig: () => ({ controlResponse: null }),

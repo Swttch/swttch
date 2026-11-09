@@ -228,6 +228,26 @@
       "left": "Sessions left as they are because they are in use: {{count}}. Close them and try again.",
       "failed": "Sessions that could not be prepared: {{count}}",
       "error": "Could not prepare the sessions: {{message}}"
+    },
+    "readAloud": {
+      "title": "Read aloud",
+      "description": "Settings for the voice that reads a reply aloud when you press the speaker button under it. Until you change them, the voice and the speed are the ones stored in your Claude account.",
+      "language": {
+        "label": "Language",
+        "description": "The language a reply is read in. Auto reads each reply in the language it is written in.",
+        "auto": "Auto"
+      },
+      "voice": {
+        "label": "Style",
+        "description": "Which voice reads."
+      },
+      "speed": {
+        "label": "Speed",
+        "description": "How fast a reply is read.",
+        "slow": "Slow",
+        "normal": "Normal",
+        "fast": "Fast"
+      }
     }
   },
   "diffView": {
@@ -280,6 +300,26 @@
     "hideToolCalls": {
       "label": "Hide tool calls",
       "description": "Hide the cards for commands and lookups. File changes, questions and plans stay visible."
+    },
+    "transcriptViewMode": {
+      "label": "Transcript view",
+      "description": "View modes control how much detail appears in the chat transcript.",
+      "classic": "Classic",
+      "normal": "Normal",
+      "thinking": "Thinking",
+      "verbose": "Verbose",
+      "badge": "Claude Desktop app setting",
+      "hint": {
+        "title": "Switch view modes",
+        "body": "Normal: Tool calls collapsed into summaries, with full text responses\nThinking: Tool calls collapsed into summaries, plus Claude's thinking\nVerbose: Every tool call, file read, and intermediate step Claude takes, plus Claude's thinking\n\nUse Thinking to follow Claude's reasoning with tool calls still collapsed. Use Verbose when debugging why Claude took a particular action.\n\nClassic is the chat as released so far. Normal, Thinking and Verbose are the Claude desktop app's Transcript views: the message you sent sits on the right, with no fold arrow and no pinning to the top."
+      },
+      "announcement": {
+        "title": "The chat UI is new!",
+        "description": "The chat now looks like the Claude desktop app: replies read without bubbles, and tool calls fold into a single line. Thinking and every step are one view switch away.",
+        "shortcut": "Press Ctrl+I to switch between views.",
+        "howTo": "To go back to the old chat, set {{path}} to “{{classic}}”.",
+        "openSetting": "Open this setting"
+      }
     },
     "chat": {
       "sectionTitle": "Chat",

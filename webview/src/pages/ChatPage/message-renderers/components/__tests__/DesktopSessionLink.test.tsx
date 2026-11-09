@@ -1,12 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 
-const session = vi.hoisted(() => ({ value: undefined as { cliSessionId?: string; cwd?: string } | undefined }));
+const session = vi.hoisted(() => ({ value: undefined as { cliSessionId?: string; cwd?: string; title?: string } | undefined }));
+const viewMode = vi.hoisted(() => ({ value: null as string | null }));
 const openSession = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const env = vi.hoisted(() => ({ value: 'browser' as string }));
 
 vi.mock('@/hooks/useDesktopSession', () => ({
   useDesktopSession: () => session.value,
+}));
+vi.mock('../../transcriptViewMode', () => ({
+  useTranscriptViewMode: () => viewMode.value,
 }));
 vi.mock('@/adapters', () => ({
   getAdapter: () => ({ type: env.value, openSession }),
@@ -31,6 +35,7 @@ describe('desktopSessionIdOf', () => {
 describe('DesktopSessionLink', () => {
   beforeEach(() => {
     session.value = undefined;
+    viewMode.value = null;
     env.value = 'browser';
     openSession.mockClear();
   });
@@ -43,6 +48,16 @@ describe('DesktopSessionLink', () => {
     expect(link).toHaveAttribute('rel', 'noreferrer');
     expect(link).toHaveClass('richInputChip');
     expect(link.getAttribute('href')).toMatch(/\/sessions\/cli-1\?workingDir=%2FUsers%2Fme%2Fproject$/);
+  });
+
+  it('is named by the session\'s own title in the Transcript view, and by the text in the classic chat', () => {
+    session.value = { cliSessionId: 'cli-1', title: '* Issue 657 - history' };
+    const { unmount } = render(<DesktopSessionLink id="local_x">Issue 657 session</DesktopSessionLink>);
+    expect(screen.getByRole('link', { name: 'Issue 657 session' })).toBeInTheDocument();
+    unmount();
+    viewMode.value = 'normal';
+    render(<DesktopSessionLink id="local_x">Issue 657 session</DesktopSessionLink>);
+    expect(screen.getByRole('link', { name: '* Issue 657 - history' })).toBeInTheDocument();
   });
 
   it('leaves the opening to the link itself in a browser, where target=_blank puts it in a new tab', () => {

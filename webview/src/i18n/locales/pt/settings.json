@@ -228,6 +228,26 @@
       "left": "Sessões deixadas como estavam porque estão em uso: {{count}}. Feche-as e tente novamente.",
       "failed": "Sessões que não puderam ser preparadas: {{count}}",
       "error": "Não foi possível preparar as sessões: {{message}}"
+    },
+    "readAloud": {
+      "title": "Ler em voz alta",
+      "description": "Configurações da voz que lê uma resposta quando você aperta o botão de alto-falante abaixo dela. Até você mudá-las, a voz e a velocidade são as guardadas na sua conta do Claude.",
+      "language": {
+        "label": "Idioma",
+        "description": "O idioma em que uma resposta é lida. No automático, cada resposta é lida no idioma em que foi escrita.",
+        "auto": "Automático"
+      },
+      "voice": {
+        "label": "Estilo",
+        "description": "Qual voz lê."
+      },
+      "speed": {
+        "label": "Velocidade",
+        "description": "Com que rapidez uma resposta é lida.",
+        "slow": "Lenta",
+        "normal": "Normal",
+        "fast": "Rápido"
+      }
     }
   },
   "diffView": {
@@ -280,6 +300,26 @@
     "hideToolCalls": {
       "label": "Ocultar chamadas de ferramentas",
       "description": "Oculta os cartões dos comandos e das leituras. As alterações de ficheiros, as perguntas e os planos continuam visíveis."
+    },
+    "transcriptViewMode": {
+      "label": "Visualização de transcrição",
+      "description": "Os modos de visualização controlam quanto detalhe aparece na transcrição do chat.",
+      "classic": "Clássico",
+      "normal": "Normal",
+      "thinking": "Raciocínio",
+      "verbose": "Detalhado",
+      "badge": "Configuração do app de desktop do Claude",
+      "hint": {
+        "title": "Alternar modos de visualização",
+        "body": "Normal: Chamadas de ferramenta recolhidas em resumos, com respostas de texto completo\nThinking: Chamadas de ferramenta recolhidas em resumos, mais o pensamento de Claude\nVerbose: Cada chamada de ferramenta, leitura de arquivo e passo intermediário que Claude toma, mais o pensamento de Claude\n\nUse Thinking para seguir o raciocínio de Claude com chamadas de ferramenta ainda recolhidas. Use Verbose ao depurar por que Claude tomou uma ação particular.\n\nClássico é o chat lançado até agora; Normal, Raciocínio e Detalhado são as visualizações de transcrição do app de desktop do Claude. A mensagem enviada fica à direita, sem seta de recolher e sem fixação no topo."
+      },
+      "announcement": {
+        "title": "A interface do chat está nova!",
+        "description": "O chat agora se parece com o app desktop do Claude: as respostas aparecem sem balões e as chamadas de ferramentas se recolhem em uma única linha. O raciocínio e cada etapa estão a uma troca de visualização.",
+        "shortcut": "Pressione Ctrl+I para alternar entre as visualizações.",
+        "howTo": "Para voltar ao chat antigo, altere {{path}} para “{{classic}}”.",
+        "openSetting": "Abrir esta configuração"
+      }
     },
     "chat": {
       "sectionTitle": "Chat",

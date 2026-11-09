@@ -24,6 +24,8 @@ import { useEditHistoryCommands } from './hooks/useEditHistoryCommands';
 import { ZoomIndicator } from './components/ZoomIndicator';
 import { HelpModalHost } from './components/HelpModal';
 import { LinkMenu } from './components/LinkMenu';
+import { useCycleTranscriptViewMode } from './pages/ChatPage/transcript/useCycleTranscriptViewMode';
+import { TranscriptViewDefaultOffer } from './pages/ChatPage/transcript/TranscriptViewDefaultOffer';
 import { usePanelFocusReporter } from './hooks/usePanelFocusReporter';
 import { usePrimarySelectionReporter } from './hooks/usePrimarySelectionReporter';
 import { useClipboardReporter } from './hooks/useClipboardReporter';
@@ -48,6 +50,8 @@ function AppContent() {
   // Ctrl+letter as Ctrl+A, so the IDE names the letter instead.
   useEmacsTextKeys();
   useEditHistoryCommands();
+  // Ctrl+I cycles the Transcript view of the session on screen, wherever the focus is.
+  const viewOffer = useCycleTranscriptViewMode();
   // Tell the backend which panel is active so panel-scoped pushes route here.
   usePanelFocusReporter();
   // The IDE's embedded browser (2026.2+) no longer fills the Linux PRIMARY
@@ -101,6 +105,7 @@ function AppContent() {
       <ZoomIndicator />
       <HelpModalHost />
       <LinkMenu />
+      <TranscriptViewDefaultOffer {...viewOffer} />
       {isDev() && <div className="fixed w-full top-0 border-t-2 border-t-fuchsia-500 z-50" />}
       <Routes location={backgroundLocation ?? location}>
         <Route path="/" element={<ProjectSelectorPage />} />

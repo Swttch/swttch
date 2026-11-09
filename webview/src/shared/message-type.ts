@@ -284,6 +284,27 @@ export enum MessageType {
   DICTATION_ERROR = 'DICTATION_ERROR',
   /** Whether this machine can dictate at all (i.e. Claude Code is logged in). inbound webview→backend */
   GET_DICTATION_AVAILABILITY = 'GET_DICTATION_AVAILABILITY',
+
+  // ───────────────────────────────────────────────────────────────────────
+  // Read aloud (text to speech)
+  //
+  // The backend runs `swttch-ext tts` (from @swttch/extend-kit) and relays its audio, because asking for
+  // speech sends the account's OAuth token and only the kit may touch credentials. The webview plays it.
+  // ───────────────────────────────────────────────────────────────────────
+  /** Start reading a text aloud; stops any reading already going on this connection. payload: { text, language?, speed?, workingDir? }. Acks { status, errorKind? }. inbound webview→backend */
+  START_READ_ALOUD = 'START_READ_ALOUD',
+  /** Stop the reading. inbound webview→backend */
+  STOP_READ_ALOUD = 'STOP_READ_ALOUD',
+  /** A piece of audio of the reading: base64 of 16-bit little-endian PCM, 16 kHz, mono. payload: { audio }. outbound backend→webview */
+  READ_ALOUD_AUDIO = 'READ_ALOUD_AUDIO',
+  /** The service said everything it was given; the last audio has been sent. outbound backend→webview */
+  READ_ALOUD_DONE = 'READ_ALOUD_DONE',
+  /** Reading failed. payload: { message, fatal }. outbound backend→webview */
+  READ_ALOUD_ERROR = 'READ_ALOUD_ERROR',
+  /** Whether this machine can read aloud (kit with `tts` installed, Claude Code logged in). Acks { available, reason, detail }. inbound webview→backend */
+  GET_READ_ALOUD_AVAILABILITY = 'GET_READ_ALOUD_AVAILABILITY',
+  /** What the Claude account has chosen for reading aloud, to show beside the settings. Acks { available, voice, speed, language } (each null when not set or not known). inbound webview→backend */
+  GET_READ_ALOUD_VOICE_SETTINGS = 'GET_READ_ALOUD_VOICE_SETTINGS',
   /** Installed and latest @swttch/extend-kit versions, for the voice settings section. inbound webview→backend */
   GET_EXTEND_KIT_INFO = 'GET_EXTEND_KIT_INFO',
   /** Companion startup update completed. outbound backend→webview */
@@ -907,6 +928,18 @@ export enum MessageType {
    * webview applies the command to the focused text field.
    */
   EDIT_HISTORY_COMMAND_REQUESTED = 'EDIT_HISTORY_COMMAND_REQUESTED',
+  /**
+   * Node↔Kotlin notification, then outbound backend→webview. The user pressed
+   * Ctrl+I, the keystroke that cycles the chat's Transcript view (Normal,
+   * Thinking, Verbose, classic), while this tab's webview had focus. Carries
+   * nothing but the { panelId } Kotlin sends so the backend can route it to
+   * that panel only. It exists because the IDE's keymap binds Ctrl+I to its
+   * own actions ("Implement Methods" in an editor) and JCEF off-screen
+   * rendering reports every Ctrl+letter to the page as Ctrl+A, so a DOM keydown
+   * never says Ctrl+I was pressed. The IDE claims the keystroke for the
+   * webview, and the webview cycles the view of the session on screen.
+   */
+  CYCLE_TRANSCRIPT_VIEW = 'CYCLE_TRANSCRIPT_VIEW',
   /**
    * The webview reports the name the user confirmed for this tab, carrying
    * { name }. An empty name clears the manual name, returning the tab to

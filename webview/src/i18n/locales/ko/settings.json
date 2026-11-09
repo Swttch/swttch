@@ -228,6 +228,26 @@
       "left": "사용 중이라 그대로 둔 세션: {{count}}개. 세션을 닫고 다시 시도하세요.",
       "failed": "준비하지 못한 세션: {{count}}개",
       "error": "세션을 준비하지 못했습니다: {{message}}"
+    },
+    "readAloud": {
+      "title": "소리 내어 읽기",
+      "description": "답변 아래의 스피커 버튼을 눌렀을 때 답변을 읽어 주는 목소리의 설정입니다. 바꾸기 전까지 목소리와 속도는 Claude 계정에 저장된 값입니다.",
+      "language": {
+        "label": "언어",
+        "description": "답변을 읽는 언어입니다. 자동이면 답변마다 그 글이 쓰인 언어로 읽습니다.",
+        "auto": "자동"
+      },
+      "voice": {
+        "label": "스타일",
+        "description": "읽는 목소리입니다."
+      },
+      "speed": {
+        "label": "속도",
+        "description": "답변을 읽는 속도입니다.",
+        "slow": "느림",
+        "normal": "보통",
+        "fast": "빠름"
+      }
     }
   },
   "diffView": {
@@ -280,6 +300,26 @@
     "hideToolCalls": {
       "label": "도구 호출 숨기기",
       "description": "명령 실행과 조회 카드를 숨긴다. 파일 변경, 질문, 계획은 계속 보인다."
+    },
+    "transcriptViewMode": {
+      "label": "트랜스크립트 보기",
+      "description": "보기 모드는 채팅 트랜스크립트에 나타나는 세부 정보의 양을 제어합니다.",
+      "classic": "클래식",
+      "normal": "일반",
+      "thinking": "사고 과정",
+      "verbose": "자세히",
+      "badge": "Claude 데스크탑 앱의 설정",
+      "hint": {
+        "title": "보기 모드 전환하기",
+        "body": "Normal: 도구 호출이 요약으로 축소되고 전체 텍스트 응답\nThinking: 도구 호출이 요약으로 축소되고 Claude의 thinking\nVerbose: 모든 도구 호출, 파일 읽기, Claude가 수행하는 중간 단계, 그리고 Claude의 thinking\n\nThinking을 사용하여 도구 호출이 여전히 축소된 상태에서 Claude의 추론을 따릅니다. Claude가 특정 작업을 수행한 이유를 디버깅할 때 Verbose를 사용합니다.\n\n클래식은 지금까지 출시된 채팅이고, 일반·사고 과정·자세히는 Claude 데스크탑 앱의 트랜스크립트 보기입니다. 보낸 메시지가 오른쪽에 놓이고 접기 화살표와 상단 고정이 없습니다."
+      },
+      "announcement": {
+        "title": "채팅 UI가 새로워졌어요!",
+        "description": "이제 채팅이 Claude 데스크탑처럼 보여요. 답변은 말풍선 없이 읽기 편하게 나오고, 도구 호출은 한 줄로 접혀요. 생각 과정이나 모든 단계를 보고 싶다면 보기만 바꾸면 돼요.",
+        "shortcut": "Ctrl+I를 누르면 보기가 차례로 바뀌어요.",
+        "howTo": "원래대로 되돌리려면 {{path}}를 ‘{{classic}}’으로 바꾸세요.",
+        "openSetting": "이 설정 열기"
+      }
     },
     "chat": {
       "sectionTitle": "채팅",

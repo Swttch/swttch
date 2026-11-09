@@ -359,6 +359,7 @@
       "rotateModel": "Cambiar al siguiente modelo",
       "clearConversation": "Borrar la conversación",
       "openSideQuestion": "Hacer una pregunta al margen (/btw)",
+      "cycleTranscriptView": "Cambiar la vista de transcripción (Normal, Razonamiento, Detallada, Clásica)",
       "refreshSessionList": "Actualizar la lista de sesiones mientras está abierta",
       "zoomIn": "Acercar el zoom",
       "findInChat": "Buscar en la conversación",

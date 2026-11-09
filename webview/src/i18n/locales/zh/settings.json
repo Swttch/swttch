@@ -228,6 +228,26 @@
       "left": "因正在使用而保持原样的会话：{{count}} 个。请关闭后重试。",
       "failed": "未能准备的会话：{{count}} 个",
       "error": "无法准备会话：{{message}}"
+    },
+    "readAloud": {
+      "title": "朗读",
+      "description": "点击回复下方的扬声器按钮时朗读回复的声音的设置。在你修改之前，声音和语速是你的 Claude 账号中保存的值。",
+      "language": {
+        "label": "语言",
+        "description": "朗读回复所用的语言。选择自动时，每条回复按其文字所用的语言朗读。",
+        "auto": "自动"
+      },
+      "voice": {
+        "label": "风格",
+        "description": "用哪种声音朗读。"
+      },
+      "speed": {
+        "label": "语速",
+        "description": "回复朗读的快慢。",
+        "slow": "慢",
+        "normal": "正常",
+        "fast": "快"
+      }
     }
   },
   "diffView": {
@@ -280,6 +300,26 @@
     "hideToolCalls": {
       "label": "隐藏工具调用",
       "description": "隐藏命令和读取操作的卡片。文件改动、提问和计划仍会显示。"
+    },
+    "transcriptViewMode": {
+      "label": "对话记录视图",
+      "description": "视图模式控制聊天会话记录中显示的详细程度。",
+      "classic": "经典",
+      "normal": "普通",
+      "thinking": "思考",
+      "verbose": "详细",
+      "badge": "Claude 桌面应用的设置",
+      "hint": {
+        "title": "切换视图模式",
+        "body": "Normal：工具调用折叠成摘要，带有完整文本回复\nThinking：工具调用折叠成摘要，加上 Claude 的思考\nVerbose：Claude 采取的每个工具调用、文件读取和中间步骤，加上 Claude 的思考\n\n使用 Thinking 来跟踪 Claude 的推理，工具调用仍然折叠。在调试 Claude 为什么采取特定操作时使用 Verbose。\n\n“经典”是目前已发布的聊天界面；“普通”“思考”“详细”是 Claude 桌面应用的对话记录视图。你发送的消息显示在右侧，没有折叠箭头，也不会固定在顶部。"
+      },
+      "announcement": {
+        "title": "聊天界面焕然一新！",
+        "description": "现在聊天看起来就像 Claude 桌面应用：回复不再有气泡，工具调用折叠成一行。想看思考过程或每一个步骤，只需切换视图。",
+        "shortcut": "按 Ctrl+I 即可在各视图之间切换。",
+        "howTo": "如需恢复为原来的聊天界面，请将{{path}}改为“{{classic}}”。",
+        "openSetting": "打开此设置"
+      }
     },
     "chat": {
       "sectionTitle": "聊天",

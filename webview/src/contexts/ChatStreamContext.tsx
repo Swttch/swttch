@@ -6,6 +6,8 @@ import { useChatStream } from '../hooks/useChatStream';
 import { useDiffs } from '../hooks/useDiffs';
 import { useTools } from '../hooks/useTools';
 import { useBridgeContext } from './BridgeContext';
+import { takePendingTranscriptView } from '@/utils/pendingTranscriptView';
+import { SettingKey } from '@/types/settings';
 import { useSessionContext, type SessionHandoff } from './SessionContext';
 import { useOptionalAllowAllCommands } from './AllowAllCommandsContext';
 import { useCliConfig } from './CliConfigContext';
@@ -126,6 +128,10 @@ interface ChatStreamContextType {
 
   // Context window usage
   contextWindowUsage: { totalTokens: number; contextWindow: number; maxOutputTokens: number } | null;
+  /** Output tokens of the API messages of the running turn that have ended. */
+  turnOutputTokens: number;
+  /** When the running turn began, in ms since the epoch; null before any send. */
+  turnStartedAt: number | null;
   applyContextWindow: (contextWindow: number) => void;
 
   // The effort level the CLI reported running the current session's last turn at
@@ -198,7 +204,21 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   const adoptAllowAllDraft = useOptionalAllowAllCommands()?.adoptDraft;
   const { controlResponse, refresh: refreshCliConfig } = useCliConfig();
   const { settings: claudeSettings } = useClaudeSettings();
-  const { settings: appSettings } = useSettings();
+  const { settings: appSettings, updateSetting: updateAppSetting } = useSettings();
+  /**
+   * The view picked in this chat before it had a session is saved under the id the first message just gave it, so
+   * the session starts in that view and keeps it. Resolves once the backend has it, which is before the CLI is
+   * spawned and reads it (the thinking views ask for thinking summaries). Null when nothing was picked.
+   */
+  const adoptPendingView = useCallback(
+    (sessionId: string): Promise<void> | null => {
+      const choice = takePendingTranscriptView();
+      if (!choice) return null;
+      const bySession = appSettings[SettingKey.TRANSCRIPT_VIEW_MODE_BY_SESSION] ?? {};
+      return updateAppSetting(SettingKey.TRANSCRIPT_VIEW_MODE_BY_SESSION, { ...bySession, [sessionId]: choice });
+    },
+    [appSettings, updateAppSetting],
+  );
   const tools = useTools();
   const diffs = useDiffs();
 
@@ -578,10 +598,12 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
       // Resolve session ID: use existing or generate new one
       let sessionId = session.currentSessionId;
       const isNewSession = !sessionId;
+      let pendingViewSaved: Promise<void> | null = null;
       if (!sessionId) {
         sessionId = crypto.randomUUID();
         session.addNewSession(sessionId, content);
         adoptAllowAllDraft?.(sessionId);
+        pendingViewSaved = adoptPendingView(sessionId);
         console.log('[ChatStreamContext] New session created:', sessionId);
       }
 
@@ -614,7 +636,8 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
       // queue until `result` instead made the user wait out the whole turn (or
       // interrupt manually) before their message reached Claude (#220).
       // The backend reuses the running process, so this never respawns the CLI.
-      bridge.send(MessageType.SEND_MESSAGE, payload).then((response) => {
+      // A view picked before the session existed goes to the backend first: the spawn reads it.
+      (pendingViewSaved ?? Promise.resolve()).catch(() => undefined).then(() => bridge.send(MessageType.SEND_MESSAGE, payload)).then((response) => {
         if (response?.status === 'error') {
           console.error('[ChatStreamContext] Backend error:', response.error);
         }
@@ -622,7 +645,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
         console.error('[ChatStreamContext] Failed to send message to bridge:', error);
       });
     },
-    [addUserMessage, adoptAllowAllDraft, bridge, session, sessionModel]
+    [addUserMessage, adoptAllowAllDraft, adoptPendingView, bridge, session, sessionModel]
   );
 
   /**
@@ -726,6 +749,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
         sessionId = crypto.randomUUID();
         session.addNewSession(sessionId, rawInput);
         adoptAllowAllDraft?.(sessionId);
+        void adoptPendingView(sessionId);
       }
 
       // Recorded before the request goes out: the answer travels on the CLI
@@ -756,7 +780,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
         () => sideQuestionsRef.current?.settleQuestion(requestId, { status: SideQuestionStatus.Failed }),
       );
     },
-    [adoptAllowAllDraft, dispatchControlRequestCommand, session, sessionModel]
+    [adoptAllowAllDraft, adoptPendingView, dispatchControlRequestCommand, session, sessionModel]
   );
 
   // Run one of the slash commands the CLI won't take as text over stream-json.
@@ -786,6 +810,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
         sessionId = crypto.randomUUID();
         session.addNewSession(sessionId, command);
         adoptAllowAllDraft?.(sessionId);
+        void adoptPendingView(sessionId);
       }
 
       // Undeliverable request → send as text after all, so the user gets the
@@ -799,7 +824,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
         if (result && !result.sent) sendMessage(command, inputMode);
       });
     },
-    [addCommandEcho, adoptAllowAllDraft, dispatchControlRequestCommand, runSideQuestion, sendMessage, session, sessionModel]
+    [addCommandEcho, adoptAllowAllDraft, adoptPendingView, dispatchControlRequestCommand, runSideQuestion, sendMessage, session, sessionModel]
   );
 
   // handleSubmit: convenience wrapper for form submission.
@@ -935,6 +960,8 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
 
     // Context window usage
     contextWindowUsage: chatStream.contextWindowUsage,
+    turnOutputTokens: chatStream.turnOutputTokens,
+    turnStartedAt: chatStream.turnStartedAt,
     applyContextWindow: chatStream.applyContextWindow,
     appliedEffort,
     clearAppliedEffort,
@@ -955,6 +982,8 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     chatStream.disconnectCountdown,
     chatStream.apiRetry,
     chatStream.contextWindowUsage,
+    chatStream.turnOutputTokens,
+    chatStream.turnStartedAt,
     chatStream.applyContextWindow,
     appliedEffort,
     clearAppliedEffort,

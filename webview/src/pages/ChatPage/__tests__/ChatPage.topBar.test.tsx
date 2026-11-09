@@ -26,6 +26,10 @@ vi.mock('../useDesktopTabActions', () => ({ useDesktopTabActions: () => {} }));
 vi.mock('../ChatMessageArea', () => ({
   ChatMessageArea: () => <p data-testid="message-text">some chat text</p>,
 }));
+// The transcript of the Transcript view modes is the other area ChatPage can draw; it is stubbed the same way.
+vi.mock('../transcript/TranscriptArea', () => ({
+  TranscriptArea: () => <p data-testid="message-text">some chat text</p>,
+}));
 vi.mock('../PermissionBanner', () => ({ PermissionBanner: stub('perm') }));
 vi.mock('../AskUserQuestionInputPanel', () => ({ AskUserQuestionInputPanel: stub('ask') }));
 vi.mock('../AcceptPlanPanel', () => ({ AcceptPlanPanel: stub('plan') }));
@@ -69,6 +73,7 @@ vi.mock('../../../hooks/useScheduledDelivery/useScheduledDelivery', () => ({ use
 vi.mock('@/hooks/useWorkingDirGone', () => ({ useWorkingDirGone: () => false }));
 vi.mock('../../../contexts/SessionContext', () => ({
   useSessionContext: () => ({ currentSessionId: 's1', currentSession: { title: 't' } }),
+  useSessionContextOrNull: () => ({ currentSessionId: 's1' }),
 }));
 vi.mock('../../../hooks', () => ({ useAwaitingNotifications: () => {}, useDocumentTitle: spies.useDocumentTitle }));
 vi.mock('../../../hooks/useReportSessionActivity', () => ({ useReportSessionActivity: spies.useReportSessionActivity }));

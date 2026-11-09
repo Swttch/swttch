@@ -228,6 +228,26 @@
       "left": "Sessions laissées telles quelles car elles sont en cours d'utilisation : {{count}}. Fermez-les puis réessayez.",
       "failed": "Sessions qui n'ont pas pu être préparées : {{count}}",
       "error": "Impossible de préparer les sessions : {{message}}"
+    },
+    "readAloud": {
+      "title": "Lire à voix haute",
+      "description": "Réglages de la voix qui lit une réponse quand vous appuyez sur le bouton haut-parleur placé dessous. Tant que vous ne les changez pas, la voix et la vitesse sont celles enregistrées dans votre compte Claude.",
+      "language": {
+        "label": "Langue",
+        "description": "La langue dans laquelle une réponse est lue. En automatique, chaque réponse est lue dans la langue dans laquelle elle est écrite.",
+        "auto": "Automatique"
+      },
+      "voice": {
+        "label": "Style",
+        "description": "Quelle voix lit."
+      },
+      "speed": {
+        "label": "Vitesse",
+        "description": "À quelle vitesse une réponse est lue.",
+        "slow": "Lent",
+        "normal": "Normale",
+        "fast": "Rapide"
+      }
     }
   },
   "diffView": {
@@ -280,6 +300,26 @@
     "hideToolCalls": {
       "label": "Masquer les appels d'outils",
       "description": "Masque les cartes des commandes et des lectures. Les modifications de fichiers, les questions et les plans restent visibles."
+    },
+    "transcriptViewMode": {
+      "label": "Vue de la transcription",
+      "description": "Les modes d'affichage contrôlent le niveau de détail qui apparaît dans la transcription du chat.",
+      "classic": "Classique",
+      "normal": "Normale",
+      "thinking": "Raisonnement",
+      "verbose": "Détaillé",
+      "badge": "Réglage de l'application de bureau Claude",
+      "hint": {
+        "title": "Changer les modes d'affichage",
+        "body": "Normal: Les appels d'outils réduits en résumés, avec les réponses texte complètes\nThinking: Les appels d'outils réduits en résumés, plus la réflexion de Claude\nVerbose: Chaque appel d'outil, lecture de fichier et étape intermédiaire que Claude prend, plus la réflexion de Claude\n\nUtilisez Thinking pour suivre le raisonnement de Claude avec les appels d'outils toujours réduits. Utilisez Verbose lors du débogage pour savoir pourquoi Claude a pris une action particulière.\n\nClassique est la discussion publiée jusqu'ici ; Normale, Raisonnement et Détaillé sont les vues de transcription de l'application de bureau Claude. Le message envoyé se place à droite, sans flèche de repli ni épinglage en haut."
+      },
+      "announcement": {
+        "title": "L’interface du chat fait peau neuve !",
+        "description": "Le chat ressemble désormais à l’application de bureau de Claude : les réponses se lisent sans bulles et les appels d’outils se replient en une seule ligne. La réflexion et chaque étape sont à un changement de vue.",
+        "shortcut": "Appuyez sur Ctrl+I pour passer d’une vue à l’autre.",
+        "howTo": "Pour revenir à l’ancien chat, réglez {{path}} sur « {{classic}} ».",
+        "openSetting": "Ouvrir ce réglage"
+      }
     },
     "chat": {
       "sectionTitle": "Chat",

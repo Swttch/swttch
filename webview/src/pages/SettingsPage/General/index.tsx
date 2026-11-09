@@ -2,6 +2,7 @@ import { BasicsSection } from './Basics';
 import { ComposerSection } from './Composer';
 import { NotificationsSection } from './Notifications';
 import { VoiceSection } from './Voice';
+import { ReadAloudSection } from './ReadAloud';
 import { DiffViewSection } from './DiffView';
 import { useTranslation } from '@/i18n';
 
@@ -24,6 +25,7 @@ export function GeneralSettings() {
       <ComposerSection />
       <NotificationsSection />
       <VoiceSection />
+      <ReadAloudSection />
       <DiffViewSection />
     </div>
   );

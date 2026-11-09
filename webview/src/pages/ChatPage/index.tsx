@@ -5,6 +5,8 @@ import { ListeningNotice } from './ListeningNotice';
 import { SessionHeader } from './SessionHeader';
 import { useDesktopTabActions } from './useDesktopTabActions';
 import { ChatMessageArea } from './ChatMessageArea';
+import { TranscriptArea } from './transcript/TranscriptArea';
+import { useTranscriptViewMode } from './message-renderers/transcriptViewMode';
 import type { ChatSearchSource } from './chatSearch/useChatSearch';
 import { PermissionBanner } from './PermissionBanner';
 import { AskUserQuestionInputPanel } from './AskUserQuestionInputPanel';
@@ -133,6 +135,8 @@ function ChatPageContent() {
   const onboarding = useOnboarding();
   const { currentSessionId, currentSession } = useSessionContext();
   const { messages, isStreaming, error, disconnectCountdown, apiRetry, hasMoreOlder, oldestLoadedUuid } = useChatStreamContext();
+  // null is the chat released so far; a named view mode draws the transcript with its own code.
+  const transcriptViewMode = useTranscriptViewMode();
   const { isTopBarDisplayed, topBarHeight } = useTopBar();
   const paneColumn = usePaneColumn();
   const paneColumnWidth = usePaneWidth(true);
@@ -445,18 +449,33 @@ function ChatPageContent() {
         style={{ paddingInlineEnd: SEND_INDEX_RAIL_WIDTH, paddingTop: topBarHeight }}
         className="flex flex-col flex-1 overflow-y-auto w-full h-screen pb-0 bg-surface-base z-0"
       >
-        <ChatMessageArea
-          isStreaming={isStreaming && !isAwaitingUser}
-          disconnectCountdown={disconnectCountdown}
-          apiRetry={apiRetry}
-          mergedMessages={mergedMessages}
-          sections={sections}
-          carriedSend={carried}
-          hasMore={hasMoreOlder}
-          isLoadingMore={isLoadingMore}
-          onLoadMore={loadMore}
-          findInChat={findInChat}
-        />
+        {transcriptViewMode === null ? (
+          <ChatMessageArea
+            isStreaming={isStreaming && !isAwaitingUser}
+            disconnectCountdown={disconnectCountdown}
+            apiRetry={apiRetry}
+            mergedMessages={mergedMessages}
+            sections={sections}
+            carriedSend={carried}
+            hasMore={hasMoreOlder}
+            isLoadingMore={isLoadingMore}
+            onLoadMore={loadMore}
+            findInChat={findInChat}
+          />
+        ) : (
+          <TranscriptArea
+            isStreaming={isStreaming && !isAwaitingUser}
+            disconnectCountdown={disconnectCountdown}
+            apiRetry={apiRetry}
+            mergedMessages={mergedMessages}
+            sections={sections}
+            carriedSend={carried}
+            hasMore={hasMoreOlder}
+            isLoadingMore={isLoadingMore}
+            onLoadMore={loadMore}
+            findInChat={findInChat}
+          />
+        )}
 
         <div id="scroll-bottom-marker" />
 

@@ -374,6 +374,24 @@ describe('settings', () => {
       }
     });
 
+    it('should accept the read-aloud choices, each one also as null (follow)', async () => {
+      expect((await saveSettingToFile('voice', { readAloudLanguage: 'ko', readAloudVoice: 'buttery', readAloudSpeed: 0.8 })).status).toBe('ok');
+      expect((await saveSettingToFile('voice', { readAloudLanguage: null, readAloudVoice: null, readAloudSpeed: null })).status).toBe('ok');
+    });
+
+    it('should reject a read-aloud speed out of range or not a number', async () => {
+      for (const speed of [0.5, 2, '1.0', NaN]) {
+        const result = await saveSettingToFile('voice', { readAloudSpeed: speed });
+        expect(result.status, String(speed)).toBe('error');
+        expect(result.error).toContain('voice.readAloudSpeed');
+      }
+    });
+
+    it('should reject a read-aloud language or voice that is not a string', async () => {
+      expect((await saveSettingToFile('voice', { readAloudLanguage: 5 })).status).toBe('error');
+      expect((await saveSettingToFile('voice', { readAloudVoice: {} })).status).toBe('error');
+    });
+
     it('should reject a non-integer voice.silenceTimeout', async () => {
       const result = await saveSettingToFile('voice', { silenceTimeout: 1.5 });
       expect(result.status).toBe('error');
@@ -710,6 +728,8 @@ describe('settings', () => {
         openSettingsAs: 'overlay',
         chatPagination: true,
         hideToolCalls: false,
+        transcriptViewMode: 'normal',
+        transcriptViewModeBySession: {},
         includeNestedSessions: false,
         uiDirection: 'ltr',
         uiLanguage: null,
@@ -853,6 +873,8 @@ export default {
         openSettingsAs: 'overlay',
         chatPagination: true,
         hideToolCalls: false,
+        transcriptViewMode: 'normal',
+        transcriptViewModeBySession: {},
         includeNestedSessions: false,
         uiDirection: 'ltr',
         uiLanguage: null,

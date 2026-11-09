@@ -1,0 +1,108 @@
+/* The colours of the Transcript view modes. The desktop app's dark palette is the one they were drawn in; the light
+   values keep the same roles (reply text, quiet text, hover, chip) readable on a light chat. */
+:root {
+  --tr-text: #2b2b2b;
+  --tr-muted: #7a7a7a;
+  --tr-hover: #3d3d3d;
+  --tr-soft: #4a4a4a;
+  --tr-chip: #ebebeb;
+  --tr-link: #2f64c4;
+  --tr-add-bg: #dff1dc;
+  --tr-del-bg: #f8dfe1;
+}
+.dark {
+  --tr-text: #efefef;
+  --tr-muted: #9c9c9c;
+  --tr-hover: #d4d4d4;
+  --tr-soft: #c4c4c4;
+  --tr-chip: #2b2b2b;
+  --tr-link: #7b9bd8;
+  --tr-add-bg: #243623;
+  --tr-del-bg: #382124;
+}
+
+/* Inline code and links in the reply, as the desktop app draws them: code is a quiet grey chip with the reply's own
+   light text (the classic chat tints it), and a link is a muted blue underlined. The classic chat's rules for these
+   are `!important` and are written against the markdown's own attributes, so these have to be as well. */
+.transcript-prose :not(pre) > code,
+.transcript-prose [data-streamdown="inline-code"] {
+  background-color: var(--tr-chip) !important;
+  color: var(--tr-text) !important;
+  border-radius: 4px !important;
+  font-size: 0.82em !important;
+  padding: 0.05em 0.35em !important;
+}
+
+.transcript-prose a {
+  color: var(--tr-link) !important;
+  text-decoration: underline !important;
+  text-underline-offset: 2px;
+}
+
+/* A link to a session is the same underlined text, not the classic chat's chip on a blue background. */
+.transcript-prose a.richInputChip {
+  background: transparent !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+
+/* The cards of the sessions Claude started are spaced 22px apart, and the text after the last of them stands as far
+   from it as they stand from each other. */
+[data-seg]:has(> [data-transcript-started-session]) + [data-seg]:not(:has(> [data-transcript-started-session])):not(:empty) {
+  padding-top: 11px;
+}
+
+/* The three dots of the streaming indicator breathe in turn. */
+@keyframes transcript-dot {
+  0%, 80%, 100% { opacity: 0.25; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1); }
+}
+/* The gap under a send's bubble is the same whether the reply starts with text or with a run of calls.
+   The bubble leaves the room that text needs. A run of calls brings 17px of its own above its line, so
+   right under the bubble it would be 24px too far; this takes that back. Some entries draw nothing and
+   leave an empty wrapper, so the run is picked as the first wrapper that is not empty, not as the first. */
+[data-after-send] > [data-seg="tools"]:not(:empty):not(:not(:empty) ~ *) {
+  margin-top: -24px;
+}
+
+/* A session brief is a card, not a bubble, and it leaves no room of its own for the run of calls to take back, so
+   the run keeps the 17px it brings. Without this the line of the run sits under the card's edge. */
+:has(> [data-transcript-brief]) + [data-section-body][data-after-send] > [data-seg="tools"]:not(:empty):not(:not(:empty) ~ *) {
+  margin-top: 0;
+}
+
+/* The desktop app sets the reply's lines closer than the classic chat's 1.6; the chat's own line spacing variable is
+   read by every paragraph and list item in the markdown, so it is set here, for the reply only. */
+.transcript-prose {
+  --chat-line-height: 1.44;
+}
+
+/* The reply's paragraphs stand a little closer than the classic chat's. */
+.transcript-prose p { margin: 0.65em 0 0 !important; }
+.transcript-prose p:first-child { margin-top: 0 !important; }
+
+/* The lit dots of the working indicator: each dot takes its turn, so one to three of the four are lit at a time. */
+@keyframes transcript-grid-dot {
+  0%, 100% { opacity: 0.18; }
+  20%, 55% { opacity: 1; }
+}
+
+/* The words of what is running are swept by a lighter band from left to right, over and over. */
+.transcript-shimmer {
+  background-image: linear-gradient(100deg, var(--tr-muted) 40%, rgb(var(--text-primary-rgb)) 50%, var(--tr-muted) 60%);
+  background-size: 250% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: transcript-shimmer 1.5s linear infinite;
+}
+@keyframes transcript-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}
+
+/* A card drawn by the classic renderers (a file Claude sent, an Artifact) sits in the reply like the text does: no
+   bullet before it and none of the room the classic chat leaves for the bullet. */
+[data-transcript-card] [data-message-bullet] { display: none; }
+[data-transcript-card] > .group { padding-inline: 0; }
+[data-transcript-card] > .group > .flex { gap: 0; }

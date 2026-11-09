@@ -58,6 +58,8 @@ const SETTINGS_FILE = join(homedir(), '.claude-code-gui', 'settings.js');
 // If a new key does look like an exception, the agent decides and proposes it
 // with that reasoning — it is not a question to hand back to the user.
 
+const TRANSCRIPT_VIEW_MODES: string[] = ['normal', 'thinking', 'verbose'];
+
 const DEFAULT_SETTINGS: Record<string, unknown> = {
   cliPath: null,
   nodePath: null,
@@ -76,6 +78,8 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   openSettingsAs: 'overlay',
   chatPagination: true,
   hideToolCalls: false,
+  transcriptViewMode: 'normal',
+  transcriptViewModeBySession: {},
   includeNestedSessions: false,
   uiDirection: 'ltr',
   // GUI-only keys migrated out of the native ~/.claude/settings.json (not part of
@@ -157,10 +161,12 @@ const COMMENT_MAP: Record<string, string> = {
   openSettingsAs: '설정 화면을 여는 방식: "overlay" | "new-tab"',
   chatPagination: '채팅 기록을 페이지 단위로 로드(스크롤 시 이전 메시지 추가). false면 전체를 한 번에 로드',
   hideToolCalls: '명령 실행·조회처럼 과정에 해당하는 도구 카드를 채팅에서 숨긴다(CLI의 focus view와 같은 자리). 파일 변경(Edit/Write)과 질문·계획처럼 사용자를 향한 것은 계속 보인다',
+  transcriptViewMode: '채팅 보기 방식: "normal" | "thinking" | "verbose" | "classic". 비어 있으면(null) normal. classic은 이전 버전 채팅 UI이고, 나머지 셋은 데스크탑 앱의 Transcript view와 같으며 사용자 말풍선을 오른쪽에 두고 접기·상단 고정을 없앤다',
+  transcriptViewModeBySession: '헤더 메뉴에서 세션마다 고른 보기 방식. { 세션id: "normal" | "thinking" | "verbose" | "classic" }. 항목이 없는 세션은 transcriptViewMode를 따른다',
   includeNestedSessions: '세션 목록에 하위 작업 디렉터리의 세션까지 포함. false면 현재 디렉터리의 세션만',
   uiDirection: 'UI 미러링(레이아웃 방향): "ltr" | "rtl"',
   uiLanguage: 'GUI 인터페이스 표시 언어(예: "korean"). null이면 영어. Claude 응답 언어(language)와 무관',
-  voice: '음성 입력 설정 중 공식 스키마에 없는 것들. speechLanguage: 말하는 언어의 BCP-47 코드(예: "ko"), 공식 language가 비었을 때만 쓰인다(VS Code 확장의 accessibility.voice.speechLanguage와 같은 자리). silenceTimeout: 말이 없을 때 녹음이 기다리는 초(1~15, 기본 15). 서비스가 15초 침묵이면 스스로 끊으므로 그 이상은 의미가 없다. enabled/mode/autoSubmit은 공식 키라 네이티브 settings.json에 있다',
+  voice: '음성 입력 설정 중 공식 스키마에 없는 것들. speechLanguage: 말하는 언어의 BCP-47 코드(예: "ko"), 공식 language가 비었을 때만 쓰인다(VS Code 확장의 accessibility.voice.speechLanguage와 같은 자리). silenceTimeout: 말이 없을 때 녹음이 기다리는 초(1~15, 기본 15). 서비스가 15초 침묵이면 스스로 끊으므로 그 이상은 의미가 없다. enabled/mode/autoSubmit은 공식 키라 네이티브 settings.json에 있다. readAloudLanguage/readAloudVoice/readAloudSpeed: 답변을 소리로 읽을 때의 언어(예: "ko"), 목소리(예: "buttery"), 속도(0.7~1.5). null이면 각각 답변 글의 언어, Claude 계정(데스크탑)에 저장된 목소리, 계정에 저장된 속도를 따른다',
   useCtrlEnterToSend: '[레거시] true면 Ctrl/Cmd+Enter로 전송하고 Enter는 줄바꿈. false면 Enter로 전송. composerSendShortcut/composerNewlineShortcut이 비었을 때만 쓰인다',
   composerSendShortcut: '프롬프트를 보내는 키: "enter" | "modEnter"(Ctrl/Cmd+Enter) | "custom". null이면 useCtrlEnterToSend를 따른다',
   composerSendShortcutCustom: 'composerSendShortcut이 "custom"일 때 쓰는 조합(저장형, 예: "Meta+Enter")',
@@ -487,6 +493,21 @@ function validateSetting(key: string, value: unknown): string | null {
         return `${key} must be a boolean`;
       }
       break;
+    case 'transcriptViewMode':
+      if (value !== null && value !== 'classic' && !TRANSCRIPT_VIEW_MODES.includes(value as string)) {
+        return 'transcriptViewMode must be null or one of "normal", "thinking", "verbose", "classic"';
+      }
+      break;
+    case 'transcriptViewModeBySession':
+      if (
+        typeof value !== 'object' ||
+        value === null ||
+        Array.isArray(value) ||
+        !Object.values(value).every((v) => v === 'classic' || TRANSCRIPT_VIEW_MODES.includes(v as string))
+      ) {
+        return 'transcriptViewModeBySession must be an object of session id to "normal", "thinking", "verbose" or "classic"';
+      }
+      break;
     case 'uiDirection':
       if (!['ltr', 'rtl'].includes(value as string)) {
         return 'uiDirection must be one of "ltr", "rtl"';
@@ -542,6 +563,26 @@ function validateSetting(key: string, value: unknown): string | null {
           /^(?:(?:Ctrl|Alt|Shift|Meta)\+)*(?:Ctrl|Alt|Meta)\+(?:(?:Ctrl|Alt|Shift|Meta)\+)*[^+]+$/.test(shortcut);
         if (!valid) {
           return 'voice.shortcut must combine Ctrl, Alt or Meta with a key (e.g. "Alt+D")';
+        }
+      }
+      if (
+        'readAloudLanguage' in voice &&
+        voice.readAloudLanguage !== null &&
+        typeof voice.readAloudLanguage !== 'string'
+      ) {
+        return 'voice.readAloudLanguage must be a string or null';
+      }
+      if (
+        'readAloudVoice' in voice &&
+        voice.readAloudVoice !== null &&
+        typeof voice.readAloudVoice !== 'string'
+      ) {
+        return 'voice.readAloudVoice must be a string or null';
+      }
+      if ('readAloudSpeed' in voice && voice.readAloudSpeed !== null) {
+        const speed = voice.readAloudSpeed;
+        if (typeof speed !== 'number' || !Number.isFinite(speed) || speed < 0.7 || speed > 1.5) {
+          return 'voice.readAloudSpeed must be a number between 0.7 and 1.5, or null';
         }
       }
       if ('silenceTimeout' in voice) {

@@ -88,6 +88,7 @@ import {
   composerBindings,
   composerKeyAction,
   sendKeyLabel,
+  invertKeyLabel,
   ComposerKeyAction,
 } from '@/utils/composerShortcut';
 import { FollowUpBehavior, resolveFollowUpBehavior } from '@/shared';
@@ -200,6 +201,14 @@ export function ChatInput() {
   } = useClaudeSettings();
   // useCtrlEnterToSend + focusInputOnEditorContext migrated to the app settings.
   const { settings: appSettings } = useSettings();
+  // While a turn runs, every view names both keys, as the desktop app does.
+  // The desktop app draws the Enter key as the return symbol ("↵", "⌘↵") rather than spelling it out.
+  const returnSymbol = (label: string) => label.replace(/Enter/g, '↵');
+  const queueKey = invertKeyLabel(appSettings);
+  const followUpKeys =
+    queueKey !== ''
+      ? t('chatInput.placeholder.followUp', { send: returnSymbol(sendKeyLabel(appSettings)), queue: returnSymbol(queueKey) })
+      : null;
 
   const { cycle: cycleEffort } = useEffort();
   const [showModelSwitch, setShowModelSwitch] = useState(false);
@@ -1529,9 +1538,11 @@ export function ChatInput() {
               // actually do. Saying "Queue another message" with steering on
               // would describe the setting the user turned off.
               isStreaming
-                ? resolveFollowUpBehavior(appSettings) === FollowUpBehavior.Steer
-                  ? t('chatInput.placeholder.steerMessage')
-                  : t('chatInput.placeholder.queueMessage')
+                ? followUpKeys !== null
+                  ? followUpKeys
+                  : resolveFollowUpBehavior(appSettings) === FollowUpBehavior.Steer
+                    ? t('chatInput.placeholder.steerMessage')
+                    : t('chatInput.placeholder.queueMessage')
                 : t('chatInput.placeholder.hint', {
                     send: sendKeyLabel(appSettings),
                   })

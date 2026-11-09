@@ -1,0 +1,40 @@
+import { useSettingsOrNull } from '@/contexts/SettingsContext';
+import { useSessionContextOrNull } from '@/contexts/SessionContext';
+import { SettingKey, TRANSCRIPT_VIEW_MODES, type TranscriptViewMode } from '@/types/settings';
+import { usePendingTranscriptView } from '@/utils/pendingTranscriptView';
+
+/**
+ * The chat's view mode, or `null` for the chat UI that has been released so far
+ * (the "classic" mode).
+ *
+ * The three named modes are the Claude desktop app's Transcript view. They have
+ * one thing in common, which is what separates them from classic: the user's
+ * bubble sits on the right, and it has no fold arrow and does not pin itself to
+ * the top while its reply scrolls past.
+ *
+ * The header menu picks a view for one session. That pick wins; a session
+ * without one follows the default from the settings screen.
+ *
+ * Reads through [useSettingsOrNull] so a renderer mounted without a provider
+ * (every unit test that renders one directly) keeps drawing the classic chat.
+ */
+export function useTranscriptViewMode(): TranscriptViewMode | null {
+  const context = useSettingsOrNull();
+  const sessionId = useSessionContextOrNull()?.currentSessionId ?? null;
+  // A chat that has not started has no session to keep a pick under: what was picked waits in the page.
+  const waiting = usePendingTranscriptView();
+  const picked = sessionId
+    ? context?.settings[SettingKey.TRANSCRIPT_VIEW_MODE_BY_SESSION]?.[sessionId]
+    : (waiting ?? undefined);
+  if (picked === 'classic') return null;
+  if (isTranscriptViewMode(picked)) return picked;
+  // Without a settings provider the classic chat is drawn; with one, a default that was never chosen is Normal.
+  if (!context) return null;
+  const value = context.settings[SettingKey.TRANSCRIPT_VIEW_MODE];
+  if (value === 'classic') return null;
+  return isTranscriptViewMode(value) ? value : 'normal';
+}
+
+export function isTranscriptViewMode(value: unknown): value is TranscriptViewMode {
+  return TRANSCRIPT_VIEW_MODES.includes(value as TranscriptViewMode);
+}

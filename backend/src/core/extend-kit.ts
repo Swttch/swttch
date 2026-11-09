@@ -816,3 +816,157 @@ export async function runExtApi(
   }
   return fail('extend_kit_unreadable', 'swttch-ext answered with something that is not JSON');
 }
+
+/** What a read-aloud stream presents to callers: audio in order, then done or an error. */
+export interface TextToSpeechHandlers {
+  /** A piece of audio: 16-bit little-endian PCM, 16 kHz, mono. Always a whole number of samples. */
+  onAudio: (pcm: Buffer) => void;
+  onDone: () => void;
+  onError: (message: string, info?: { fatal?: boolean }) => void;
+}
+
+export interface TextToSpeechOptions {
+  language?: string;
+  speed?: number;
+  voice?: string;
+}
+
+export interface TextToSpeechStream {
+  /** Stop reading now. No handler fires after this. */
+  cancel: () => void;
+}
+
+/** The capability name `swttch-ext --capabilities` lists for reading aloud. */
+const TEXT_TO_SPEECH_CAPABILITY = 'tts';
+
+/**
+ * Read `text` aloud by SPAWNING `swttch-ext tts`.
+ *
+ * The text goes in on stdin; audio comes back on stdout as raw PCM. The credential that authorizes the
+ * reading is read inside that child and never crosses back: this process holds text going out and audio
+ * coming in, the same boundary dictation keeps.
+ *
+ * @throws ExtendKitMissingError when the package is not installed globally.
+ * @throws ExtendKitTooOldError when the installed kit has no `tts` command.
+ * @throws ExtendKitProbeFailedError when the installed kit could not be run.
+ */
+export async function spawnTextToSpeech(
+  text: string,
+  handlers: TextToSpeechHandlers,
+  options: TextToSpeechOptions = {},
+  workingDir?: string,
+): Promise<TextToSpeechStream> {
+  const caps = await getExtCapabilities(workingDir);
+  if (!caps.installed) throw new ExtendKitMissingError();
+  if (!caps.capabilities.includes(TEXT_TO_SPEECH_CAPABILITY)) {
+    throw new ExtendKitTooOldError(caps.version, 'tts');
+  }
+  const entry = cachedExtEntry ?? (cachedExtEntry = await resolveBinEntry(EXT_BINARY));
+
+  await Claude.applyConfigDir(workingDir);
+
+  const args = ['tts'];
+  if (options.language) args.push(`--language=${options.language}`);
+  if (options.speed !== undefined) args.push(`--speed=${options.speed}`);
+  if (options.voice) args.push(`--voice=${options.voice}`);
+
+  const child = ccbCommand(entry, args, undefined, workingDir, await ccbEnv(workingDir)).spawn({
+    stdio: ['pipe', 'pipe', 'pipe'],
+    // Never a shell: stdout carries raw audio bytes.
+    shell: false,
+  });
+
+  let ended = false;
+  let carry: Buffer | null = null;
+  let stderr = '';
+
+  child.stdout?.on('data', (chunk: Buffer) => {
+    if (ended) return;
+    // A chunk may end in the middle of a 16-bit sample; the odd byte waits for its other half.
+    let data = carry ? Buffer.concat([carry, chunk]) : chunk;
+    carry = null;
+    if (data.length % 2 === 1) {
+      carry = data.subarray(data.length - 1);
+      data = data.subarray(0, data.length - 1);
+    }
+    if (data.length > 0) handlers.onAudio(data);
+  });
+  child.stderr?.on('data', (chunk: Buffer) => {
+    stderr += chunk.toString('utf8');
+  });
+
+  child.on('error', (err: Error) => {
+    if (ended) return;
+    ended = true;
+    handlers.onError(err.message, { fatal: true });
+  });
+  child.on('close', (code: number | null) => {
+    if (ended) return;
+    ended = true;
+    if (code === 0) {
+      handlers.onDone();
+      return;
+    }
+    // The kit writes one JSON line of its own on failure; its words are the ones worth showing.
+    const line = lastLine(stderr);
+    let message = `Reading aloud stopped unexpectedly (exit ${code ?? 'signal'})`;
+    let fatal = false;
+    if (line) {
+      try {
+        const parsed = JSON.parse(line) as { error?: { message?: string; fatal?: boolean } };
+        if (parsed.error?.message) message = parsed.error.message;
+        fatal = parsed.error?.fatal ?? false;
+      } catch {
+        // Not the kit's line: a runtime warning is no reason to show raw stderr.
+      }
+    }
+    handlers.onError(message, { fatal });
+  });
+
+  child.stdin?.on('error', () => {
+    // The child ended before it read everything; its exit reports why.
+  });
+  child.stdin?.end(Buffer.from(text, 'utf8'));
+
+  return {
+    cancel: () => {
+      if (ended) return;
+      ended = true;
+      child.kill();
+    },
+  };
+}
+
+/** The voice, speed and language the Claude account has chosen for reading aloud; null for what is not set. */
+export interface AccountVoiceSettings {
+  voice: string | null;
+  speed: number | null;
+  language: string | null;
+}
+
+/**
+ * Ask the kit what the Claude account has chosen for reading aloud (`swttch-ext tts --settings`).
+ *
+ * Answers null when it cannot be known: the kit is missing, is older than the version that has `--settings`, or
+ * could not be run. A caller shows its own defaults then, which is the same thing reading aloud will do.
+ */
+export async function getAccountVoiceSettings(workingDir?: string): Promise<AccountVoiceSettings | null> {
+  try {
+    const caps = await getExtCapabilities(workingDir);
+    if (!caps.installed || !caps.capabilities.includes('tts.settings')) return null;
+    const entry = cachedExtEntry ?? (cachedExtEntry = await resolveBinEntry(EXT_BINARY));
+    await Claude.applyConfigDir(workingDir);
+    const { stdout } = await ccbCommand(entry, ['tts', '--settings'], 20_000, workingDir, await ccbEnv(workingDir)).exec();
+    const parsed = JSON.parse(lastLine(stdout) ?? '') as { ok?: boolean; data?: Partial<AccountVoiceSettings> };
+    if (!parsed.ok || !parsed.data) return null;
+    return {
+      voice: typeof parsed.data.voice === 'string' ? parsed.data.voice : null,
+      speed: typeof parsed.data.speed === 'number' ? parsed.data.speed : null,
+      language: typeof parsed.data.language === 'string' ? parsed.data.language : null,
+    };
+  } catch {
+    // Whatever went wrong, there is no answer, and the screen shows its own defaults.
+    return null;
+  }
+}
+

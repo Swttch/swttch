@@ -33,6 +33,7 @@ vi.mock('@/hooks/useBackgroundTaskActions', () => ({
 // button's colour) and one app setting (Enter vs Ctrl+Enter).
 vi.mock('@/contexts/SessionContext', () => ({
   useSessionContext: () => ({ inputMode: 'ask_before_edit' }),
+  useSessionContextOrNull: () => null,
 }));
 vi.mock('@/contexts/SettingsContext', () => ({
   useSettings: () => ({ settings: { useCtrlEnterToSend: false } }),

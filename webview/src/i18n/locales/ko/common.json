@@ -359,6 +359,7 @@
       "rotateModel": "다음 모델로 바꾸기",
       "clearConversation": "대화 비우기",
       "openSideQuestion": "곁가지 질문하기 (/btw)",
+      "cycleTranscriptView": "대화 보기를 바꾸기(일반, 생각, 자세히, 클래식)",
       "refreshSessionList": "세션 목록이 열려 있을 때 새로고침",
       "zoomIn": "확대",
       "findInChat": "대화 내용에서 찾기",

@@ -46,6 +46,7 @@ vi.mock('../../../contexts/SessionContext', () => ({
 // Mock SettingsContext (other header widgets read it)
 vi.mock('../../../contexts/SettingsContext', () => ({
   useSettings: () => mockSettingsValue,
+  useSettingsOrNull: () => mockSettingsValue,
 }));
 
 // SettingsButton goes through openSettingsAt(), which asks the adapter for a

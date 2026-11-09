@@ -144,6 +144,10 @@ export interface UseChatStreamReturn {
   resetStreamState: () => void;
   systemInit: Record<string, unknown> | null;
   contextWindowUsage: { totalTokens: number; contextWindow: number; maxOutputTokens: number } | null;
+  /** What the model has written so far in the turn running now, in tokens: the output of every API message that has ended. 0 before the first one ends. */
+  turnOutputTokens: number;
+  /** When the turn running now began (the moment its message was sent), in ms since the epoch; null before any send. */
+  turnStartedAt: number | null;
   /** Fills in a window size learned outside a turn (the `/context` report). Never overwrites one the CLI already reported. */
   applyContextWindow: (contextWindow: number) => void;
 }
@@ -171,6 +175,8 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     contextWindow: number;
     maxOutputTokens: number;
   } | null>(null);
+  const [turnOutputTokens, setTurnOutputTokens] = useState(0);
+  const [turnStartedAt, setTurnStartedAt] = useState<number | null>(null);
 
   // Usage of the API message now streaming, built from its `message_start` and
   // `message_delta`. The `assistant` frame repeats only the `message_start`
@@ -544,6 +550,8 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
   const addUserMessage = useCallback((content: string, context?: Context[], attachments?: Attachment[]) => {
     if (!content.trim() && (!attachments || attachments.length === 0)) return;
 
+    setTurnOutputTokens(0);
+    setTurnStartedAt(Date.now());
     setError(null);
     setAuthDiagnosis(null);
 
@@ -890,6 +898,9 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
             innerEvent.usage as MessageUsage | undefined,
           );
           streamingMessageUsageRef.current = finalUsage;
+          // Each API message ends once: its output is added to what the turn has written so far.
+          const outputOfMessage = (innerEvent.usage as MessageUsage | undefined)?.output_tokens;
+          if (typeof outputOfMessage === 'number' && outputOfMessage > 0) setTurnOutputTokens((sum) => sum + outputOfMessage);
           const finalTotalTokens = totalMessageTokens(finalUsage);
           if (finalTotalTokens > 0) {
             setContextWindowUsage(prev => ({
@@ -1225,6 +1236,23 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
           setError(err);
           onErrorRef.current?.(err);
         }
+        // A turn the CLI could not run at all (a resume whose conversation file is gone, say) ends in a result of this
+        // subtype with the reasons in `errors`, and nothing else reports it: without this the turn just stops.
+        else if (cliEvent.subtype === 'error_during_execution') {
+          // The CLI also writes its own diagnostic lines here (`[ede_diagnostic] …`): they describe how the turn ended,
+          // for a person reading logs, and a turn the user stopped carries one. They are not errors to show.
+          const reasons = (Array.isArray(cliEvent.errors) ? (cliEvent.errors as unknown[]) : [])
+            .filter((r): r is string => typeof r === 'string')
+            .filter((r) => !r.trimStart().startsWith('[ede_diagnostic]'));
+          const detail = reasons.join('\n') || (typeof cliEvent.result === 'string' && !cliEvent.result.trimStart().startsWith('[ede_diagnostic]') ? cliEvent.result : '');
+          // Nothing left to say means the turn ended some way that is not a failure (it was stopped, say).
+          const stoppedByUser = Array.isArray(cliEvent.errors) && (cliEvent.errors as unknown[]).length > 0 && reasons.length === 0;
+          if (!stoppedByUser) {
+            const err = new Error(detail || 'The turn failed before it could run');
+            setError(err);
+            onErrorRef.current?.(err);
+          }
+        }
 
         // result 이벤트에서 modelUsage를 통해 contextWindow/maxOutputTokens 업데이트.
         // result 이벤트엔 top-level model이 없으므로 조회 키는 system/init에서 저장한
@@ -1558,6 +1586,8 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     resetStreamState,
     systemInit,
     contextWindowUsage,
+    turnOutputTokens,
+    turnStartedAt,
     applyContextWindow,
   };
 }

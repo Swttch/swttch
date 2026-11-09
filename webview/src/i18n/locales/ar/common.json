@@ -363,6 +363,7 @@
       "rotateModel": "التبديل إلى النموذج التالي",
       "clearConversation": "مسح المحادثة",
       "openSideQuestion": "طرح سؤال جانبي (/btw)",
+      "cycleTranscriptView": "تبديل عرض النص (عادي، التفكير، مفصّل، كلاسيكي)",
       "refreshSessionList": "تحديث قائمة الجلسات أثناء فتحها",
       "zoomIn": "تكبير",
       "findInChat": "البحث في المحادثة",

@@ -359,6 +359,7 @@
       "rotateModel": "次のモデルに切り替える",
       "clearConversation": "会話をクリア",
       "openSideQuestion": "横から質問する (/btw)",
+      "cycleTranscriptView": "トランスクリプト表示を切り替える（通常、思考、詳細、クラシック）",
       "refreshSessionList": "セッション一覧が開いているときに更新",
       "zoomIn": "拡大",
       "findInChat": "会話内を検索",

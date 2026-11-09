@@ -26,6 +26,10 @@ export interface SendActionsValue {
   rewindCode: (sendUuid: string) => void;
   /** Start a new session branched from just before this send. */
   forkConversation: (sendUuid: string) => void;
+  /** Whether a reply (an assistant entry, by its uuid) can be branched from: it is recorded and not still streaming. */
+  canForkReply: (replyUuid: string) => boolean;
+  /** Start a new session that keeps the conversation up to and including this reply. */
+  forkAtReply: (replyUuid: string) => void;
   /** Both, in that order: the files are restored, then the branch opens. */
   forkAndRewind: (sendUuid: string) => void;
 }
