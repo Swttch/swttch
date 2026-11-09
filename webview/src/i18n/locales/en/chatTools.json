@@ -348,6 +348,9 @@
       }
     }
   },
+  "sendIndex": {
+    "holdHint": "Hold to see every prompt"
+  },
   "sideSessionsEvent": {
     "title": "Update on sessions you started"
   },

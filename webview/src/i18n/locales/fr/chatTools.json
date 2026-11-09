@@ -348,6 +348,9 @@
       }
     }
   },
+  "sendIndex": {
+    "holdHint": "Maintenez pour voir tous les messages"
+  },
   "sideSessionsEvent": {
     "title": "Nouvelles des sessions lancées"
   },

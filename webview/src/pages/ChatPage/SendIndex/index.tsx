@@ -11,6 +11,7 @@ import { useSessionContext } from '@/contexts/SessionContext';
 import { useWorkingDir } from '@/contexts/WorkingDirContext';
 import type { SendSection } from '../groupIntoSendSections';
 import { composeSendText, sendText } from '../sendText';
+import { SendIndexList } from './SendIndexList';
 import { scrollToSend } from './scrollToSend';
 import { readingLineSectionKey } from './readingLine';
 import { useTopBar } from '@/contexts/TopBarContext';
@@ -89,6 +90,9 @@ const CURRENT_GLOW_REACH = 3;
  * thing the user is now driving.
  */
 const TICK_LENGTH_FOCUS_GAIN = 2;
+
+/** How long a tick is held before the list of every send opens, in milliseconds. */
+const SEND_LIST_HOLD_MS = 400;
 
 /** Tick opacity for a row outside the current entry's glow. */
 const TICK_OPACITY_REST = 0.35;
@@ -302,6 +306,7 @@ function SendIndexCard({ text, top, onEnter, onLeave }: { text: string; top: num
             {line}
           </div>
         ))}
+        <div className="pt-1 text-[0.6875rem] text-text-tertiary/70">{t('sendIndex.holdHint')}</div>
       </div>
     </div>
   );
@@ -607,6 +612,12 @@ export function SendIndex(props: Props) {
       e.preventDefault();
       return;
     }
+    if (e.key === 'Enter') {
+      setPointed(null);
+      setListOpen(open => !open);
+      e.preventDefault();
+      return;
+    }
     if (e.key === 'ArrowUp' || matchesShortcut(e, PREV_SHORTCUT_DEFAULT)) {
       movePointer(-1);
       e.preventDefault();
@@ -711,6 +722,44 @@ export function SendIndex(props: Props) {
   };
   useEffect(() => () => clearTimeout(leaveTimer.current), []);
 
+  /*
+    Holding a tick opens the list of every send; a short press is still a click
+    and jumps. The press is timed on the tick itself, and the click that follows
+    a hold is swallowed so that letting go does not also jump.
+  */
+  const [listOpen, setListOpen] = useState(false);
+  const holdTimer = useRef<ReturnType<typeof setTimeout>>();
+  const held = useRef(false);
+  const startHold = () => {
+    held.current = false;
+    clearTimeout(holdTimer.current);
+    holdTimer.current = setTimeout(() => {
+      held.current = true;
+      mouseOnTick.current = false;
+      setPointed(null);
+      setListOpen(true);
+    }, SEND_LIST_HOLD_MS);
+  };
+  const cancelHold = () => clearTimeout(holdTimer.current);
+  useEffect(() => () => clearTimeout(holdTimer.current), []);
+
+  // The list closes on a press anywhere outside it and on Escape.
+  useEffect(() => {
+    if (!listOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (!outerRef.current?.contains(e.target as Node)) setListOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setListOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [listOpen]);
+
   // A session with nothing sent yet has no ruler to draw, and an empty rail
   // would take room for nothing.
   if (entries.length === 0) return null;
@@ -787,13 +836,16 @@ export function SendIndex(props: Props) {
                 className="h-full flex items-center cursor-pointer transition-[width] duration-150 pointer-events-auto"
                 style={{ width: tickLength(fromPointer, focused) }}
                 onMouseEnter={() => holdPointer(i)}
-                onMouseLeave={() => releasePointer(i)}
+                onMouseLeave={() => { releasePointer(i); cancelHold(); }}
+                onPointerDown={e => { if (e.button === 0) startHold(); }}
+                onPointerUp={cancelHold}
                 /*
                   Clicking takes the keyboard too, so the jumps that follow a
                   click land somewhere. Arriving by pointer and then pressing
                   Shift+J is the ordinary way to walk on from where you looked.
                 */
                 onClick={() => {
+                  if (held.current) { held.current = false; return; }
                   jumpTo(i);
                   railRef.current?.focus();
                 }}
@@ -807,7 +859,17 @@ export function SendIndex(props: Props) {
           );
         })}
       </div>
-      {pointed !== null && cardTop !== null && entries[pointed] && (
+      {listOpen && (
+        <SendIndexList
+          entries={entries}
+          current={current}
+          onPick={i => {
+            setListOpen(false);
+            jumpTo(i);
+          }}
+        />
+      )}
+      {!listOpen && pointed !== null && cardTop !== null && entries[pointed] && (
         <SendIndexCard
           text={entries[pointed].text}
           top={cardTop}

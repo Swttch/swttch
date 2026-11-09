@@ -348,6 +348,9 @@
       }
     }
   },
+  "sendIndex": {
+    "holdHint": "Gedrückt halten für alle Prompts"
+  },
   "sideSessionsEvent": {
     "title": "Neuigkeiten von gestarteten Sitzungen"
   },

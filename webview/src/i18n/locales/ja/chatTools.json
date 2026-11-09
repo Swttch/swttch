@@ -344,6 +344,9 @@
       }
     }
   },
+  "sendIndex": {
+    "holdHint": "長押しで全プロンプトを表示"
+  },
   "sideSessionsEvent": {
     "title": "開始したセッションからの通知"
   },

@@ -53,6 +53,26 @@ leaves several entries looking identical.
 text to copy it. A click inside the card does not move the transcript; only a
 click on the tick does.
 
+## Every prompt in one list
+
+Hovering a tick shows that one prompt. **Hold a tick** (about half a second) and a
+list of every prompt in the session opens beside the rail, one line each, with the
+prompt you are reading in blue. A short press is still a click and goes to that
+prompt.
+
+![The list of every prompt, opened beside the rail: one line per prompt, the one being read in blue. The text is blurred in this image](./assets/rail-all-prompts.jpg)
+
+- The list opens scrolled to the prompt you are reading. Scroll it to look further;
+  the chat behind it and the rail's marker stay where they are.
+- Click a row to go there, the same way a tick click does, including prompts from
+  further back than the chat has loaded.
+- `Esc` or a click anywhere outside closes it.
+- From the keyboard, focus the rail and press `Enter` to open or close it.
+- Only the rows on screen are drawn, so a session with hundreds of prompts opens
+  as quickly as a short one.
+- The hover card ends with a small hint, "Hold to see every prompt", since holding
+  is not something you would find by chance.
+
 ## Going to a prompt
 
 **Click a tick** and the chat scrolls to that prompt, landing it near the top of
