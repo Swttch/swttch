@@ -344,6 +344,9 @@
       }
     }
   },
+  "sideSessionsEvent": {
+    "title": "به‌روزرسانی درباره نشست‌هایی که شروع کرده‌اید"
+  },
   "crossSessionMessage": {
     "title": "Message received from"
   },

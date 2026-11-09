@@ -356,6 +356,9 @@
       }
     }
   },
+  "sideSessionsEvent": {
+    "title": "Новости о запущенных сессиях"
+  },
   "crossSessionMessage": {
     "title": "Message received from"
   },

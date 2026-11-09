@@ -15,6 +15,7 @@ import { stripSessionMentionTags } from '../ChatInput/sessionMentionTag';
 import { InterruptedMessageRenderer } from './InterruptedMessageRenderer';
 import { PeerAgentMessageRenderer } from './PeerAgentMessageRenderer';
 import { CrossSessionMessageRenderer, parseCrossSessionMessage } from './CrossSessionMessageRenderer';
+import { SideSessionsEventRenderer, parseSideSessionsEvent } from './SideSessionsEventRenderer';
 import { NotificationLine } from './NotificationMessageRenderer';
 import { MessageBox } from './components/MessageBox';
 import { ReplyQuotes } from './components/ReplyQuotes';
@@ -58,6 +59,10 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
   if (message.origin?.kind === 'peer') {
     return <PeerAgentMessageRenderer message={message} />;
   }
+  // The app's note about the sessions this one started: one folded line, not a bubble of its instructions.
+  const sideSessionsEvent = parseSideSessionsEvent(getTextContent(message));
+  if (sideSessionsEvent) return <SideSessionsEventRenderer event={sideSessionsEvent} />;
+
   // A message another session sent: one folded line naming the sender, as in Claude Desktop (#593).
   const crossSession = parseCrossSessionMessage(getTextContent(message));
   if (crossSession) {

@@ -348,6 +348,9 @@
       }
     }
   },
+  "sideSessionsEvent": {
+    "title": "Novedades de las sesiones iniciadas"
+  },
   "crossSessionMessage": {
     "title": "Message received from"
   },

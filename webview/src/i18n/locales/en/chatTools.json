@@ -348,6 +348,9 @@
       }
     }
   },
+  "sideSessionsEvent": {
+    "title": "Update on sessions you started"
+  },
   "crossSessionMessage": {
     "title": "Message received from"
   },

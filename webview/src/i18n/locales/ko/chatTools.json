@@ -344,6 +344,9 @@
       }
     }
   },
+  "sideSessionsEvent": {
+    "title": "시작한 세션에서 온 알림"
+  },
   "crossSessionMessage": {
     "title": "다음 발신자로부터 메시지 수신"
   },

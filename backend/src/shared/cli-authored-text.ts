@@ -21,7 +21,7 @@ const SYSTEM_REMINDER_BLOCK = /<system-reminder>[\s\S]*?<\/system-reminder>/g;
 const CLI_AUTHORED_TEXT = new RegExp(
   '^\\s*(?:'
   + '<command-name>|<command-message>|<local-command-stdout>'
-  + '|<task-notification>|<ide_opened_file>'
+  + '|<task-notification>|<ide_opened_file>|<side-sessions-event>'
   + '|\\[Request interrupted by user'
   + ')',
 );
@@ -35,4 +35,16 @@ export function withoutSystemReminders(text: string): string {
 export function isCliAuthoredText(text: string): boolean {
   const typed = withoutSystemReminders(text);
   return typed.trim() === '' || CLI_AUTHORED_TEXT.test(typed);
+}
+
+/**
+ * Whether the text is the desktop app's note about sessions this one started
+ * (`<side-sessions-event>`, with a `<system-reminder>` per session ahead of it).
+ *
+ * The app writes it as an ordinary `user` entry so Claude sees it, which makes
+ * it look like a send. It is not one: nobody typed it, and it must neither pin
+ * a header at the top of the chat nor get a tick on the rail.
+ */
+export function isSideSessionsEventText(text: string): boolean {
+  return /^\s*<side-sessions-event>/.test(withoutSystemReminders(text));
 }

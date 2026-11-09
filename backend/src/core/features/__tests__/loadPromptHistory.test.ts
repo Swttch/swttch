@@ -90,6 +90,11 @@ describe('isTypedPrompt', () => {
     expect(isTypedPrompt(prompt('u3', '<system-reminder>a</system-reminder>\n<task-notification>x</task-notification>'), true)).toBe(false);
   });
 
+  it('rejects the desktop app\'s note about sessions this one started', () => {
+    const note = '<system-reminder>The session "x" finished a turn.</system-reminder>\n<side-sessions-event>None of the sessions is working now.</side-sessions-event>';
+    expect(isTypedPrompt(prompt('u1', note), true)).toBe(false);
+  });
+
   it('keeps a prompt that merely opens with markup the user typed', () => {
     // The list is by name rather than "any tag" so typing about markup still
     // counts as typing.

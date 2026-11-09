@@ -344,6 +344,9 @@
       }
     }
   },
+  "sideSessionsEvent": {
+    "title": "開始したセッションからの通知"
+  },
   "crossSessionMessage": {
     "title": "Message received from"
   },
