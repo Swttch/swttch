@@ -57,7 +57,7 @@ const SEND_INDEX_RAIL_INSET_START = 0;
  * The rest of the gap on the start edge, as a margin class rather than a number so it can follow the width of the
  * window. The inset above stays 0 and this class is the one to tune.
  */
-const SEND_INDEX_RAIL_MARGIN_START = 'ms-0 2xs:ms-1 xs:ms-2 sm:ms-4 md:ms-6';
+const SEND_INDEX_RAIL_MARGIN_START = 'ms-0 sm:ms-2 lg:ms-6';
 
 /** Each tick is a hairline; the stack reads as a ruler rather than a list. */
 const TICK_HEIGHT = 2;
