@@ -657,16 +657,27 @@ export function SendIndex(props: Props) {
     by design. Its height follows the tick it belongs to.
   */
   const [cardTop, setCardTop] = useState<number | null>(null);
+  /*
+    Runs when the pointed tick changes and for nothing else. It used to list the
+    rail's scroll state and bounds as well, and each of those is itself set by a
+    layout effect, so one measurement could wake the next and the page fell over
+    with "Maximum update depth exceeded" on a short window.
+
+    It also never resets the position when nothing is pointed: the card is not
+    drawn then, and writing null on every run was a state update with nothing to
+    say.
+  */
   useLayoutEffect(() => {
     const outer = outerRef.current;
     const row = pointed === null ? null : (scrollRef.current?.children[pointed] as HTMLElement | undefined);
-    if (!outer || !row) { setCardTop(null); return; }
+    if (!outer || !row) return;
     const box = row.getBoundingClientRect();
     const outerBox = outer.getBoundingClientRect();
     // Screen pixels back to the page's own, as in measureBounds.
     const zoom = outerBox.width / (outer.offsetWidth || 1) || 1;
-    setCardTop((box.top - outerBox.top + box.height / 2) / zoom);
-  }, [pointed, more, bounds?.top, bounds?.height]);
+    const next = (box.top - outerBox.top + box.height / 2) / zoom;
+    setCardTop(prev => (prev !== null && Math.abs(prev - next) < 0.5 ? prev : next));
+  }, [pointed]);
 
   // Leaving a tick for the card must not drop the pointer on the way across
   // the gap between them, so letting go is deferred a moment and the card
