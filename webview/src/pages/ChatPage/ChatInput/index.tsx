@@ -92,7 +92,6 @@ import {
   ComposerKeyAction,
 } from '@/utils/composerShortcut';
 import { FollowUpBehavior, resolveFollowUpBehavior } from '@/shared';
-import { useTranscriptViewMode } from '../message-renderers/transcriptViewMode';
 import { arrowRecallsHistory } from './caretAtEdge';
 import { basename } from './basename';
 import {
@@ -202,12 +201,13 @@ export function ChatInput() {
   } = useClaudeSettings();
   // useCtrlEnterToSend + focusInputOnEditorContext migrated to the app settings.
   const { settings: appSettings } = useSettings();
-  // The Transcript view modes name both keys while a turn runs, as the desktop app does.
-  const transcriptViewMode = useTranscriptViewMode();
+  // While a turn runs, every view names both keys, as the desktop app does.
+  // The desktop app draws the Enter key as the return symbol ("↵", "⌘↵") rather than spelling it out.
+  const returnSymbol = (label: string) => label.replace(/Enter/g, '↵');
   const queueKey = invertKeyLabel(appSettings);
   const followUpKeys =
-    transcriptViewMode !== null && queueKey !== ''
-      ? t('chatInput.placeholder.followUp', { send: sendKeyLabel(appSettings), queue: queueKey })
+    queueKey !== ''
+      ? t('chatInput.placeholder.followUp', { send: returnSymbol(sendKeyLabel(appSettings)), queue: returnSymbol(queueKey) })
       : null;
 
   const { cycle: cycleEffort } = useEffort();
