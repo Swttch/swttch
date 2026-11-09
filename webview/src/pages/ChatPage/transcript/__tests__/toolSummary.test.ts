@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { TFunction } from 'i18next';
 import type { LoadedMessageDto } from '../../../../types';
 import type { ToolCall } from '../buildSegments';
-import { commandStandIn, groupIntoRows, groupLabel, isExpandable, rowLabel, sumLineStats } from '../toolSummary';
+import { commandStandIn, groupIntoRows, groupLabel, hasFailed, isExpandable, rowLabel, sumLineStats, wasStopped } from '../toolSummary';
 
 // A translator that shows what it was asked for: the key's last part, then what it was given.
 const t = ((key: string, options?: { count?: number; name?: string }) => {
@@ -139,5 +139,30 @@ describe('sumLineStats', () => {
     ];
     // The line "a" is only context: the edit put in three lines and took out one.
     expect(sumLineStats(calls)).toEqual({ added: 6, removed: 1 });
+  });
+});
+
+describe('a call the user stopped', () => {
+  const STOPPED = "The user doesn't want to proceed with this tool use. The tool use was rejected (eg. if it was a file edit, the new_string was NOT written to the file). STOP what you are doing and wait for the user to tell you how to proceed.";
+
+  function stopped(id: string, input: Record<string, unknown> = {}): ToolCall {
+    const tool_result = { message: { content: [{ type: 'tool_result', tool_use_id: id, is_error: true, content: STOPPED }] } } as unknown as LoadedMessageDto;
+    return { toolUse: { id, name: 'Bash', input, tool_result } as unknown as ToolCall['toolUse'], message };
+  }
+
+  it('is stopped, not failed, though the CLI flags its result as an error', () => {
+    const c = stopped('1', { command: 'ping -c 100 127.0.0.1' });
+    expect(wasStopped(c)).toBe(true);
+    expect(hasFailed(c)).toBe(false);
+  });
+
+  it('is told apart from a call that really failed', () => {
+    const failed = call('2', 'Bash', {}, true);
+    expect(wasStopped(failed)).toBe(false);
+    expect(hasFailed(failed)).toBe(true);
+  });
+
+  it('reads as the running phrase on its line, as the desktop app draws it', () => {
+    expect(rowLabel(stopped('3', { command: 'ping -c 100 127.0.0.1' }), t).before).toBe('runningCommandOf');
   });
 });

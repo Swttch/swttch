@@ -28,6 +28,7 @@ import {
   groupIntoRows,
   groupLabel,
   hasFailed,
+  wasStopped,
   imagesOfResult,
   isExpandable,
   pathOf,
@@ -80,7 +81,9 @@ function withoutTabContext(output: string): string {
 function NoOutput({ call, output }: { call: ToolCall; output: string }) {
   const { t } = useTranslation('chat');
   if (output.trim() !== '' || !call.toolUse.tool_result) return null;
-  return <div className="px-1 pb-3 text-[0.9375rem] text-[var(--tr-muted)]">{t('transcript.tools.noOutput')}</div>;
+  // A call the user stopped has no output to wait for: it was cut off, and the desktop app says that where the output would be.
+  const text = wasStopped(call) ? t('transcript.tools.interruptedNote') : t('transcript.tools.noOutput');
+  return <div className="px-1 pb-3 text-[0.9375rem] text-[var(--tr-muted)]">{text}</div>;
 }
 
 /** A copy button over a code box, in its top corner. */
@@ -331,7 +334,7 @@ function ToolDetail({ calls, withPictures = true }: { calls: ToolCall[]; withPic
   const call = calls[0];
   const kind = toolKindOf(call);
   // The CLI answers a command that printed nothing with a sentence saying so; the desktop app shows its own line for it.
-  const printed = toolResultText(call.toolUse.tool_result as LoadedMessageDto | undefined);
+  const printed = wasStopped(call) ? '' : toolResultText(call.toolUse.tool_result as LoadedMessageDto | undefined);
   const output = /^\(Bash completed with no output\)$/.test(printed.trim()) ? '' : printed;
   if (kind === 'command') {
     const command = typeof call.toolUse.input?.command === 'string' ? (call.toolUse.input.command as string) : '';
@@ -504,6 +507,7 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live }: { calls: ToolCal
         </span>
         )}
         {hasFailed(call) && toolKindOf(call) !== 'sessionStart' && <span className="flex-shrink-0 text-red-400">{t('transcript.tools.failedMark')}</span>}
+        {wasStopped(call) && <span className="flex-shrink-0">{t('transcript.tools.stoppedMark')}</span>}
         <LineStatsView stats={sumLineStats(calls)} />
         {expandable && <Chevron open={open} />}
         {(!open && inBox) && <Thumbnails srcs={pictures} />}

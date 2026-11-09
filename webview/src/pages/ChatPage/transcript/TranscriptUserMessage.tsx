@@ -45,6 +45,8 @@ interface Props {
 export function TranscriptUserMessage(props: Props) {
   // The summary a compaction hands the model is not something the user sent, and it is not drawn.
   if (isCompactSummaryEntry(props.message)) return null;
+  // The call that was running says "Stopped" on its own line, so the notice the CLI writes after it is not drawn again.
+  if (getTextContent(props.message).trim() === INTERRUPTED_FOR_TOOL_USE_TEXT) return null;
   return <SendBubble {...props} />;
 }
 

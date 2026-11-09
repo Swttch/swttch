@@ -1,7 +1,7 @@
 import type { TFunction } from 'i18next';
 import type { LoadedMessageDto } from '../../../types';
 import { parseSessionDelivery } from '../message-renderers/ToolRenderers/SendMessageRenderer';
-import { toolResultText, toolStatus } from '../message-renderers/ToolRenderers/common/toolStatus';
+import { toolResultRawText, toolResultText, toolStatus } from '../message-renderers/ToolRenderers/common/toolStatus';
 import { APP_EVENT_TOOL, BACKGROUND_DONE_TOOL, PEER_MESSAGE_TOOL, type ToolCall } from './buildSegments';
 import { changedLineCounts } from './fileDiff';
 
@@ -198,7 +198,19 @@ export function sumLineStats(calls: ToolCall[]): LineStats {
 }
 
 /** Whether the call ended in an error. A call that is still running, or that the user declined, has not failed. */
+/** What the CLI records as a call's result when the user stopped the turn while the call ran (or turned the call down). */
+const STOPPED_RESULT_PREFIX = "The user doesn't want to proceed with this tool use.";
+
+/**
+ * Whether the call was stopped by the user: the turn was interrupted while it ran, or it was turned down. That is not
+ * a failure of the call, and the desktop app says so with its own word ("Stopped") instead of "Failed".
+ */
+export function wasStopped(call: ToolCall): boolean {
+  return toolResultRawText(call.toolUse.tool_result as LoadedMessageDto | undefined).startsWith(STOPPED_RESULT_PREFIX);
+}
+
 export function hasFailed(call: ToolCall): boolean {
+  if (wasStopped(call)) return false;
   return toolStatus(call.toolUse.tool_result as LoadedMessageDto | undefined, call.message.isStreaming ?? false) === 'error';
 }
 
@@ -356,7 +368,7 @@ export function rowLabel(call: ToolCall, t: TFunction): RowLabel {
   const kind = toolKindOf(call);
   switch (kind) {
     case 'command': {
-      const unfinished = isRunning(call) || hasFailed(call);
+      const unfinished = isRunning(call) || hasFailed(call) || wasStopped(call);
       // A command that came with a description of what it is for is that line, running or over, as the desktop app
       // draws it: the line, not "Ran command". (The desktop app swaps in a past-tense summary of it once it is over,
       // which the CLI's `tool_use_summary` event carries only while the turn runs; the description stands in for it.)
@@ -589,7 +601,7 @@ export function groupLabel(calls: ToolCall[], t: TFunction): string {
           return t('transcript.tools.otherActions', { ns: 'chat', count });
         default: {
           // A page phrase carries no site here: the line is over calls that may be on different pages.
-          const unfinished = (calls.filter((call) => toolKindOf(call) === kind)).some((call) => isRunning(call) || hasFailed(call));
+          const unfinished = (calls.filter((call) => toolKindOf(call) === kind)).some((call) => isRunning(call) || hasFailed(call) || wasStopped(call));
           const phrase = pageGroupPhrase(kind, t, unfinished);
           return count > 1 && PAGE_KINDS.has(kind) ? t('transcript.tools.times', { ns: 'chat', label: phrase, count }) : phrase;
         }

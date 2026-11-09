@@ -1239,11 +1239,19 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
         // A turn the CLI could not run at all (a resume whose conversation file is gone, say) ends in a result of this
         // subtype with the reasons in `errors`, and nothing else reports it: without this the turn just stops.
         else if (cliEvent.subtype === 'error_during_execution') {
-          const reasons = Array.isArray(cliEvent.errors) ? (cliEvent.errors as unknown[]).filter((r): r is string => typeof r === 'string') : [];
-          const detail = reasons.join('\n') || (typeof cliEvent.result === 'string' ? cliEvent.result : '');
-          const err = new Error(detail || 'The turn failed before it could run');
-          setError(err);
-          onErrorRef.current?.(err);
+          // The CLI also writes its own diagnostic lines here (`[ede_diagnostic] …`): they describe how the turn ended,
+          // for a person reading logs, and a turn the user stopped carries one. They are not errors to show.
+          const reasons = (Array.isArray(cliEvent.errors) ? (cliEvent.errors as unknown[]) : [])
+            .filter((r): r is string => typeof r === 'string')
+            .filter((r) => !r.trimStart().startsWith('[ede_diagnostic]'));
+          const detail = reasons.join('\n') || (typeof cliEvent.result === 'string' && !cliEvent.result.trimStart().startsWith('[ede_diagnostic]') ? cliEvent.result : '');
+          // Nothing left to say means the turn ended some way that is not a failure (it was stopped, say).
+          const stoppedByUser = Array.isArray(cliEvent.errors) && (cliEvent.errors as unknown[]).length > 0 && reasons.length === 0;
+          if (!stoppedByUser) {
+            const err = new Error(detail || 'The turn failed before it could run');
+            setError(err);
+            onErrorRef.current?.(err);
+          }
         }
 
         // result 이벤트에서 modelUsage를 통해 contextWindow/maxOutputTokens 업데이트.
