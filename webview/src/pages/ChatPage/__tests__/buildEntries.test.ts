@@ -29,4 +29,12 @@ describe('buildEntries', () => {
     const entries = buildEntries([send('x'), send('y')], [section('c')]);
     expect(entries.map(e => e.key)).toEqual(['c']);
   });
+
+  it('leaves out a loaded section that opens with something the CLI wrote, as the index does (#657)', () => {
+    const entries = buildEntries(
+      [send('b')],
+      [section('a', '<task-notification>done</task-notification>'), section('n', '[Request interrupted by user]'), section('b', '<system-reminder>r</system-reminder>\nreal words')],
+    );
+    expect(entries.map(e => e.key)).toEqual(['b']);
+  });
 });

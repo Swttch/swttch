@@ -1,9 +1,11 @@
 import { useTranslation } from '@/i18n';
+import { stripSessionMentionTags } from '../ChatInput/sessionMentionTag';
 import { parseCrossSessionPreview } from '../message-renderers/CrossSessionMessageRenderer';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { CHAT_FOOTER_ID } from '../chatFooter';
 import { matchesShortcut, shouldToggleOnShortcut } from '@/utils/shortcut';
-import type { SessionSend } from '@/shared';
+import { isCliAuthoredText, type SessionSend } from '@/shared';
+import { getTextContent } from '@/types';
 import { useApi } from '@/contexts/ApiContext';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { useWorkingDir } from '@/contexts/WorkingDirContext';
@@ -183,7 +185,10 @@ export function buildEntries(
   loadedSections: SendSection[],
 ): SendIndexEntry[] {
   const loaded = loadedSections
-    .filter(section => section.head !== null)
+    // A section can open with something the CLI wrote (a finished-task note, an interrupt marker) that the
+    // backend index leaves out; drawing it here would put a tick on the rail that vanishes once the same
+    // send is read from the index instead (#657).
+    .filter(section => section.head !== null && !isCliAuthoredText(getTextContent(section.head)))
     .map(section => ({ key: section.key, text: sendText(section.head!), loaded: true }));
 
   // Nothing loaded yet: the index is all there is to draw.
@@ -256,8 +261,10 @@ function isMoveKey(key: string): boolean {
 function SendIndexCard({ text, top, onEnter, onLeave }: { text: string; top: number; onEnter: () => void; onLeave: () => void }) {
   const { t } = useTranslation('chatTools');
   // A message from another session is shown by who sent it and what it says, not with its tags.
-  const cross = parseCrossSessionPreview(text);
-  const lines = (cross ? [`${t('crossSessionMessage.title')} ${cross.name}`.trim(), ...cross.body.split('\n')] : text.split('\n')).slice(0, CARD_MAX_LINES);
+  // The chip an `@@` message opens with reads as its label, as it does in the bubble, not as its tag.
+  const shown = stripSessionMentionTags(text);
+  const cross = parseCrossSessionPreview(shown);
+  const lines = (cross ? [`${t('crossSessionMessage.title')} ${cross.name}`.trim(), ...cross.body.split('\n')] : shown.split('\n')).slice(0, CARD_MAX_LINES);
 
   return (
     /*

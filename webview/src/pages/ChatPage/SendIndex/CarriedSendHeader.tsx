@@ -1,3 +1,4 @@
+import { stripSessionMentionTags } from '../ChatInput/sessionMentionTag';
 import { CrossSessionMessageRenderer, parseCrossSessionPreview } from '../message-renderers/CrossSessionMessageRenderer';
 import { StickySendHeader } from '../StickySendHeader';
 import { MessageBox } from '../message-renderers/components/MessageBox';
@@ -26,7 +27,9 @@ interface Props {
  * a message that is not loaded. Loading older messages replaces it with the
  * real bubble, unabridged.
  */
-export function CarriedSendHeader({ preview }: Props) {
+export function CarriedSendHeader({ preview: rawPreview }: Props) {
+  // An `@@` message is its label here, as in the bubble, not the tag around it.
+  const preview = stripSessionMentionTags(rawPreview);
   const cross = parseCrossSessionPreview(preview);
   if (cross) {
     return (
