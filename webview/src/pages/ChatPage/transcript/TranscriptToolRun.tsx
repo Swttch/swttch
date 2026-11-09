@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { ChevronRightIcon, ClipboardDocumentIcon } from '@heroicons/react/20/solid';
 import { getAdapter } from '@/adapters';
@@ -512,33 +512,15 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
   const { t } = useTranslation('chat');
   const verbose = useTranscriptViewMode() === 'verbose';
   // The live run: the turn is running and the call it is waiting on is in this run. Its line then says what the
-  // model is doing and for how long, as the working indicator, and its list is open while it runs.
+  // model is doing and for how long, as the working indicator, and its list stays shut unless the reader opens it.
   const { isStreaming, messages } = useChatStreamContext();
   const live = useMemo(() => (isStreaming ? runningActivity(messages) : null), [isStreaming, messages]);
   const active = live !== null && calls.some((call) => call.toolUse.id === live.toolUseId);
-  const [open, setOpen] = useState(verbose || active);
-  // What the reader clicked wins over everything that follows: a run they shut stays shut while it goes on, and one
-  // they opened stays open. Only a change of the view mode, which is the reader's choice as well, starts over.
-  const toggledByReader = useRef(false);
-  const toggle = () => {
-    toggledByReader.current = true;
-    setOpen((v) => !v);
-  };
-  useEffect(() => {
-    toggledByReader.current = false;
-    setOpen(verbose || active);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [verbose]);
-  // Left alone, the run opens when its call starts and shuts when the turn ends. Between two calls nothing is
-  // waited on for a moment, and that gap must not shut it, so being waited on is not what shuts it.
-  useEffect(() => {
-    if (toggledByReader.current) return;
-    if (active) setOpen(true);
-  }, [active]);
-  useEffect(() => {
-    if (toggledByReader.current || verbose || isStreaming) return;
-    setOpen(false);
-  }, [isStreaming, verbose]);
+  // Shut unless the view is Verbose or the reader opened it: a run that is still going on is not opened for them,
+  // and the line over it (the dots, what is running, the seconds) is what tells them it is working.
+  const [open, setOpen] = useState(verbose);
+  useEffect(() => setOpen(verbose), [verbose]);
+  const toggle = () => setOpen((v) => !v);
   const label = useActivityLabel();
   const formatElapsed = useFormatElapsed();
   const seconds = useTurnSeconds();
