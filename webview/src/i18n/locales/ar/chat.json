@@ -1115,6 +1115,8 @@
       "titleBefore": "قبل",
       "titleAfter": "بعد",
       "inputHeading": "الإدخال",
+      "outputHeading": "المخرجات",
+      "noOutput": "لا توجد مخرجات",
       "archivedSession": "تمت أرشفة الجلسة",
       "appAskedReport": "طلب التطبيق من Claude الإبلاغ بالنتائج",
       "startedByClaudeFrom": "بدأها Claude من",

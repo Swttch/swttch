@@ -1067,6 +1067,8 @@
       "titleBefore": "قبل",
       "titleAfter": "بعد",
       "inputHeading": "ورودی",
+      "outputHeading": "خروجی",
+      "noOutput": "بدون خروجی",
       "archivedSession": "جلسه بایگانی شد",
       "appAskedReport": "برنامه از Claude خواست گزارش دهد",
       "startedByClaudeFrom": "شروع‌شده توسط Claude از",

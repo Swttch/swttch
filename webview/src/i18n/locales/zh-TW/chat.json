@@ -1059,6 +1059,8 @@
       "titleBefore": "變更前",
       "titleAfter": "變更後",
       "inputHeading": "輸入",
+      "outputHeading": "輸出",
+      "noOutput": "無輸出",
       "archivedSession": "已封存工作階段",
       "appAskedReport": "應用程式請 Claude 回報結果",
       "startedByClaudeFrom": "Claude 從以下工作階段啟動",

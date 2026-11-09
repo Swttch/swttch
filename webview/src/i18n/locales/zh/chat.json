@@ -1059,6 +1059,8 @@
       "titleBefore": "更改前",
       "titleAfter": "更改后",
       "inputHeading": "输入",
+      "outputHeading": "输出",
+      "noOutput": "无输出",
       "archivedSession": "已归档会话",
       "appAskedReport": "应用请求 Claude 汇报结果",
       "startedByClaudeFrom": "Claude 从以下会话启动",

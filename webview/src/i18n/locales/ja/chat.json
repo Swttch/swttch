@@ -1059,6 +1059,8 @@
       "titleBefore": "変更前",
       "titleAfter": "変更後",
       "inputHeading": "入力",
+      "outputHeading": "出力",
+      "noOutput": "出力なし",
       "archivedSession": "セッションをアーカイブしました",
       "appAskedReport": "アプリが Claude に報告を求めました",
       "startedByClaudeFrom": "Claude が次のセッションから開始：",

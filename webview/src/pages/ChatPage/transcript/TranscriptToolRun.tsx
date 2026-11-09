@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { ChevronRightIcon, ClipboardDocumentIcon } from '@heroicons/react/20/solid';
 import { getAdapter } from '@/adapters';
@@ -70,6 +70,13 @@ function Chevron({ open }: { open: boolean }) {
 function withoutTabContext(output: string): string {
   const at = output.indexOf('\n\nTab Context:');
   return (at === -1 ? output : output.slice(0, at)).trim();
+}
+
+/** Under a code box whose call finished and printed nothing: a quiet line saying so, as the desktop app does. */
+function NoOutput({ call, output }: { call: ToolCall; output: string }) {
+  const { t } = useTranslation('chat');
+  if (output.trim() !== '' || !call.toolUse.tool_result) return null;
+  return <div className="px-1 pb-3 text-[0.9375rem] text-[#9c9c9c]">{t('transcript.tools.noOutput')}</div>;
 }
 
 /** A copy button over a code box, in its top corner. */
@@ -211,11 +218,31 @@ function InputDetail({ call }: { call: ToolCall }) {
       <div className="pb-1 text-[#9c9c9c]">{t('transcript.tools.inputHeading')}</div>
       {entries.map(([key, value]) => (
         <div key={key} className="pb-1.5">
-          <div className="text-[0.8461rem] text-[#9c9c9c]">{key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}</div>
+          <div className="text-[0.8461rem] text-[#9c9c9c]">{key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ').replace(/\b(id)\b/g, 'ID')}</div>
           <div className="break-words text-[#efefef]">{typeof value === 'string' ? value : JSON.stringify(value)}</div>
         </div>
       ))}
     </div>
+  );
+}
+
+/**
+ * What a call was given, and what it printed: "Input" with its entries, a rule, and "Output" with the text that came
+ * back. How the desktop app draws a skill that was started. The output is left out until there is one.
+ */
+function InputOutputDetail({ call }: { call: ToolCall }) {
+  const { t } = useTranslation('chat');
+  const output = toolResultText(call.toolUse.tool_result as LoadedMessageDto | undefined).trim();
+  return (
+    <>
+      <InputDetail call={call} />
+      {output && (
+        <div className={`mx-1 mb-3 border-t ${BOX_BORDER} pt-3 text-[0.9375rem] leading-[1.5]`}>
+          <div className="pb-1 text-[#9c9c9c]">{t('transcript.tools.outputHeading')}</div>
+          <div className="whitespace-pre-wrap break-words text-[#9c9c9c]">{output}</div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -287,14 +314,26 @@ function SessionFactsDetail({ call }: { call: ToolCall }) {
 function ToolDetail({ calls }: { calls: ToolCall[] }) {
   const call = calls[0];
   const kind = toolKindOf(call);
-  const output = toolResultText(call.toolUse.tool_result as LoadedMessageDto | undefined);
+  // The CLI answers a command that printed nothing with a sentence saying so; the desktop app shows its own line for it.
+  const printed = toolResultText(call.toolUse.tool_result as LoadedMessageDto | undefined);
+  const output = /^\(Bash completed with no output\)$/.test(printed.trim()) ? '' : printed;
   if (kind === 'command') {
     const command = typeof call.toolUse.input?.command === 'string' ? (call.toolUse.input.command as string) : '';
-    return <CodeBox title={call.toolUse.name} code={command} language="bash" output={output} />;
+    return (
+      <>
+        <CodeBox title={call.toolUse.name} code={command} language="bash" output={output} />
+        <NoOutput call={call} output={output} />
+      </>
+    );
   }
   if (kind === 'pageScript') {
     const script = typeof call.toolUse.input?.text === 'string' ? (call.toolUse.input.text as string) : '';
-    return <CodeBox title="JavaScript" code={script} language="javascript" output={withoutTabContext(output)} />;
+    return (
+      <>
+        <CodeBox title="JavaScript" code={script} language="javascript" output={withoutTabContext(output)} />
+        <NoOutput call={call} output={withoutTabContext(output)} />
+      </>
+    );
   }
   if (kind === 'receivedMessage') {
     const body = typeof call.toolUse.input?.body === 'string' ? (call.toolUse.input.body as string) : '';
@@ -308,7 +347,7 @@ function ToolDetail({ calls }: { calls: ToolCall[] }) {
     return (
       <>
         <MarkdownDetail text={body} message={call.message} />
-        <TranscriptToolRow calls={[requestCall]} defaultOpen={false} inBox={false} />
+        <NestedRequestRow call={requestCall} />
       </>
     );
   }
@@ -327,6 +366,7 @@ function ToolDetail({ calls }: { calls: ToolCall[] }) {
   if (kind === 'sessionLookup') return <SessionFactsDetail call={call} />;
   if (kind === 'sessionRename') return <RenameDetail call={call} />;
   if (kind === 'toolLoad') return <InputDetail call={call} />;
+  if (kind === 'skill' || kind === 'sessionRead') return <InputOutputDetail call={call} />;
   if (kind === 'messageSent') return <SentMessageDetail call={call} />;
   if (call.toolUse.name === 'Edit' || call.toolUse.name === 'Write') return <FileChangeDetail calls={calls} />;
   if (browserToolOf(call.toolUse.name) !== '') return <PlainDetail call={call} />;
@@ -393,11 +433,19 @@ function StartedSessionCard({ call }: { call: ToolCall }) {
   );
 }
 
+/** The request for a report under the message it asks about: shut, except in Verbose, which opens every call. */
+function NestedRequestRow({ call }: { call: ToolCall }) {
+  const verbose = useTranscriptViewMode() === 'verbose';
+  return <TranscriptToolRow calls={[call]} defaultOpen={verbose} inBox={false} />;
+}
+
 /** One call: a line that opens to its details. */
 function TranscriptToolRow({ calls, defaultOpen, inBox }: { calls: ToolCall[]; defaultOpen: boolean; inBox: boolean }) {
   const { t } = useTranslation('chat');
   const call = calls[0];
   const [open, setOpen] = useState(defaultOpen);
+  // A row already drawn follows the view it is drawn in: Verbose opens it, another view shuts it again.
+  useEffect(() => setOpen(defaultOpen), [defaultOpen]);
   const running = !call.toolUse.tool_result && (call.message.isStreaming ?? false);
   const label = rowLabel(call, t);
   const path = pathOf(call);
@@ -452,6 +500,8 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
   const { t } = useTranslation('chat');
   const verbose = useTranscriptViewMode() === 'verbose';
   const [open, setOpen] = useState(verbose);
+  // Switching the view while the run is on screen opens or shuts it as well, not only runs drawn after the switch.
+  useEffect(() => setOpen(verbose), [verbose]);
   const pictures = calls.flatMap((call) => imagesOfResult(call.toolUse.tool_result as LoadedMessageDto | undefined));
 
   if (calls.length === 1 && toolKindOf(calls[0]) === 'sessionStart' && !hasFailed(calls[0])) {

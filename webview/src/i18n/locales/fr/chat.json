@@ -1075,6 +1075,8 @@
       "titleBefore": "Avant",
       "titleAfter": "Après",
       "inputHeading": "Entrée",
+      "outputHeading": "Sortie",
+      "noOutput": "Aucune sortie",
       "archivedSession": "Session archivée",
       "appAskedReport": "L’application a demandé à Claude de faire un compte rendu",
       "startedByClaudeFrom": "Démarrée par Claude depuis",

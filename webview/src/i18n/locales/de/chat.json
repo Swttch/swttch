@@ -1067,6 +1067,8 @@
       "titleBefore": "Vorher",
       "titleAfter": "Nachher",
       "inputHeading": "Eingabe",
+      "outputHeading": "Ausgabe",
+      "noOutput": "Keine Ausgabe",
       "archivedSession": "Sitzung archiviert",
       "appAskedReport": "Die App hat Claude um eine Rückmeldung gebeten",
       "startedByClaudeFrom": "Von Claude gestartet aus",

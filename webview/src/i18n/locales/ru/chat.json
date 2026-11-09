@@ -1091,6 +1091,8 @@
       "titleBefore": "До",
       "titleAfter": "После",
       "inputHeading": "Ввод",
+      "outputHeading": "Вывод",
+      "noOutput": "Нет вывода",
       "archivedSession": "Сеанс заархивирован",
       "appAskedReport": "Приложение попросило Claude сообщить о результатах",
       "startedByClaudeFrom": "Запущено Claude из сеанса",

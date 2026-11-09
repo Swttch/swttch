@@ -1071,6 +1071,8 @@
       "titleBefore": "Before",
       "titleAfter": "After",
       "inputHeading": "Input",
+      "outputHeading": "Output",
+      "noOutput": "No output",
       "archivedSession": "Archived session",
       "appAskedReport": "The app asked Claude to report back",
       "startedByClaudeFrom": "Started by Claude from",

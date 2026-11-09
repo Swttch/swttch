@@ -42,6 +42,12 @@
   margin-top: -24px;
 }
 
+/* A session brief is a card, not a bubble, and it leaves no room of its own for the run of calls to take back, so
+   the run keeps the 17px it brings. Without this the line of the run sits under the card's edge. */
+:has(> [data-transcript-brief]) + [data-section-body][data-after-send] > [data-seg="tools"]:not(:empty):not(:not(:empty) ~ *) {
+  margin-top: 0;
+}
+
 /* The desktop app sets the reply's lines closer than the classic chat's 1.6; the chat's own line spacing variable is
    read by every paragraph and list item in the markdown, so it is set here, for the reply only. */
 .transcript-prose {

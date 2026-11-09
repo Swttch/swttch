@@ -1059,6 +1059,8 @@
       "titleBefore": "변경 전",
       "titleAfter": "변경 후",
       "inputHeading": "입력",
+      "outputHeading": "출력",
+      "noOutput": "출력 없음",
       "archivedSession": "세션 보관됨",
       "appAskedReport": "앱이 Claude에게 결과 보고를 요청했습니다",
       "startedByClaudeFrom": "Claude가 다음 세션에서 시작함",
