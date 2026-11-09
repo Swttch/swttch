@@ -37,7 +37,7 @@ export const SEND_INDEX_RAIL_WIDTH = 24;
  * reserves only SEND_INDEX_RAIL_WIDTH, so this inset is taken out of the gap
  * between the two rather than added to what the text gives up.
  */
-export const SEND_INDEX_RAIL_INSET = 6;
+export const SEND_INDEX_RAIL_INSET = 14;
 
 /** Each tick is a hairline; the stack reads as a ruler rather than a list. */
 const TICK_HEIGHT = 2;
@@ -277,7 +277,7 @@ function SendIndexCard({ text, top, onEnter, onLeave }: { text: string; top: num
       out from under the cursor halfway across.
     */
     <div
-      className="absolute start-full -translate-y-1/2 ps-2 pointer-events-auto"
+      className="absolute end-full -translate-y-1/2 pe-2 pointer-events-auto"
       style={{ top }}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
@@ -391,46 +391,50 @@ export function SendIndex(props: Props) {
     The vertical stretch the rail may occupy, in pixels from the top of the
     rail's positioned parent.
 
-    Its top is the lower edge of the send pinned under the top bar, its bottom
-    the upper edge of the composer. Measured rather than assumed because both
-    move: the pinned send folds as the reader scrolls, and the composer grows
-    with what is typed and with the panels stacked on it. The rail takes
-    whatever is left between them, so a taller window shows more ticks and a
-    shorter one scrolls them; no count of ticks is ever fixed.
+    Its top is under the top bar, its bottom the upper edge of the composer, so
+    the rail never runs down behind the input box. Measured rather than assumed
+    because the composer grows with what is typed and with the panels stacked
+    on it. The rail takes whatever is left, so a taller window shows more ticks
+    and a shorter one scrolls them; no count of ticks is ever fixed.
   */
   const [bounds, setBounds] = useState<{ top: number; height: number } | null>(null);
   const outerRef = useRef<HTMLDivElement>(null);
 
-  const measureBounds = (readingSection: string | null) => {
+  const measureBounds = () => {
     const outer = outerRef.current;
     const parent = outer?.offsetParent as HTMLElement | null;
     if (!outer || !parent) return;
-    const parentTop = parent.getBoundingClientRect().top;
     // The page can be zoomed (the zoom control scales the root), and measured
     // boxes come back in screen pixels while top/height are set in the page's
     // own. The ratio between the two is the zoom.
     const zoom = outer.getBoundingClientRect().width / (outer.offsetWidth || 1) || 1;
-
-    let top = topBarHeight * zoom;
-    if (readingSection) {
-      const header = document.querySelector<HTMLElement>(
-        `[data-send-section="${CSS.escape(readingSection)}"] [data-send-pinned-header]`,
-      );
-      const box = header?.getBoundingClientRect();
-      // Only a header that is stuck to the top covers anything; one still in
-      // its place in the flow is just part of the transcript.
-      if (box && box.top <= parentTop + top + 2 * zoom) top = Math.max(top, box.bottom - parentTop);
-    }
+    const parentTop = parent.getBoundingClientRect().top;
 
     const footer = document.getElementById(CHAT_FOOTER_ID);
-    const bottom = footer ? footer.getBoundingClientRect().top - parentTop : parent.clientHeight * zoom;
+    const bottom = footer ? (footer.getBoundingClientRect().top - parentTop) / zoom : parent.clientHeight;
 
-    const next = {
-      top: Math.round(top / zoom) + 4,
-      height: Math.max(Math.round((bottom - top) / zoom) - 8, 0),
-    };
+    const next = { top: topBarHeight + 4, height: Math.max(Math.round(bottom - topBarHeight) - 8, 0) };
     setBounds(prev => (prev && prev.top === next.top && prev.height === next.height ? prev : next));
   };
+
+  /*
+    The bottom edge moves only when the composer does (it grows with what is
+    typed and with the panels stacked on it) or the window does, so that is all
+    this listens to. It is deliberately NOT measured on scroll: the transcript
+    scrolls far more often than anything here changes.
+  */
+  useEffect(() => {
+    measureBounds();
+    const footer = document.getElementById(CHAT_FOOTER_ID);
+    const observer = footer ? new ResizeObserver(measureBounds) : null;
+    if (footer) observer?.observe(footer);
+    window.addEventListener('resize', measureBounds);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', measureBounds);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topBarHeight, entries.length > 0]);
 
   useEffect(() => {
     const scroller = document.querySelector<HTMLElement>('[data-chat-scroll]');
@@ -439,32 +443,22 @@ export function SendIndex(props: Props) {
     let frame = 0;
     const measure = () => {
       frame = 0;
-      const key = readingLineSectionKey(topBarHeight);
-      setReadingKey(key);
-      measureBounds(key);
+      setReadingKey(readingLineSectionKey(topBarHeight));
     };
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(measure);
     };
 
     scroller.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll);
-    // The composer changes height without anyone scrolling.
-    const footer = document.getElementById(CHAT_FOOTER_ID);
-    const observer = footer ? new ResizeObserver(onScroll) : null;
-    if (footer) observer?.observe(footer);
     // Also measure now: arriving at a session, and every page of older messages
     // prepended into it, moves the sends without anyone scrolling.
     measure();
 
     return () => {
       scroller.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
-      observer?.disconnect();
       if (frame) cancelAnimationFrame(frame);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sections, topBarHeight, entries.length > 0]);
+  }, [sections, topBarHeight]);
 
   /*
     The entry being read is the LAST one past the reading line, not the first.
@@ -735,7 +729,7 @@ export function SendIndex(props: Props) {
       className="absolute z-20 flex flex-col justify-center pointer-events-none"
       style={{
         width: SEND_INDEX_RAIL_WIDTH,
-        insetInlineStart: SEND_INDEX_RAIL_INSET,
+        insetInlineEnd: SEND_INDEX_RAIL_INSET,
         top: bounds?.top ?? 0,
         height: bounds?.height ?? 0,
         visibility: bounds ? 'visible' : 'hidden',
@@ -763,7 +757,7 @@ export function SendIndex(props: Props) {
           The scrollbar is hidden: the fade at the edges is what says there is
           more, and a bar would sit beside ticks that are themselves a ruler.
         */
-        className={`flex flex-col items-start py-2 rounded-full outline-none transition-colors duration-150 max-h-full overflow-y-auto shrink-0 ${
+        className={`flex flex-col items-end py-2 rounded-full outline-none transition-colors duration-150 max-h-full overflow-y-auto shrink-0 ${
           focused ? 'bg-surface-raised' : 'bg-transparent'
         }`}
         style={{ width: SEND_INDEX_RAIL_WIDTH, scrollbarWidth: 'none', msOverflowStyle: 'none', maskImage: mask, WebkitMaskImage: mask }}
@@ -780,7 +774,7 @@ export function SendIndex(props: Props) {
               role="option"
               aria-selected={i === current}
               data-send-index-current={i === current ? 'true' : undefined}
-              className="relative flex items-center justify-start ps-0.5 shrink-0"
+              className="relative flex items-center justify-end pe-0.5 shrink-0"
               style={{ height: TICK_HEIGHT + TICK_GAP, width: SEND_INDEX_RAIL_WIDTH }}
             >
               {/*

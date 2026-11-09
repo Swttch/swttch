@@ -6,13 +6,13 @@ A long session is dozens of prompts, and each one is followed by a reply full of
 tool calls, diffs and command output. Finding the place where you asked about
 something means scrolling, and it is easy to lose the spot you were reading.
 
-The **send index** is a strip of thin ticks down the start edge of the chat. One
+The **send index** is a strip of thin ticks down the end edge of the chat. One
 tick per prompt you sent, for the whole session. Hover a tick to read that
 prompt, click it to go there.
 
-Requested in [#427](https://github.com/Swttch/swttch/issues/427). Moved to the start edge, bounded to the free space and fixed to list every prompt in [#657](https://github.com/Swttch/swttch/issues/657).
+Requested in [#427](https://github.com/Swttch/swttch/issues/427). Bounded to the free space and fixed to list every prompt in [#657](https://github.com/Swttch/swttch/issues/657).
 
-![The chat with the send index at the start edge: a stack of short horizontal ticks drawn over the chat](./assets/rail-at-rest.jpg)
+![The chat with the send index at the end edge: a stack of short horizontal ticks, vertically centred, beside a reply made of two Bash tool cards](./assets/rail-at-rest.jpg)
 
 ## What the rail tells you
 
@@ -43,7 +43,7 @@ the moment the two coincide there is no way to tell them apart.
 Hover any tick and a card opens toward the transcript with the first four lines
 of that prompt.
 
-![The same chat with the pointer on a tick: a card has opened to the right of the rail, showing the first line of that prompt in white and the following line dimmed](./assets/rail-preview-card.jpg)
+![The same chat with the pointer on a tick: a card has opened to the left of the rail, showing the first line of that prompt in white and the following line dimmed](./assets/rail-preview-card.jpg)
 
 Four lines rather than one, because prompts in a working session tend to open
 with the same words — "fix the", "now make it" — and a single truncated line
@@ -117,17 +117,12 @@ replaces it with the real message, unabridged.
 - **The rail is not shown in a session with nothing sent yet**, since there is
   nothing to index.
 
-## Where it sits and how much room it takes
+## How much room it takes
 
-The rail sits on the **start edge** of the chat, drawn over the transcript. It
-reserves no room beside it: the strip it used to leave at the end edge was there
-to keep clear of the scrollbar, and the scrollbar is on the other side.
-
-**It takes the free space, whatever that is.** The rail runs from just under the
-prompt pinned at the top of the chat to just above the input box. Both edges are
-measured as you use the chat, so a taller window shows more ticks, a shorter one
-fewer, and the rail follows the input box as it grows. There is no fixed number
-of ticks.
+The rail runs from under the top bar to just above the input box, so it never
+runs down behind the input. The bottom edge is measured again when the input box
+grows or the window changes size, so a taller window shows more ticks and a
+shorter one fewer. There is no fixed number of ticks.
 
 **More ticks than fit are scrolled, not squeezed.** Scroll the wheel over the
 rail to move through them; the scrollbar is hidden. An edge with more ticks
@@ -146,18 +141,24 @@ background tasks, interrupt markers, another session's message, and the note the
 desktop app writes about sessions this one started. A message that has a
 reminder in front of what you typed is listed by what you typed.
 
-A prompt that opens with an `@@` mention shows the mention's name, as the chat
-bubble does, rather than the markup around it.
+A prompt that opens with an `@@` mention shows the mention's name, and one made
+of reply cards shows each quote and its comment, as the chat bubble does, rather
+than the markup around them.
 
 ## Scrollbars
 
 Shipped alongside: scrollbars across the app are now half as wide, their track
 is fully transparent, and in dark themes the thumb is darker than the surface it
 sits on rather than lighter. A pale bar down the edge of a dark transcript pulls
-the eye away from the conversation.
+the eye away from the conversation, and the rail now shares that edge.
 
-## The input box
+## The input box is not pushed aside
 
-The rail is drawn over the transcript, so the input box is not pushed aside by
-it: it sits centred with the same space on both sides, and the conversation still
-runs on behind it and shows around it.
+The rail keeps clear of the conversation by leaving a 24 pixel strip at the end
+edge of the transcript. The input box is not held to that strip: it reaches over
+it, so it sits centred, with the same space on its start side and its end side.
+
+Earlier the input box gave up the same 24 pixels along with the transcript, so
+it sat a little off-centre with more space on its end side. Nothing else about
+it changed: it still floats over the bottom of the chat, and the conversation
+still runs on behind it and shows around it.

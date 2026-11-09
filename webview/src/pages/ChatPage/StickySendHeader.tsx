@@ -129,7 +129,6 @@ export function StickySendHeader(props: Props) {
         style={{ scrollMarginTop: SEND_JUMP_SCROLL_MARGIN }}
       />
       <div
-        data-send-pinned-header
         className="sticky top-0 z-[1] group"
         /*
           Content passing under the pinned message fades out instead of
