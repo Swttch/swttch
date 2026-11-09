@@ -202,6 +202,7 @@
       "normal": "عادي",
       "thinking": "التفكير",
       "verbose": "مفصّل",
+      "setDefault": "اجعل {{mode}} الافتراضي",
       "defaultOffer": {
         "title": "هل تريد جعل {{mode}} عرضك الافتراضي؟",
         "action": "اجعله افتراضيًا",

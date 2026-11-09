@@ -202,6 +202,7 @@
       "normal": "Normal",
       "thinking": "Thinking",
       "verbose": "Verbose",
+      "setDefault": "Make {{mode}} the default",
       "defaultOffer": {
         "title": "Make {{mode}} your default view?",
         "action": "Make default",

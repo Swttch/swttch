@@ -202,6 +202,7 @@
       "normal": "通常",
       "thinking": "思考",
       "verbose": "詳細",
+      "setDefault": "{{mode}}をデフォルトにする",
       "defaultOffer": {
         "title": "{{mode}}をデフォルトの表示にしますか？",
         "action": "デフォルトに設定",

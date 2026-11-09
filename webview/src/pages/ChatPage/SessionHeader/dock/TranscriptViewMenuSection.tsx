@@ -1,4 +1,5 @@
 import Tippy from '@tippyjs/react/headless';
+import toast from 'react-hot-toast';
 import { CheckIcon, ChevronRightIcon } from '@heroicons/react/20/solid';
 import { useTranslation } from '@/i18n';
 import { Tooltip } from '@/components/Tooltip';
@@ -49,6 +50,13 @@ export function TranscriptViewMenuSection({ onPick }: { onPick: () => void }) {
     onPick();
   };
 
+  const defaultChoice: Choice = settings[SettingKey.TRANSCRIPT_VIEW_MODE] ?? CLASSIC;
+  const makeDefault = () => {
+    void updateSetting(SettingKey.TRANSCRIPT_VIEW_MODE, current === CLASSIC ? null : current);
+    toast.success(t('sessionHeader.transcriptView.defaultOffer.saved', { mode: t(`sessionHeader.transcriptView.${current}`) }));
+    onPick();
+  };
+
   return (
     <div className="border-t border-border-default py-1">
       <Tippy
@@ -66,7 +74,7 @@ export function TranscriptViewMenuSection({ onPick }: { onPick: () => void }) {
             role="menu"
             aria-label={t('sessionHeader.transcriptView.title')}
             {...{ [TRANSCRIPT_VIEW_SUBMENU_ATTRIBUTE]: '' }}
-            className="w-40 bg-surface-raised border border-border-default rounded-md shadow-xl py-1 z-50"
+            className="min-w-[10rem] max-w-[16rem] bg-surface-raised border border-border-default rounded-md shadow-xl py-1 z-50"
             {...attrs}
           >
             {choices.map((choice) => (
@@ -84,6 +92,20 @@ export function TranscriptViewMenuSection({ onPick }: { onPick: () => void }) {
                 </button>
               </Tooltip>
             ))}
+            {current !== defaultChoice && (
+              // Only for a view that is not the default yet, as in the desktop app: the way to keep it for every session.
+              <>
+                <div className="my-1 border-t border-border-default" />
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={makeDefault}
+                  className="flex w-full items-center px-3 py-1.5 text-start text-sm text-text-primary hover:bg-surface-hover"
+                >
+                  {t('sessionHeader.transcriptView.setDefault', { mode: t(`sessionHeader.transcriptView.${current}`) })}
+                </button>
+              </>
+            )}
           </div>
         )}
       >

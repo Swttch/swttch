@@ -202,6 +202,7 @@
       "normal": "一般",
       "thinking": "思考",
       "verbose": "詳細",
+      "setDefault": "將「{{mode}}」設為預設",
       "defaultOffer": {
         "title": "要將「{{mode}}」設為預設檢視嗎？",
         "action": "設為預設",

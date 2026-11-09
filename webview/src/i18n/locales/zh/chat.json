@@ -202,6 +202,7 @@
       "normal": "普通",
       "thinking": "思考",
       "verbose": "详细",
+      "setDefault": "将“{{mode}}”设为默认",
       "defaultOffer": {
         "title": "将“{{mode}}”设为默认视图？",
         "action": "设为默认",

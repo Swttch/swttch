@@ -202,6 +202,7 @@
       "normal": "일반",
       "thinking": "사고 과정",
       "verbose": "자세히",
+      "setDefault": "{{mode}} 보기를 기본값으로 설정",
       "defaultOffer": {
         "title": "{{mode}} 보기를 기본값으로 설정할까요?",
         "action": "기본값으로 설정",

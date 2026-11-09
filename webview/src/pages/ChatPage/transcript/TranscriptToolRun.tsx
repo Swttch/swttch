@@ -370,8 +370,9 @@ function ToolDetail({ calls }: { calls: ToolCall[] }) {
   if (kind === 'messageSent') return <SentMessageDetail call={call} />;
   if (call.toolUse.name === 'Edit' || call.toolUse.name === 'Write') return <FileChangeDetail calls={calls} />;
   if (browserToolOf(call.toolUse.name) !== '') return <PlainDetail call={call} />;
-  // The other kinds keep the card the classic chat draws for them: their details are not a command and its output.
-  return <ToolRenderer toolUse={call.toolUse} message={call.message} />;
+  // Every other call, as the desktop app draws the ones it has no design of their own for: what the call was given,
+  // and what it printed.
+  return <InputOutputDetail call={call} />;
 }
 
 /**

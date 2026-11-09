@@ -202,6 +202,7 @@
       "normal": "عادی",
       "thinking": "تفکر",
       "verbose": "مفصل",
+      "setDefault": "{{mode}} را پیش‌فرض کن",
       "defaultOffer": {
         "title": "{{mode}} نمای پیش‌فرض شما شود؟",
         "action": "پیش‌فرض شود",

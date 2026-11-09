@@ -202,6 +202,7 @@
       "normal": "Normal",
       "thinking": "Raciocínio",
       "verbose": "Detalhado",
+      "setDefault": "Tornar {{mode}} o padrão",
       "defaultOffer": {
         "title": "Tornar {{mode}} sua visualização padrão?",
         "action": "Tornar padrão",

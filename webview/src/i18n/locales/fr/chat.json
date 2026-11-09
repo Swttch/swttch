@@ -202,6 +202,7 @@
       "normal": "Normale",
       "thinking": "Raisonnement",
       "verbose": "Détaillé",
+      "setDefault": "Définir {{mode}} par défaut",
       "defaultOffer": {
         "title": "Définir {{mode}} comme vue par défaut ?",
         "action": "Définir par défaut",
