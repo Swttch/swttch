@@ -283,11 +283,16 @@
     },
     "transcriptViewMode": {
       "label": "Vista de transcripción",
-      "description": "Cómo se muestra el chat. Clásico es el chat publicado hasta ahora; Normal, Pensamiento y Detallado son las vistas de transcripción de la aplicación de escritorio de Claude. El mensaje enviado queda a la derecha, sin flecha para plegar y sin fijarse arriba.",
+      "description": "Los modos de vista controlan cuánto detalle aparece en la transcripción del chat.",
       "classic": "Clásico",
       "normal": "Normal",
       "thinking": "Pensamiento",
-      "verbose": "Detallado"
+      "verbose": "Detallado",
+      "badge": "Ajuste de la aplicación de escritorio de Claude",
+      "hint": {
+        "title": "Cambiar modos de vista",
+        "body": "Normal: Llamadas a herramientas contraídas en resúmenes, con respuestas de texto completo\nThinking: Llamadas a herramientas contraídas en resúmenes, más el pensamiento de Claude\nVerbose: Cada llamada a herramienta, lectura de archivo y paso intermedio que Claude realiza, más el pensamiento de Claude\n\nUsa Thinking para seguir el razonamiento de Claude con las llamadas a herramientas aún contraídas. Usa Verbose cuando depures por qué Claude tomó una acción particular.\n\nClásico es el chat publicado hasta ahora; Normal, Pensamiento y Detallado son las vistas de transcripción de la aplicación de escritorio de Claude. El mensaje enviado queda a la derecha, sin flecha para plegar y sin fijarse arriba."
+      }
     },
     "chat": {
       "sectionTitle": "Chat",

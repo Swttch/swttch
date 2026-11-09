@@ -283,11 +283,16 @@
     },
     "transcriptViewMode": {
       "label": "Vue de la transcription",
-      "description": "Comment la discussion est affichée. Classique est la discussion publiée jusqu'ici ; Normale, Raisonnement et Détaillé sont les vues de transcription de l'application de bureau Claude. Le message envoyé se place à droite, sans flèche de repli ni épinglage en haut.",
+      "description": "Les modes d'affichage contrôlent le niveau de détail qui apparaît dans la transcription du chat.",
       "classic": "Classique",
       "normal": "Normale",
       "thinking": "Raisonnement",
-      "verbose": "Détaillé"
+      "verbose": "Détaillé",
+      "badge": "Réglage de l'application de bureau Claude",
+      "hint": {
+        "title": "Changer les modes d'affichage",
+        "body": "Normal: Les appels d'outils réduits en résumés, avec les réponses texte complètes\nThinking: Les appels d'outils réduits en résumés, plus la réflexion de Claude\nVerbose: Chaque appel d'outil, lecture de fichier et étape intermédiaire que Claude prend, plus la réflexion de Claude\n\nUtilisez Thinking pour suivre le raisonnement de Claude avec les appels d'outils toujours réduits. Utilisez Verbose lors du débogage pour savoir pourquoi Claude a pris une action particulière.\n\nClassique est la discussion publiée jusqu'ici ; Normale, Raisonnement et Détaillé sont les vues de transcription de l'application de bureau Claude. Le message envoyé se place à droite, sans flèche de repli ni épinglage en haut."
+      }
     },
     "chat": {
       "sectionTitle": "Chat",

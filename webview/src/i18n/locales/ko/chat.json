@@ -201,7 +201,12 @@
       "classicHint": "현재 출시된 버전의 채팅 UI로 되돌립니다.",
       "normal": "일반",
       "thinking": "사고 과정",
-      "verbose": "자세히"
+      "verbose": "자세히",
+      "defaultOffer": {
+        "title": "{{mode}} 보기를 기본값으로 설정할까요?",
+        "action": "기본값으로 설정",
+        "saved": "이제 {{mode}} 보기가 기본값으로 설정되었습니다."
+      }
     },
     "dock": {
       "overflowTitle": "더보기",

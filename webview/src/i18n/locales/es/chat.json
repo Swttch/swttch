@@ -201,7 +201,12 @@
       "classicHint": "Vuelve a la interfaz del chat de la versión publicada actualmente.",
       "normal": "Normal",
       "thinking": "Pensamiento",
-      "verbose": "Detallado"
+      "verbose": "Detallado",
+      "defaultOffer": {
+        "title": "¿Quieres hacer de {{mode}} tu vista predeterminada?",
+        "action": "Establecer como predeterminado",
+        "saved": "{{mode}} es ahora la vista predeterminada."
+      }
     },
     "dock": {
       "overflowTitle": "Más",

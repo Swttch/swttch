@@ -201,7 +201,12 @@
       "classicHint": "現在リリースされているバージョンのチャットUIに戻します。",
       "normal": "通常",
       "thinking": "思考",
-      "verbose": "詳細"
+      "verbose": "詳細",
+      "defaultOffer": {
+        "title": "{{mode}}をデフォルトの表示にしますか？",
+        "action": "デフォルトに設定",
+        "saved": "{{mode}}がデフォルトビューになりました。"
+      }
     },
     "dock": {
       "overflowTitle": "その他",

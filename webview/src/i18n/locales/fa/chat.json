@@ -201,7 +201,12 @@
       "classicHint": "به رابط گفتگوی نسخهٔ منتشرشدهٔ فعلی برمی‌گردد.",
       "normal": "عادی",
       "thinking": "تفکر",
-      "verbose": "مفصل"
+      "verbose": "مفصل",
+      "defaultOffer": {
+        "title": "{{mode}} نمای پیش‌فرض شما شود؟",
+        "action": "پیش‌فرض شود",
+        "saved": "{{mode}} اکنون نمای پیش‌فرض است."
+      }
     },
     "dock": {
       "overflowTitle": "بیشتر",

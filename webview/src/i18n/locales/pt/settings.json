@@ -283,11 +283,16 @@
     },
     "transcriptViewMode": {
       "label": "Visualização de transcrição",
-      "description": "Como o chat é exibido. Clássico é o chat lançado até agora; Normal, Raciocínio e Detalhado são as visualizações de transcrição do app de desktop do Claude. A mensagem enviada fica à direita, sem seta de recolher e sem fixação no topo.",
+      "description": "Os modos de visualização controlam quanto detalhe aparece na transcrição do chat.",
       "classic": "Clássico",
       "normal": "Normal",
       "thinking": "Raciocínio",
-      "verbose": "Detalhado"
+      "verbose": "Detalhado",
+      "badge": "Configuração do app de desktop do Claude",
+      "hint": {
+        "title": "Alternar modos de visualização",
+        "body": "Normal: Chamadas de ferramenta recolhidas em resumos, com respostas de texto completo\nThinking: Chamadas de ferramenta recolhidas em resumos, mais o pensamento de Claude\nVerbose: Cada chamada de ferramenta, leitura de arquivo e passo intermediário que Claude toma, mais o pensamento de Claude\n\nUse Thinking para seguir o raciocínio de Claude com chamadas de ferramenta ainda recolhidas. Use Verbose ao depurar por que Claude tomou uma ação particular.\n\nClássico é o chat lançado até agora; Normal, Raciocínio e Detalhado são as visualizações de transcrição do app de desktop do Claude. A mensagem enviada fica à direita, sem seta de recolher e sem fixação no topo."
+      }
     },
     "chat": {
       "sectionTitle": "Chat",

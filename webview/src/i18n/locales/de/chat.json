@@ -201,7 +201,12 @@
       "classicHint": "Kehrt zur Chat-Oberfläche der aktuell veröffentlichten Version zurück.",
       "normal": "Normal",
       "thinking": "Denkprozess",
-      "verbose": "Ausführlich"
+      "verbose": "Ausführlich",
+      "defaultOffer": {
+        "title": "Möchtest du {{mode}} zu deiner Standardansicht machen?",
+        "action": "Als Standard festlegen",
+        "saved": "{{mode}} ist jetzt die Standardansicht."
+      }
     },
     "dock": {
       "overflowTitle": "Mehr",

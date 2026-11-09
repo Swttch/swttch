@@ -283,11 +283,16 @@
     },
     "transcriptViewMode": {
       "label": "Transkript-Ansicht",
-      "description": "Wie der Chat dargestellt wird. Klassisch ist der bisher veröffentlichte Chat; Normal, Denkprozess und Ausführlich sind die Transkript-Ansichten der Claude-Desktop-App. Die gesendete Nachricht steht rechts, ohne Falt-Pfeil und ohne Fixierung am oberen Rand.",
+      "description": "Ansichtsmodi kontrollieren, wie viel Detail im Chat-Transkript angezeigt wird.",
       "classic": "Klassisch",
       "normal": "Normal",
       "thinking": "Denkprozess",
-      "verbose": "Ausführlich"
+      "verbose": "Ausführlich",
+      "badge": "Einstellung der Claude-Desktop-App",
+      "hint": {
+        "title": "Wechseln Sie Ansichtsmodi",
+        "body": "Normal: Tool-Aufrufe in Zusammenfassungen zusammengefasst, mit vollständigen Text-Antworten\nThinking: Tool-Aufrufe in Zusammenfassungen zusammengefasst, plus Claudes Thinking\nAusführlich: Jeden Tool-Aufruf, jede Datei-Leseoperation und jeden Zwischenschritt, den Claude unternimmt, plus Claudes Thinking\n\nVerwenden Sie Thinking, um Claudes Überlegungen mit noch zusammengefassten Tool-Aufrufen zu folgen. Verwenden Sie Ausführlich beim Debuggen, warum Claude eine bestimmte Aktion unternommen hat.\n\nKlassisch ist der bisher veröffentlichte Chat; Normal, Denkprozess und Ausführlich sind die Transkript-Ansichten der Claude-Desktop-App. Die gesendete Nachricht steht rechts, ohne Falt-Pfeil und ohne Fixierung am oberen Rand."
+      }
     },
     "chat": {
       "sectionTitle": "Chat",

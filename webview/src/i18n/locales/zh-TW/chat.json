@@ -201,7 +201,12 @@
       "classicHint": "還原為目前已發布版本的聊天介面。",
       "normal": "一般",
       "thinking": "思考",
-      "verbose": "詳細"
+      "verbose": "詳細",
+      "defaultOffer": {
+        "title": "要將「{{mode}}」設為預設檢視嗎？",
+        "action": "設為預設",
+        "saved": "「{{mode}}」現在是預設檢視。"
+      }
     },
     "dock": {
       "overflowTitle": "更多",

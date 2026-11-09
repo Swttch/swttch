@@ -283,11 +283,16 @@
     },
     "transcriptViewMode": {
       "label": "Transcript view",
-      "description": "How the chat is drawn. Classic is the chat as released so far. Normal, Thinking and Verbose are the Claude desktop app's Transcript views: the message you sent sits on the right, with no fold arrow and no pinning to the top.",
+      "description": "View modes control how much detail appears in the chat transcript.",
       "classic": "Classic",
       "normal": "Normal",
       "thinking": "Thinking",
-      "verbose": "Verbose"
+      "verbose": "Verbose",
+      "badge": "Claude Desktop app setting",
+      "hint": {
+        "title": "Switch view modes",
+        "body": "Normal: Tool calls collapsed into summaries, with full text responses\nThinking: Tool calls collapsed into summaries, plus Claude's thinking\nVerbose: Every tool call, file read, and intermediate step Claude takes, plus Claude's thinking\n\nUse Thinking to follow Claude's reasoning with tool calls still collapsed. Use Verbose when debugging why Claude took a particular action.\n\nClassic is the chat as released so far. Normal, Thinking and Verbose are the Claude desktop app's Transcript views: the message you sent sits on the right, with no fold arrow and no pinning to the top."
+      }
     },
     "chat": {
       "sectionTitle": "Chat",

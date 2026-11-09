@@ -283,11 +283,16 @@
     },
     "transcriptViewMode": {
       "label": "對話記錄檢視",
-      "description": "聊天的顯示方式。「經典」是目前已發布的聊天介面；「一般」「思考」「詳細」是 Claude 桌面應用程式的對話記錄檢視。你傳送的訊息顯示在右側，沒有摺疊箭頭，也不會固定在頂端。",
+      "description": "檢視模式控制聊天逐字稿中顯示多少詳細資訊。",
       "classic": "經典",
       "normal": "一般",
       "thinking": "思考",
-      "verbose": "詳細"
+      "verbose": "詳細",
+      "badge": "Claude 桌面應用程式的設定",
+      "hint": {
+        "title": "切換檢視模式",
+        "body": "Normal：工具呼叫摺疊成摘要，具有完整文字回應\nThinking：工具呼叫摺疊成摘要，加上 Claude 的思考\nVerbose：Claude 採取的每個工具呼叫、檔案讀取和中間步驟，加上 Claude 的思考\n\n使用 Thinking 來追蹤 Claude 的推理，工具呼叫仍然摺疊。在除錯 Claude 為什麼採取特定操作時使用 Verbose。\n\n「經典」是目前已發布的聊天介面；「一般」「思考」「詳細」是 Claude 桌面應用程式的對話記錄檢視。你傳送的訊息顯示在右側，沒有摺疊箭頭，也不會固定在頂端。"
+      }
     },
     "chat": {
       "sectionTitle": "聊天",

@@ -201,7 +201,12 @@
       "classicHint": "Revient à l'interface de discussion de la version actuellement publiée.",
       "normal": "Normale",
       "thinking": "Raisonnement",
-      "verbose": "Détaillé"
+      "verbose": "Détaillé",
+      "defaultOffer": {
+        "title": "Définir {{mode}} comme vue par défaut ?",
+        "action": "Définir par défaut",
+        "saved": "{{mode}} est désormais la vue par défaut."
+      }
     },
     "dock": {
       "overflowTitle": "Plus",

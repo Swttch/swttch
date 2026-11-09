@@ -201,7 +201,12 @@
       "classicHint": "恢复为当前已发布版本的聊天界面。",
       "normal": "普通",
       "thinking": "思考",
-      "verbose": "详细"
+      "verbose": "详细",
+      "defaultOffer": {
+        "title": "将“{{mode}}”设为默认视图？",
+        "action": "设为默认",
+        "saved": "“{{mode}}”现在是默认视图。"
+      }
     },
     "dock": {
       "overflowTitle": "更多",

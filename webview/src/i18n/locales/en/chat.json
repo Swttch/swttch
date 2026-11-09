@@ -201,7 +201,12 @@
       "classicHint": "Go back to the chat UI of the currently released version.",
       "normal": "Normal",
       "thinking": "Thinking",
-      "verbose": "Verbose"
+      "verbose": "Verbose",
+      "defaultOffer": {
+        "title": "Make {{mode}} your default view?",
+        "action": "Make default",
+        "saved": "{{mode}} is now the default view."
+      }
     },
     "dock": {
       "overflowTitle": "More",

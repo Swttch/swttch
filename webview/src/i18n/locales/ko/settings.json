@@ -283,11 +283,16 @@
     },
     "transcriptViewMode": {
       "label": "트랜스크립트 보기",
-      "description": "채팅을 그리는 방식입니다. 클래식은 지금까지 출시된 채팅이고, 일반·사고 과정·자세히는 Claude 데스크탑 앱의 트랜스크립트 보기입니다. 보낸 메시지가 오른쪽에 놓이고 접기 화살표와 상단 고정이 없습니다.",
+      "description": "보기 모드는 채팅 트랜스크립트에 나타나는 세부 정보의 양을 제어합니다.",
       "classic": "클래식",
       "normal": "일반",
       "thinking": "사고 과정",
-      "verbose": "자세히"
+      "verbose": "자세히",
+      "badge": "Claude 데스크탑 앱의 설정",
+      "hint": {
+        "title": "보기 모드 전환하기",
+        "body": "Normal: 도구 호출이 요약으로 축소되고 전체 텍스트 응답\nThinking: 도구 호출이 요약으로 축소되고 Claude의 thinking\nVerbose: 모든 도구 호출, 파일 읽기, Claude가 수행하는 중간 단계, 그리고 Claude의 thinking\n\nThinking을 사용하여 도구 호출이 여전히 축소된 상태에서 Claude의 추론을 따릅니다. Claude가 특정 작업을 수행한 이유를 디버깅할 때 Verbose를 사용합니다.\n\n클래식은 지금까지 출시된 채팅이고, 일반·사고 과정·자세히는 Claude 데스크탑 앱의 트랜스크립트 보기입니다. 보낸 메시지가 오른쪽에 놓이고 접기 화살표와 상단 고정이 없습니다."
+      }
     },
     "chat": {
       "sectionTitle": "채팅",
