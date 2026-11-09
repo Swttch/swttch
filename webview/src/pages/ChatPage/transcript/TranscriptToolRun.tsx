@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { ChevronRightIcon, ClipboardDocumentIcon } from '@heroicons/react/20/solid';
 import { getAdapter } from '@/adapters';
@@ -10,6 +10,9 @@ import { toolResultText } from '../message-renderers/ToolRenderers/common/toolSt
 import { HighlightedCode } from '../message-renderers/ToolRenderers/Mcp/Generic/HighlightedCode';
 import { useTranscriptViewMode } from '../message-renderers/transcriptViewMode';
 import { APP_EVENT_TOOL, type ToolCall } from './buildSegments';
+import { useChatStreamContext } from '@/contexts/ChatStreamContext';
+import { ActivityGlyph, useActivityLabel, useFormatElapsed, useTurnSeconds } from './TranscriptActivity';
+import { runningActivity } from './streamingActivity';
 import { FileChangeDetail } from './FileChangeDetail';
 import { useDesktopSession } from '@/hooks/useDesktopSession';
 import { DesktopSessionLink } from '../message-renderers/components/DesktopSessionLink';
@@ -441,7 +444,7 @@ function NestedRequestRow({ call }: { call: ToolCall }) {
 }
 
 /** One call: a line that opens to its details. */
-function TranscriptToolRow({ calls, defaultOpen, inBox }: { calls: ToolCall[]; defaultOpen: boolean; inBox: boolean }) {
+function TranscriptToolRow({ calls, defaultOpen, inBox, live }: { calls: ToolCall[]; defaultOpen: boolean; inBox: boolean; live?: { label: string; elapsed: string } }) {
   const { t } = useTranslation('chat');
   const call = calls[0];
   const [open, setOpen] = useState(defaultOpen);
@@ -461,6 +464,13 @@ function TranscriptToolRow({ calls, defaultOpen, inBox }: { calls: ToolCall[]; d
         onClick={() => expandable && setOpen((v) => !v)}
         className={`flex w-full items-center gap-2.5 ${inBox ? 'px-3' : ''} py-[10px] text-start text-[0.9375rem] transition-colors ${SUMMARY_TEXT} ${running ? 'animate-pulse' : ''}`}
       >
+        {live ? (
+          <>
+            <ActivityGlyph />
+            <span className="min-w-0 truncate transcript-shimmer">{live.label}</span>
+            <span className="flex-shrink-0">{live.elapsed}</span>
+          </>
+        ) : (
         <span className="min-w-0 truncate">
           {label.before}
           {label.fileName && (
@@ -479,6 +489,7 @@ function TranscriptToolRow({ calls, defaultOpen, inBox }: { calls: ToolCall[]; d
           {label.after}
           <RowMeta call={call} meta={label.meta} />
         </span>
+        )}
         {hasFailed(call) && toolKindOf(call) !== 'sessionStart' && <span className="flex-shrink-0 text-red-400">{t('transcript.tools.failedMark')}</span>}
         <LineStatsView stats={sumLineStats(calls)} />
         {expandable && <Chevron open={open} />}
@@ -500,9 +511,37 @@ function TranscriptToolRow({ calls, defaultOpen, inBox }: { calls: ToolCall[]; d
 export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
   const { t } = useTranslation('chat');
   const verbose = useTranscriptViewMode() === 'verbose';
-  const [open, setOpen] = useState(verbose);
-  // Switching the view while the run is on screen opens or shuts it as well, not only runs drawn after the switch.
-  useEffect(() => setOpen(verbose), [verbose]);
+  // The live run: the turn is running and the call it is waiting on is in this run. Its line then says what the
+  // model is doing and for how long, as the working indicator, and its list is open while it runs.
+  const { isStreaming, messages } = useChatStreamContext();
+  const live = useMemo(() => (isStreaming ? runningActivity(messages) : null), [isStreaming, messages]);
+  const active = live !== null && calls.some((call) => call.toolUse.id === live.toolUseId);
+  const [open, setOpen] = useState(verbose || active);
+  // What the reader clicked wins over everything that follows: a run they shut stays shut while it goes on, and one
+  // they opened stays open. Only a change of the view mode, which is the reader's choice as well, starts over.
+  const toggledByReader = useRef(false);
+  const toggle = () => {
+    toggledByReader.current = true;
+    setOpen((v) => !v);
+  };
+  useEffect(() => {
+    toggledByReader.current = false;
+    setOpen(verbose || active);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [verbose]);
+  // Left alone, the run opens when its call starts and shuts when the turn ends. Between two calls nothing is
+  // waited on for a moment, and that gap must not shut it, so being waited on is not what shuts it.
+  useEffect(() => {
+    if (toggledByReader.current) return;
+    if (active) setOpen(true);
+  }, [active]);
+  useEffect(() => {
+    if (toggledByReader.current || verbose || isStreaming) return;
+    setOpen(false);
+  }, [isStreaming, verbose]);
+  const label = useActivityLabel();
+  const formatElapsed = useFormatElapsed();
+  const seconds = useTurnSeconds();
   const pictures = calls.flatMap((call) => imagesOfResult(call.toolUse.tool_result as LoadedMessageDto | undefined));
 
   if (calls.length === 1 && toolKindOf(calls[0]) === 'sessionStart' && !hasFailed(calls[0])) {
@@ -523,7 +562,12 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
   if (calls.length === 1) {
     return (
       <div className="px-4 pt-3 pb-[11px]" data-transcript-tool-run-single>
-        <TranscriptToolRow calls={[calls[0]]} defaultOpen={verbose} inBox={false} />
+        <TranscriptToolRow
+          calls={[calls[0]]}
+          defaultOpen={verbose}
+          inBox={false}
+          live={active && live ? { label: label(live), elapsed: formatElapsed(seconds) } : undefined}
+        />
       </div>
     );
   }
@@ -533,11 +577,21 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
       <button
         type="button"
         aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
         className={`flex w-full items-center gap-1 py-2 text-start text-[0.9375rem] transition-colors ${SUMMARY_TEXT}`}
       >
-        <span>{groupLabel(calls, t)}</span>
-        <LineStatsView stats={sumLineStats(calls)} />
+        {active && live ? (
+          <>
+            <span className="me-2 flex"><ActivityGlyph /></span>
+            <span className="min-w-0 truncate transcript-shimmer">{label(live)}</span>
+            <span className="ms-2 me-1 flex-shrink-0">{formatElapsed(seconds)}</span>
+          </>
+        ) : (
+          <>
+            <span>{groupLabel(calls, t)}</span>
+            <LineStatsView stats={sumLineStats(calls)} />
+          </>
+        )}
         <Chevron open={open} />
         {!open && <Thumbnails srcs={pictures} />}
       </button>

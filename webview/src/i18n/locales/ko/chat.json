@@ -1116,7 +1116,19 @@
     },
     "streaming": {
       "seconds": "{{seconds}}초",
-      "thinking": "생각 중"
+      "thinking": "생각 중",
+      "minutesSeconds": "{{minutes}}분 {{seconds}}초",
+      "tokens": "{{count}} 토큰",
+      "activity": {
+        "working": "작업 중",
+        "editing": "편집 중",
+        "reading": "읽는 중",
+        "searching": "검색 중",
+        "fetching": "가져오는 중",
+        "pageScript": "페이지 스크립트 실행 중",
+        "command": "실행 중 명령어",
+        "agent": "에이전트 실행 중"
+      }
     }
   }
 }

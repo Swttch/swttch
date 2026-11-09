@@ -5,7 +5,6 @@ import {
   type AnyContentBlockDto,
   type ThinkingBlockDto,
 } from '../../../dto/message/ContentBlockDto';
-import { useTranslation } from '@/i18n';
 import { MessageBubble } from '../MessageBubble';
 import { StreamingMessage } from '../StreamingMessage';
 import { ToolRenderer } from '../message-renderers/ToolRenderer';
@@ -33,7 +32,6 @@ function TranscriptBlocks({
   blocks: AnyContentBlockDto[];
   showFooter: boolean;
 }) {
-  const { t } = useTranslation('chat');
   const sendActions = useSendActionsValue();
   const streaming = message.isStreaming ?? false;
 
@@ -43,14 +41,9 @@ function TranscriptBlocks({
         if (block.type === ContentBlockType.Thinking) {
           const thinking = block as ThinkingBlockDto;
           // The desktop app does not fold thinking behind a label: what Claude thought is text in the
-          // transcript, a shade quieter than the reply. A block with no text yet says it is thinking.
-          if (!thinking.thinking) {
-            return (
-              <p key={`${message.uuid}-thinking-${index}`} className="py-1 italic text-[#efefef] animate-pulse">
-                {t('thinking.thinkingEllipsis')}
-              </p>
-            );
-          }
+          // transcript, a shade quieter than the reply. A block with no text yet draws nothing: the breathing dots
+          // at the end of the transcript already say "Thinking", and a second line saying it again is one too many.
+          if (!thinking.thinking) return null;
           return (
             <StreamingMessage
               key={`${message.uuid}-thinking-${index}`}

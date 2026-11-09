@@ -8,6 +8,7 @@ import { useSessionContext } from '../../../contexts/SessionContext';
 import { useChatStreamContext } from '../../../contexts/ChatStreamContext';
 import { StreamErrorBanner } from '../StreamErrorBanner';
 import { TranscriptStreamingIndicator } from './TranscriptStreamingIndicator';
+import { runningActivity } from './streamingActivity';
 import { EmptyState } from '../EmptyState';
 import { isJetBrains } from '@/config/environment';
 import { SectionFoldContext, SectionKeyContext } from '../SectionFoldContext';
@@ -71,7 +72,8 @@ export function TranscriptArea(props: TranscriptAreaProps) {
   const { isStreaming, disconnectCountdown = null, apiRetry = null, mergedMessages, hasMore, isLoadingMore, onLoadMore, findInChat = LOADED_ONLY } = props;
   const sections = useMemo(() => withoutPeerSections(props.sections), [props.sections]);
   const { workingDirectory } = useSessionContext();
-  const { retry: onRetry } = useChatStreamContext();
+  const { retry: onRetry, messages: streamMessages } = useChatStreamContext();
+  const waitedCall = useMemo(() => (isStreaming ? runningActivity(streamMessages) : null), [isStreaming, streamMessages]);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const fold = useSectionFold();
@@ -160,8 +162,9 @@ export function TranscriptArea(props: TranscriptAreaProps) {
           </LastEntryContext.Provider>
         </SendActionsContext.Provider>
       </SectionFoldContext.Provider>
-      {isStreaming && (
-        <div className="max-w-[604px] pl-[31px]">
+      {/* While a call is being waited on, the run of calls that holds it is the working indicator (see TranscriptToolRun); this line is for the rest of the turn, when the model thinks or writes. A dropped connection and the CLI's retries still say so here. */}
+      {isStreaming && (waitedCall === null || disconnectCountdown !== null || apiRetry !== null) && (
+        <div className="max-w-[604px]">
           <TranscriptStreamingIndicator countdownSeconds={disconnectCountdown} apiRetry={apiRetry} />
         </div>
       )}

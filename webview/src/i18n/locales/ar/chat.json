@@ -1177,7 +1177,19 @@
     },
     "streaming": {
       "seconds": "{{seconds}} ث",
-      "thinking": "يفكّر"
+      "thinking": "يفكّر",
+      "minutesSeconds": "{{minutes}}د {{seconds}}ث",
+      "tokens": "{{count}} رمز",
+      "activity": {
+        "working": "قيد العمل",
+        "editing": "قيد التحرير",
+        "reading": "قيد القراءة",
+        "searching": "قيد البحث",
+        "fetching": "قيد الجلب",
+        "pageScript": "تشغيل نص الصفحة",
+        "command": "تشغيل أمر",
+        "agent": "تشغيل وكيل"
+      }
     }
   }
 }

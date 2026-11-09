@@ -1,6 +1,7 @@
 import { useSettingsOrNull } from '@/contexts/SettingsContext';
 import { useSessionContextOrNull } from '@/contexts/SessionContext';
 import { SettingKey, TRANSCRIPT_VIEW_MODES, type TranscriptViewMode } from '@/types/settings';
+import { usePendingTranscriptView } from '@/utils/pendingTranscriptView';
 
 /**
  * The chat's view mode, or `null` for the chat UI that has been released so far
@@ -20,7 +21,11 @@ import { SettingKey, TRANSCRIPT_VIEW_MODES, type TranscriptViewMode } from '@/ty
 export function useTranscriptViewMode(): TranscriptViewMode | null {
   const context = useSettingsOrNull();
   const sessionId = useSessionContextOrNull()?.currentSessionId ?? null;
-  const picked = sessionId ? context?.settings[SettingKey.TRANSCRIPT_VIEW_MODE_BY_SESSION]?.[sessionId] : undefined;
+  // A chat that has not started has no session to keep a pick under: what was picked waits in the page.
+  const waiting = usePendingTranscriptView();
+  const picked = sessionId
+    ? context?.settings[SettingKey.TRANSCRIPT_VIEW_MODE_BY_SESSION]?.[sessionId]
+    : (waiting ?? undefined);
   if (picked === 'classic') return null;
   if (isTranscriptViewMode(picked)) return picked;
   const value = context?.settings[SettingKey.TRANSCRIPT_VIEW_MODE];

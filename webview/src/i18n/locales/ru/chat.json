@@ -1151,7 +1151,19 @@
     },
     "streaming": {
       "seconds": "{{seconds}} с",
-      "thinking": "Думает"
+      "thinking": "Думает",
+      "minutesSeconds": "{{minutes}} мин {{seconds}} с",
+      "tokens": "{{count}} токенов",
+      "activity": {
+        "working": "Работаю",
+        "editing": "Редактирование",
+        "reading": "Чтение",
+        "searching": "Поиск",
+        "fetching": "Загрузка",
+        "pageScript": "Выполнение скрипта страницы",
+        "command": "Выполнение команды",
+        "agent": "Запуск агента"
+      }
     }
   }
 }

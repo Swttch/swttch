@@ -111,10 +111,10 @@ describe('commandStandIn', () => {
     expect(commandStandIn('')).toBe('');
   });
 
-  it('names what a command begins with in its row, and a command with a description keeps the general wording', () => {
+  it('names what a command begins with in its row, and a command with a description is that description', () => {
     const tWhat = ((key: string, o?: { what?: string }) => (o?.what ? `${key.split('.').pop()}:${o.what}` : key.split('.').pop())) as unknown as TFunction;
     expect(rowLabel(call('1', 'Bash', { command: 'cat >> a.txt' }), tWhat).before).toBe('ranCommandOf:cat…');
-    expect(rowLabel(call('2', 'Bash', { command: 'cat >> a.txt', description: 'Show a' }), tWhat).before).toBe('ranCommand');
+    expect(rowLabel(call('2', 'Bash', { command: 'cat >> a.txt', description: 'Show a' }), tWhat).before).toBe('Show a');
   });
 });
 

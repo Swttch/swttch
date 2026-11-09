@@ -173,7 +173,7 @@ const FILE_CHANGE_TOOLS = new Set(['Edit', 'Write', 'NotebookEdit']);
  * A call whose card is the point of the turn (a question, a plan, what was sent), and so is not gathered.
  * The turn's checklist (`update_plan`) is one: the desktop app draws it as a box of its own, not as a tool call.
  */
-function isCardTool(name: string): boolean {
+export function isCardTool(name: string): boolean {
   return (isAlwaysVisibleTool(name) && !FILE_CHANGE_TOOLS.has(name)) || name === UPDATE_PLAN_TOOL;
 }
 

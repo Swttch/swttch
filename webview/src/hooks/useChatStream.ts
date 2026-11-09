@@ -144,6 +144,10 @@ export interface UseChatStreamReturn {
   resetStreamState: () => void;
   systemInit: Record<string, unknown> | null;
   contextWindowUsage: { totalTokens: number; contextWindow: number; maxOutputTokens: number } | null;
+  /** What the model has written so far in the turn running now, in tokens: the output of every API message that has ended. 0 before the first one ends. */
+  turnOutputTokens: number;
+  /** When the turn running now began (the moment its message was sent), in ms since the epoch; null before any send. */
+  turnStartedAt: number | null;
   /** Fills in a window size learned outside a turn (the `/context` report). Never overwrites one the CLI already reported. */
   applyContextWindow: (contextWindow: number) => void;
 }
@@ -171,6 +175,8 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     contextWindow: number;
     maxOutputTokens: number;
   } | null>(null);
+  const [turnOutputTokens, setTurnOutputTokens] = useState(0);
+  const [turnStartedAt, setTurnStartedAt] = useState<number | null>(null);
 
   // Usage of the API message now streaming, built from its `message_start` and
   // `message_delta`. The `assistant` frame repeats only the `message_start`
@@ -544,6 +550,8 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
   const addUserMessage = useCallback((content: string, context?: Context[], attachments?: Attachment[]) => {
     if (!content.trim() && (!attachments || attachments.length === 0)) return;
 
+    setTurnOutputTokens(0);
+    setTurnStartedAt(Date.now());
     setError(null);
     setAuthDiagnosis(null);
 
@@ -890,6 +898,9 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
             innerEvent.usage as MessageUsage | undefined,
           );
           streamingMessageUsageRef.current = finalUsage;
+          // Each API message ends once: its output is added to what the turn has written so far.
+          const outputOfMessage = (innerEvent.usage as MessageUsage | undefined)?.output_tokens;
+          if (typeof outputOfMessage === 'number' && outputOfMessage > 0) setTurnOutputTokens((sum) => sum + outputOfMessage);
           const finalTotalTokens = totalMessageTokens(finalUsage);
           if (finalTotalTokens > 0) {
             setContextWindowUsage(prev => ({
@@ -1222,6 +1233,15 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
         // 에러 처리
         if (errorData) {
           const err = new Error(errorData.message || 'Unknown error');
+          setError(err);
+          onErrorRef.current?.(err);
+        }
+        // A turn the CLI could not run at all (a resume whose conversation file is gone, say) ends in a result of this
+        // subtype with the reasons in `errors`, and nothing else reports it: without this the turn just stops.
+        else if (cliEvent.subtype === 'error_during_execution') {
+          const reasons = Array.isArray(cliEvent.errors) ? (cliEvent.errors as unknown[]).filter((r): r is string => typeof r === 'string') : [];
+          const detail = reasons.join('\n') || (typeof cliEvent.result === 'string' ? cliEvent.result : '');
+          const err = new Error(detail || 'The turn failed before it could run');
           setError(err);
           onErrorRef.current?.(err);
         }
@@ -1558,6 +1578,8 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     resetStreamState,
     systemInit,
     contextWindowUsage,
+    turnOutputTokens,
+    turnStartedAt,
     applyContextWindow,
   };
 }

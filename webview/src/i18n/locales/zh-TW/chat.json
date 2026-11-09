@@ -1116,7 +1116,19 @@
     },
     "streaming": {
       "seconds": "{{seconds}} 秒",
-      "thinking": "思考中"
+      "thinking": "思考中",
+      "minutesSeconds": "{{minutes}}分{{seconds}}秒",
+      "tokens": "{{count}} 個 token",
+      "activity": {
+        "working": "處理中",
+        "editing": "編輯中",
+        "reading": "讀取中",
+        "searching": "搜尋中",
+        "fetching": "擷取中",
+        "pageScript": "正在執行頁面指令碼",
+        "command": "正在執行指令",
+        "agent": "正在執行代理"
+      }
     }
   }
 }

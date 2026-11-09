@@ -357,6 +357,11 @@ export function rowLabel(call: ToolCall, t: TFunction): RowLabel {
   switch (kind) {
     case 'command': {
       const unfinished = isRunning(call) || hasFailed(call);
+      // A command that came with a description of what it is for is that line, running or over, as the desktop app
+      // draws it: the line, not "Ran command". (The desktop app swaps in a past-tense summary of it once it is over,
+      // which the CLI's `tool_use_summary` event carries only while the turn runs; the description stands in for it.)
+      const description = inputString(call, 'description').trim();
+      if (description) return plain(description);
       // Without a description of its own the row says what the command begins with ("Ran cat …"), as the desktop app does.
       const standIn = inputString(call, 'description').trim() === '' ? commandStandIn(inputString(call, 'command')) : '';
       if (standIn) return plain(t(unfinished ? 'transcript.tools.runningCommandOf' : 'transcript.tools.ranCommandOf', { ns: 'chat', what: standIn }));

@@ -7,6 +7,7 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { useSessionContextOrNull } from '@/contexts/SessionContext';
 import { SettingKey, TRANSCRIPT_VIEW_MODES, type TranscriptViewMode } from '@/types/settings';
 import { useTranscriptViewMode } from '../../message-renderers/transcriptViewMode';
+import { setPendingTranscriptView } from '@/utils/pendingTranscriptView';
 
 const CLASSIC = 'classic';
 type Choice = TranscriptViewMode | typeof CLASSIC;
@@ -32,8 +33,9 @@ export const TRANSCRIPT_VIEW_SUBMENU_ATTRIBUTE = 'data-transcript-view-submenu';
  * `<body>` so the ⋮ menu cannot clip it. It is `interactive`, so the pointer can
  * travel from the row onto the menu without closing it.
  *
- * Hidden when there is no session to attach the pick to (the empty chat that
- * has not sent anything yet).
+ * In a chat that has not sent anything yet there is no session to attach the
+ * pick to: it waits in the page and the first message starts the session in it
+ * (see pendingTranscriptView).
  */
 export function TranscriptViewMenuSection({ onPick }: { onPick: () => void }) {
   const { t } = useTranslation('chat');
@@ -41,10 +43,15 @@ export function TranscriptViewMenuSection({ onPick }: { onPick: () => void }) {
   const sessionId = useSessionContextOrNull()?.currentSessionId ?? null;
   const current = useTranscriptViewMode() ?? CLASSIC;
 
-  if (!sessionId) return null;
-
   const choices: Choice[] = [...TRANSCRIPT_VIEW_MODES, CLASSIC];
   const pick = (choice: Choice) => {
+    // A chat that has not started has no session to keep the pick under: it waits in the page and the first
+    // message starts the session in it (see pendingTranscriptView).
+    if (!sessionId) {
+      setPendingTranscriptView(choice);
+      onPick();
+      return;
+    }
     const bySession = settings[SettingKey.TRANSCRIPT_VIEW_MODE_BY_SESSION] ?? {};
     void updateSetting(SettingKey.TRANSCRIPT_VIEW_MODE_BY_SESSION, { ...bySession, [sessionId]: choice });
     onPick();

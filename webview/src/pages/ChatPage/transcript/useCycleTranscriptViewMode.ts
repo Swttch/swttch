@@ -7,6 +7,7 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { useSessionContextOrNull } from '@/contexts/SessionContext';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { getBridge } from '@/api/bridge/Bridge';
+import { setPendingTranscriptView } from '@/utils/pendingTranscriptView';
 import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
 import { SettingKey, TRANSCRIPT_VIEW_MODES, type TranscriptViewMode } from '@/types/settings';
@@ -62,7 +63,7 @@ export interface DefaultViewOffer {
  * Korean or other non-Latin layout the letter is not "i". The browser's own answer to the key (a Tab character
  * in a macOS text field) is stopped.
  *
- * The pick is the session's, kept by session id as the header menu keeps it. When the pressing has stopped for
+ * The pick is the session's, kept by session id as the header menu keeps it (a chat not started yet holds it in the page). When the pressing has stopped for
  * two seconds on a view that is not yet the default, `offer` says so, and it goes away after five seconds
  * unless it is taken or dismissed.
  */
@@ -101,15 +102,19 @@ export function useCycleTranscriptViewMode(): DefaultViewOffer {
   }, [offer, dismiss]);
 
   useEffect(() => {
-    /** Moves the session on screen to the next view. False when there is no session to move. */
+    /** Moves the chat on screen to the next view: its session's, or the waiting pick of a chat not started yet. */
     const cycle = (): boolean => {
       const { settings, updateSetting, sessionId, current, messages } = latest.current;
-      if (!sessionId) return false;
       const next = nextTranscriptViewChoice(current, sessionHasThinking(messages));
       // A press that follows before the setting has come back must continue from this one, not from the old view.
       latest.current.current = next;
-      const bySession = settings[SettingKey.TRANSCRIPT_VIEW_MODE_BY_SESSION] ?? {};
-      void updateSetting(SettingKey.TRANSCRIPT_VIEW_MODE_BY_SESSION, { ...bySession, [sessionId]: next });
+      if (sessionId) {
+        const bySession = settings[SettingKey.TRANSCRIPT_VIEW_MODE_BY_SESSION] ?? {};
+        void updateSetting(SettingKey.TRANSCRIPT_VIEW_MODE_BY_SESSION, { ...bySession, [sessionId]: next });
+      } else {
+        // No session to keep it under yet: the pick waits in the page for the first message.
+        setPendingTranscriptView(next);
+      }
       // Says which view the press landed on. One fixed id, so a run of presses replaces the line instead of stacking.
       const label = tRef.current('sessionHeader.transcriptView.title');
       toast(`${label}: ${tRef.current(`sessionHeader.transcriptView.${next}`)}`, { id: CHANGED_TOAST_ID, duration: 1500 });

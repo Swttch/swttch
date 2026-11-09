@@ -1133,7 +1133,19 @@
     },
     "streaming": {
       "seconds": "{{seconds}}s",
-      "thinking": "Pensando"
+      "thinking": "Pensando",
+      "minutesSeconds": "{{minutes}} min {{seconds}} s",
+      "tokens": "{{count}} tokens",
+      "activity": {
+        "working": "Trabalhando",
+        "editing": "Editando",
+        "reading": "Lendo",
+        "searching": "Pesquisando",
+        "fetching": "Buscando",
+        "pageScript": "Executando script da página",
+        "command": "Executando um comando",
+        "agent": "Executando um agente"
+      }
     }
   }
 }

@@ -57,3 +57,23 @@
 /* The reply's paragraphs stand a little closer than the classic chat's. */
 .transcript-prose p { margin: 0.65em 0 0 !important; }
 .transcript-prose p:first-child { margin-top: 0 !important; }
+
+/* The lit dots of the working indicator: each dot takes its turn, so one to three of the four are lit at a time. */
+@keyframes transcript-grid-dot {
+  0%, 100% { opacity: 0.18; }
+  20%, 55% { opacity: 1; }
+}
+
+/* The words of what is running are swept by a lighter band from left to right, over and over. */
+.transcript-shimmer {
+  background-image: linear-gradient(100deg, #9c9c9c 40%, #ffffff 50%, #9c9c9c 60%);
+  background-size: 250% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: transcript-shimmer 1.5s linear infinite;
+}
+@keyframes transcript-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}

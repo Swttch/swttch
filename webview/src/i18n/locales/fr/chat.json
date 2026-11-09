@@ -1134,7 +1134,19 @@
     },
     "streaming": {
       "seconds": "{{seconds}} s",
-      "thinking": "Réflexion en cours"
+      "thinking": "Réflexion en cours",
+      "minutesSeconds": "{{minutes}} min {{seconds}} s",
+      "tokens": "{{count}} jetons",
+      "activity": {
+        "working": "En cours",
+        "editing": "Modification",
+        "reading": "Lecture en cours",
+        "searching": "Recherche en cours",
+        "fetching": "Récupération",
+        "pageScript": "Exécution du script de la page",
+        "command": "Exécution d’une commande",
+        "agent": "Exécution d’un agent"
+      }
     }
   }
 }

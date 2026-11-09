@@ -1125,7 +1125,19 @@
     },
     "streaming": {
       "seconds": "{{seconds}} ثانیه",
-      "thinking": "در حال فکر کردن"
+      "thinking": "در حال فکر کردن",
+      "minutesSeconds": "{{minutes}} دقیقه {{seconds}} ثانیه",
+      "tokens": "{{count}} توکن",
+      "activity": {
+        "working": "در حال کار",
+        "editing": "در حال ویرایش",
+        "reading": "در حال خواندن",
+        "searching": "در حال جستجو",
+        "fetching": "در حال دریافت",
+        "pageScript": "اجرای اسکریپت صفحه",
+        "command": "اجرای دستور",
+        "agent": "اجرای عامل"
+      }
     }
   }
 }
