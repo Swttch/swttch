@@ -2,7 +2,7 @@
 
 🌐 [English](../en/desktop-session-import.md) | [한국어](../ko/desktop-session-import.md) | [日本語](../ja/desktop-session-import.md) | [中文](../zh/desktop-session-import.md) | [Español](../es/desktop-session-import.md) | **Deutsch** | [Français](../fr/desktop-session-import.md)
 
-_Zuletzt aktualisiert: 2026-11-07_
+_Zuletzt aktualisiert: 2026-11-09_
 
 Eine im Plugin erstellte Sitzung erscheint nicht von selbst im Code-Tab von Claude Desktop. In die Gegenrichtung, also eine in Desktop erstellte Sitzung im Plugin zu öffnen, funktioniert von Anfang an. Die Datei, aus der Desktop seine Liste aufbaut, ist nicht dokumentiert, daher können wir sie nicht für Sie beschreiben. Möglich ist aber, **den Sitzungsimport von Desktop einmal auszuführen**. Ab v0.36.0 werden neue Sitzungen so gestartet, dass dieser Import sie erkennt, und die davor erstellten Sitzungen lassen sich mit einer Schaltfläche in den Einstellungen vorbereiten.
 
@@ -52,7 +52,7 @@ Führen Sie eine Sitzung nicht an beiden Orten **gleichzeitig** aus. Zwei Progra
 - Importiert werden nur Sitzungen in **Ordnern, denen Sie vertrauen**. „Keine CLI-Sitzungen zum Importieren“ bedeutet, dass die importierbaren Sitzungen bereits in Ihrer Liste stehen, zuvor gelöscht wurden oder in Ordnern liegen, denen Claude noch nicht vertraut. Erscheint eine Plugin-Sitzung nicht, prüfen Sie zuerst, ob Sie Schritt 1 ausgeführt haben
 - Eine Sitzung, die Sie in Desktop **gelöscht** haben, wird nicht erneut importiert
 - Eine importierte Sitzung behält ihren Verlauf und ihren Berechtigungsmodus (außer dem Modus zum Umgehen von Berechtigungen), aber nicht den Archivstatus oder erteilte Berechtigungen
-- Die Schaltfläche in Schritt 1 ersetzt nur das `sdk-cli` in jeder Zeile der Aufzeichnungsdatei durch den neuen Namen und lässt alles andere unverändert. Eine Sitzung, die ein anderes SDK-Werkzeug im selben Ordner erstellt hat, wird mit geändert
+- Die Schaltfläche in Schritt 1 ersetzt das `sdk-cli` in jeder Zeile der Aufzeichnungsdatei durch den neuen Namen und **fügt jeder Sitzung ohne mit `/rename` gewählten Namen eine Zeile mit dem Titel der Sitzung hinzu** (dem Namen, den das Plugin für sie anzeigt). Ohne diese Zeile benennt Desktop eine importierte Sitzung nach ihrer ersten Nachricht und zeigt den IDE-Kontext-Satz (zum Beispiel "The user opened the file .env in the IDE") als Titel. Alles andere bleibt unverändert. Eine Sitzung, die ein anderes SDK-Tool im selben Ordner erstellt hat, wird mit verändert
 - Wir schreiben nicht in die eigenen Dateien von Desktop, um Sitzungen in dessen Liste zu bringen. Diese Dateien sind nicht dokumentiert, und ein Desktop-Update könnte das unbemerkt zerstören
 
 ### Wenn es trotzdem nicht klappt

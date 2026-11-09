@@ -4,6 +4,9 @@ import type { IPCMessage } from '../types';
 import { MessageType } from '../../shared';
 import { getProjectSessionsPath } from '../features/getProjectSessionsPath';
 import { listActiveSessions } from '../features/listActiveSessions';
+import { readSessionTitleOverrides } from '../features/sessionTitleOverrides';
+import { includeLastPromptInTitles } from '../features/sessionTitleSettings';
+import { writeDesktopTitles } from '../features/sessionTitleForDesktop';
 import { swttchEntrypointName, updateSessionsEntrypoint } from '../features/sessionEntrypoint';
 
 /**
@@ -41,7 +44,19 @@ export async function updateSessionsEntrypointHandler(
       swttchEntrypointName(process.env.JETBRAINS_MODE === 'true'),
       running,
     );
-    connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId, status: 'ok', ...result });
+    // The names the list shows go into the transcripts too, since Desktop names an imported session from there (#647).
+    const titles = await writeDesktopTitles(sessionsDir, {
+      runningSessionIds: running,
+      overrides: await readSessionTitleOverrides(sessionsDir),
+      includeLastPrompt: await includeLastPromptInTitles(workingDir),
+    });
+    connections.sendTo(connectionId, MessageType.ACK, {
+      requestId: message.requestId,
+      status: 'ok',
+      ...result,
+      titled: titles.titled,
+      titleFailed: titles.failed,
+    });
   } catch (err) {
     connections.sendTo(connectionId, MessageType.ACK, {
       requestId: message.requestId,
