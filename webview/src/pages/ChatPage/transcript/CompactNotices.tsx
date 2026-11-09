@@ -5,7 +5,7 @@ import type { LoadedMessageDto } from '../../../types';
 import { formatTokenCount } from './compact';
 
 /** The quiet grey of a summary line, as in the tool runs. */
-const QUIET_TEXT = 'text-[#9c9c9c]';
+const QUIET_TEXT = 'text-[var(--tr-muted)]';
 
 /**
  * Where the conversation was compacted: one quiet line saying how many tokens that saved. The desktop app draws it
@@ -33,7 +33,7 @@ export function CliNotice({ message }: { message: LoadedMessageDto }) {
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className={`flex items-center gap-1 py-2 text-start text-[0.9375rem] transition-colors hover:text-[#d4d4d4] ${QUIET_TEXT}`}
+        className={`flex items-center gap-1 py-2 text-start text-[0.9375rem] transition-colors hover:text-[var(--tr-hover)] ${QUIET_TEXT}`}
       >
         <span>{t('transcript.compact.notices', { count: 1 })}</span>
         <ChevronDownIcon className={`h-4 w-4 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />

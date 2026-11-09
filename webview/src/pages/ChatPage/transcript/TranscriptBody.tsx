@@ -50,7 +50,7 @@ function TranscriptBlocks({
               plain
               content={thinking.thinking}
               isStreaming={streaming}
-              className="text-[#efefef] text-[1.02rem] leading-[1.3]"
+              className="text-[var(--tr-text)] text-[1.02rem] leading-[1.3]"
               message={message}
             />
           );
@@ -68,7 +68,7 @@ function TranscriptBlocks({
               plain
               content={text}
               isStreaming={streaming}
-              className="text-[#efefef] text-[1.02rem] leading-[1.3]"
+              className="text-[var(--tr-text)] text-[1.02rem] leading-[1.3]"
               message={message}
               footer={
                 streaming || !showFooter ? undefined : (
@@ -109,7 +109,7 @@ function SegmentView({ segment, endsTurn, onRetry }: { segment: Segment; endsTur
     case 'card':
       return <ToolRenderer toolUse={segment.call.toolUse} message={segment.call.message} />;
     case 'chapter':
-      return <h3 className="px-4 pb-[29px] pt-3 text-[1rem] font-semibold leading-relaxed text-[#efefef]">{segment.title}</h3>;
+      return <h3 className="px-4 pb-[29px] pt-3 text-[1rem] font-semibold leading-relaxed text-[var(--tr-text)]">{segment.title}</h3>;
   }
 }
 

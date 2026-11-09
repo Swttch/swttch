@@ -42,7 +42,7 @@ const Closing: FC<{ next: LoadedMessageDto | null; wrapUp: Record<string, unknow
             plain
             content={recap}
             isStreaming={false}
-            className="text-[#efefef] text-[1rem] leading-relaxed"
+            className="text-[var(--tr-text)] text-[1rem] leading-relaxed"
           />
         </div>
       )}

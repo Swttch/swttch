@@ -65,7 +65,7 @@ function PathLine({ path }: { path: string }) {
   const shown = withHomeAsTilde(path);
   const cut = shown.lastIndexOf('/') + 1;
   return (
-    <div dir="ltr" className="group mb-3 mt-1 flex min-w-0 items-center gap-2 text-[0.8461rem] text-[#efefef]">
+    <div dir="ltr" className="group mb-3 mt-1 flex min-w-0 items-center gap-2 text-[0.8461rem] text-[var(--tr-text)]">
       {/* The whole path is in the tooltip: the line itself may have cut the folders out of the middle. */}
       <Tooltip content={path} placement="top">
         <div role="link" tabIndex={0} onClick={() => getAdapter().openFile(path)} className="flex min-w-0 cursor-pointer hover:underline">
@@ -82,7 +82,7 @@ function PathLine({ path }: { path: string }) {
             () => toast.error(t('sendActions.copyFailed')),
           )
         }
-        className="flex-shrink-0 rounded p-0.5 text-[#9c9c9c] opacity-0 hover:text-[#efefef] focus-visible:opacity-100 group-hover:opacity-100"
+        className="flex-shrink-0 rounded p-0.5 text-[var(--tr-muted)] opacity-0 hover:text-[var(--tr-text)] focus-visible:opacity-100 group-hover:opacity-100"
         aria-label={t('sendActions.copyMessage')}
       >
         <ClipboardDocumentIcon className="h-4 w-4" />
@@ -92,8 +92,8 @@ function PathLine({ path }: { path: string }) {
 }
 
 const ROW_TINT: Record<DiffLineType, string> = {
-  [DiffLineType.Add]: 'bg-[#243623]',
-  [DiffLineType.Delete]: 'bg-[#382124]',
+  [DiffLineType.Add]: 'bg-[var(--tr-add-bg)]',
+  [DiffLineType.Delete]: 'bg-[var(--tr-del-bg)]',
   [DiffLineType.Context]: '',
 };
 
@@ -145,7 +145,7 @@ function OneChange({ call }: { call: ToolCall }) {
       {lines.length > 0 && (
         <div
           dir="ltr"
-          className="max-h-[24rem] overflow-y-auto rounded-lg border border-border-default/70 py-1 font-mono text-[0.8461rem] leading-[1.5] text-[#efefef]"
+          className="max-h-[24rem] overflow-y-auto rounded-lg border border-border-default/70 py-1 font-mono text-[0.8461rem] leading-[1.5] text-[var(--tr-text)]"
         >
           {lines.map((line, index) => (
             <DiffRow key={index} line={line} digits={digits} language={language} />

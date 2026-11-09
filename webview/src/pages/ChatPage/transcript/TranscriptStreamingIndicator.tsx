@@ -30,7 +30,7 @@ export function TranscriptStreamingIndicator({
   }
 
   return (
-    <div className="flex items-center gap-2.5 px-4 py-[17px] text-[0.9375rem] text-[#9c9c9c]" role="status" data-transcript-streaming>
+    <div className="flex items-center gap-2.5 px-4 py-[17px] text-[0.9375rem] text-[var(--tr-muted)]" role="status" data-transcript-streaming>
       <ActivityGlyph />
       <span>
         {turnOutputTokens > 0 ? (

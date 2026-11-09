@@ -8,7 +8,7 @@ import { timeAgo } from '@/utils/timeAgo';
 import { CopyIcon, ForkIcon } from './footerIcons';
 
 const BUTTON =
-  'flex w-6 h-6 cursor-pointer items-center justify-center rounded-md text-[#9c9c9c] transition-colors hover:bg-surface-hover hover:text-[#efefef]';
+  'flex w-6 h-6 cursor-pointer items-center justify-center rounded-md text-[var(--tr-muted)] transition-colors hover:bg-surface-hover hover:text-[var(--tr-text)]';
 
 /** A tooltip with a title and, under it, what the button does. */
 function Hint({ title, text }: { title: string; text?: string }): ReactNode {

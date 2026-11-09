@@ -1,17 +1,40 @@
+/* The colours of the Transcript view modes. The desktop app's dark palette is the one they were drawn in; the light
+   values keep the same roles (reply text, quiet text, hover, chip) readable on a light chat. */
+:root {
+  --tr-text: #2b2b2b;
+  --tr-muted: #7a7a7a;
+  --tr-hover: #3d3d3d;
+  --tr-soft: #4a4a4a;
+  --tr-chip: #ebebeb;
+  --tr-link: #2f64c4;
+  --tr-add-bg: #dff1dc;
+  --tr-del-bg: #f8dfe1;
+}
+.dark {
+  --tr-text: #efefef;
+  --tr-muted: #9c9c9c;
+  --tr-hover: #d4d4d4;
+  --tr-soft: #c4c4c4;
+  --tr-chip: #2b2b2b;
+  --tr-link: #7b9bd8;
+  --tr-add-bg: #243623;
+  --tr-del-bg: #382124;
+}
+
 /* Inline code and links in the reply, as the desktop app draws them: code is a quiet grey chip with the reply's own
    light text (the classic chat tints it), and a link is a muted blue underlined. The classic chat's rules for these
    are `!important` and are written against the markdown's own attributes, so these have to be as well. */
 .transcript-prose :not(pre) > code,
 .transcript-prose [data-streamdown="inline-code"] {
-  background-color: #2b2b2b !important;
-  color: #efefef !important;
+  background-color: var(--tr-chip) !important;
+  color: var(--tr-text) !important;
   border-radius: 4px !important;
   font-size: 0.82em !important;
   padding: 0.05em 0.35em !important;
 }
 
 .transcript-prose a {
-  color: #7b9bd8 !important;
+  color: var(--tr-link) !important;
   text-decoration: underline !important;
   text-underline-offset: 2px;
 }
@@ -66,7 +89,7 @@
 
 /* The words of what is running are swept by a lighter band from left to right, over and over. */
 .transcript-shimmer {
-  background-image: linear-gradient(100deg, #9c9c9c 40%, #ffffff 50%, #9c9c9c 60%);
+  background-image: linear-gradient(100deg, var(--tr-muted) 40%, rgb(var(--text-primary-rgb)) 50%, var(--tr-muted) 60%);
   background-size: 250% 100%;
   background-clip: text;
   -webkit-background-clip: text;

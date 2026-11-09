@@ -42,10 +42,10 @@ import {
  * The quiet grey of a summary line, measured off the desktop app (#9c9c9c), and the lighter grey it
  * takes on under the pointer. Neutral on purpose: the theme's own secondary text is tinted blue.
  */
-const SUMMARY_TEXT = 'text-[#9c9c9c] hover:text-[#d4d4d4]';
+const SUMMARY_TEXT = 'text-[var(--tr-muted)] hover:text-[var(--tr-hover)]';
 
 /** The reply's own light grey, for the name of a file in a row: it stands out from the grey around it. */
-const LINK_TEXT = 'text-[#efefef]';
+const LINK_TEXT = 'text-[var(--tr-text)]';
 
 /** Borders of a group's box and of the lines inside it: fainter than the theme's, as the desktop app draws them. */
 const BOX_BORDER = 'border-border-default/70';
@@ -79,7 +79,7 @@ function withoutTabContext(output: string): string {
 function NoOutput({ call, output }: { call: ToolCall; output: string }) {
   const { t } = useTranslation('chat');
   if (output.trim() !== '' || !call.toolUse.tool_result) return null;
-  return <div className="px-1 pb-3 text-[0.9375rem] text-[#9c9c9c]">{t('transcript.tools.noOutput')}</div>;
+  return <div className="px-1 pb-3 text-[0.9375rem] text-[var(--tr-muted)]">{t('transcript.tools.noOutput')}</div>;
 }
 
 /** A copy button over a code box, in its top corner. */
@@ -95,7 +95,7 @@ function CopyButton({ text }: { text: string }) {
           () => toast.error(t('sendActions.copyFailed')),
         );
       }}
-      className="absolute end-2 top-2 rounded p-1 text-[#9c9c9c] hover:text-[#efefef] hover:bg-surface-hover"
+      className="absolute end-2 top-2 rounded p-1 text-[var(--tr-muted)] hover:text-[var(--tr-text)] hover:bg-surface-hover"
       aria-label={t('sendActions.copyMessage')}
     >
       <ClipboardDocumentIcon className="w-4 h-4" />
@@ -113,7 +113,7 @@ function OutputText({ output }: { output: string }) {
     <div className="px-3 pb-3 font-mono text-[0.8461rem] leading-[1.5]">
       {exit && <div className="text-red-400">{t('transcript.tools.exitCode', { code: exit[1] })}</div>}
       {rest && (
-        <pre className="mt-2 whitespace-pre-wrap break-words text-[#9c9c9c] max-h-[24rem] overflow-y-auto">{rest}</pre>
+        <pre className="mt-2 whitespace-pre-wrap break-words text-[var(--tr-muted)] max-h-[24rem] overflow-y-auto">{rest}</pre>
       )}
     </div>
   );
@@ -123,10 +123,10 @@ function OutputText({ output }: { output: string }) {
 function CodeBox({ title, code, language, output }: { title: string; code: string; language: string; output: string }) {
   return (
     <div className={`relative mb-2 rounded-lg border ${BOX_BORDER} overflow-hidden`} data-transcript-code-box>
-      <div className="px-3 pt-2 pb-1 text-[0.8461rem] text-[#9c9c9c]">{title}</div>
+      <div className="px-3 pt-2 pb-1 text-[0.8461rem] text-[var(--tr-muted)]">{title}</div>
       <CopyButton text={code} />
-      <pre className="mx-2 mb-2 max-h-[16rem] overflow-y-auto whitespace-pre-wrap break-words rounded-md bg-surface-hover px-3 py-2 font-mono text-[0.8461rem] leading-[1.5] text-[#efefef]">
-        {language === 'bash' && <span className="text-[#9c9c9c] select-none">$ </span>}
+      <pre className="mx-2 mb-2 max-h-[16rem] overflow-y-auto whitespace-pre-wrap break-words rounded-md bg-surface-hover px-3 py-2 font-mono text-[0.8461rem] leading-[1.5] text-[var(--tr-text)]">
+        {language === 'bash' && <span className="text-[var(--tr-muted)] select-none">$ </span>}
         <HighlightedCode text={code} language={language} />
       </pre>
       <OutputText output={output} />
@@ -161,7 +161,7 @@ function PlainDetail({ call }: { call: ToolCall }) {
   // The text parts are joined without a break, so the note can sit at the front of a line of text; it is cut out wherever it is.
   const text = toolKindOf(call) === 'capture' ? '' : stripImageNotes(toolResultText(result).replace(/\[Image: source: [^\]]*\]/g, '\n')).trim();
   return (
-    <div className="px-1 pb-3 text-[0.9375rem] leading-[1.5] text-[#9c9c9c]">
+    <div className="px-1 pb-3 text-[0.9375rem] leading-[1.5] text-[var(--tr-muted)]">
       {text && <div className="whitespace-pre-wrap break-words">{text}</div>}
       {images.map((src, index) => (
         <button key={index} type="button" onClick={() => setViewing(index)} className="mt-2 block max-w-full cursor-zoom-in">
@@ -185,7 +185,7 @@ function PlainDetail({ call }: { call: ToolCall }) {
 function MarkdownDetail({ text, message }: { text: string; message: LoadedMessageDto }) {
   return (
     <div className="transcript-prose px-1 pb-3">
-      <StreamingMessage plain content={text} isStreaming={false} className="text-[0.9375rem] leading-[1.5] text-[#c4c4c4]" message={message} />
+      <StreamingMessage plain content={text} isStreaming={false} className="text-[0.9375rem] leading-[1.5] text-[var(--tr-soft)]" message={message} />
     </div>
   );
 }
@@ -194,8 +194,8 @@ function MarkdownDetail({ text, message }: { text: string; message: LoadedMessag
 function DetailPair({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex gap-6 py-0.5">
-      <span className="w-[4.5rem] flex-shrink-0 text-[#9c9c9c]">{label}</span>
-      <span className="min-w-0 break-words text-[#efefef]">{value}</span>
+      <span className="w-[4.5rem] flex-shrink-0 text-[var(--tr-muted)]">{label}</span>
+      <span className="min-w-0 break-words text-[var(--tr-text)]">{value}</span>
     </div>
   );
 }
@@ -218,11 +218,11 @@ function InputDetail({ call }: { call: ToolCall }) {
   const entries = Object.entries(call.toolUse.input ?? {});
   return (
     <div className="px-1 pb-3 text-[0.9375rem] leading-[1.5]">
-      <div className="pb-1 text-[#9c9c9c]">{t('transcript.tools.inputHeading')}</div>
+      <div className="pb-1 text-[var(--tr-muted)]">{t('transcript.tools.inputHeading')}</div>
       {entries.map(([key, value]) => (
         <div key={key} className="pb-1.5">
-          <div className="text-[0.8461rem] text-[#9c9c9c]">{key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ').replace(/\b(id)\b/g, 'ID')}</div>
-          <div className="break-words text-[#efefef]">{typeof value === 'string' ? value : JSON.stringify(value)}</div>
+          <div className="text-[0.8461rem] text-[var(--tr-muted)]">{key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ').replace(/\b(id)\b/g, 'ID')}</div>
+          <div className="break-words text-[var(--tr-text)]">{typeof value === 'string' ? value : JSON.stringify(value)}</div>
         </div>
       ))}
     </div>
@@ -241,8 +241,8 @@ function InputOutputDetail({ call }: { call: ToolCall }) {
       <InputDetail call={call} />
       {output && (
         <div className={`mx-1 mb-3 border-t ${BOX_BORDER} pt-3 text-[0.9375rem] leading-[1.5]`}>
-          <div className="pb-1 text-[#9c9c9c]">{t('transcript.tools.outputHeading')}</div>
-          <div className="whitespace-pre-wrap break-words text-[#9c9c9c]">{output}</div>
+          <div className="pb-1 text-[var(--tr-muted)]">{t('transcript.tools.outputHeading')}</div>
+          <div className="whitespace-pre-wrap break-words text-[var(--tr-muted)]">{output}</div>
         </div>
       )}
     </>
@@ -256,7 +256,7 @@ function SentMessageDetail({ call }: { call: ToolCall }) {
   const delivery = parseSessionDelivery(toolResultText(call.toolUse.tool_result as LoadedMessageDto | undefined)).delivery;
   return (
     <div className="px-1 pb-3">
-      {delivery && <div className="pb-2 text-[0.9375rem] text-[#9c9c9c]">{delivery === 'delivered' ? t('sendMessage.delivered') : delivery}</div>}
+      {delivery && <div className="pb-2 text-[0.9375rem] text-[var(--tr-muted)]">{delivery === 'delivered' ? t('sendMessage.delivered') : delivery}</div>}
       <MarkdownDetail text={text} message={call.message} />
     </div>
   );
@@ -297,7 +297,7 @@ function SessionFactsDetail({ call }: { call: ToolCall }) {
   ];
   return (
     <div className="px-1 pb-3 text-[0.9375rem] leading-[1.5]">
-      <div className="flex gap-4 px-2 py-2 text-[#9c9c9c]">
+      <div className="flex gap-4 px-2 py-2 text-[var(--tr-muted)]">
         <span className="w-[6rem] flex-shrink-0">{t('transcript.tools.factField')}</span>
         <span>{t('transcript.tools.factValue')}</span>
       </div>
@@ -305,8 +305,8 @@ function SessionFactsDetail({ call }: { call: ToolCall }) {
         .filter((row): row is [string, string] => row[1] !== undefined)
         .map(([label, value]) => (
           <div key={label} className={`flex gap-4 border-t ${BOX_BORDER} px-2 py-3`}>
-            <span className="w-[6rem] flex-shrink-0 text-[#efefef]">{label}</span>
-            <span className="min-w-0 break-words text-[#efefef]">{value}</span>
+            <span className="w-[6rem] flex-shrink-0 text-[var(--tr-text)]">{label}</span>
+            <span className="min-w-0 break-words text-[var(--tr-text)]">{value}</span>
           </div>
         ))}
     </div>
@@ -360,11 +360,11 @@ function ToolDetail({ calls }: { calls: ToolCall[] }) {
   }
   if (kind === 'sessionStart' && hasFailed(call)) {
     // A start the app refused shows what it said, in the quiet grey (the classic card paints it red), and not what was asked for.
-    return <div className="whitespace-pre-wrap break-words px-1 pb-3 text-[0.9375rem] leading-[1.5] text-[#9c9c9c]">{output}</div>;
+    return <div className="whitespace-pre-wrap break-words px-1 pb-3 text-[0.9375rem] leading-[1.5] text-[var(--tr-muted)]">{output}</div>;
   }
   if (kind === 'sessionArchive' &&typeof call.toolUse.input?.reason === 'string' && call.toolUse.input.reason) {
     // What archiving a session shows is the reason it was archived for, in the quiet grey, and nothing of what the call returned.
-    return <div className="whitespace-pre-wrap break-words px-1 pb-3 text-[0.9375rem] leading-[1.5] text-[#9c9c9c]">{call.toolUse.input.reason as string}</div>;
+    return <div className="whitespace-pre-wrap break-words px-1 pb-3 text-[0.9375rem] leading-[1.5] text-[var(--tr-muted)]">{call.toolUse.input.reason as string}</div>;
   }
   if (kind === 'sessionLookup') return <SessionFactsDetail call={call} />;
   if (kind === 'sessionRename') return <RenameDetail call={call} />;
@@ -427,11 +427,11 @@ function StartedSessionCard({ call }: { call: ToolCall }) {
         target="_blank"
         rel="noreferrer"
         onClick={goTo}
-        className={`flex w-full items-center gap-2 rounded-lg border ${BOX_BORDER} px-3.5 py-[13px] text-start text-[0.9375rem] text-[#efefef] hover:bg-[#2b2b2b] ${href ? 'cursor-pointer' : ''}`}
+        className={`flex w-full items-center gap-2 rounded-lg border ${BOX_BORDER} px-3.5 py-[13px] text-start text-[0.9375rem] text-[var(--tr-text)] hover:bg-[var(--tr-chip)] ${href ? 'cursor-pointer' : ''}`}
       >
         <span className="min-w-0 flex-1 truncate">{title}</span>
         {awaiting && <span className="flex-shrink-0 text-[0.8461rem] text-[#d99a2b]">{t('transcript.tools.needsInput')}</span>}
-        <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-[#9c9c9c] rtl:-scale-x-100" />
+        <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-[var(--tr-muted)] rtl:-scale-x-100" />
       </a>
     </div>
   );
@@ -535,7 +535,7 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
     // since the picture itself is right under it.
     return (
       <div className="px-4 pt-3 pb-[11px]" data-transcript-tool-run-single>
-        <div className="py-[10px] text-[0.9375rem] text-[#9c9c9c]">{rowLabel(calls[0], t).before}</div>
+        <div className="py-[10px] text-[0.9375rem] text-[var(--tr-muted)]">{rowLabel(calls[0], t).before}</div>
         <PlainDetail call={calls[0]} />
       </div>
     );

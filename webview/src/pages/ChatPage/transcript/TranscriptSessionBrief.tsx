@@ -9,7 +9,7 @@ import type { SessionBrief } from '../message-renderers/utils/sessionBrief';
 import { UserMessageText } from '../message-renderers/components/UserMessageText';
 import './prose.css';
 
-const QUIET_TEXT = 'text-[#9c9c9c]';
+const QUIET_TEXT = 'text-[var(--tr-muted)]';
 
 /** The height a card's text is cut at until "Show more" is pressed. */
 const CLAMPED = 'max-h-[9em] overflow-hidden [mask-image:linear-gradient(to_bottom,black_calc(100%_-_2rem),transparent)]';
@@ -37,10 +37,10 @@ function BriefStep({ label, text, meta, defaultOpen }: { label: string; text: st
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        className={`flex w-fit max-w-full items-center gap-1.5 text-[0.9375rem] hover:text-[#d4d4d4] ${QUIET_TEXT}`}
+        className={`flex w-fit max-w-full items-center gap-1.5 text-[0.9375rem] hover:text-[var(--tr-hover)] ${QUIET_TEXT}`}
       >
         <span>{label}</span>
-        {meta && <span className="min-w-0 truncate text-[#efefef]">{meta}</span>}
+        {meta && <span className="min-w-0 truncate text-[var(--tr-text)]">{meta}</span>}
         {open ? <ChevronDownIcon className="h-4 w-4 shrink-0" /> : <ChevronRightIcon className="h-4 w-4 shrink-0" />}
       </button>
       {open && (
@@ -48,12 +48,12 @@ function BriefStep({ label, text, meta, defaultOpen }: { label: string; text: st
           <div
             ref={bodyRef}
             data-testid="session-brief-text"
-            className={`transcript-prose whitespace-pre-wrap break-words text-[1rem] leading-[1.5] text-[#c4c4c4] ${expanded ? '' : CLAMPED}`}
+            className={`transcript-prose whitespace-pre-wrap break-words text-[1rem] leading-[1.5] text-[var(--tr-soft)] ${expanded ? '' : CLAMPED}`}
           >
             <UserMessageText text={text} />
           </div>
           {(overflowing || expanded) && (
-            <button type="button" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)} className={`w-fit text-[0.8461rem] hover:text-[#d4d4d4] ${QUIET_TEXT}`}>
+            <button type="button" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)} className={`w-fit text-[0.8461rem] hover:text-[var(--tr-hover)] ${QUIET_TEXT}`}>
               {expanded ? t('sessionBrief.showLess') : t('sessionBrief.showMore')}
             </button>
           )}
@@ -82,12 +82,12 @@ export function TranscriptSessionBrief({ brief, message }: { brief: SessionBrief
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        className={`flex w-fit max-w-full items-center gap-1.5 text-start text-[0.9375rem] hover:text-[#d4d4d4] ${QUIET_TEXT}`}
+        className={`flex w-fit max-w-full items-center gap-1.5 text-start text-[0.9375rem] hover:text-[var(--tr-hover)] ${QUIET_TEXT}`}
       >
         <span className="min-w-0 truncate">
           {parent?.title ? (
             <>
-              {t('transcript.tools.startedByClaudeFrom')} <bdi className="text-[#efefef] underline underline-offset-2">{parent.title}</bdi>
+              {t('transcript.tools.startedByClaudeFrom')} <bdi className="text-[var(--tr-text)] underline underline-offset-2">{parent.title}</bdi>
             </>
           ) : (
             t('transcript.tools.startedByClaude')
