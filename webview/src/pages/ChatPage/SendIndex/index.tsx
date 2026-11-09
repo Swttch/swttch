@@ -53,6 +53,12 @@ export type SendIndexSide = 'start' | 'end';
 /** How far in from the start edge the rail sits when it is there. No scrollbar on that side, so less is needed. */
 const SEND_INDEX_RAIL_INSET_START = 0;
 
+/**
+ * The rest of the gap on the start edge, as a margin class rather than a number so it can follow the width of the
+ * window. The inset above stays 0 and this class is the one to tune.
+ */
+const SEND_INDEX_RAIL_MARGIN_START = 'ms-2';
+
 /** Each tick is a hairline; the stack reads as a ruler rather than a list. */
 const TICK_HEIGHT = 2;
 
@@ -790,7 +796,7 @@ export function SendIndex(props: Props) {
     */
     <div
       ref={outerRef}
-      className="absolute z-20 flex flex-col justify-center pointer-events-none"
+      className={`absolute z-20 flex flex-col justify-center pointer-events-none ${side === 'start' ? SEND_INDEX_RAIL_MARGIN_START : ''}`}
       style={{
         width: SEND_INDEX_RAIL_WIDTH,
         ...(side === 'end'

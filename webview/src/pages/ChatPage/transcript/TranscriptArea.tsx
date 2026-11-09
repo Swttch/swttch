@@ -102,7 +102,7 @@ export function TranscriptArea(props: TranscriptAreaProps) {
   if (isEmpty) return <EmptyState />;
 
   return (
-    <div ref={containerRef} className="flex-1 w-full max-w-[var(--chat-column-max,70rem)] mx-auto text-xs antialiased">
+    <div ref={containerRef} className="flex-1 w-full max-w-[var(--chat-column-max,70rem)] mx-auto sm:px-4 text-xs antialiased">
       <ChatSearchBar search={search} />
       <SelectionReplyLayer containerRef={containerRef} />
       {(isLoadingMore || hasMore) && (

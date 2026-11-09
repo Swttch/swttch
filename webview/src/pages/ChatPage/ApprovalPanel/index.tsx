@@ -91,7 +91,7 @@ export function ApprovalPanel(props: Props) {
 
   if (collapsed) {
     return (
-      <div className="w-full max-w-[var(--chat-column-max,44rem)] mx-auto px-4 pb-[20px] pt-2">
+      <div className="w-full max-w-[var(--chat-column-max,44rem)] mx-auto px-4 sm:px-[var(--chat-column-px,1rem)] pb-[20px] pt-2">
         <CollapsedSummaryBar title={collapsedTitle ?? (typeof title === 'string' ? title : '')} onExpand={expand} />
       </div>
     );
@@ -104,7 +104,7 @@ export function ApprovalPanel(props: Props) {
    * and scroll when they no longer fit.
    */
   return (
-    <div className="w-full max-w-[var(--chat-column-max,44rem)] mx-auto px-4 pb-[20px] pt-2 min-h-0 flex flex-col">
+    <div className="w-full max-w-[var(--chat-column-max,44rem)] mx-auto px-4 sm:px-[var(--chat-column-px,1rem)] pb-[20px] pt-2 min-h-0 flex flex-col">
       <div className="rounded-lg border border-border-default bg-surface-raised overflow-hidden min-h-0 flex flex-col">
         {/* 헤더 */}
         <div className="px-2 py-2.5 mb-0.5 flex items-start gap-2">

@@ -454,9 +454,10 @@ function ChatPageContent() {
         style={{
           paddingInlineEnd: railAtStart ? undefined : SEND_INDEX_RAIL_WIDTH,
           paddingTop: topBarHeight,
-          // How wide the chat column and the input may grow. The transcript view modes use a wider column than the
-          // classic chat's 44rem; everything that sets a column width reads this and falls back to its own.
-          ...(railAtStart ? ({ '--chat-column-max': '70rem' } as React.CSSProperties) : {}),
+          // How wide the chat column and the input may grow, and the side padding they take from the `sm` width up.
+          // The transcript view modes use a wider column than the classic chat's 44rem; everything that sets a column
+          // width reads these and falls back to its own.
+          ...(railAtStart ? ({ '--chat-column-max': '70rem', '--chat-column-px': '2rem' } as React.CSSProperties) : {}),
         }}
         className="flex flex-col flex-1 overflow-y-auto w-full h-screen pb-0 bg-surface-base z-0"
       >
