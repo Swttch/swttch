@@ -359,6 +359,7 @@
       "rotateModel": "Zum nächsten Modell wechseln",
       "clearConversation": "Unterhaltung löschen",
       "openSideQuestion": "Nebenfrage stellen (/btw)",
+      "cycleTranscriptView": "Transkript-Ansicht wechseln (Normal, Denken, Ausführlich, Klassisch)",
       "refreshSessionList": "Sitzungsliste aktualisieren, solange sie geöffnet ist",
       "zoomIn": "Vergrößern",
       "findInChat": "Im Gespräch suchen",

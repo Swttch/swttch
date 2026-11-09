@@ -359,6 +359,7 @@
       "rotateModel": "切换到下一个模型",
       "clearConversation": "清除对话",
       "openSideQuestion": "提一个旁支问题 (/btw)",
+      "cycleTranscriptView": "切换对话记录视图（普通、思考、详细、经典）",
       "refreshSessionList": "会话列表打开时刷新会话",
       "zoomIn": "放大",
       "findInChat": "在对话中查找",
