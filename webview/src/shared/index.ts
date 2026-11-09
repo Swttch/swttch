@@ -30,3 +30,4 @@ export * from './session-send';
 export * from './session-activity';
 export * from './sponsor-gate';
 export * from './env-var-origin';
+export * from './cli-authored-text';

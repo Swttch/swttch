@@ -33,8 +33,27 @@ export function commandSendText(commandName: string | undefined, args: string): 
  * index would look wrong for a send that is perfectly fine.
  */
 export function sendText(message: LoadedMessageDto): string {
-  const parsed = parseUserContent(getTextContent(message));
-  return parsed.commandName !== undefined
-    ? commandSendText(parsed.commandName, parsed.text)
-    : parsed.text;
+  return composeSendText(getTextContent(message));
+}
+
+/**
+ * The same, from the text alone, so the index's cut copy of a send that is not
+ * loaded reads exactly as the loaded one will once it arrives.
+ *
+ * A message that opens with reply or excerpt cards has the cards ahead of what
+ * was typed, and `parseUserContent` takes them out of `text`. Reading `text`
+ * alone left a send made of replies empty: its card was blank, and a send whose
+ * tick showed the raw `<!-- reply -->` markers before it was loaded went blank
+ * after a jump loaded it (#657). The cards are put back as the lines the bubble
+ * draws: each quote, then its comment, then what was typed.
+ */
+export function composeSendText(raw: string): string {
+  const parsed = parseUserContent(raw);
+  if (parsed.commandName !== undefined) return commandSendText(parsed.commandName, parsed.text);
+  const lines = [
+    ...parsed.replies.flatMap(reply => [reply.quote, reply.comment]),
+    ...parsed.excerpts,
+    parsed.text,
+  ];
+  return lines.map(line => line.trim()).filter(Boolean).join('\n');
 }

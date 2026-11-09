@@ -1,6 +1,6 @@
 import { loadActiveChain, type SessionMessage } from './loadSessionMessages';
 import { collectPrompts } from './loadPromptHistory';
-import type { SessionSend } from '../../shared';
+import { withoutSystemReminders, type SessionSend } from '../../shared';
 
 /**
  * How much of a send the preview carries.
@@ -66,6 +66,7 @@ export async function collectSessionSends(
     .map(entry => ({
       uuid: entry.uuid as string,
       timestamp: typeof entry.timestamp === 'string' ? entry.timestamp : null,
-      preview: previewOf(textOf(entry)),
+      // The reminders wrapped around a typed message are not part of what was typed.
+      preview: previewOf(withoutSystemReminders(textOf(entry))),
     }));
 }

@@ -112,3 +112,16 @@ describe('groupIntoSendSections', () => {
     expect(sections.map(s => s.key)).toEqual(['u-1', 'u-2']);
   });
 });
+
+describe('groupIntoSendSections and another session\'s message', () => {
+  it('does not open a section for a message another session sent (#657)', () => {
+    const peer = { ...typed('p-1', 'Another Claude session sent a message:\n<cross-session-message from="x">hi</cross-session-message>'), isMeta: true } as LoadedMessageDto;
+    const sections = groupIntoSendSections([typed('u-1'), assistant('a-1'), peer]);
+    expect(sections.map(s => s.key)).toEqual(['u-1']);
+  });
+
+  it('does not open a section for the app\'s note about sessions this one started', () => {
+    const note = typed('n-1', '<system-reminder>r</system-reminder>\n<side-sessions-event>x</side-sessions-event>');
+    expect(groupIntoSendSections([typed('u-1'), assistant('a-1'), note]).map(s => s.key)).toEqual(['u-1']);
+  });
+});

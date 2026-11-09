@@ -10,9 +10,9 @@ The **send index** is a strip of thin ticks down the end edge of the chat. One
 tick per prompt you sent, for the whole session. Hover a tick to read that
 prompt, click it to go there.
 
-Requested in [#427](https://github.com/Swttch/swttch/issues/427).
+Requested in [#427](https://github.com/Swttch/swttch/issues/427). Bounded to the free space and fixed to list every prompt in [#657](https://github.com/Swttch/swttch/issues/657).
 
-![The chat with the send index at the end edge: a stack of short horizontal ticks, vertically centred, beside a reply made of two Bash tool cards](./assets/rail-at-rest.png)
+![The chat with the send index at the end edge: a stack of short horizontal ticks, vertically centred, beside a reply made of two Bash tool cards](./assets/rail-at-rest.jpg)
 
 ## What the rail tells you
 
@@ -43,7 +43,7 @@ the moment the two coincide there is no way to tell them apart.
 Hover any tick and a card opens toward the transcript with the first four lines
 of that prompt.
 
-![The same chat with the pointer on a tick: a card has opened to the left of the rail, showing the first line of that prompt in white and the following line dimmed](./assets/rail-preview-card.png)
+![The same chat with the pointer on a tick: a card has opened to the left of the rail, showing the first line of that prompt in white and the following line dimmed](./assets/rail-preview-card.jpg)
 
 Four lines rather than one, because prompts in a working session tend to open
 with the same words — "fix the", "now make it" — and a single truncated line
@@ -52,6 +52,26 @@ leaves several entries looking identical.
 **The card is reachable with the mouse.** You can move onto it and select the
 text to copy it. A click inside the card does not move the transcript; only a
 click on the tick does.
+
+## Every prompt in one list
+
+Hovering a tick shows that one prompt. **Hold a tick** (about half a second) and a
+list of every prompt in the session opens beside the rail, one line each, with the
+prompt you are reading in blue. A short press is still a click and goes to that
+prompt.
+
+![The list of every prompt, opened beside the rail: one line per prompt, the one being read in blue. The text is blurred in this image](./assets/rail-all-prompts.jpg)
+
+- The list opens scrolled to the prompt you are reading. Scroll it to look further;
+  the chat behind it and the rail's marker stay where they are.
+- Click a row to go there, the same way a tick click does, including prompts from
+  further back than the chat has loaded.
+- `Esc` or a click anywhere outside closes it.
+- From the keyboard, focus the rail and press `Enter` to open or close it.
+- Only the rows on screen are drawn, so a session with hundreds of prompts opens
+  as quickly as a short one.
+- The hover card ends with a small hint, "Hold to see every prompt", since holding
+  is not something you would find by chance.
 
 ## Going to a prompt
 
@@ -117,6 +137,46 @@ replaces it with the real message, unabridged.
 - **The rail is not shown in a session with nothing sent yet**, since there is
   nothing to index.
 
+## Which edge it sits on
+
+In the classic chat the rail is on the **end edge**, in a strip the chat leaves for
+it. In the Transcript view modes (Normal, Thinking and Detailed), where your
+messages are on the end side, the rail moves to the **start edge** and is drawn
+over the chat, with nothing reserved for it: each block there has the same side
+padding on both sides. The hover card and the list of every
+prompt open toward the chat on either side. Changing the view mode moves the rail
+at once.
+
+![The send index in a Transcript view mode: ticks along the start edge with the card opened to their right](./assets/rail-start-edge.jpg)
+
+## How much room it takes
+
+The rail runs from under the top bar to just above the input box, so it never
+runs down behind the input. The bottom edge is measured again when the input box
+grows or the window changes size, so a taller window shows more ticks and a
+shorter one fewer. There is no fixed number of ticks.
+
+**More ticks than fit are scrolled, not squeezed.** Scroll the wheel over the
+rail to move through them; the scrollbar is hidden. An edge with more ticks
+behind it fades out, which is how the rail says "this goes on" without taking
+room for an arrow. The tick you are reading, or the one the keyboard walked to,
+is kept in view.
+
+**Only a tick answers the mouse.** Hovering the empty strip around the ticks does
+nothing; the wave and the card appear when the pointer is on a tick itself.
+
+## What counts as a prompt
+
+The rail lists what you typed. Text the app or the CLI wrote into the
+conversation is left out: the reminders wrapped around a message, finished
+background tasks, interrupt markers, another session's message, and the note the
+desktop app writes about sessions this one started. A message that has a
+reminder in front of what you typed is listed by what you typed.
+
+A prompt that opens with an `@@` mention shows the mention's name, and one made
+of reply cards shows each quote and its comment, as the chat bubble does, rather
+than the markup around them.
+
 ## Scrollbars
 
 Shipped alongside: scrollbars across the app are now half as wide, their track
@@ -126,8 +186,9 @@ the eye away from the conversation, and the rail now shares that edge.
 
 ## The input box is not pushed aside
 
-The rail keeps clear of the conversation by leaving a 24 pixel strip at the end
-edge of the transcript. The input box is not held to that strip: it reaches over
+In the classic chat the rail keeps clear of the conversation by leaving a 24 pixel
+strip at the end edge of the transcript. The Transcript view modes reserve nothing,
+since their blocks carry their own side padding. The input box is not held to that strip: it reaches over
 it, so it sits centred, with the same space on its start side and its end side.
 
 Earlier the input box gave up the same 24 pixels along with the transcript, so

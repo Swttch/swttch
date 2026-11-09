@@ -1,5 +1,5 @@
 import { loadActiveChain, type SessionMessage } from './loadSessionMessages';
-import { isQueueOperation, queuedMidTurnCounts } from '../../shared';
+import { isCliAuthoredText, isQueueOperation, queuedMidTurnCounts } from '../../shared';
 
 /**
  * How many prompts one page of history carries.
@@ -40,29 +40,9 @@ export interface PromptHistoryPage {
   oldestUuid?: string;
 }
 
-/**
- * CLI-authored text that occupies a prompt slot without a human having typed it.
- *
- * Content is the only signal for these. Measured across every project on this
- * machine, no field distinguishes them from a real prompt — not even
- * `permissionMode`, which the CLI stamps on anything it *processes* as a prompt
- * including the ones it writes itself: 153 `<task-notification>`, 25
- * `<ide_opened_file>` and 11 `<system-reminder>` entries all carried it.
- *
- * Anchored at the start, and listed by name rather than matching any tag, so a
- * prompt that merely opens with markup the user typed still counts as typed.
- */
-const CLI_AUTHORED_TEXT = new RegExp(
-  '^\\s*(?:'
-  + '<command-name>|<command-message>|<local-command-stdout>'
-  + '|<task-notification>|<ide_opened_file>|<system-reminder>'
-  + '|\\[Request interrupted by user'
-  + ')',
-);
-
-/** Whether the CLI wrote this prompt text itself, in whichever slot it landed. */
+/** Whether the CLI wrote this prompt text itself, in whichever slot it landed. See `isCliAuthoredText`. */
 function isCliAuthored(text: string): boolean {
-  return CLI_AUTHORED_TEXT.test(text);
+  return isCliAuthoredText(text);
 }
 
 /** The text a `user` entry carries, ignoring non-text blocks. */

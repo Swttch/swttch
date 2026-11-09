@@ -1,4 +1,5 @@
-import type { LoadedMessageDto } from '../../types';
+import { getTextContent, type LoadedMessageDto } from '../../types';
+import { isSideSessionsEventText } from '../../shared';
 import { LoadedMessageType } from '../../dto/common';
 
 /**
@@ -41,6 +42,12 @@ export function isOlderPagePrepend(
 export function isUserSend(message: LoadedMessageDto): boolean {
   if (message.type !== LoadedMessageType.User) return false;
   if (message.isSynthetic) return false;
+  // A message another session sent is written with `isMeta`, like the CLI's other notes for Claude.
+  // It is not something this user typed, and counting it opened a section the backend's index (which
+  // already skips it) has no entry for (#657).
+  if (message.isMeta) return false;
+  // The note about sessions this one started is written as a user entry, but nobody sent it.
+  if (isSideSessionsEventText(getTextContent(message))) return false;
   if (message.isVisibleInTranscriptOnly) return false;
   if (message.isCompactSummary) return false;
   if (message.toolUseResult !== undefined) return false;

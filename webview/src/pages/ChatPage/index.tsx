@@ -137,6 +137,9 @@ function ChatPageContent() {
   const { messages, isStreaming, error, disconnectCountdown, apiRetry, hasMoreOlder, oldestLoadedUuid } = useChatStreamContext();
   // null is the chat released so far; a named view mode draws the transcript with its own code.
   const transcriptViewMode = useTranscriptViewMode();
+  // The send index sits on the start edge in the transcript view modes, where user messages are on the end side,
+  // drawn over the chat; the classic chat keeps it on the end edge, in the strip the chat reserves there.
+  const railAtStart = transcriptViewMode !== null;
   const { isTopBarDisplayed, topBarHeight } = useTopBar();
   const paneColumn = usePaneColumn();
   const paneColumnWidth = usePaneWidth(true);
@@ -437,16 +440,25 @@ function ChatPageContent() {
         transcript moves. Inside, it would scroll away with the content it is
         describing.
 
-        `paddingInlineEnd` is what keeps the ticks beside the transcript instead
-        of on top of it. It is read from the rail's own constant so the two
-        cannot drift; see SEND_INDEX_RAIL_WIDTH.
+        In the classic chat `paddingInlineEnd` is what keeps the ticks beside the
+        transcript instead of on top of it, read from the rail's own constant so
+        the two cannot drift; see SEND_INDEX_RAIL_WIDTH. In the transcript view
+        modes the rail is on the start edge, drawn over the chat, and nothing is
+        reserved: every block there carries its own side padding.
       */}
-      <SendIndex sections={sections} sessionSends={sessionSends} />
+      <SendIndex sections={sections} sessionSends={sessionSends} side={railAtStart ? 'start' : 'end'} />
       <div
         ref={scrollContainerRef}
         data-chat-scroll
         onScroll={handleScroll}
-        style={{ paddingInlineEnd: SEND_INDEX_RAIL_WIDTH, paddingTop: topBarHeight }}
+        style={{
+          paddingInlineEnd: railAtStart ? undefined : SEND_INDEX_RAIL_WIDTH,
+          paddingTop: topBarHeight,
+          // How wide the chat column and the input may grow, and the side padding they take from the `sm` width up.
+          // The transcript view modes use a wider column than the classic chat's 44rem; everything that sets a column
+          // width reads these and falls back to its own.
+          ...(railAtStart ? ({ '--chat-column-max': '70rem', '--chat-column-px': '2rem' } as React.CSSProperties) : {}),
+        }}
         className="flex flex-col flex-1 overflow-y-auto w-full h-screen pb-0 bg-surface-base z-0"
       >
         {transcriptViewMode === null ? (
@@ -497,7 +509,7 @@ function ChatPageContent() {
         <div
           id={CHAT_FOOTER_ID}
           className="sticky start-0 bottom-0 z-10 flex flex-col max-h-full"
-          style={{ marginInlineEnd: -SEND_INDEX_RAIL_WIDTH }}
+          style={railAtStart ? undefined : { marginInlineEnd: -SEND_INDEX_RAIL_WIDTH }}
         >
           {showScrollButton && (
               <button

@@ -344,6 +344,12 @@
       }
     }
   },
+  "sendIndex": {
+    "holdHint": "長按查看全部提問"
+  },
+  "sideSessionsEvent": {
+    "title": "已啟動工作階段的通知"
+  },
   "crossSessionMessage": {
     "title": "Message received from"
   },

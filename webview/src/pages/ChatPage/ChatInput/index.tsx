@@ -1249,7 +1249,7 @@ export function ChatInput() {
   }, [composerHasContent, setComposerHasContent]);
 
   return (
-    <div className="max-w-[44rem] mx-auto px-4 pb-[14px] pt-2">
+    <div className="max-w-[var(--chat-column-max,44rem)] mx-auto px-4 sm:px-[var(--chat-column-px,1rem)] pb-[14px] pt-2">
       {/* 텔레메트리 동의 인풋배너: 미응답(PENDING)이고 이 세션에서 닫지 않았을 때만 표시 */}
       {showConsentBanner && (
         <TelemetryConsentBanner

@@ -368,6 +368,12 @@
       }
     }
   },
+  "sendIndex": {
+    "holdHint": "اضغط مطولًا لعرض كل الرسائل"
+  },
+  "sideSessionsEvent": {
+    "title": "تحديث عن الجلسات التي بدأتها"
+  },
   "crossSessionMessage": {
     "title": "Message received from"
   },

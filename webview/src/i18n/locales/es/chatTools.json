@@ -348,6 +348,12 @@
       }
     }
   },
+  "sendIndex": {
+    "holdHint": "Mantén pulsado para ver todos los mensajes"
+  },
+  "sideSessionsEvent": {
+    "title": "Novedades de las sesiones iniciadas"
+  },
   "crossSessionMessage": {
     "title": "Message received from"
   },

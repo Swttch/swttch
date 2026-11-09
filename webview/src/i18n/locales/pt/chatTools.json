@@ -348,6 +348,12 @@
       }
     }
   },
+  "sendIndex": {
+    "holdHint": "Mantenha pressionado para ver todos os prompts"
+  },
+  "sideSessionsEvent": {
+    "title": "Novidades das sessões iniciadas"
+  },
   "crossSessionMessage": {
     "title": "Message received from"
   },

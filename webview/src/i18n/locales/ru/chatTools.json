@@ -356,6 +356,12 @@
       }
     }
   },
+  "sendIndex": {
+    "holdHint": "Удерживайте, чтобы увидеть все запросы"
+  },
+  "sideSessionsEvent": {
+    "title": "Новости о запущенных сессиях"
+  },
   "crossSessionMessage": {
     "title": "Message received from"
   },

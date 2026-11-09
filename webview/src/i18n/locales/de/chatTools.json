@@ -348,6 +348,12 @@
       }
     }
   },
+  "sendIndex": {
+    "holdHint": "Gedrückt halten für alle Prompts"
+  },
+  "sideSessionsEvent": {
+    "title": "Neuigkeiten von gestarteten Sitzungen"
+  },
   "crossSessionMessage": {
     "title": "Message received from"
   },
