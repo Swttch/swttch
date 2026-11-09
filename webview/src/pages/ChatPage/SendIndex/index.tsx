@@ -10,7 +10,7 @@ import { useApi } from '@/contexts/ApiContext';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { useWorkingDir } from '@/contexts/WorkingDirContext';
 import type { SendSection } from '../groupIntoSendSections';
-import { sendText } from '../sendText';
+import { composeSendText, sendText } from '../sendText';
 import { scrollToSend } from './scrollToSend';
 import { readingLineSectionKey } from './readingLine';
 import { useTopBar } from '@/contexts/TopBarContext';
@@ -193,7 +193,7 @@ export function buildEntries(
 
   // Nothing loaded yet: the index is all there is to draw.
   if (loaded.length === 0) {
-    return sessionSends.map(send => ({ key: send.uuid, text: send.preview, loaded: false }));
+    return sessionSends.map(send => ({ key: send.uuid, text: composeSendText(send.preview), loaded: false }));
   }
 
   /*
@@ -215,7 +215,7 @@ export function buildEntries(
 
   const older = sessionSends
     .slice(0, boundary)
-    .map(send => ({ key: send.uuid, text: send.preview, loaded: false }));
+    .map(send => ({ key: send.uuid, text: composeSendText(send.preview), loaded: false }));
 
   // What the index holds before the anchor comes first, minus anything the transcript already has.
   const loadedKeys = new Set(loaded.map(entry => entry.key));
