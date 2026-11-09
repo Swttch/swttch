@@ -6,7 +6,7 @@ import { Claude } from '../claude';
 import { MessageType } from '../../shared';
 import { readProxySummary } from '../features/proxy-summary';
 import { resolveEnv } from '../features/settings-env';
-import { hasSettingsEnvCapability } from '../extend-kit';
+import { hasSettingsEnvCapability, extHasCapability, runExtOauthUsage } from '../extend-kit';
 import { readRegistry, upsertAccount } from '../features/account-store';
 import {
   LIVE_ACCOUNT_ID, armCooldown, clearCooldown, readCooldownUntil, readUsageSnapshot,
@@ -212,7 +212,7 @@ export function classifyError(err: unknown, env: NodeJS.ProcessEnv = process.env
   // An installed-but-too-old kit rides the same code, because one button fixes both: the
   // panel's install runs @latest, which updates an existing install. The message still says
   // which of the two it was, so "update" is never shown as "install".
-  if (/^Update ccb:/.test(cleanOutput(raw))) {
+  if (/^Update (?:ccb|extend-kit):/.test(cleanOutput(raw))) {
     return { kind: 'ccb_missing', message: cleanOutput(raw) };
   }
 
@@ -415,6 +415,18 @@ export async function runCcbUsage(workingDir?: string): Promise<CcbUsageResponse
   // unlike `Claude.exec` it cannot do this for us.
   await Claude.applyConfigDir(workingDir);
 
+  // The kit's own command first. A kit installed before `swttch-ext` could report usage has no
+  // such capability, and `ccb` below keeps serving it until those installs are gone.
+  if (await extHasCapability('api.oauth.usage', workingDir)) {
+    return await runExtOauthUsage({
+      workingDir,
+      timeoutMs: SPAWN_TIMEOUT_MS,
+      // The kit is told the budget instead of only being killed at the mark, so it can say which
+      // phase stalled and whether a proxy was involved.
+      requestBudgetMs: CCB_REQUEST_BUDGET_MS,
+    }) as CcbUsageResponse;
+  }
+
   // A kit too old to read Claude's settings files cannot see a proxy configured only there.
   // This backend used to copy that value into the child's environment and no longer does, so
   // on such a kit the panel would simply time out — the exact symptom of the report that got
@@ -426,7 +438,7 @@ export async function runCcbUsage(workingDir?: string): Promise<CcbUsageResponse
   // what the failed run said, because telling somebody to update a kit that is already current
   // sends them to press a button that reports success and changes nothing (#471).
   if (!(await hasSettingsEnvCapability(workingDir))) {
-    throw new Error('Update ccb: this version cannot read Claude Code settings files');
+    throw new Error('Update extend-kit: this version cannot read Claude Code settings files');
   }
 
   // The Command core resolves the platform shell (win32 cmd.exe argv; unix login

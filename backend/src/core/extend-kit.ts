@@ -479,15 +479,89 @@ async function readCapabilities(entry: string, workingDir?: string): Promise<str
 }
 
 /**
+ * The kit command that serves a capability, and what it can do.
+ *
+ * `swttch-ext` is asked first: it is the kit's command, and `ccb` is its deprecated former name.
+ * A kit installed before `swttch-ext` learned the capability (or before it existed) answers
+ * without it, and then `ccb` serves, so an older install keeps working. The fallback goes when
+ * kits old enough to need it are gone.
+ *
+ * @throws ExtendKitMissingError when neither command is installed.
+ */
+async function resolveKit(
+  capability: string,
+  workingDir?: string,
+): Promise<{ entry: string; ext: boolean; capabilities: string[] }> {
+  try {
+    const ext = await getExtCapabilities(workingDir);
+    if (ext.installed && ext.capabilities.includes(capability)) {
+      return { entry: cachedExtEntry ?? (cachedExtEntry = await resolveBinEntry(EXT_BINARY)), ext: true, capabilities: ext.capabilities };
+    }
+  } catch {
+    // swttch-ext could not be run: ccb may still be able to.
+  }
+  const entry = await resolveCcbEntry();
+  return { entry, ext: false, capabilities: await readCapabilities(entry, workingDir) };
+}
+
+/**
+ * Whether `swttch-ext` itself can do `capability`. False when it is missing, too old, or cannot
+ * be run; callers that have a `ccb` route fall back to it on false.
+ */
+export async function extHasCapability(capability: string, workingDir?: string): Promise<boolean> {
+  try {
+    const ext = await getExtCapabilities(workingDir);
+    return ext.installed && ext.capabilities.includes(capability);
+  } catch {
+    return false;
+  }
+}
+
+/** A kit failure in the JSON shape `ccb` printed, which is what the usage classifier reads. */
+function failureText(error: { code: string; message: string; hint?: string }): string {
+  const retry = /Retry after (\d+)s/.exec(error.hint ?? '');
+  return JSON.stringify({
+    error: {
+      code: error.code,
+      message: error.message,
+      ...(error.hint && { hint: error.hint }),
+      ...(retry && { details: { retryAfterSec: Number(retry[1]) } }),
+    },
+  });
+}
+
+/**
+ * `swttch-ext api oauth usage` for the active login, or for a saved-account snapshot.
+ *
+ * Returns the usage payload itself (the `data` of the kit's envelope). A refusal throws an Error
+ * whose message is the failure as JSON, the same text `ccb` printed, so the one classifier that
+ * reads usage failures reads both routes.
+ */
+export async function runExtOauthUsage(
+  options: { accountFile?: string; workingDir?: string; timeoutMs?: number; requestBudgetMs?: number } = {},
+): Promise<unknown> {
+  const answer = await runExtApi(
+    'oauth',
+    'usage',
+    options.accountFile ? { 'account-file': options.accountFile } : {},
+    {
+      workingDir: options.workingDir,
+      timeoutMs: options.timeoutMs,
+      ...(options.requestBudgetMs && { env: { CCB_REQUEST_TIMEOUT_MS: String(options.requestBudgetMs) } }),
+    },
+  );
+  if (answer.ok) return answer.data;
+  throw new Error(failureText(answer.error));
+}
+
+/**
  * Whether the installed kit is new enough to stream dictation.
  *
  * @throws ExtendKitTooOldError when the kit answers without a capability
  *         dictation needs.
  * @throws ExtendKitProbeFailedError when the kit could not be asked at all.
  */
-async function assertSttCapable(entry: string, workingDir?: string): Promise<void> {
-  const capabilities = await readCapabilities(entry, workingDir);
-
+async function assertSttCapable(capabilities: string[]): Promise<void> {
   for (const required of [STT_CAPABILITY, SETTINGS_ENV_CAPABILITY]) {
     if (!capabilities.includes(required)) {
       throw new ExtendKitTooOldError(await getExtendKitVersion(), required);
@@ -510,8 +584,8 @@ async function assertSttCapable(entry: string, workingDir?: string): Promise<voi
  * @throws ExtendKitProbeFailedError when it is there and cannot be run.
  */
 export async function assertDictationCapable(workingDir?: string): Promise<void> {
-  const entry = await resolveCcbEntry();
-  await assertSttCapable(entry, workingDir);
+  const kit = await resolveKit(STT_CAPABILITY, workingDir);
+  await assertSttCapable(kit.capabilities);
 }
 
 /**
@@ -557,8 +631,9 @@ export async function spawnSpeechToText(
   options: SpeechToTextOptions = {},
   workingDir?: string,
 ): Promise<SpeechToTextStream> {
-  const entry = await resolveCcbEntry();
-  await assertSttCapable(entry, workingDir);
+  const kit = await resolveKit(STT_CAPABILITY, workingDir);
+  await assertSttCapable(kit.capabilities);
+  const { entry } = kit;
 
   // Settle the Claude data directory before the child exists to inherit it. Dictation was
   // the one feature that never did this, so the login it authenticated with was whichever
@@ -673,15 +748,20 @@ export async function spawnSpeechToText(
  * @throws ExtendKitProbeFailedError when the installed kit could not be run.
  */
 export async function probeSpeechToTextAvailable(workingDir?: string): Promise<boolean> {
-  const entry = await resolveCcbEntry();
-  await assertSttCapable(entry, workingDir);
+  const kit = await resolveKit(STT_CAPABILITY, workingDir);
+  await assertSttCapable(kit.capabilities);
+  const { entry } = kit;
 
   // The same project the stream will run against, or the answer describes a different one.
   await Claude.applyConfigDir(workingDir);
 
-  const { stdout } = await ccbCommand(entry, ['stt', '--check', '--json'], 20_000, workingDir, await ccbEnv(workingDir)).exec();
-  const parsed = JSON.parse(lastLine(stdout) ?? '{}') as { available?: boolean };
-  return parsed.available === true;
+  // `swttch-ext stt --check` answers in words, `ccb stt --check --json` in JSON. Either says
+  // "available" only when a login is there, so read both.
+  const checkArgs = kit.ext ? ['stt', '--check'] : ['stt', '--check', '--json'];
+  const { stdout } = await ccbCommand(entry, checkArgs, 20_000, workingDir, await ccbEnv(workingDir)).exec();
+  const last = lastLine(stdout) ?? '';
+  if (last.startsWith('{')) return (JSON.parse(last) as { available?: boolean }).available === true;
+  return last === 'available';
 }
 
 /**
@@ -778,7 +858,7 @@ export async function runExtApi(
   service: string,
   call: string,
   params: Record<string, string>,
-  options: { yes?: boolean; workingDir?: string } = {},
+  options: { yes?: boolean; workingDir?: string; timeoutMs?: number; env?: NodeJS.ProcessEnv } = {},
 ): Promise<ExtApiAnswer> {
   const fail = (code: string, message: string): ExtApiAnswer => ({ ok: false, error: { code, message } });
 
@@ -802,7 +882,13 @@ export async function runExtApi(
 
   let stdout = '';
   try {
-    ({ stdout } = await ccbCommand(entry, args, EXT_CALL_TIMEOUT_MS, options.workingDir, await ccbEnv(options.workingDir)).exec());
+    ({ stdout } = await ccbCommand(
+      entry,
+      args,
+      options.timeoutMs ?? EXT_CALL_TIMEOUT_MS,
+      options.workingDir,
+      { ...(await ccbEnv(options.workingDir)), ...options.env },
+    ).exec());
   } catch (err) {
     // A call the server refused exits non-zero and still prints its JSON answer.
     stdout = (err as { stdout?: string }).stdout ?? '';

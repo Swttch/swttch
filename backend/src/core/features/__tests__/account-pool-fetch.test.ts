@@ -1,6 +1,9 @@
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { fetchAccountUsage } from '../account-pool-usage';
-const mock = vi.hoisted(() => ({ exec: vi.fn(), which: vi.fn() }));
+const mock = vi.hoisted(() => ({ exec: vi.fn(), which: vi.fn(), extHas: vi.fn(), extUsage: vi.fn() }));
+// The kit's own command is asked first. These suites cover the `ccb` route, so the kit says it cannot;
+// the `swttch-ext` route has its own tests at the bottom.
+vi.mock('../../extend-kit', () => ({ extHasCapability: mock.extHas, runExtOauthUsage: mock.extUsage }));
 vi.mock('../../command', () => ({ Command: class {
   constructor(readonly bin: string, readonly args: string[] = [], readonly options: { timeout?: number } = {}) {}
   which() { return mock.which(); }
@@ -23,6 +26,7 @@ vi.mock('../account-store', () => ({
 }));
 beforeEach(() => {
   vi.clearAllMocks();
+  mock.extHas.mockResolvedValue(false);
   mock.which.mockResolvedValue('/external bin/ccb');
   mock.exec.mockImplementation(async (_bin: string, args: string[]) => ({ stdout: JSON.stringify(
     args.includes('--capabilities') ? { capabilities: ['oauth.usage.account-file'] }
@@ -118,4 +122,13 @@ it('shares a failure with everyone waiting on it, and asks again next time', asy
   mock.exec.mockResolvedValue({ stdout: '{"capabilities":["oauth.usage.account-file"],"five_hour":{"utilization":1,"resets_at":null}}', stderr: '' });
   await expect(fetchAccountUsage('company')).resolves.toMatchObject({ five_hour: { utilization: 1 } });
   expect(oauthCalls()).toHaveLength(2);
+});
+
+it('uses swttch-ext, with the snapshot path, when the kit can read a saved account', async () => {
+  mock.extHas.mockResolvedValue(true);
+  mock.extUsage.mockResolvedValue({ five_hour: { utilization: 5, resets_at: null } });
+  expect(await fetchAccountUsage('company')).toEqual({ five_hour: { utilization: 5, resets_at: null } });
+  expect(mock.extHas).toHaveBeenCalledWith('api.oauth.usage.account-file', undefined);
+  expect(mock.extUsage).toHaveBeenCalledWith(expect.objectContaining({ accountFile: '/saved accounts/company.json' }));
+  expect(mock.exec).not.toHaveBeenCalled();
 });

@@ -46,7 +46,7 @@ vi.mock('../claude', () => ({
   Claude: { applyConfigDir: vi.fn().mockResolvedValue(undefined), authStripEnv: vi.fn().mockResolvedValue({}) },
 }));
 
-const { getExtCapabilities, runExtApi, resetExtendKitCache } = await import('../extend-kit');
+const { getExtCapabilities, runExtApi, runExtOauthUsage, extHasCapability, resetExtendKitCache } = await import('../extend-kit');
 
 const realAppData = process.env.APPDATA;
 const realExecPath = process.execPath;
@@ -146,5 +146,36 @@ describe('runExtApi', () => {
     advertised = ['api.frame.pin'];
     apiAnswer = { stdout: 'welcome to zsh', fail: false };
     expect(await runExtApi('frame', 'pin', { slug: 'x' })).toMatchObject({ ok: false, error: { code: 'extend_kit_unreadable' } });
+  });
+});
+
+describe('usage through swttch-ext', () => {
+  it('knows whether swttch-ext itself can read usage, and says no for an older kit', async () => {
+    await layOutKit({ ccb: 'bin/ccb.js', 'swttch-ext': 'bin/ext.js' });
+    advertised = ['api.frame.list'];
+    expect(await extHasCapability('api.oauth.usage')).toBe(false);
+    resetExtendKitCache();
+    advertised = ['api.oauth.usage'];
+    expect(await extHasCapability('api.oauth.usage')).toBe(true);
+  });
+
+  it('returns the data of the envelope and passes the snapshot path as its own argument', async () => {
+    await layOutKit({ ccb: 'bin/ccb.js', 'swttch-ext': 'bin/ext.js' });
+    advertised = ['api.oauth.usage'];
+    apiAnswer = { stdout: JSON.stringify({ ok: true, data: { five_hour: { utilization: 3 } } }), fail: false };
+    expect(await runExtOauthUsage({ accountFile: '/saved accounts/a.json' })).toEqual({ five_hour: { utilization: 3 } });
+    expect(lastApiArgs).toEqual(['api', 'oauth', 'usage', '--account-file', '/saved accounts/a.json']);
+  });
+
+  it('throws a refusal as the JSON failure the usage classifier reads, with the retry seconds', async () => {
+    await layOutKit({ ccb: 'bin/ccb.js', 'swttch-ext': 'bin/ext.js' });
+    advertised = ['api.oauth.usage'];
+    apiAnswer = {
+      stdout: JSON.stringify({ ok: false, error: { code: 'rate_limited', message: 'Too many requests.', status: 429, hint: 'Retry after 42s.' } }),
+      fail: true,
+    };
+    const { classifyError } = await import('../handlers/getUsage');
+    const err = await runExtOauthUsage().catch((e) => e);
+    expect(classifyError(err)).toMatchObject({ kind: 'rate_limited', retryAfterSec: 42 });
   });
 });

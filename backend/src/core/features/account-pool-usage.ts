@@ -3,9 +3,11 @@ import type { AccountUsageData } from '../../shared';
 import { readRegistry, accountSnapshotPath, type AccountsRegistry } from './account-store';
 import { Command } from '../command';
 import { Claude } from '../claude';
+import { extHasCapability, runExtOauthUsage } from '../extend-kit';
 
 const USAGE_TIMEOUT_MS = 15_000;
 const ACCOUNT_USAGE_CAPABILITY = 'oauth.usage.account-file';
+const ACCOUNT_USAGE_EXT_CAPABILITY = 'api.oauth.usage.account-file';
 
 /**
  * External CLI owns credential reads and HTTP; this process sends only a file path.
@@ -55,6 +57,14 @@ async function runAccountUsage(accountId: string, workingDir?: string): Promise<
   // A saved-account query answers from a snapshot file, but the capability probe beside it
   // does not, and neither should authenticate with a credential `claude` discards.
   const env = await Claude.authStripEnv(workingDir);
+  // The kit's own command first; a kit that cannot do this yet leaves it to `ccb` below.
+  if (await extHasCapability(ACCOUNT_USAGE_EXT_CAPABILITY, workingDir)) {
+    return await runExtOauthUsage({
+      accountFile: accountSnapshotPath(accountId),
+      workingDir,
+      timeoutMs: USAGE_TIMEOUT_MS,
+    }) as CcbUsageResponse;
+  }
   const binary = await new Command('ccb').which();
   if (!binary) throw new Error('The ccb CLI is not installed');
   // Old ccb versions ignore unrecognised flags: never let them silently query
