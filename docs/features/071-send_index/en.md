@@ -137,6 +137,17 @@ replaces it with the real message, unabridged.
 - **The rail is not shown in a session with nothing sent yet**, since there is
   nothing to index.
 
+## Which edge it sits on
+
+In the classic chat the rail is on the **end edge**, in a strip the chat leaves for
+it. In the Transcript view modes (Normal, Thinking and Detailed), where your
+messages are on the end side, the rail moves to the **start edge** and is drawn
+over the chat, with nothing reserved for it. The hover card and the list of every
+prompt open toward the chat on either side. Changing the view mode moves the rail
+at once.
+
+![The send index in a Transcript view mode: ticks along the start edge with the card opened to their right](./assets/rail-start-edge.jpg)
+
 ## How much room it takes
 
 The rail runs from under the top bar to just above the input box, so it never
@@ -174,8 +185,8 @@ the eye away from the conversation, and the rail now shares that edge.
 
 ## The input box is not pushed aside
 
-The rail keeps clear of the conversation by leaving a 24 pixel strip at the end
-edge of the transcript. The input box is not held to that strip: it reaches over
+In the classic chat the rail keeps clear of the conversation by leaving a 24 pixel
+strip at the end edge of the transcript. The input box is not held to that strip: it reaches over
 it, so it sits centred, with the same space on its start side and its end side.
 
 Earlier the input box gave up the same 24 pixels along with the transcript, so

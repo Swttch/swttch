@@ -37,6 +37,8 @@ function rowText(text: string): string {
 }
 
 interface Props {
+  /** The edge of the chat the rail is on; the list opens on the side facing the chat. */
+  side: 'start' | 'end';
   entries: { key: string; text: string }[];
   /** The entry being read, which is drawn apart and is where the list opens. */
   current: number;
@@ -49,7 +51,7 @@ interface Props {
  * It only reads: opening it leaves the transcript and the rail where they are,
  * and picking a row goes through the same jump a tick click does.
  */
-export function SendIndexList({ entries, current, onPick }: Props) {
+export function SendIndexList({ side, entries, current, onPick }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [scroll, setScroll] = useState({ top: 0, height: 0 });
 
@@ -66,7 +68,7 @@ export function SendIndexList({ entries, current, onPick }: Props) {
   const { start, end } = visibleRange(scroll.top, scroll.height, entries.length);
 
   return (
-    <div className="absolute end-full top-0 bottom-0 pe-2 pointer-events-auto">
+    <div className={`absolute top-0 bottom-0 pointer-events-auto ${side === 'end' ? 'end-full pe-2' : 'start-full ps-2'}`}>
       <div
         ref={scrollRef}
         role="listbox"

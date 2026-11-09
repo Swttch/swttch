@@ -115,6 +115,12 @@ vi.mock('../ChatInput', () => ({
 }));
 vi.mock('../AccountSwitchErrorBanner', () => ({ AccountSwitchErrorBanner: stub('acct') }));
 vi.mock('../SettingsFileProblemBanner', () => ({ SettingsFileProblemBanner: stub('settings-file') }));
+// The chat released so far is `null`; a named view mode draws the transcript with its own code.
+const viewMode = vi.hoisted(() => ({ current: null as string | null }));
+vi.mock('../message-renderers/transcriptViewMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../message-renderers/transcriptViewMode')>()),
+  useTranscriptViewMode: () => viewMode.current,
+}));
 vi.mock('../SendIndex', () => ({ SendIndex: stub('sendIndex'), SEND_INDEX_RAIL_WIDTH: 16 }));
 vi.mock('@/hooks/useSessionSends', () => ({ useSessionSends: () => [] }));
 
@@ -158,5 +164,16 @@ describe('ChatPage bottom strip layout', () => {
 
     expect(screen.getByTestId('sendIndex').parentElement).toBe(scrollerOf(container).parentElement);
     expect(scrollerOf(container).contains(screen.getByTestId('sendIndex'))).toBe(false);
+  });
+
+  it('reserves nothing for the rail in a transcript view mode, where it is drawn over the chat on the start edge', () => {
+    viewMode.current = 'normal';
+    try {
+      const { container } = renderPage();
+      expect(scrollerOf(container).style.paddingInlineEnd).toBe('');
+      expect(footerOf(container).style.marginInlineEnd).toBe('');
+    } finally {
+      viewMode.current = null;
+    }
   });
 });

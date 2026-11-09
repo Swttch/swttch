@@ -20,7 +20,7 @@ describe('SendIndexList', () => {
 
   it('draws only the rows near the one being read, and marks that one', () => {
     // jsdom has no layout, so the viewport reads as 0 tall; the rows drawn are then just the overscan.
-    render(<SendIndexList entries={entries} current={0} onPick={() => {}} />);
+    render(<SendIndexList side="end" entries={entries} current={0} onPick={() => {}} />);
     const rows = screen.getAllByRole('option');
     expect(rows.length).toBeLessThan(40);
     expect(rows[0]).toHaveAttribute('aria-selected', 'true');
@@ -29,20 +29,27 @@ describe('SendIndexList', () => {
 
   it('picks the row that is clicked', () => {
     const onPick = vi.fn();
-    render(<SendIndexList entries={entries} current={0} onPick={onPick} />);
+    render(<SendIndexList side="end" entries={entries} current={0} onPick={onPick} />);
     fireEvent.click(screen.getByText('prompt number 3'));
     expect(onPick).toHaveBeenCalledWith(3);
   });
 
   it('reads an @@ mention as its label', () => {
     const tagged = [{ key: 'a', text: '<session-mention session-id="x" agent-name="n">@@name</session-mention>\nhello' }];
-    render(<SendIndexList entries={tagged} current={0} onPick={() => {}} />);
+    render(<SendIndexList side="end" entries={tagged} current={0} onPick={() => {}} />);
     expect(screen.getByRole('option').textContent).toBe('@@name');
   });
 
   it('keeps a fixed row height so the scroll height is true', () => {
-    const { container } = render(<SendIndexList entries={entries} current={0} onPick={() => {}} />);
+    const { container } = render(<SendIndexList side="end" entries={entries} current={0} onPick={() => {}} />);
     const spacer = container.querySelector('[role="listbox"] > div') as HTMLElement;
     expect(spacer.style.height).toBe(`${entries.length * SEND_LIST_ROW_HEIGHT}px`);
+  });
+
+  it('opens on the side that faces the chat', () => {
+    const { container, rerender } = render(<SendIndexList side="end" entries={entries} current={0} onPick={() => {}} />);
+    expect(container.firstElementChild?.className).toContain('end-full');
+    rerender(<SendIndexList side="start" entries={entries} current={0} onPick={() => {}} />);
+    expect(container.firstElementChild?.className).toContain('start-full');
   });
 });

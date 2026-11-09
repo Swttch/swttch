@@ -40,6 +40,19 @@ export const SEND_INDEX_RAIL_WIDTH = 24;
  */
 export const SEND_INDEX_RAIL_INSET = 14;
 
+/**
+ * Which edge of the chat the rail sits on.
+ *
+ * `end` is the classic chat, where user messages are on the start side and the
+ * end edge is free apart from the scrollbar. In the transcript view modes user
+ * messages are on the end side, so the rail takes the start edge and is drawn
+ * over the chat rather than beside it. See `railAtStart` in ChatPage.
+ */
+export type SendIndexSide = 'start' | 'end';
+
+/** How far in from the start edge the rail sits when it is there. No scrollbar on that side, so less is needed. */
+const SEND_INDEX_RAIL_INSET_START = 6;
+
 /** Each tick is a hairline; the stack reads as a ruler rather than a list. */
 const TICK_HEIGHT = 2;
 
@@ -262,7 +275,7 @@ function isMoveKey(key: string): boolean {
  * is nothing outside it to open into. Covering the transcript is what this
  * shape costs, and it is the same cost the products that ship it already pay.
  */
-function SendIndexCard({ text, top, onEnter, onLeave }: { text: string; top: number; onEnter: () => void; onLeave: () => void }) {
+function SendIndexCard({ text, top, side, onEnter, onLeave }: { text: string; top: number; side: SendIndexSide; onEnter: () => void; onLeave: () => void }) {
   const { t } = useTranslation('chatTools');
   // A message from another session is shown by who sent it and what it says, not with its tags.
   // The chip an `@@` message opens with reads as its label, as it does in the bubble, not as its tag.
@@ -281,7 +294,7 @@ function SendIndexCard({ text, top, onEnter, onLeave }: { text: string; top: num
       out from under the cursor halfway across.
     */
     <div
-      className="absolute end-full -translate-y-1/2 pe-2 pointer-events-auto"
+      className={`absolute -translate-y-1/2 pointer-events-auto ${side === 'end' ? 'end-full pe-2' : 'start-full ps-2'}`}
       style={{ top }}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
@@ -326,6 +339,8 @@ function SendIndexCard({ text, top, onEnter, onLeave }: { text: string; top: num
  * message rather than an unfetched one.
  */
 interface Props {
+  /** The edge of the chat the rail is on. */
+  side: SendIndexSide;
   /** The transcript split by send, in transcript order. */
   sections: SendSection[];
   /** Every send in the session, loaded or not. See useSessionSends. */
@@ -333,7 +348,7 @@ interface Props {
 }
 
 export function SendIndex(props: Props) {
-  const { sections, sessionSends } = props;
+  const { sections, sessionSends, side } = props;
   /*
     The row being pointed at, by mouse or by keyboard.
 
@@ -778,7 +793,9 @@ export function SendIndex(props: Props) {
       className="absolute z-20 flex flex-col justify-center pointer-events-none"
       style={{
         width: SEND_INDEX_RAIL_WIDTH,
-        insetInlineEnd: SEND_INDEX_RAIL_INSET,
+        ...(side === 'end'
+          ? { insetInlineEnd: SEND_INDEX_RAIL_INSET }
+          : { insetInlineStart: SEND_INDEX_RAIL_INSET_START }),
         top: bounds?.top ?? 0,
         height: bounds?.height ?? 0,
         visibility: bounds ? 'visible' : 'hidden',
@@ -806,7 +823,7 @@ export function SendIndex(props: Props) {
           The scrollbar is hidden: the fade at the edges is what says there is
           more, and a bar would sit beside ticks that are themselves a ruler.
         */
-        className={`flex flex-col items-end py-2 rounded-full outline-none transition-colors duration-150 max-h-full overflow-y-auto shrink-0 ${
+        className={`flex flex-col ${side === 'end' ? 'items-end' : 'items-start'} py-2 rounded-full outline-none transition-colors duration-150 max-h-full overflow-y-auto shrink-0 ${
           focused ? 'bg-surface-raised' : 'bg-transparent'
         }`}
         style={{ width: SEND_INDEX_RAIL_WIDTH, scrollbarWidth: 'none', msOverflowStyle: 'none', maskImage: mask, WebkitMaskImage: mask }}
@@ -823,7 +840,7 @@ export function SendIndex(props: Props) {
               role="option"
               aria-selected={i === current}
               data-send-index-current={i === current ? 'true' : undefined}
-              className="relative flex items-center justify-end pe-0.5 shrink-0"
+              className={`relative flex items-center shrink-0 ${side === 'end' ? 'justify-end pe-0.5' : 'justify-start ps-0.5'}`}
               style={{ height: TICK_HEIGHT + TICK_GAP, width: SEND_INDEX_RAIL_WIDTH }}
             >
               {/*
@@ -861,6 +878,7 @@ export function SendIndex(props: Props) {
       </div>
       {listOpen && (
         <SendIndexList
+          side={side}
           entries={entries}
           current={current}
           onPick={i => {
@@ -871,6 +889,7 @@ export function SendIndex(props: Props) {
       )}
       {!listOpen && pointed !== null && cardTop !== null && entries[pointed] && (
         <SendIndexCard
+          side={side}
           text={entries[pointed].text}
           top={cardTop}
           onEnter={() => holdPointer(pointed)}
