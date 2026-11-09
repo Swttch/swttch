@@ -51,7 +51,7 @@ export const SEND_INDEX_RAIL_INSET = 14;
 export type SendIndexSide = 'start' | 'end';
 
 /** How far in from the start edge the rail sits when it is there. No scrollbar on that side, so less is needed. */
-const SEND_INDEX_RAIL_INSET_START = 6;
+const SEND_INDEX_RAIL_INSET_START = 0;
 
 /** Each tick is a hairline; the stack reads as a ruler rather than a list. */
 const TICK_HEIGHT = 2;

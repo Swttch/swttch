@@ -91,7 +91,7 @@ export const AskUserQuestionInputPanel = (props: Props) => {
 
   if (collapsed) {
     return (
-      <div className="w-full max-w-[44rem] mx-auto px-4 pb-[14px] pt-2">
+      <div className="w-full max-w-[var(--chat-column-max,44rem)] mx-auto px-4 pb-[14px] pt-2">
         <CollapsedSummaryBar title={summaryTitle} onExpand={expand} />
       </div>
     );
@@ -104,7 +104,7 @@ export const AskUserQuestionInputPanel = (props: Props) => {
    * shrink, and scroll when they no longer fit.
    */
   return (
-    <div className="w-full max-w-[44rem] mx-auto px-4 pb-[14px] pt-2 min-h-0 flex flex-col">
+    <div className="w-full max-w-[var(--chat-column-max,44rem)] mx-auto px-4 pb-[14px] pt-2 min-h-0 flex flex-col">
       <div
         ref={panelRef}
         tabIndex={-1}

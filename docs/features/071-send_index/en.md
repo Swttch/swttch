@@ -142,7 +142,8 @@ replaces it with the real message, unabridged.
 In the classic chat the rail is on the **end edge**, in a strip the chat leaves for
 it. In the Transcript view modes (Normal, Thinking and Detailed), where your
 messages are on the end side, the rail moves to the **start edge** and is drawn
-over the chat, with nothing reserved for it. The hover card and the list of every
+over the chat, with nothing reserved for it: each block there has the same side
+padding on both sides. The hover card and the list of every
 prompt open toward the chat on either side. Changing the view mode moves the rail
 at once.
 
@@ -186,7 +187,8 @@ the eye away from the conversation, and the rail now shares that edge.
 ## The input box is not pushed aside
 
 In the classic chat the rail keeps clear of the conversation by leaving a 24 pixel
-strip at the end edge of the transcript. The input box is not held to that strip: it reaches over
+strip at the end edge of the transcript. The Transcript view modes reserve nothing,
+since their blocks carry their own side padding. The input box is not held to that strip: it reaches over
 it, so it sits centred, with the same space on its start side and its end side.
 
 Earlier the input box gave up the same 24 pixels along with the transcript, so
