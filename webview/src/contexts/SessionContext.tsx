@@ -101,12 +101,17 @@ interface SessionContextValue {
 }
 
 /**
- * Sessions fetched per request.
+ * Top-level sessions fetched per request.
  *
- * Settling a title means reading a transcript, so this is the number of files
- * opened to draw a screen. Comfortably more than the dropdown shows at once, so
- * scrolling has somewhere to go before the next request lands, and far short of
- * the hundreds a project accumulates.
+ * Settling a title means reading a transcript, so this is roughly the number of
+ * files opened to draw a screen. Comfortably more than the dropdown shows at
+ * once, so scrolling has somewhere to go before the next request lands, and far
+ * short of the hundreds a project accumulates.
+ *
+ * Counted in top-level sessions, not rows: each arrives with every session
+ * under it (the ones it started through the session-management MCP), so a
+ * family is never left half drawn at the end of a page. A page therefore holds
+ * at least this many rows and more when a session started others.
  */
 export const SESSION_PAGE_SIZE = 30;
 
