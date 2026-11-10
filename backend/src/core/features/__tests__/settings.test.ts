@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { homedir } from 'os';
+import { join } from 'path';
 
 // We need to mock fs modules to test readSettingsFile and saveSettingToFile
 vi.mock('fs/promises', () => ({
@@ -61,6 +63,26 @@ describe('settings', () => {
       const result = await saveSettingToFile('theme', 'invalid');
       expect(result.status).toBe('error');
       expect(result.error).toContain('theme must be one of');
+    });
+
+    it('keeps settings.js in the default folder even when CCG_HOME is set', async () => {
+      // The IDE plugin (SettingsManager.kt) reads and writes this same file and does not know
+      // CCG_HOME. If the backend moved its copy the two would work on different files.
+      const saved = process.env.CCG_HOME;
+      process.env.CCG_HOME = '/tmp/custom-ccg-home';
+      try {
+        const result = await saveSettingToFile('theme', 'dark');
+        expect(result.status).toBe('ok');
+        const defaultDir = join(homedir(), '.claude-code-gui');
+        expect(mockMkdir).toHaveBeenCalledWith(defaultDir, { recursive: true });
+        // The temp file sits next to settings.js and is renamed over it.
+        const written = mockWriteFile.mock.calls.map((c) => String(c[0]));
+        expect(written.length).toBeGreaterThan(0);
+        expect(written.every((p) => p.startsWith(defaultDir))).toBe(true);
+      } finally {
+        if (saved === undefined) delete process.env.CCG_HOME;
+        else process.env.CCG_HOME = saved;
+      }
     });
 
     it('should accept valid theme values', async () => {

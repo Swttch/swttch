@@ -1,7 +1,7 @@
 import { stat, readdir, unlink, mkdir } from 'fs/promises';
 import { join } from 'path';
-import { homedir } from 'os';
 import { createStream, type RotatingFileStream } from 'rotating-file-stream';
+import { ccgHomeDir } from '../config/ccg-home';
 
 const MAX_FILE_SIZE_MB = 50;
 
@@ -38,8 +38,7 @@ const MAX_FILE_COUNT = 40;
  * so a test can set it after this module is loaded.
  */
 function defaultLogDir(): string {
-  const home = process.env.CCG_HOME?.trim();
-  return home ? join(home, 'logs') : join(homedir(), '.claude-code-gui', 'logs');
+  return join(ccgHomeDir(), 'logs');
 }
 
 /**

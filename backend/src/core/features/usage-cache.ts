@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'fs';
-import { homedir } from 'os';
 import { join } from 'path';
 import type { CcbUsageResponse } from '../handlers/getUsage';
+import { ccgHomeDir } from '../../config/ccg-home';
 
 /**
  * What the usage panel remembers between reads, and when it is allowed to ask again.
@@ -43,8 +43,7 @@ export const LIVE_ACCOUNT_ID = 'live';
  * set it after this module is loaded.
  */
 function baseDir(): string {
-  const home = process.env.CCG_HOME?.trim();
-  return home ? join(home, 'usage') : join(homedir(), '.claude-code-gui', 'usage');
+  return join(ccgHomeDir(), 'usage');
 }
 
 // Account ids come from the registry (`acc-<uuid>`) or are the literal "live". Anything

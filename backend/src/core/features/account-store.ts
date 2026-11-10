@@ -1,10 +1,10 @@
 import { readFile, writeFile, rename, unlink, mkdir, chmod, readdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join, dirname } from 'path';
-import { homedir } from 'os';
 import { randomUUID } from 'crypto';
 import { AccountPoolStrategy, type AccountPool, type StoredAccount } from '../../shared';
 import { refusedWriteMessage } from './atomic-json';
+import { ccgHomeDir } from '../../config/ccg-home';
 
 /**
  * Persistence for saved Claude accounts (the multi-account registry).
@@ -47,7 +47,7 @@ const ACCOUNT_ID_PATTERN = /^acc-[a-f0-9-]+$/;
 const ACCOUNT_POOL_ID_PATTERN = /^pool-[a-f0-9-]+$/;
 
 function baseDir(): string {
-  return join(homedir(), '.claude-code-gui');
+  return ccgHomeDir();
 }
 function registryPath(): string {
   return join(baseDir(), 'accounts.json');

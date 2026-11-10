@@ -1,8 +1,8 @@
 import { execFileSync, type ChildProcess } from 'child_process';
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
-import { homedir } from 'os';
 import { basename, join } from 'path';
 import { isPowerShellUsable } from './win-job';
+import { ccgHomeDir } from '../config/ccg-home';
 
 /**
  * On-disk registry of live chat CLI processes.
@@ -50,7 +50,7 @@ export interface CliRegistryEntry {
 }
 
 function registryDir(): string {
-  return join(homedir(), '.claude-code-gui', 'cli-registry');
+  return join(ccgHomeDir(), 'cli-registry');
 }
 
 /**

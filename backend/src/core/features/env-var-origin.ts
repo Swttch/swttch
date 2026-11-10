@@ -2,6 +2,7 @@ import { readFile, readdir } from 'fs/promises';
 import { homedir } from 'os';
 import { join } from 'path';
 import type { EnvVarOrigin } from '../../shared';
+import { ideSharedDir } from '../../config/ccg-home';
 
 
 /**
@@ -111,7 +112,7 @@ export async function traceEnvVarOrigins(name: string, workingDir?: string): Pro
     searches.push(findInFile(join(home, file), name, 'claude-settings', structuredAssigns));
   }
   searches.push(
-    findInFile(join(home, '.claude-code-gui', 'settings.js'), name, 'plugin-settings', structuredAssigns),
+    findInFile(join(ideSharedDir(), 'settings.js'), name, 'plugin-settings', structuredAssigns),
   );
 
   if (workingDir) {

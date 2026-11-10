@@ -7,6 +7,7 @@ $Messages = @{
         '  ccg                  Run (default). Check port, compare versions, spawn backend, open browser.',
         '  ccg run              Same as default.',
         '  ccg list, ls         Show the backend process tree (PIDs, ports).',
+        '  ccg account, acct    Manage saved Claude accounts (list/use/current/save/rm).',
         '  ccg update           Force-update runtime to the latest release.',
         '  ccg stop             Stop the backend on port 19836, descendants included.',
         '  ccg version, -v      Show installed ccg, cached runtimes, and running backend.',
@@ -82,7 +83,7 @@ $Messages = @{
     help_stop_header        = "ccg stop - terminate the backend process tree"
     help_stop_body          = "  ccg stop                 Stop the backend on port 19836, descendants included.`n  ccg stop <pid>           Stop the tree rooted at this PID.`n  ccg stop --port <port>   Stop the backend on this port (alias: -p).`n  ccg stop --all           Stop EVERY backend.mjs tree, IDE ones too (asks first; alias: -a).`n  ccg stop --no-tree       Stop only the named process, not its children.`n  ccg stop -h, --help      Show this help.`n`n  Descendants are stopped first, then the root. Windows has no graceful`n  signal for a console-less node, so processes are ended right away; -f/--force`n  is accepted and means the same. A PID that is not part of a backend tree`n  triggers a confirmation prompt before anything is stopped."
     help_update_header      = "ccg update - force-update the runtime to the latest release"
-    help_update_body        = "  ccg update             Refresh the runtime to the latest GitHub release. If a`n                         backend is running it is stopped first, then replaced.`n  ccg update -h, --help  Show this help."
+    help_update_body        = "  ccg update             Refresh the runtime to the latest GitHub release. If a`n                         backend is running it is stopped first, then replaced.`n                         Like 'ccg run', it then keeps the new backend running in`n                         this terminal until you press Ctrl+C.`n  ccg update -h, --help  Show this help."
     help_self_update_header = "ccg self-update - update ccg itself"
     help_self_update_body   = "  ccg self-update             Re-run the install script to update the ccg cli.`n  ccg self-update -y, --yes   Do not ask before overwriting the existing installation.`n  ccg self-update -h, --help  Show this help."
     help_uninstall_header   = "ccg uninstall - remove ccg from this machine"
@@ -95,7 +96,25 @@ $Messages = @{
     ccg_deprecated_notice   = "Note: 'ccg' is the old name and is deprecated. Use 'swttch browser' (or 'swttch <command>') instead. Set CCG_NO_DEPRECATION_NOTICE=1 to hide this note."
     swttch_usage_header     = "Usage: swttch <command> [args]"
     desktop_not_available   = "The Swttch desktop app is not available yet."
-    help_swttch_body        = "  swttch browser        Open Swttch in your browser (starts or reuses the backend).`n                        Use -h for details. (The old name 'ccg' still works but is deprecated.)`n  swttch desktop        Open the Swttch desktop app (not available yet).`n  swttch list, ls       Show the backend process tree (PIDs, ports, source labels).`n  swttch update         Force-update runtime to the latest release.`n  swttch stop           Stop the backend on port 19836, descendants included.`n  swttch version, -v    Show installed swttch, cached runtimes, and running backend.`n  swttch doctor         Diagnose environment (node, PATH, cache, port).`n  swttch self-update    Re-run the install script to update swttch itself.`n  swttch uninstall      Remove swttch from this machine.`n  swttch help, -h       Show this message.`n`n  Run 'swttch <command> -h' for details on any command."
+    help_swttch_body        = "  swttch browser        Open Swttch in your browser (starts or reuses the backend).`n                        Use -h for details. (The old name 'ccg' still works but is deprecated.)`n  swttch desktop        Open the Swttch desktop app (not available yet).`n  swttch list, ls       Show the backend process tree (PIDs, ports, source labels).`n  swttch account, acct  Manage saved Claude accounts (list/use/current/save/rm).`n  swttch update         Force-update runtime to the latest release.`n  swttch stop           Stop the backend on port 19836, descendants included.`n  swttch version, -v    Show installed swttch, cached runtimes, and running backend.`n  swttch doctor         Diagnose environment (node, PATH, cache, port).`n  swttch self-update    Re-run the install script to update swttch itself.`n  swttch uninstall      Remove swttch from this machine.`n  swttch help, -h       Show this message.`n`n  Run 'swttch <command> -h' for details on any command."
     help_browser_header     = "swttch browser - start (or reuse) the backend and open the browser"
     help_browser_body       = "  swttch browser       Check port 19836, spawn the backend (or reuse a running one),`n                       then open the WebView in your browser.`n  swttch browser -b, --bind <addr>`n                       Bind the backend to <addr> instead of loopback (127.0.0.1).`n                       Use 0.0.0.0 to let other devices on your network open the`n                       WebView at http://<this-machine-ip>:19836. WARNING: the backend`n                       runs 'claude' and file I/O with no authentication - only expose`n                       it on trusted networks.`n  swttch browser -p, --port <n>`n                       Bind the backend to port <n> instead of 19836. Affects the`n                       whole run (probe, reuse, kill, browser URL).`n  swttch browser -h, --help`n                       Show this help."
+    account_list_header     = 'Saved Claude accounts:'
+    account_active_marker   = '*'
+    account_none            = "No saved accounts. Run 'ccg account save' after logging in with 'claude'."
+    account_current         = 'Current account: {0}'
+    account_switched        = 'Switched to {0}.'
+    account_saved           = 'Saved {0}.'
+    account_removed         = 'Removed {0}.'
+    account_rm_prompt       = 'Remove saved account {0}? (y/N): '
+    account_aborted         = 'Aborted.'
+    err_account_need_token  = 'Specify an account (id, email, name, or a unique substring).'
+    err_account_unknown_sub = 'Unknown account subcommand: {0}'
+    err_account_helper_missing = "Account helper not found in the runtime. Run 'ccg update' to refresh it."
+    err_account_not_found   = "No saved account matches '{0}'."
+    err_account_ambiguous   = "'{0}' matches multiple accounts:"
+    err_account_no_login    = "No logged-in Claude account to save. Log in with 'claude' first."
+    err_account_generic     = 'Account command failed.'
+    help_account_header     = 'ccg account - manage saved Claude accounts'
+    help_account_body       = "  ccg account [list]        List saved accounts (the live one is marked *).`n  ccg account current       Show the currently live account.`n  ccg account use <who>     Switch the live account (who = id, email, name, or substring).`n  ccg account save          Save the currently logged-in account for quick switching.`n  ccg account rm <who>      Delete a saved account (asks first).`n  ccg account -h, --help    Show this help.`n`n  Switching swaps the system-wide live credentials, so a NEW 'claude' (terminal or`n  GUI) picks up the chosen account."
 }

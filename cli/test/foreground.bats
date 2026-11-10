@@ -89,6 +89,10 @@ EOF
 }
 
 # ── restart on rc=75 ──────────────────────────────────────────────────────────
+#
+# The counting node mocks below ignore `node -e ...`: _ccg_derive_token (lib/browser.sh)
+# runs it to compute the auth-token HMAC before any backend is spawned. Counting that call
+# as a backend spawn made the first real spawn look like call #2 (exit 0, no restart).
 
 @test "rc=75 once then rc=0: respawns once, returns 0" {
   # Counter file: first call exits 75, second exits 0.
@@ -98,6 +102,7 @@ EOF
 
   cat > "$MOCK_BIN/node" <<EOF
 #!/usr/bin/env bash
+if [ "\$1" = "-e" ]; then printf x; exit 0; fi
 count=\$(cat "$counter_file")
 count=\$((count + 1))
 printf '%d' "\$count" > "$counter_file"
@@ -129,6 +134,7 @@ EOF
   # Sleep 3s on first call so crash-loop guard is not triggered.
   cat > "$MOCK_BIN/node" <<EOF
 #!/usr/bin/env bash
+if [ "\$1" = "-e" ]; then printf x; exit 0; fi
 count=\$(cat "$counter_file")
 count=\$((count + 1))
 printf '%d' "\$count" > "$counter_file"
@@ -155,6 +161,7 @@ EOF
   # Each 75-exit call sleeps 3s so crash-loop guard is not triggered.
   cat > "$MOCK_BIN/node" <<EOF
 #!/usr/bin/env bash
+if [ "\$1" = "-e" ]; then printf x; exit 0; fi
 count=\$(cat "$counter_file")
 count=\$((count + 1))
 printf '%d' "\$count" > "$counter_file"
@@ -216,6 +223,7 @@ EOF
   # rc=75 on first call, rc=0 on second. Sleep long enough to clear crash guard.
   cat > "$MOCK_BIN/node" <<EOF
 #!/usr/bin/env bash
+if [ "\$1" = "-e" ]; then printf x; exit 0; fi
 count=\$(cat "$counter_file")
 count=\$((count + 1))
 printf '%d' "\$count" > "$counter_file"

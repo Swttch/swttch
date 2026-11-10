@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { spawn, execFileSync, type ChildProcess } from 'child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
 import { join } from 'path';
 
 // The registry lives under homedir()/.claude-code-gui — point homedir at a scratch
@@ -27,6 +28,24 @@ import {
 const isPosix = process.platform !== 'win32';
 
 const registryDir = () => join(fakeHome, '.claude-code-gui', 'cli-registry');
+
+describe('cli-registry location', () => {
+  it('follows CCG_HOME when it is set, not the home directory', () => {
+    fakeHome = mkdtempSync(join(tmpdir(), 'cli-reg-home-'));
+    const ccgHome = join(fakeHome, 'custom-ccg-home');
+    const saved = process.env.CCG_HOME;
+    process.env.CCG_HOME = ccgHome;
+    try {
+      registerCliProcess({ pid: 424242 } as ChildProcess, 'sess-ccg-home', '/x');
+      expect(existsSync(join(ccgHome, 'cli-registry', '424242.json'))).toBe(true);
+      expect(existsSync(join(fakeHome, '.claude-code-gui'))).toBe(false);
+    } finally {
+      if (saved === undefined) delete process.env.CCG_HOME;
+      else process.env.CCG_HOME = saved;
+      rmSync(fakeHome, { recursive: true, force: true });
+    }
+  });
+});
 const entryPath = (pid: number) => join(registryDir(), `${pid}.json`);
 
 function pidAlive(pid: number): boolean {

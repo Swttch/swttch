@@ -1,7 +1,6 @@
 import { readFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
-import { homedir } from 'os';
 import { atomicWriteFile, updateJsonFile, refusedWriteMessage } from './atomic-json';
 import { normalizeSettingValue } from './path-settings';
 import {
@@ -15,10 +14,13 @@ import {
   ContextBadgeDisplay,
   CONTEXT_BADGE_DISPLAYS,
 } from '../../shared';
+import { ideSharedDir } from '../../config/ccg-home';
 
 // ─── Settings helpers ────────────────────────────────────────────────────────
 
-const SETTINGS_FILE = join(homedir(), '.claude-code-gui', 'settings.js');
+function settingsFile(): string {
+  return join(ideSharedDir(), 'settings.js');
+}
 
 // ─── Scope policy: project-local by default ──────────────────────────────────
 //
@@ -285,14 +287,14 @@ type SettingsReadForUpdate =
  */
 async function readSettingsFileForUpdate(): Promise<SettingsReadForUpdate> {
   try {
-    if (!existsSync(SETTINGS_FILE)) {
+    if (!existsSync(settingsFile())) {
       // Create with defaults
-      await mkdir(join(homedir(), '.claude-code-gui'), { recursive: true });
-      await atomicWriteFile(SETTINGS_FILE, generateSettingsContent(DEFAULT_SETTINGS));
+      await mkdir(ideSharedDir(), { recursive: true });
+      await atomicWriteFile(settingsFile(), generateSettingsContent(DEFAULT_SETTINGS));
       return { status: 'ok', settings: { ...DEFAULT_SETTINGS } };
     }
 
-    const raw = await readFile(SETTINGS_FILE, 'utf-8');
+    const raw = await readFile(settingsFile(), 'utf-8');
 
     // Strip comments in a string-literal-aware way so a value like
     // "//wsl.localhost/..." (WSL UNC path) is never mistaken for a comment (#7).
@@ -842,14 +844,14 @@ async function doSaveSettingToFile(key: string, value: unknown): Promise<SaveRes
     // able to clear the rest (issue #386).
     const read = await readSettingsFileForUpdate();
     if (read.status === 'unreadable') {
-      const error = refusedWriteMessage(SETTINGS_FILE, read.reason);
+      const error = refusedWriteMessage(settingsFile(), read.reason);
       console.error('[node-backend]', `${error} — ${key} was not saved`);
       return { status: 'error', error };
     }
     const current = read.settings;
     current[key] = normalized;
-    await mkdir(join(homedir(), '.claude-code-gui'), { recursive: true });
-    await atomicWriteFile(SETTINGS_FILE, generateSettingsContent(current));
+    await mkdir(ideSharedDir(), { recursive: true });
+    await atomicWriteFile(settingsFile(), generateSettingsContent(current));
     return { status: 'ok' };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
