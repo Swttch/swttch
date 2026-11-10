@@ -210,6 +210,10 @@
     "refreshSessions": "Refresh sessions",
     "renameSession": "Rename session",
     "deleteSession": "Delete session",
+    "startedSessions": {
+      "show": "Show the sessions it started",
+      "hide": "Hide the sessions it started"
+    },
     "groups": {
       "today": "Today",
       "yesterday": "Yesterday",

@@ -210,6 +210,10 @@
     "refreshSessions": "セッションを更新",
     "renameSession": "セッション名を変更",
     "deleteSession": "セッションを削除",
+    "startedSessions": {
+      "show": "このセッションが開始したセッションを表示",
+      "hide": "このセッションが開始したセッションを隠す"
+    },
     "groups": {
       "today": "今日",
       "yesterday": "昨日",

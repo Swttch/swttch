@@ -63,7 +63,9 @@ In the conversation that started it, the start is drawn as a card with the new s
 
 When the new session ends its turn, the session that started it receives a message with the new session's last reply (the first 400 characters when it is longer). It is drawn as "Received message from" with the session's name, and Claude there tells you the result. You do not have to ask or wait. This happens only while the session that started it is still open in the app; if you closed it in the meantime, open the new session to read its answer.
 
-You can also say "start it and move it to the top level". Claude then detaches the new session: it is no longer linked to the session that started it and no longer reports to it. The conversation shows a line saying the session was moved to the top level.
+In the session list (the dropdown in the top bar and the session panel alike), a session that another session started is drawn under that session, indented, with a line running down the group. The sessions are listed in the order they were started. The session that started them carries a small arrow after its title: a click folds the sessions under it away, and another click brings them back. The group sits where its most recent session belongs, so a session that is working now is not buried under a session that last spoke days ago. When a search matches only the started session, it is shown as an ordinary row.
+
+You can also say "start it and move it to the top level". Claude then detaches the new session: it is no longer linked to the session that started it and no longer reports to it. The conversation shows a line saying the session was moved to the top level, and the session list shows it as a row of its own.
 
 A session renamed through these tools ("rename this session to ...") gets its name where Claude Code itself keeps it, so the new name shows in this app's session list, in the terminal's `claude --resume` list and in the other Claude Code apps alike.
 

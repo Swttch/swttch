@@ -5,6 +5,7 @@ import { useSessionListScale } from './scale';
 import { useTranslation } from '@/i18n';
 import { SessionActivity } from '@/shared';
 import { TypewriterText } from '@/components/TypewriterText';
+import { Tooltip } from '@/components/Tooltip';
 
 interface Props {
   session: SessionMetaDto;
@@ -37,6 +38,29 @@ interface Props {
    * one anyway would say "idle" about a session that is merely absent.
    */
   isOpen?: boolean;
+  /**
+   * Set on a session that started other sessions which the list draws under it:
+   * whether they are folded away, and how to fold them. The row then carries the
+   * small arrow after its title, the way the desktop app does.
+   */
+  startedSessions?: {
+    isCollapsed: boolean;
+    onToggle: () => void;
+  };
+  /**
+   * Set on a session the list draws under the session that started it: that
+   * session, and whether this row is the last of the family. The row is then
+   * indented and carries the line the desktop app draws down a family, round to
+   * its last row.
+   *
+   * The indent and the line live INSIDE the row, not in a box around it, so the
+   * row keeps its full width: its hover and selected background run from one
+   * edge of the list to the other with the line on top, as in the desktop app.
+   */
+  startedBy?: {
+    sessionId: string;
+    isLast: boolean;
+  };
 }
 
 /** Dot colour per state. Only Running adds the turning ring. */
@@ -92,6 +116,8 @@ export function SessionItem(props: Props) {
     originLabel,
     activity = SessionActivity.Idle,
     isOpen = false,
+    startedSessions,
+    startedBy,
   } = props;
   const { t } = useTranslation('common');
   const scale = useSessionListScale();
@@ -172,13 +198,32 @@ export function SessionItem(props: Props) {
       onClick={isEditing ? undefined : onSelect}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`w-full ${scale.itemPad} text-start ${scale.itemText} rounded transition-colors flex justify-between items-center gap-1 ${
+      className={`relative w-full ${scale.itemPad} text-start ${scale.itemText} rounded transition-colors flex justify-between items-center gap-1 ${
         isSelected || isHighlighted
           ? 'text-text-primary bg-[var(--surface-selected)]'
           : 'text-text-secondary hover:text-text-primary hover:bg-[var(--surface-selected)]'
       }`}
       title={isEditing ? undefined : session.title}
+      data-testid={startedBy ? 'session-started-row' : undefined}
+      data-started-by={startedBy?.sessionId}
     >
+      {startedBy && (
+        <>
+          {/* The line of the family. It spans the row from its top edge so the
+              lines of neighbouring rows join, and stops half-way down the last
+              row, where it turns toward the title. */}
+          <span
+            aria-hidden
+            className={`pointer-events-none absolute start-3 top-0 w-2.5 border-s border-text-tertiary/40 ${
+              startedBy.isLast ? 'h-1/2 border-b rounded-es-md' : 'h-full'
+            }`}
+          />
+          {/* Room for the line; this is what indents the row. Wider than the
+              activity marker, so the title still sits deeper than the title of
+              a starter that wears one. */}
+          <span aria-hidden className="w-6 shrink-0" />
+        </>
+      )}
       {/* The marker leads the whole ROW rather than the title line, so it stays
           centred against the text no matter whether that is one line or two.
           Inside the title line it sat half-way down a two-line row and looked
@@ -213,6 +258,46 @@ export function SessionItem(props: Props) {
             onClick={(e) => e.stopPropagation()}
             className={`w-full bg-transparent ${scale.itemText} text-text-primary outline-none border-b border-text-tertiary/40`}
           />
+        ) : startedSessions ? (
+          <span className="flex items-center gap-1 min-w-0">
+            <TypewriterText className="truncate" text={session.title} arrivedAt={titleArrivedAt} />
+            <Tooltip
+              content={t(
+                startedSessions.isCollapsed
+                  ? 'sessionList.startedSessions.show'
+                  : 'sessionList.startedSessions.hide',
+              )}
+            >
+              <span
+                role="button"
+                aria-expanded={!startedSessions.isCollapsed}
+                data-testid="session-started-toggle"
+                onClick={(e) => {
+                  // The arrow folds the family. It must not also open the session.
+                  e.stopPropagation();
+                  startedSessions.onToggle();
+                }}
+                className="shrink-0 flex items-center justify-center w-4 h-4 rounded text-text-tertiary hover:text-text-primary transition-colors"
+              >
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 10 10"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className={`transition-transform ${startedSessions.isCollapsed ? '-rotate-90 rtl:rotate-90' : ''}`}
+                >
+                  <path
+                    d="M2 3.5l3 3 3-3"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+            </Tooltip>
+          </span>
         ) : (
           <TypewriterText className="truncate" text={session.title} arrivedAt={titleArrivedAt} />
         )}

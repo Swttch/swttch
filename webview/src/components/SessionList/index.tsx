@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { GroupedSessions, GROUP_ORDER, getSessionOriginLabel } from './utils';
 import { SessionItem } from './SessionItem';
+import { SessionNesting } from './families';
 import { generatedTitleArrivedAt } from '@/contexts/generatedTitle';
 import { useSessionListScale } from './scale';
 import { useTranslation } from '@/i18n';
@@ -34,13 +35,19 @@ interface Props {
   onLoadMore?: () => void;
   /** Sessions exist past the ones rendered. Nothing is requested when false. */
   hasMore?: boolean;
+  /**
+   * Which sessions are drawn under the ones that started them (from
+   * `useSessionList`, which already arranged `groupedSessions` to match).
+   * Without it every row is drawn as a row of its own.
+   */
+  nesting?: SessionNesting;
 }
 
 // How close to the bottom, in pixels, counts as "about to run out".
 const LOAD_MORE_THRESHOLD_PX = 200;
 
 export function SessionList(props: Props) {
-  const { groupedSessions, currentSessionId, highlightedSessionId = null, onSelectSession, onDeleteSession, onRenameSession, className = 'max-h-80', onLoadMore, hasMore = false } = props;
+  const { groupedSessions, currentSessionId, highlightedSessionId = null, onSelectSession, onDeleteSession, onRenameSession, className = 'max-h-80', onLoadMore, hasMore = false, nesting = SessionNesting.none } = props;
   const scale = useSessionListScale();
   const scrollRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation('common');
@@ -136,6 +143,21 @@ export function SessionList(props: Props) {
     [visibleGroups],
   );
 
+  // The rows that are drawn. A session is indented under its starter only while
+  // the starter is one of them: the filters above can hide a starter and keep a
+  // session it started, and that session is then an ordinary row.
+  const visibleIds = useMemo(
+    () => new Set(GROUP_ORDER.flatMap((key) => visibleGroups[key]).map((session) => session.id)),
+    [visibleGroups],
+  );
+  const drawnUnder = useCallback(
+    (sessionId: string): string | null => {
+      const top = nesting.families.topOf(sessionId);
+      return top !== null && visibleIds.has(top) ? top : null;
+    },
+    [nesting, visibleIds],
+  );
+
   // Taken from the side that walked the directories, not guessed from the rows.
   //
   // The rows cannot answer this once the list is paged. A page holds the newest
@@ -218,23 +240,40 @@ export function SessionList(props: Props) {
             <div className={`${scale.groupHeader} text-text-tertiary`}>
               {t(`sessionList.groups.${groupKey}`)}
             </div>
-            {sessionsInGroup.map((session) => (
-              <SessionItem
-                key={session.id}
-                session={session}
-                isSelected={session.id === currentSessionId}
-                isHighlighted={session.id === highlightedSessionId}
-                originLabel={
-                  isMerged ? getSessionOriginLabel(session.sessionDir, rootDir) : undefined
-                }
-                activity={activityOf(activity, session.id)}
-                isOpen={open.has(session.id)}
-                onSelect={() => onSelectSession(session.id)}
-                onDelete={() => onDeleteSession(session.id)}
-                onRename={(title) => onRenameSession(session.id, title)}
-                titleArrivedAt={generatedTitleArrivedAt(generatedTitle, session.id, session.title)}
-              />
-            ))}
+            {sessionsInGroup.map((session, index) => {
+              const top = drawnUnder(session.id);
+              const startedOthers = nesting.families.membersOf(session.id).length > 0;
+              // A session another one started is the last of its family when the
+              // row after it is not drawn under the same session.
+              const next = sessionsInGroup[index + 1];
+              const isLastOfFamily = !next || drawnUnder(next.id) !== top;
+              return (
+                <SessionItem
+                  key={session.id}
+                  session={session}
+                  isSelected={session.id === currentSessionId}
+                  isHighlighted={session.id === highlightedSessionId}
+                  originLabel={
+                    isMerged ? getSessionOriginLabel(session.sessionDir, rootDir) : undefined
+                  }
+                  activity={activityOf(activity, session.id)}
+                  isOpen={open.has(session.id)}
+                  onSelect={() => onSelectSession(session.id)}
+                  onDelete={() => onDeleteSession(session.id)}
+                  onRename={(title) => onRenameSession(session.id, title)}
+                  titleArrivedAt={generatedTitleArrivedAt(generatedTitle, session.id, session.title)}
+                  startedSessions={
+                    startedOthers
+                      ? {
+                          isCollapsed: nesting.collapsed.has(session.id),
+                          onToggle: () => nesting.toggle(session.id),
+                        }
+                      : undefined
+                  }
+                  startedBy={top !== null ? { sessionId: top, isLast: isLastOfFamily } : undefined}
+                />
+              );
+            })}
           </div>
         );
         })}

@@ -5,6 +5,27 @@ import { toTitle } from '../../mappers/sessionTransformer';
 import { To, ToDate, Rename } from '../decorators';
 
 /**
+ * The row the session-management MCP (`@swttch/session-manager-mcp`) keeps about
+ * a session, as that package wrote it: what the CLI has no place for. The field
+ * names belong to the package and are not renamed here.
+ *
+ * Only the fields this app reads are spelled out. The rest of the row arrives
+ * with them and stays on the object.
+ */
+export class SessionMarkDto {
+  /** The session the row is about (the session id the CLI gave it). */
+  id: string;
+  /** The session that started this one, or null when nothing did or it was moved to the top level. */
+  parentSessionUid: string | null = null;
+  /** The short name the family of sessions calls it by. */
+  handle: string | null = null;
+  /** When the package started the session, in milliseconds; 0 when it did not start it. */
+  startedAt: number = 0;
+  /** When the session was archived, in milliseconds; 0 when it is not archived. */
+  archivedAt: number = 0;
+}
+
+/**
  * Session metadata DTO
  */
 export class SessionMetaDto {
@@ -34,6 +55,13 @@ export class SessionMetaDto {
    * one currently being browsed — they differ once nested sessions are listed.
    */
   sessionDir?: string;
+  /**
+   * What the session-management MCP recorded about this session, when it
+   * recorded anything. The list draws a session under the one that started it
+   * from `parentSessionUid`.
+   */
+  @Type(() => SessionMarkDto)
+  sessionMark?: SessionMarkDto;
 }
 
 /**

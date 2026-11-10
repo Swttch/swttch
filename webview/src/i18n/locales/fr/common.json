@@ -210,6 +210,10 @@
     "refreshSessions": "Actualiser les sessions",
     "renameSession": "Renommer la session",
     "deleteSession": "Supprimer la session",
+    "startedSessions": {
+      "show": "Afficher les sessions qu’elle a lancées",
+      "hide": "Masquer les sessions qu’elle a lancées"
+    },
     "groups": {
       "today": "Aujourd'hui",
       "yesterday": "Hier",

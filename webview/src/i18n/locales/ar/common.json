@@ -214,6 +214,10 @@
     "refreshSessions": "تحديث الجلسات",
     "renameSession": "إعادة تسمية الجلسة",
     "deleteSession": "حذف الجلسة",
+    "startedSessions": {
+      "show": "إظهار الجلسات التي بدأتها هذه الجلسة",
+      "hide": "إخفاء الجلسات التي بدأتها هذه الجلسة"
+    },
     "groups": {
       "today": "اليوم",
       "yesterday": "أمس",

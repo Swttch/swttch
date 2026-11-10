@@ -210,6 +210,10 @@
     "refreshSessions": "Sitzungen aktualisieren",
     "renameSession": "Sitzung umbenennen",
     "deleteSession": "Sitzung löschen",
+    "startedSessions": {
+      "show": "Von dieser Sitzung gestartete Sitzungen anzeigen",
+      "hide": "Von dieser Sitzung gestartete Sitzungen ausblenden"
+    },
     "groups": {
       "today": "Heute",
       "yesterday": "Gestern",

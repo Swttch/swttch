@@ -210,6 +210,10 @@
     "refreshSessions": "세션 새로고침",
     "renameSession": "세션 이름 바꾸기",
     "deleteSession": "세션 삭제",
+    "startedSessions": {
+      "show": "이 세션이 시작한 세션 펼치기",
+      "hide": "이 세션이 시작한 세션 접기"
+    },
     "groups": {
       "today": "오늘",
       "yesterday": "어제",

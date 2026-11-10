@@ -210,6 +210,10 @@
     "refreshSessions": "重新整理工作階段",
     "renameSession": "重新命名工作階段",
     "deleteSession": "刪除工作階段",
+    "startedSessions": {
+      "show": "顯示此工作階段啟動的工作階段",
+      "hide": "隱藏此工作階段啟動的工作階段"
+    },
     "groups": {
       "today": "今天",
       "yesterday": "昨天",

@@ -210,6 +210,10 @@
     "refreshSessions": "刷新会话",
     "renameSession": "重命名会话",
     "deleteSession": "删除会话",
+    "startedSessions": {
+      "show": "显示此会话启动的会话",
+      "hide": "隐藏此会话启动的会话"
+    },
     "groups": {
       "today": "今天",
       "yesterday": "昨天",

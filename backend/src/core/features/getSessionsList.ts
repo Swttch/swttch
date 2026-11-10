@@ -5,14 +5,23 @@ import { extractSessionInfo, scanTail, type SessionInfo } from './extractSession
 import { getProjectSessionsPath } from './getProjectSessionsPath';
 import { readSessionTitleOverrides } from './sessionTitleOverrides';
 import { includeLastPromptInTitles } from './sessionTitleSettings';
+import { readSessionMarks, type SessionMark } from './sessionMarks';
 
 /**
  * [sessionDir] is the working directory the session was recorded under. It is
  * the requested directory for a flat listing and can be a directory below it
  * once nested listings merge several — every row carries it either way, so a
  * caller never has to work out which request produced which row.
+ *
+ * [sessionMark] is the row the session-management MCP keeps about the session
+ * (which session started it, among other things), whole, when there is one. The
+ * list draws a session under the one that started it from this.
  */
-export type SessionListEntry = SessionInfo & { sessionId: string; sessionDir: string };
+export type SessionListEntry = SessionInfo & {
+  sessionId: string;
+  sessionDir: string;
+  sessionMark?: SessionMark;
+};
 
 /**
  * One page of sessions, newest first.
@@ -184,6 +193,10 @@ export async function resolvePage(
     return loaded;
   };
 
+  // Read once for the page. The file is small and another program appends to it
+  // at any time, so it is not cached between requests.
+  const marks = await readSessionMarks();
+
   const sessions: SessionListEntry[] = [];
   let cursor = offset;
 
@@ -222,10 +235,12 @@ export async function resolvePage(
       // unable to tell a short page from the end of the list.
       if (resolved.info.isSidechain) continue;
       if (limit !== undefined && sessions.length >= limit) break;
+      const sessionMark = marks.get(resolved.key.sessionId);
       sessions.push({
         sessionId: resolved.key.sessionId,
         sessionDir: resolved.key.sessionDir,
         ...resolved.info,
+        ...(sessionMark ? { sessionMark } : {}),
       });
     }
   }
