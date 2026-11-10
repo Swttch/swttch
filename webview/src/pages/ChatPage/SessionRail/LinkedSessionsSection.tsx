@@ -3,9 +3,12 @@ import toast from "react-hot-toast";
 import {useTranslation} from "@/i18n";
 import {useSessionContext} from "@/contexts/SessionContext";
 import {useBridgeContext} from "@/contexts/BridgeContext";
-import {SessionFamilies} from "@/components/SessionList/families";
+import {SessionFamilies, starterIdOf} from "@/components/SessionList/families";
 import {getRelativeTime} from "@/components/SessionList/utils";
 import {RelationField, type RelationItem} from "@/components/RelationField";
+import {Tooltip} from "@/components/Tooltip";
+import claudeLogo from "@/assets/claude-logo.svg";
+import {Section} from "./Section";
 import {MessageType} from "@/shared";
 import type {SessionMetaDto} from "@/dto";
 
@@ -26,25 +29,38 @@ export function LinkedSessionsSection() {
     const {sessions, currentSessionId, switchSession} = useSessionContext();
     const {send} = useBridgeContext();
 
-    const {parentId, parentItems, childItems, parentChoices, childChoices} = useMemo(() => {
+    const {parentId, parentItems, childItems, parentChoices, childChoices, apart, hasDesktopRecord} = useMemo(() => {
         const held: SessionMetaDto[] = sessions ?? [];
         const families = SessionFamilies.of(held);
         const current = held.find((s) => s.id === currentSessionId);
-        const parentId = current?.sessionMark?.parentSessionUid ?? null;
+        const parentId = starterIdOf(current?.sessionMark);
         const children = families.childrenOf(currentSessionId ?? '');
         const below = new Set(families.descendantsOf(currentSessionId ?? '').map((s) => s.id));
         const above = new Set<string>();
         for (let id = families.parentOf(currentSessionId ?? ''); id !== null; id = families.parentOf(id)) above.add(id);
         const others = held.filter((s) => s.id !== currentSessionId);
         const parent = held.find((s) => s.id === parentId);
+        // The links of this session (its own parent, and the sessions the desktop app says it started) that were set
+        // by hand to something other than what the Claude desktop app records. A link only the package knows of has no
+        // desktop record and is left alone.
+        const apart = held.filter((s) => {
+            const desktop = s.sessionMark?.desktopParentSessionId;
+            const chosen = s.sessionMark?.parentSessionUid;
+            if (!desktop || typeof chosen !== 'string' || chosen === desktop) return false;
+            return s.id === currentSessionId || desktop === currentSessionId;
+        }).map((s) => s.id);
+        // Whether the desktop app records any link of this session at all.
+        const hasDesktopRecord = held.some((s) => !!s.sessionMark?.desktopParentSessionId && (s.id === currentSessionId || s.sessionMark.desktopParentSessionId === currentSessionId));
         return {
+            apart,
+            hasDesktopRecord,
             parentId,
             parentItems: parent ? [toItem(parent)] : [],
             childItems: children.map(toItem),
             // A session cannot be put under itself or under one of its own descendants; the one it is under already is held.
             parentChoices: others.filter((s) => !below.has(s.id) && s.id !== parentId).map(toItem),
             // Nor can its own ancestors, or sessions it already started, be added below it.
-            childChoices: others.filter((s) => !above.has(s.id) && s.id !== parentId && s.sessionMark?.parentSessionUid !== currentSessionId).map(toItem),
+            childChoices: others.filter((s) => !above.has(s.id) && s.id !== parentId && starterIdOf(s.sessionMark) !== currentSessionId).map(toItem),
         };
     }, [sessions, currentSessionId]);
 
@@ -66,7 +82,42 @@ export function LinkedSessionsSection() {
         openLabel: t('sessionRail.linked.open'),
     };
 
+    const resetToDesktop = async () => {
+        for (const id of apart) {
+            try {
+                const answer = await send(MessageType.SET_SESSION_PARENT, {sessionId: id, parentSessionId: null, inherit: true}) as {status?: string; error?: string};
+                if (answer?.status !== 'ok') throw new Error(answer?.error ?? t('sessionRail.linked.failed'));
+            } catch (error) {
+                toast.error(error instanceof Error ? error.message : t('sessionRail.linked.failed'));
+                return;
+            }
+        }
+    };
+
+    // The tooltip says what the button does now: reset the links, or why there is nothing to reset. It is not `disabled`
+    // because a disabled button gets no pointer events, and so no tooltip.
+    const canReset = apart.length > 0;
+    const resetHint = canReset
+        ? t('sessionRail.linked.resetToDesktop')
+        : t(hasDesktopRecord ? 'sessionRail.linked.resetSynced' : 'sessionRail.linked.resetNoRecord');
+    const resetButton = (
+        <Tooltip content={resetHint} placement="bottom">
+            <button
+                type="button"
+                aria-label={t('sessionRail.linked.resetToDesktop')}
+                aria-disabled={!canReset}
+                onClick={() => {
+                    if (canReset) void resetToDesktop();
+                }}
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${canReset ? 'hover:bg-surface-hover' : 'cursor-default opacity-40'}`}
+            >
+                <img src={claudeLogo} alt="" className="h-4 w-4"/>
+            </button>
+        </Tooltip>
+    );
+
     return (
+        <Section title={t('sessionRail.linked.title')} defaultOpen action={resetButton}>
         <div className="flex flex-col gap-2 text-[0.8462rem]">
             <RelationField
                 {...common}
@@ -94,6 +145,7 @@ export function LinkedSessionsSection() {
                 keepOpen
             />
         </div>
+        </Section>
     );
 }
 

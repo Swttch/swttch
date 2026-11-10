@@ -317,6 +317,8 @@ export enum MessageType {
   UNINSTALL_SESSION_MCP = 'UNINSTALL_SESSION_MCP',
   /** Put a session under another session by hand, or take it to the top level (`{ sessionId, parentSessionId }`, parentSessionId null for the top level). Runs the session-management MCP's own `set-parent` command; needs package version 0.3.0 or later. Acks { status, error? }. inbound webview→backend */
   SET_SESSION_PARENT = 'SET_SESSION_PARENT',
+  /** Archive a session, bring it back (`{ sessionId, archived: boolean }`), or forget what was chosen so that the Claude desktop app's record shows again (`{ sessionId, inherit: true }`). Runs the session-management MCP's own `set-archived` command; needs package version 0.4.0 or later. Acks { status, error? }. inbound webview→backend */
+  SET_SESSION_ARCHIVED = 'SET_SESSION_ARCHIVED',
   /** An automatic update of the session-management MCP is over (at backend startup, or one a version lookup started), so the versions should be read again. outbound backend→webview */
   SESSION_MCP_UPDATED = 'SESSION_MCP_UPDATED',
   /** Read whether the user has answered the one-time "use voice input?" question, and when. Resolves to accepted without asking when the kit is already installed. inbound webview→backend */

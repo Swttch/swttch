@@ -178,13 +178,13 @@ describe('SessionRail', () => {
     });
 });
 
-function linked(id: string, title: string, startedBy: string | null, startedAt = 0) {
+function linked(id: string, title: string, startedBy: string | null, startedAt = 0, desktopStarter?: string) {
     return {
         id,
         title,
         createdAt: new Date(startedAt || 0),
         updatedAt: new Date(startedAt || 0),
-        sessionMark: {id, parentSessionUid: startedBy, startedAt},
+        sessionMark: {id, parentSessionUid: startedBy, startedAt, ...(desktopStarter ? {desktopParentSessionId: desktopStarter} : {})},
     };
 }
 
@@ -234,6 +234,55 @@ describe('SessionRail - linked sessions', () => {
         render(<SessionRail/>);
         openRail();
         expect(screen.getByText('sessionRail.linked.notInList')).toBeInTheDocument();
+    });
+});
+
+describe('SessionRail - the links the Claude desktop app records', () => {
+    beforeEach(() => {
+        mcpInstalled = '0.4.0';
+        send.mockResolvedValue({status: 'ok'});
+    });
+
+    const resetButton = () => screen.getByRole('button', {name: 'sessionRail.linked.resetToDesktop'});
+
+    it('shows the parent the desktop app records where the package chose nothing', () => {
+        sessionCtx.sessions = [linked('s1', 'This one', null, 0, 'p1'), linked('p1', 'The manager', null)];
+        render(<SessionRail/>);
+        openRail();
+        expect(screen.getByRole('button', {name: 'The manager'})).toBeInTheDocument();
+    });
+
+    it('does not bring the desktop parent back under a session that was taken to the top level on purpose', () => {
+        sessionCtx.sessions = [linked('s1', 'This one', '', 0, 'p1'), linked('p1', 'The manager', null)];
+        render(<SessionRail/>);
+        openRail();
+        expect(screen.queryByRole('button', {name: 'The manager'})).toBeNull();
+    });
+
+    it('has nothing to reset while every link is the one the desktop app records', () => {
+        sessionCtx.sessions = [linked('s1', 'This one', null, 0, 'p1'), linked('p1', 'The manager', null)];
+        render(<SessionRail/>);
+        openRail();
+        expect(resetButton()).toHaveAttribute('aria-disabled', 'true');
+        fireEvent.click(resetButton());
+        expect(send).not.toHaveBeenCalled();
+    });
+
+    it('forgets what was chosen by hand for this session and for the sessions the desktop app says it started', async () => {
+        sessionCtx.sessions = [
+            linked('s1', 'This one', '', 0, 'p1'),
+            linked('p1', 'The manager', null),
+            linked('c1', 'A child', 'other', 10, 's1'),
+            linked('c2', 'Started only through the package', 's1', 20),
+        ];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(resetButton());
+        // The links are reset one after another.
+        await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+        expect(send).toHaveBeenCalledWith('SET_SESSION_PARENT', {sessionId: 's1', parentSessionId: null, inherit: true});
+        expect(send).toHaveBeenCalledWith('SET_SESSION_PARENT', {sessionId: 'c1', parentSessionId: null, inherit: true});
+        expect(send).not.toHaveBeenCalledWith('SET_SESSION_PARENT', expect.objectContaining({sessionId: 'c2'}));
     });
 });
 

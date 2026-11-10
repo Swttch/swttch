@@ -139,11 +139,19 @@ export async function uninstallSessionMcpHandler(
   ack(connections, connectionId, message, { status: 'ok' });
 }
 
-/** The first package version that has the `set-parent` command. */
-const SET_PARENT_SINCE = '0.3.0';
+/**
+ * The first package version that keeps "taken to the top level on purpose" apart from "nothing chosen" (0.4.0), which
+ * is what stops the desktop app's record from coming back under a session that was unlinked by hand, and that has
+ * `set-parent <id> inherit`.
+ */
+const SET_PARENT_SINCE = '0.4.0';
+
+/** The first package version that has the `set-parent` command at all (it puts a session under another one). */
+const SET_PARENT_TO_SESSION_SINCE = '0.3.0';
 
 /**
- * SET_SESSION_PARENT: put a session under another one by hand, or take it to the top level.
+ * SET_SESSION_PARENT: put a session under another one by hand, take it to the top level (parentSessionId null),
+ * or forget what was chosen by hand so that the desktop app's record shows again (`inherit: true`).
  *
  * The record of who started whom belongs to the session-management MCP, so the edit is made by
  * the package's own `set-parent` command and not by this backend: the same edit a terminal user
@@ -159,7 +167,7 @@ export async function setSessionParentHandler(
   connections: ConnectionManager,
   _bridge: Bridge,
 ): Promise<void> {
-  const payload = (message.payload ?? {}) as { sessionId?: unknown; parentSessionId?: unknown };
+  const payload = (message.payload ?? {}) as { sessionId?: unknown; parentSessionId?: unknown; inherit?: unknown };
   const sessionId = typeof payload.sessionId === 'string' ? payload.sessionId : '';
   const parentSessionId = typeof payload.parentSessionId === 'string' && payload.parentSessionId !== '' ? payload.parentSessionId : null;
   if (sessionId === '') {
@@ -172,15 +180,18 @@ export async function setSessionParentHandler(
     ack(connections, connectionId, message, { status: 'error', error: `The ${SESSION_MCP_PACKAGE} package is not installed.` });
     return;
   }
-  if (isNewerVersion(SET_PARENT_SINCE, version)) {
+  // Putting a session under another one works from 0.3.0; keeping "top level on purpose" apart from "nothing chosen",
+  // and forgetting a choice, need 0.4.0.
+  const needsSince = parentSessionId === null || payload.inherit === true ? SET_PARENT_SINCE : SET_PARENT_TO_SESSION_SINCE;
+  if (isNewerVersion(needsSince, version)) {
     ack(connections, connectionId, message, {
       status: 'error',
-      error: `The installed ${SESSION_MCP_PACKAGE} (${version}) cannot change a parent session. Version ${SET_PARENT_SINCE} or later can; it updates by itself, or update it in Settings > About.`,
+      error: `The installed ${SESSION_MCP_PACKAGE} (${version}) cannot do this. Version ${needsSince} or later can; it updates by itself, or update it in Settings > About.`,
     });
     return;
   }
 
-  const result = await run(process.execPath, [entry, 'set-parent', sessionId, parentSessionId ?? 'none']);
+  const result = await run(process.execPath, [entry, 'set-parent', sessionId, payload.inherit === true ? 'inherit' : (parentSessionId ?? 'none')]);
   type SetParentAnswer = { ok?: boolean; error?: string; changed?: boolean };
   let answer: SetParentAnswer | null = null;
   try {
@@ -195,3 +206,61 @@ export async function setSessionParentHandler(
   connections.broadcastToAll(MessageType.SESSIONS_UPDATED, { action: 'refresh' });
   ack(connections, connectionId, message, { status: 'ok', changed: answer.changed === true });
 }
+
+/**
+ * SET_SESSION_ARCHIVED: archive a session, bring it back, or forget what was chosen (`inherit: true`) so that the
+ * Claude desktop app's record of it shows again.
+ *
+ * Like the parent, the record belongs to the session-management MCP and is edited by its own `set-archived` command.
+ * Only the record is edited: no process is stopped and no worktree is touched. Every screen is told to read its
+ * session list again afterwards.
+ */
+export async function setSessionArchivedHandler(
+  connectionId: string,
+  message: IPCMessage,
+  connections: ConnectionManager,
+  _bridge: Bridge,
+): Promise<void> {
+  const payload = (message.payload ?? {}) as { sessionId?: unknown; archived?: unknown; inherit?: unknown };
+  const sessionId = typeof payload.sessionId === 'string' ? payload.sessionId : '';
+  if (sessionId === '') {
+    ack(connections, connectionId, message, { status: 'error', error: 'sessionId is required' });
+    return;
+  }
+  const state = payload.inherit === true ? 'inherit' : payload.archived === true ? 'archived' : payload.archived === false ? 'unarchived' : null;
+  if (state === null) {
+    ack(connections, connectionId, message, { status: 'error', error: 'archived (true or false) or inherit is required' });
+    return;
+  }
+
+  const [entry, version] = await Promise.all([resolveSessionMcpEntry(), getSessionMcpVersion()]);
+  if (!entry || !version) {
+    ack(connections, connectionId, message, { status: 'error', error: `The ${SESSION_MCP_PACKAGE} package is not installed.` });
+    return;
+  }
+  if (isNewerVersion(SET_ARCHIVED_SINCE, version)) {
+    ack(connections, connectionId, message, {
+      status: 'error',
+      error: `The installed ${SESSION_MCP_PACKAGE} (${version}) cannot archive a session from here. Version ${SET_ARCHIVED_SINCE} or later can; it updates by itself, or update it in Settings > About.`,
+    });
+    return;
+  }
+
+  const result = await run(process.execPath, [entry, 'set-archived', sessionId, state]);
+  type SetArchivedAnswer = { ok?: boolean; error?: string; changed?: boolean };
+  let answer: SetArchivedAnswer | null = null;
+  try {
+    answer = JSON.parse(result.stdout.trim().split('\n').pop() ?? '') as SetArchivedAnswer;
+  } catch {
+    answer = null;
+  }
+  if (answer?.ok !== true) {
+    ack(connections, connectionId, message, { status: 'error', error: answer?.error ?? (result.output || 'The set-archived command failed.') });
+    return;
+  }
+  connections.broadcastToAll(MessageType.SESSIONS_UPDATED, { action: 'refresh' });
+  ack(connections, connectionId, message, { status: 'ok', changed: answer.changed === true });
+}
+
+/** The first package version that has the `set-archived` command. */
+const SET_ARCHIVED_SINCE = '0.4.0';

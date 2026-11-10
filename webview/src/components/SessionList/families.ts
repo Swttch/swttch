@@ -82,6 +82,17 @@ export class SessionFamilies {
 }
 
 /**
+ * The id of the session that started the session a mark is about, as the lists draw it. What the package recorded
+ * decides when it decided anything (a session id, or '' for top level on purpose); only when it left the parent open
+ * (null) is the desktop app's record used.
+ */
+export function starterIdOf(mark: { parentSessionUid?: string | null; desktopParentSessionId?: string | null } | undefined | null): string | null {
+  if (!mark) return null;
+  if (typeof mark.parentSessionUid === 'string') return mark.parentSessionUid === '' ? null : mark.parentSessionUid;
+  return mark.desktopParentSessionId || null;
+}
+
+/**
  * The session that started [session], when it is on hand.
  *
  * Null as well when the records loop back to the session itself: two sessions
@@ -89,14 +100,14 @@ export class SessionFamilies {
  * other, and neither would have a row. Each of them is then a row of its own.
  */
 function starterOf(session: SessionMetaDto, byId: Map<string, SessionMetaDto>): SessionMetaDto | null {
-  const starterId = session.sessionMark?.parentSessionUid;
+  const starterId = starterIdOf(session.sessionMark);
   const starter = starterId ? byId.get(starterId) : undefined;
   if (!starter || starter.id === session.id) return null;
 
   const visited = new Set([session.id, starter.id]);
   let current = starter;
   for (;;) {
-    const nextId = current.sessionMark?.parentSessionUid;
+    const nextId = starterIdOf(current.sessionMark);
     const next = nextId ? byId.get(nextId) : undefined;
     if (!next) break;
     if (next.id === session.id) return null;

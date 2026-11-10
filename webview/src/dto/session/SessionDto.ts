@@ -17,6 +17,11 @@ export class SessionMarkDto {
   id: string;
   /** The session that started this one, or null when nothing did or it was moved to the top level. */
   parentSessionUid: string | null = null;
+  /**
+   * The session the Claude desktop app says started this one, in the CLI's id. Not a column of the package: this
+   * app adds it beside the row when the package left the parent open (null, never ''), see `starterIdOf`.
+   */
+  desktopParentSessionId: string | null = null;
   /** The short name the family of sessions calls it by. */
   handle: string | null = null;
   /** When the package started the session, in milliseconds; 0 when it did not start it. */

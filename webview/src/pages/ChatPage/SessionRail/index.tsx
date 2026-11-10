@@ -65,9 +65,7 @@ export function SessionRail() {
                 <EnvironmentSection/>
             </Section>
             {sessionMcp?.installed && (
-                <Section title={t('sessionRail.linked.title')} defaultOpen>
-                    <LinkedSessionsSection/>
-                </Section>
+                <LinkedSessionsSection/>
             )}
             <Section title={t('sessionRail.context')} defaultOpen={false} onToggle={setContextOpen}>
                 <ContextSection open={contextOpen}/>

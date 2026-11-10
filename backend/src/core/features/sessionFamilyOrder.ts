@@ -1,5 +1,5 @@
 import type { SessionSortKey } from './getSessionsList';
-import type { SessionMark } from './sessionMarks';
+import { starterIdOfRow, type SessionMark } from './sessionMarks';
 
 /**
  * The sessions of a listing in the order they are paged: every top-level
@@ -56,8 +56,8 @@ export function orderByFamily(
 
   const byId = new Map(sortedKeys.map((key) => [key.sessionId, key]));
   const starterIdOf = (sessionId: string): string | null => {
-    const starter = marks.get(sessionId)?.row.parentSessionUid;
-    return typeof starter === 'string' && starter !== sessionId && byId.has(starter) ? starter : null;
+    const starter = starterIdOfRow(marks.get(sessionId)?.row);
+    return starter !== null && starter !== sessionId && byId.has(starter) ? starter : null;
   };
   // Two records that each name the other as its starter would leave both
   // without a place. A session whose line of starters comes back to itself is

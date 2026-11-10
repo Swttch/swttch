@@ -13,7 +13,14 @@ vi.mock('../../session-mcp', () => ({
   isSessionMcpInstalled: vi.fn(),
 }));
 
-import { readSessionMarks, readSessionMarksToShow } from '../sessionMarks';
+// The Claude desktop app's record of who started whom: what the machine running the test has of it is no
+// business of these tests, so each test says what it is.
+const desktopStarters = vi.hoisted(() => ({ value: new Map<string, string>(), archived: new Set<string>() }));
+vi.mock('../desktopSessions', () => ({
+  readDesktopState: vi.fn(async () => ({ starters: desktopStarters.value, archived: desktopStarters.archived })),
+}));
+
+import { isArchivedRow, readSessionMarks, readSessionMarksToShow, starterIdOfRow } from '../sessionMarks';
 import { isSessionMcpInstalled } from '../../session-mcp';
 import { getSessionsList } from '../getSessionsList';
 import { getSessionEntry } from '../getSessionEntry';
@@ -33,6 +40,8 @@ describe('session marks', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    desktopStarters.value = new Map();
+    desktopStarters.archived = new Set();
     home = await mkdtemp(join(tmpdir(), 'session-marks-home-'));
     sessionsDir = await mkdtemp(join(tmpdir(), 'session-marks-sessions-'));
     savedHome = process.env.CCG_HOME;
@@ -163,5 +172,74 @@ describe('session marks', () => {
 
     expect(entry?.sessionMark?.row.parentSessionUid).toBe('parent');
     expect(JSON.parse(JSON.stringify(entry))).toEqual(JSON.parse(JSON.stringify(listed)));
+  });
+
+  describe('who started a session, with the desktop app\'s record beside the package\'s', () => {
+    it('uses what the package recorded, and the desktop app only where the package left it open', () => {
+      expect(starterIdOfRow({ parentSessionUid: 'chosen', desktopParentSessionId: 'desktop' })).toBe('chosen');
+      expect(starterIdOfRow({ parentSessionUid: null, desktopParentSessionId: 'desktop' })).toBe('desktop');
+      expect(starterIdOfRow({ desktopParentSessionId: 'desktop' })).toBe('desktop');
+      expect(starterIdOfRow({ parentSessionUid: null })).toBeNull();
+      expect(starterIdOfRow(undefined)).toBeNull();
+    });
+
+    it('does not bring the desktop app\'s record back under a session taken to the top level on purpose', () => {
+      expect(starterIdOfRow({ parentSessionUid: '', desktopParentSessionId: 'desktop' })).toBeNull();
+    });
+
+    it('adds the desktop app\'s record beside the package\'s row and leaves the row\'s own columns as they were', async () => {
+      desktopStarters.value = new Map([['child', 'manager']]);
+      await writeMarks([JSON.stringify({ id: 'child', parentSessionUid: null, handle: 'kid', future: 1 })]);
+
+      const row = (await readSessionMarksToShow()).get('child')?.row;
+
+      expect(row).toEqual({ id: 'child', parentSessionUid: null, handle: 'kid', future: 1, desktopParentSessionId: 'manager' });
+    });
+
+    it('makes a row of its own for a session only the desktop app knows a starter of', async () => {
+      desktopStarters.value = new Map([['child', 'manager']]);
+
+      expect((await readSessionMarksToShow()).get('child')?.row).toEqual({ id: 'child', desktopParentSessionId: 'manager' });
+    });
+
+    it('keeps the desktop app\'s record on a row whose parent the package chose, which decides nothing there', async () => {
+      desktopStarters.value = new Map([['child', 'manager']]);
+      await writeMarks([JSON.stringify({ id: 'child', parentSessionUid: '' })]);
+
+      const row = (await readSessionMarksToShow()).get('child')?.row;
+
+      expect(row?.parentSessionUid).toBe('');
+      expect(row?.desktopParentSessionId).toBe('manager');
+      expect(starterIdOfRow(row)).toBeNull();
+    });
+
+    it('is archived when the package says so, or when it chose nothing and the desktop app says so', () => {
+      expect(isArchivedRow({ archivedAt: 1794301002844, desktopArchived: false })).toBe(true);
+      expect(isArchivedRow({ archivedAt: 0, desktopArchived: true })).toBe(true);
+      expect(isArchivedRow({ desktopArchived: true })).toBe(true);
+      expect(isArchivedRow({ archivedAt: 0 })).toBe(false);
+      expect(isArchivedRow(undefined)).toBe(false);
+    });
+
+    it('does not show a session archived again that was brought back on purpose, whatever the desktop app says', () => {
+      expect(isArchivedRow({ archivedAt: -1, desktopArchived: true })).toBe(false);
+    });
+
+    it('carries what the desktop app archived beside the row, and makes a row for a session the package has none for', async () => {
+      desktopStarters.archived = new Set(['one', 'two']);
+      await writeMarks([JSON.stringify({ id: 'one', archivedAt: 0, handle: 'h' })]);
+
+      const marks = await readSessionMarksToShow();
+
+      expect(marks.get('one')?.row).toEqual({ id: 'one', archivedAt: 0, handle: 'h', desktopArchived: true });
+      expect(marks.get('two')?.row).toEqual({ id: 'two', desktopArchived: true });
+    });
+
+    it('reads no desktop record while the package is not installed', async () => {
+      mockInstalled.mockResolvedValue(false);
+      desktopStarters.value = new Map([['child', 'manager']]);
+
+      expect((await readSessionMarksToShow()).size).toBe(0);
+    });
   });
 });

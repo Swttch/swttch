@@ -2,6 +2,7 @@ import { join } from 'path';
 import { entitiesRoot } from '../entities/entityPaths';
 import { JsonlFile } from '../entities/storage/JsonlFile';
 import { isSessionMcpInstalled } from '../session-mcp';
+import { readDesktopState } from './desktopSessions';
 
 /**
  * One row of `sidebar/session_marks`: what the session-management MCP
@@ -25,6 +26,39 @@ export class SessionMark {
   toJSON(): Record<string, unknown> {
     return this.row;
   }
+}
+
+/**
+ * Whether the session the row is about is archived, as the lists treat it.
+ *
+ * What the package recorded decides when it decided anything: a time (> 0) is
+ * archived, and -1 says the session was brought back on purpose, which an archive
+ * in the desktop app must not undo. Only when the package chose nothing (0, or no
+ * row) is the desktop app's record used, which the row carries as
+ * `desktopArchived` (see readSessionMarksToShow).
+ */
+export function isArchivedRow(row: Record<string, unknown> | undefined): boolean {
+  if (!row) return false;
+  const chosen = row.archivedAt;
+  if (typeof chosen === 'number' && chosen !== 0) return chosen > 0;
+  return row.desktopArchived === true;
+}
+
+/**
+ * The session that started the session the row is about, as the lists draw it.
+ *
+ * What the package recorded decides when it decided anything: a session id puts
+ * the session under it, and '' says it was taken to the top level on purpose,
+ * which the desktop app's record must not undo. Only when the package left it
+ * open (null, or no row) is the desktop app's record used, which the row carries
+ * as `desktopParentSessionId` (see readSessionMarksToShow).
+ */
+export function starterIdOfRow(row: Record<string, unknown> | undefined): string | null {
+  if (!row) return null;
+  const chosen = row.parentSessionUid;
+  if (typeof chosen === 'string') return chosen === '' ? null : chosen;
+  const desktop = row.desktopParentSessionId;
+  return typeof desktop === 'string' && desktop !== '' ? desktop : null;
 }
 
 function sessionMarksPath(): string {
@@ -76,5 +110,19 @@ export async function readSessionMarks(): Promise<Map<string, SessionMark>> {
  * decides whether its tools are handed to Claude.
  */
 export async function readSessionMarksToShow(): Promise<Map<string, SessionMark>> {
-  return (await isSessionMcpInstalled()) ? readSessionMarks() : new Map();
+  if (!(await isSessionMcpInstalled())) return new Map();
+  const marks = await readSessionMarks();
+  // The desktop app's record of who is under whom, and of what is archived, rides beside the row
+  // (a row of its own for a session the package has none for), and no field of the package's row is
+  // changed. It decides nothing where the package chose (see starterIdOfRow, isArchivedRow); it is
+  // kept on every row it covers so that a screen can tell a value that differs from the desktop app's.
+  const desktop = await readDesktopState();
+  const beside = new Map<string, Record<string, unknown>>();
+  for (const [sessionId, starterId] of desktop.starters) beside.set(sessionId, { desktopParentSessionId: starterId });
+  for (const sessionId of desktop.archived) beside.set(sessionId, { ...beside.get(sessionId), desktopArchived: true });
+  for (const [sessionId, extra] of beside) {
+    const row = marks.get(sessionId)?.row;
+    marks.set(sessionId, new SessionMark({ ...(row ?? { id: sessionId }), ...extra }));
+  }
+  return marks;
 }

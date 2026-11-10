@@ -1,4 +1,5 @@
 import { updateInstalledExtendKit, updateInstalledSessionMcp } from './core/extend-kit-update';
+import { watchDesktopState } from './core/features/desktopSessions';
 import { startCliAutoUpdate } from './core/cli-auto-update';
 import { createLoopbackRequest } from './ws/loopback-request';
 import { execFileSync, execSync } from 'child_process';
@@ -690,6 +691,9 @@ async function main() {
   void updateInstalledExtendKit().then(updated => {
     if (updated) connections.broadcastToAll(MessageType.EXTEND_KIT_UPDATED, {});
   });
+  // Who is under whom, and what is archived, in the Claude desktop app is shown in the session lists while the
+  // session-management MCP is installed; when it changes there, every screen reads its list again.
+  watchDesktopState(() => connections.broadcastToAll(MessageType.SESSIONS_UPDATED, { action: 'refresh' }));
   void updateInstalledSessionMcp().then(updated => {
     if (updated) connections.broadcastToAll(MessageType.SESSION_MCP_UPDATED, {});
   });
