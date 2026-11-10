@@ -28,6 +28,7 @@ export type ToolKind =
   | 'backgroundDone'
   | 'toolLoad'
   | 'sessionArchive'
+  | 'sessionDetach'
   | 'appRequest'
   | 'skill'
   | 'webFetch'
@@ -67,8 +68,12 @@ function computerKind(action: unknown): ToolKind {
   }
 }
 
-/** The sessions' own tools of the desktop app (`mcp__ccd_session__…`, `mcp__ccd_session_mgmt__…`), by their short name. */
-const SESSION_TOOL = /^mcp__ccd_session(?:_mgmt)?__(.+)$/;
+/**
+ * The sessions' own tools, by their short name: the desktop app's (`mcp__ccd_session__…`, `mcp__ccd_session_mgmt__…`)
+ * and the session-management MCP's (`mcp__swttch_session__…`, `mcp__swttch_session_mgmt__…`), which are the same
+ * tools with the same arguments under another server name, so they read the same way.
+ */
+const SESSION_TOOL = /^mcp__(?:ccd|swttch)_session(?:_mgmt)?__(.+)$/;
 
 export function toolKindOf(call: ToolCall): ToolKind {
   switch (SESSION_TOOL.exec(call.toolUse.name)?.[1]) {
@@ -82,6 +87,8 @@ export function toolKindOf(call: ToolCall): ToolKind {
       return 'sessionMessage';
     case 'archive_session':
       return 'sessionArchive';
+    case 'detach_session':
+      return 'sessionDetach';
     case 'get_session':
       return 'sessionLookup';
     case 'list_events':
@@ -419,6 +426,12 @@ export function rowLabel(call: ToolCall, t: TFunction): RowLabel {
       return { ...plain(t('transcript.tools.receivedMessageFrom', { ns: 'chat' })), meta: inputString(call, 'name') };
     case 'sessionArchive':
       return { ...plain(t('transcript.tools.archivedSession', { ns: 'chat' })), meta: archivedTitle(call) };
+    case 'sessionDetach':
+      // A move that failed, or is still under way, stays at its running wording: it is not reported as done.
+      return {
+        ...plain(t(isRunning(call) || hasFailed(call) ? 'transcript.tools.sessionDetaching' : 'transcript.tools.sessionDetached', { ns: 'chat' })),
+        meta: resultField(call, /"title":\s*"((?:[^"\\]|\\.)*)"/),
+      };
     case 'appRequest':
       return plain(t('transcript.tools.appAskedReport', { ns: 'chat' }));
     case 'toolLoad':
@@ -532,6 +545,7 @@ export function groupLabel(calls: ToolCall[], t: TFunction): string {
         return 5;
       case 'sessionRename':
       case 'sessionArchive':
+      case 'sessionDetach':
       case 'sessionStart':
       case 'sessionList':
       case 'sessionMessage':
@@ -590,6 +604,7 @@ export function groupLabel(calls: ToolCall[], t: TFunction): string {
         case 'sessionRead':
         case 'sessionRename':
         case 'sessionArchive':
+        case 'sessionDetach':
         case 'sessionStart':
         case 'sessionList':
         case 'sessionMessage': {

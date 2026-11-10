@@ -1121,6 +1121,8 @@
       "outputHeading": "المخرجات",
       "noOutput": "لا توجد مخرجات",
       "archivedSession": "تمت أرشفة الجلسة",
+      "sessionDetached": "تم نقل الجلسة إلى المستوى الأعلى",
+      "sessionDetaching": "جارٍ نقل الجلسة إلى المستوى الأعلى",
       "appAskedReport": "طلب التطبيق من Claude الإبلاغ بالنتائج",
       "startedByClaudeFrom": "بدأها Claude من",
       "startedByClaude": "بدأها Claude من جلسة أخرى",

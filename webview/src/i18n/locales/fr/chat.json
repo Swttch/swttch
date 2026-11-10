@@ -1081,6 +1081,8 @@
       "outputHeading": "Sortie",
       "noOutput": "Aucune sortie",
       "archivedSession": "Session archivée",
+      "sessionDetached": "Session déplacée au premier niveau",
+      "sessionDetaching": "Déplacement de la session au premier niveau",
       "appAskedReport": "L’application a demandé à Claude de faire un compte rendu",
       "startedByClaudeFrom": "Démarrée par Claude depuis",
       "startedByClaude": "Démarrée par Claude depuis une autre session",

@@ -1077,6 +1077,8 @@
       "outputHeading": "Output",
       "noOutput": "No output",
       "archivedSession": "Archived session",
+      "sessionDetached": "Moved session to top level",
+      "sessionDetaching": "Moving session to top level",
       "appAskedReport": "The app asked Claude to report back",
       "startedByClaudeFrom": "Started by Claude from",
       "startedByClaude": "Started by Claude from another session",

@@ -1097,6 +1097,8 @@
       "outputHeading": "Вывод",
       "noOutput": "Нет вывода",
       "archivedSession": "Сеанс заархивирован",
+      "sessionDetached": "Сеанс перемещён на верхний уровень",
+      "sessionDetaching": "Перемещение сеанса на верхний уровень",
       "appAskedReport": "Приложение попросило Claude сообщить о результатах",
       "startedByClaudeFrom": "Запущено Claude из сеанса",
       "startedByClaude": "Запущено Claude из другого сеанса",

@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { ChevronRightIcon, ClipboardDocumentIcon } from '@heroicons/react/20/solid';
-import { getAdapter } from '@/adapters';
-import { ClientEnv } from '@/shared';
 import { useTranslation } from '@/i18n';
 import { openChatFile } from '@/utils/openChatFile';
 import type { LoadedMessageDto } from '../../../types';
@@ -17,6 +15,9 @@ import { runningActivity } from './streamingActivity';
 import { FileChangeDetail } from './FileChangeDetail';
 import { useDesktopSession } from '@/hooks/useDesktopSession';
 import { DesktopSessionLink } from '../message-renderers/components/DesktopSessionLink';
+import { StartedSessionLink, sessionLinkProps } from '../message-renderers/components/StartedSessionLink';
+import { isCliSessionId, startedSessionOf } from '../message-renderers/utils/startedSessions';
+import { useWorkingDirOrNull } from '@/contexts/WorkingDirContext';
 import { StreamingMessage } from '../StreamingMessage';
 import { parseSessionDelivery } from '../message-renderers/ToolRenderers/SendMessageRenderer';
 import './prose.css';
@@ -453,6 +454,14 @@ function RowMeta({ call, meta }: { call: ToolCall; meta?: string }) {
   // The session a message came from is a way into that session, named by the title it has now.
   const fromInput = call.toolUse.input?.from;
   const from = toolKindOf(call) === 'receivedMessage' && typeof fromInput === 'string' ? fromInput : '';
+  // The session-management MCP names the sender by its CLI session: a way in when this conversation started it.
+  if (isCliSessionId(from)) {
+    return (
+      <span className={`ms-2 ${LINK_TEXT}`}>
+        <StartedSessionLink id={from} plain>{shown}</StartedSessionLink>
+      </span>
+    );
+  }
   if (from.startsWith('local_')) {
     return (
       <span className={`ms-2 ${LINK_TEXT}`}>
@@ -468,19 +477,18 @@ function StartedSessionCard({ call }: { call: ToolCall }) {
   const { t } = useTranslation('chat');
   const title = typeof call.toolUse.input?.title === 'string' ? (call.toolUse.input.title as string) : '';
   // The answer names the session it started; Desktop's own file for it says whether it is waiting for the person.
-  const startedId = /session_id:\s*(local_[\w-]+)/.exec(toolResultText(call.toolUse.tool_result as LoadedMessageDto | undefined))?.[1] ?? '';
+  const answer = toolResultText(call.toolUse.tool_result as LoadedMessageDto | undefined);
+  const startedId = /session_id:\s*(local_[\w-]+)/.exec(answer)?.[1] ?? '';
   const session = useDesktopSession(startedId, startedId !== '');
+  // The session-management MCP answers with the CLI session itself and the folder it runs in, so there is
+  // nothing to look up. A session started without a folder of its own runs in this conversation's folder.
+  const workingDirectory = useWorkingDirOrNull()?.workingDirectory ?? undefined;
+  const own = startedId === '' ? startedSessionOf(answer, call.toolUse.input as Record<string, unknown> | undefined) : undefined;
   const awaiting = session?.awaitingPerson === true;
-  const sessionId = session?.cliSessionId;
-  const href = sessionId ? `${window.location.origin}/sessions/${sessionId}${session?.cwd ? `?workingDir=${encodeURIComponent(session.cwd)}` : ''}` : undefined;
+  const sessionId = session?.cliSessionId ?? own?.sessionId;
+  const cwd = session?.cwd ?? own?.cwd ?? (own ? workingDirectory : undefined);
   // The card is a way into the session it names: in a browser a link that opens it in a new tab, in the IDE the adapter opens it.
-  const goTo = (event: React.MouseEvent) => {
-    if (!sessionId) return;
-    const adapter = getAdapter();
-    if (adapter.type === ClientEnv.BROWSER) return;
-    event.preventDefault();
-    adapter.openSession(sessionId, session?.cwd).catch(() => toast.error(t('transcript.tools.openSessionFailed')));
-  };
+  const { href, onClick: goTo } = sessionLinkProps(sessionId ? { sessionId, cwd } : undefined);
   return (
     <div className="px-4 py-[11px]" data-transcript-started-session>
       <a

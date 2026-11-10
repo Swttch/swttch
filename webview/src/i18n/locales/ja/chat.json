@@ -1065,6 +1065,8 @@
       "outputHeading": "出力",
       "noOutput": "出力なし",
       "archivedSession": "セッションをアーカイブしました",
+      "sessionDetached": "セッションを最上位に移動しました",
+      "sessionDetaching": "セッションを最上位に移動中…",
       "appAskedReport": "アプリが Claude に報告を求めました",
       "startedByClaudeFrom": "Claude が次のセッションから開始：",
       "startedByClaude": "別のセッションから Claude が開始",

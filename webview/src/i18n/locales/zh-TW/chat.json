@@ -1065,6 +1065,8 @@
       "outputHeading": "輸出",
       "noOutput": "無輸出",
       "archivedSession": "已封存工作階段",
+      "sessionDetached": "已將工作階段移至最上層",
+      "sessionDetaching": "正在將工作階段移至最上層",
       "appAskedReport": "應用程式請 Claude 回報結果",
       "startedByClaudeFrom": "Claude 從以下工作階段啟動",
       "startedByClaude": "Claude 從另一個工作階段啟動",

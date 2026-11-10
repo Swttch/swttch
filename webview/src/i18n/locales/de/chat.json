@@ -1073,6 +1073,8 @@
       "outputHeading": "Ausgabe",
       "noOutput": "Keine Ausgabe",
       "archivedSession": "Sitzung archiviert",
+      "sessionDetached": "Sitzung auf oberste Ebene verschoben",
+      "sessionDetaching": "Sitzung wird auf die oberste Ebene verschoben",
       "appAskedReport": "Die App hat Claude um eine Rückmeldung gebeten",
       "startedByClaudeFrom": "Von Claude gestartet aus",
       "startedByClaude": "Von Claude aus einer anderen Sitzung gestartet",
