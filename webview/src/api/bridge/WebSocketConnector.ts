@@ -2,8 +2,10 @@
 
 import type { Connector, RawMessageHandler, ConnectionChangeHandler } from './Connector';
 import { detectRuntime, isJetBrains } from '../../config/environment';
+import { LongPollSocket } from './LongPollSocket';
 import {
   authSubprotocols,
+  getAuthToken,
   ensureAuthTokenReady,
   hasPairCode,
   getPairingStatus,
@@ -57,6 +59,12 @@ export class WebSocketConnector implements Connector {
   private livenessTimer: ReturnType<typeof setInterval> | null = null;
   /** Connection attempts in a row that ended without the socket ever opening. */
   private failedAttempts = 0;
+  /**
+   * How the control channel travels. Starts as a WebSocket and moves to
+   * long-polling, for the rest of this page's life, only when
+   * [detectBlockedWebSocket] proves WebSockets cannot open here.
+   */
+  private transport: 'websocket' | 'long-poll' = 'websocket';
 
   get isConnected(): boolean {
     return this.connected;
@@ -139,7 +147,17 @@ export class WebSocketConnector implements Connector {
 
     // Carry the per-launch auth token as the `ccg-auth` subprotocol so the
     // backend's upgrade handler accepts the control channel (Phase 1 requires it).
-    const ws = new WebSocket(wsUrl, authSubprotocols());
+    // Once WebSockets are known to be blocked for this page, the same channel
+    // runs over long-polling instead; LongPollSocket is shaped like a WebSocket,
+    // so everything below drives either one.
+    const ws =
+      this.transport === 'long-poll'
+        ? (new LongPollSocket(
+            `${window.location.protocol}//${window.location.host}`,
+            `env=${env}${panelParam}`,
+            getAuthToken(),
+          ) as unknown as WebSocket)
+        : new WebSocket(wsUrl, authSubprotocols());
     this.ws = ws;
     let opened = false;
 
@@ -215,7 +233,10 @@ export class WebSocketConnector implements Connector {
       this.ws = null;
       this.connected = false;
       this.notifyConnectionChange(false);
-      if (!opened) this.noteFailedAttempt();
+      if (!opened) {
+        this.noteFailedAttempt();
+        this.detectBlockedWebSocket();
+      }
 
       // 자동 재연결 (disposed 되지 않은 경우만)
       this.scheduleReconnect();
@@ -230,6 +251,31 @@ export class WebSocketConnector implements Connector {
         onFirstConnect = undefined;
       }
     };
+  }
+
+  /**
+   * After a WebSocket that never opened, ask the backend over plain HTTP whether
+   * it is there. If it answers, WebSockets are what is broken, not the backend —
+   * IntelliJ 2026.3 Remote Development fails every WebSocket inside the panel's
+   * browser while proxying its HTTP (#582) — so this page switches to
+   * long-polling for good. If it does not answer, the backend is down and the
+   * ordinary WebSocket retry stays in charge.
+   */
+  private detectBlockedWebSocket(): void {
+    if (this.transport !== 'websocket') return;
+    fetch('/version', { cache: 'no-store' }).then(
+      (res) => {
+        if (!res.ok || this.transport !== 'websocket') return;
+        console.warn(
+          '[WebSocketConnector] WebSocket could not open but the backend answers HTTP — ' +
+            'switching this page to long-polling.'
+        );
+        this.transport = 'long-poll';
+      },
+      () => {
+        // Backend unreachable: nothing to learn about WebSockets.
+      }
+    );
   }
 
   /**
