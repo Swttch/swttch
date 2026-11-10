@@ -458,6 +458,38 @@
       "refreshVersion": "Actualiser la version",
       "refresh": "Actualiser"
     },
+    "dependencies": {
+      "title": "Dépendances",
+      "description": "Programmes utilisés par cette application et installés séparément sur cet ordinateur.",
+      "install": "Installer",
+      "installing": "Installation…",
+      "notInstalled": "Non installé",
+      "extendKit": {
+        "description": "Fait fonctionner la saisie vocale, la lecture à voix haute et le panneau d'utilisation."
+      },
+      "sessionMcp": {
+        "description": "Outils MCP qui permettent à Claude de démarrer de nouvelles sessions Claude Code et de retrouver, contacter, arrêter et archiver vos autres sessions. Tant qu'il est installé, il est rattaché à chaque session Claude Code démarrée par cette application et se met à jour tout seul dès qu'une nouvelle version sort.",
+        "package": {
+          "installed": "Installé",
+          "updated": "Mis à jour",
+          "failed": "Installation impossible",
+          "dismiss": "Fermer",
+          "remove": "Supprimer",
+          "removed": "Supprimé",
+          "removeFailed": "Suppression impossible",
+          "installConfirmTitle": "Installer le MCP de gestion des sessions ?",
+          "installConfirmMessage": "Cela installe {{packageName}} globalement sur cet ordinateur. Une fois installé, il est rattaché à chaque session Claude Code démarrée par cette application, et ses outils occupent une partie du contexte de Claude. Il est tenu à jour automatiquement.",
+          "removeConfirmTitle": "Supprimer le MCP de gestion des sessions ?",
+          "removeConfirmMessage": "Il est supprimé de cet ordinateur et n'est plus rattaché aux nouveaux processus Claude. Vous pouvez le réinstaller à tout moment."
+        }
+      },
+      "node": {
+        "description": "L'environnement d'exécution sur lequel tourne le backend de cette application."
+      },
+      "cloudflared": {
+        "description": "Ouvre le tunnel distant. Son installation vous est proposée la première fois que vous activez le tunnel."
+      }
+    },
     "links": {
       "title": "Liens",
       "documentation": "Documentation",

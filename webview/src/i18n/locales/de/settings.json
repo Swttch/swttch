@@ -458,6 +458,38 @@
       "refreshVersion": "Version aktualisieren",
       "refresh": "Aktualisieren"
     },
+    "dependencies": {
+      "title": "Abhängigkeiten",
+      "description": "Programme, die diese App nutzt und die separat auf diesem Computer installiert werden.",
+      "install": "Installieren",
+      "installing": "Wird installiert…",
+      "notInstalled": "Nicht installiert",
+      "extendKit": {
+        "description": "Führt Spracheingabe, Vorlesen und das Nutzungs-Panel aus."
+      },
+      "sessionMcp": {
+        "description": "MCP-Tools, mit denen Claude neue Claude-Code-Sitzungen starten und Ihre anderen Sitzungen finden, anschreiben, anhalten und archivieren kann. Solange es installiert ist, wird es an jede Claude-Code-Sitzung angehängt, die diese App startet, und aktualisiert sich selbst, sobald eine neuere Version erscheint.",
+        "package": {
+          "installed": "Installiert",
+          "updated": "Aktualisiert",
+          "failed": "Installation fehlgeschlagen",
+          "dismiss": "Schließen",
+          "remove": "Entfernen",
+          "removed": "Entfernt",
+          "removeFailed": "Entfernen fehlgeschlagen",
+          "installConfirmTitle": "MCP für Sitzungsverwaltung installieren?",
+          "installConfirmMessage": "Dies installiert {{packageName}} global auf diesem Computer. Nach der Installation wird es an jede Claude-Code-Sitzung angehängt, die diese App startet, und seine Tools belegen einen Teil des Kontexts von Claude. Es wird automatisch aktuell gehalten.",
+          "removeConfirmTitle": "MCP für Sitzungsverwaltung entfernen?",
+          "removeConfirmMessage": "Es wird von diesem Computer entfernt und nicht mehr an neue Claude-Prozesse angehängt. Sie können es jederzeit erneut installieren."
+        }
+      },
+      "node": {
+        "description": "Die Laufzeitumgebung, auf der das Backend dieser App läuft."
+      },
+      "cloudflared": {
+        "description": "Öffnet den Remote-Tunnel. Beim ersten Einschalten des Tunnels werden Sie gefragt, ob es installiert werden soll."
+      }
+    },
     "links": {
       "title": "Links",
       "documentation": "Dokumentation",

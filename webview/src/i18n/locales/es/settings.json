@@ -458,6 +458,38 @@
       "refreshVersion": "Actualizar versión",
       "refresh": "Actualizar"
     },
+    "dependencies": {
+      "title": "Dependencias",
+      "description": "Programas que usa esta aplicación y que se instalan por separado en este equipo.",
+      "install": "Instalar",
+      "installing": "Instalando…",
+      "notInstalled": "No instalado",
+      "extendKit": {
+        "description": "Ejecuta la entrada de voz, la lectura en voz alta y el panel de uso."
+      },
+      "sessionMcp": {
+        "description": "Herramientas MCP que permiten a Claude iniciar nuevas sesiones de Claude Code y buscar, escribir, detener y archivar tus otras sesiones. Mientras está instalado, se conecta a cada sesión de Claude Code que inicia esta aplicación y se actualiza solo cuando sale una versión nueva.",
+        "package": {
+          "installed": "Instalado",
+          "updated": "Actualizado",
+          "failed": "No se pudo instalar",
+          "dismiss": "Cerrar",
+          "remove": "Eliminar",
+          "removed": "Eliminado",
+          "removeFailed": "No se pudo eliminar",
+          "installConfirmTitle": "¿Instalar el MCP de gestión de sesiones?",
+          "installConfirmMessage": "Esto instala {{packageName}} de forma global en este equipo. Una vez instalado, se conecta a cada sesión de Claude Code que inicia esta aplicación, y sus herramientas ocupan parte del contexto de Claude. Se mantiene actualizado automáticamente.",
+          "removeConfirmTitle": "¿Quitar el MCP de gestión de sesiones?",
+          "removeConfirmMessage": "Se elimina de este equipo y deja de conectarse a los procesos de Claude nuevos. Puedes volver a instalarlo cuando quieras."
+        }
+      },
+      "node": {
+        "description": "El entorno de ejecución sobre el que funciona el backend de esta aplicación."
+      },
+      "cloudflared": {
+        "description": "Abre el túnel remoto. Se te pedirá instalarlo la primera vez que actives el túnel."
+      }
+    },
     "links": {
       "title": "Enlaces",
       "documentation": "Documentación",

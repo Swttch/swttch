@@ -454,6 +454,38 @@
       "refreshVersion": "刷新版本",
       "refresh": "刷新"
     },
+    "dependencies": {
+      "title": "依赖项",
+      "description": "此应用使用的、需要在此电脑上单独安装的程序。",
+      "install": "安装",
+      "installing": "正在安装…",
+      "notInstalled": "未安装",
+      "extendKit": {
+        "description": "用于运行语音输入、朗读和用量面板。"
+      },
+      "sessionMcp": {
+        "description": "让 Claude 启动新的 Claude Code 会话，并查找、发送消息给、停止和归档你的其他会话的 MCP 工具。安装后，它会接入此应用启动的每个 Claude Code 会话，并在有新版本时自动更新。",
+        "package": {
+          "installed": "已安装",
+          "updated": "已更新",
+          "failed": "无法安装",
+          "dismiss": "关闭",
+          "remove": "删除",
+          "removed": "已删除",
+          "removeFailed": "无法删除",
+          "installConfirmTitle": "安装会话管理 MCP？",
+          "installConfirmMessage": "这会在此电脑上全局安装 {{packageName}}。安装后，它会接入此应用启动的每个 Claude Code 会话，其工具会占用 Claude 的一部分上下文。它会自动保持最新。",
+          "removeConfirmTitle": "移除会话管理 MCP？",
+          "removeConfirmMessage": "它会从此电脑中移除，并且不再接入新启动的 Claude 进程。你可以随时重新安装。"
+        }
+      },
+      "node": {
+        "description": "此应用的后端所运行的运行时。"
+      },
+      "cloudflared": {
+        "description": "用于打开远程隧道。首次开启隧道时会询问是否安装。"
+      }
+    },
     "links": {
       "title": "链接",
       "documentation": "文档",

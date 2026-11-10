@@ -1,4 +1,4 @@
-import { updateInstalledExtendKit } from './core/extend-kit-update';
+import { updateInstalledExtendKit, updateInstalledSessionMcp } from './core/extend-kit-update';
 import { startCliAutoUpdate } from './core/cli-auto-update';
 import { createLoopbackRequest } from './ws/loopback-request';
 import { execFileSync, execSync } from 'child_process';
@@ -689,6 +689,9 @@ async function main() {
   // Do not delay readiness for the optional companion's update.
   void updateInstalledExtendKit().then(updated => {
     if (updated) connections.broadcastToAll(MessageType.EXTEND_KIT_UPDATED, {});
+  });
+  void updateInstalledSessionMcp().then(updated => {
+    if (updated) connections.broadcastToAll(MessageType.SESSION_MCP_UPDATED, {});
   });
   startCliAutoUpdate(
     createLoopbackRequest(connections, bridges, handleMessage),

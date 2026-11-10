@@ -31,6 +31,7 @@ import { renamedSessionTitle } from './features/sessionRenamedReply';
 import { swttchEntrypointName } from './features/sessionEntrypoint';
 import { MessageType, SessionActivity } from '../shared';
 import { ingestRateLimitWindows } from './handlers/getUsage';
+import { SESSION_MCP_AREAS, resolveInstalledSessionMcp, type InstalledSessionMcp } from './session-mcp';
 
 // Tracks files Claude edits so the IDE can be told to reload them once the
 // edit completes on disk. Shared across sessions — tool_use ids are unique.
@@ -501,18 +502,26 @@ export function buildEntrypointEnv(
  * `SWTTCH_SESSION_MCP_AREAS` (comma-separated area names, default all). Area names that are not
  * plain identifiers are dropped.
  */
-/** The areas the session-management MCP serves, one server each; see packages/session-mcp (Swttch Desktop). */
-const SESSION_MCP_AREAS = ['session_mgmt', 'session', 'sidebar', 'window', 'view', 'host', 'pr', 'settings', 'directory', 'connectors', 'turn'] as const;
-
+/**
+ * The other way in: the user installed `@swttch/session-manager-mcp` from Settings > About >
+ * Dependencies, which is what turns it on. The host variable wins when both exist, so Swttch Desktop's own copy is never
+ * replaced by a global install. The server is run under THIS backend's Node, like the extend kit.
+ */
 export function buildSessionMcpArgs(
   inherited: NodeJS.ProcessEnv,
   sessionId: string,
+  installed?: InstalledSessionMcp | null,
 ): string[] {
-  const bin = inherited.SWTTCH_SESSION_MCP_BIN;
+  const bin = inherited.SWTTCH_SESSION_MCP_BIN || installed?.entry;
   if (!bin) return [];
-  const requested = inherited.SWTTCH_SESSION_MCP_AREAS
-    ? inherited.SWTTCH_SESSION_MCP_AREAS.split(',').map((a) => a.trim())
-    : [...SESSION_MCP_AREAS];
+  const nodeCommand = inherited.SWTTCH_SESSION_MCP_BIN
+    ? inherited.SWTTCH_SESSION_MCP_NODE || 'node'
+    : process.execPath;
+  const requested = inherited.SWTTCH_SESSION_MCP_BIN
+    ? inherited.SWTTCH_SESSION_MCP_AREAS
+      ? inherited.SWTTCH_SESSION_MCP_AREAS.split(',').map((a) => a.trim())
+      : [...SESSION_MCP_AREAS]
+    : installed!.areas;
   const areas = requested.filter((a) => /^[a-z][a-z0-9_]*$/.test(a));
   if (areas.length === 0) return [];
   const env: Record<string, string> = { SWTTCH_SESSION_ID: sessionId };
@@ -523,7 +532,7 @@ export function buildSessionMcpArgs(
   const mcpServers: Record<string, unknown> = {};
   for (const area of areas) {
     mcpServers[`swttch_${area}`] = {
-      command: inherited.SWTTCH_SESSION_MCP_NODE || 'node',
+      command: nodeCommand,
       args: [bin, '--area', area],
       env,
     };
@@ -869,7 +878,12 @@ export async function ensureClaudeProcess(
   console.error('[node-backend]', `Session: ${targetSessionId} (${sessionFlag})`);
 
   const args = buildClaudeArgs(sessionFlag, targetSessionId, inputMode, model, effortLevel, thinkingDisplay);
-  args.push(...buildSessionMcpArgs(process.env, targetSessionId));
+  // An installed-and-enabled session MCP is looked up per spawn: the setting is the user's, and a
+  // change must apply to the next CLI that starts without restarting this backend.
+  const installedSessionMcp = process.env.SWTTCH_SESSION_MCP_BIN
+    ? null
+    : await resolveInstalledSessionMcp(workingDir).catch(() => null);
+  args.push(...buildSessionMcpArgs(process.env, targetSessionId, installedSessionMcp));
 
   console.error('[node-backend]', `Command: ${Claude.command} ${args.join(' ')}`);
 

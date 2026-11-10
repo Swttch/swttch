@@ -458,6 +458,38 @@
       "refreshVersion": "Atualizar versão",
       "refresh": "Atualizar"
     },
+    "dependencies": {
+      "title": "Dependências",
+      "description": "Programas que este aplicativo usa e que são instalados separadamente neste computador.",
+      "install": "Instalar",
+      "installing": "Instalando…",
+      "notInstalled": "Não instalado",
+      "extendKit": {
+        "description": "Executa a entrada por voz, a leitura em voz alta e o painel de uso."
+      },
+      "sessionMcp": {
+        "description": "Ferramentas MCP que permitem ao Claude iniciar novas sessões do Claude Code e encontrar, enviar mensagens, interromper e arquivar suas outras sessões. Enquanto está instalado, ele é anexado a cada sessão do Claude Code que este aplicativo inicia e se atualiza sozinho quando sai uma versão nova.",
+        "package": {
+          "installed": "Instalado",
+          "updated": "Atualizado",
+          "failed": "Não foi possível instalar",
+          "dismiss": "Fechar",
+          "remove": "Remover",
+          "removed": "Removido",
+          "removeFailed": "Não foi possível remover",
+          "installConfirmTitle": "Instalar o MCP de gerenciamento de sessões?",
+          "installConfirmMessage": "Isso instala {{packageName}} globalmente neste computador. Depois de instalado, ele é anexado a cada sessão do Claude Code que este aplicativo inicia, e suas ferramentas ocupam parte do contexto do Claude. Ele é mantido atualizado automaticamente.",
+          "removeConfirmTitle": "Remover o MCP de gerenciamento de sessões?",
+          "removeConfirmMessage": "Ele é removido deste computador e deixa de ser anexado a novos processos do Claude. Você pode instalá-lo novamente quando quiser."
+        }
+      },
+      "node": {
+        "description": "O ambiente de execução em que o backend deste aplicativo roda."
+      },
+      "cloudflared": {
+        "description": "Abre o túnel remoto. Você será solicitado a instalá-lo na primeira vez que ativar o túnel."
+      }
+    },
     "links": {
       "title": "Links",
       "documentation": "Documentação",

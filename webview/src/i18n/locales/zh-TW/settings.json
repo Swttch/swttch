@@ -454,6 +454,38 @@
       "refreshVersion": "重新整理版本",
       "refresh": "重新整理"
     },
+    "dependencies": {
+      "title": "相依項目",
+      "description": "此應用程式使用的、需要在此電腦上另外安裝的程式。",
+      "install": "安裝",
+      "installing": "正在安裝…",
+      "notInstalled": "未安裝",
+      "extendKit": {
+        "description": "用於執行語音輸入、朗讀和用量面板。"
+      },
+      "sessionMcp": {
+        "description": "讓 Claude 啟動新的 Claude Code 工作階段，並尋找、傳送訊息給、停止和封存你的其他工作階段的 MCP 工具。安裝後，它會接上此應用程式啟動的每個 Claude Code 工作階段，並在有新版本時自動更新。",
+        "package": {
+          "installed": "已安裝",
+          "updated": "已更新",
+          "failed": "無法安裝",
+          "dismiss": "關閉",
+          "remove": "刪除",
+          "removed": "已刪除",
+          "removeFailed": "無法刪除",
+          "installConfirmTitle": "安裝工作階段管理 MCP？",
+          "installConfirmMessage": "這會在此電腦上全域安裝 {{packageName}}。安裝後，它會接上此應用程式啟動的每個 Claude Code 工作階段，其工具會佔用 Claude 的一部分上下文。它會自動保持最新。",
+          "removeConfirmTitle": "移除工作階段管理 MCP？",
+          "removeConfirmMessage": "它會從此電腦移除，且不再接上新啟動的 Claude 程序。你可以隨時重新安裝。"
+        }
+      },
+      "node": {
+        "description": "此應用程式的後端所執行的執行環境。"
+      },
+      "cloudflared": {
+        "description": "用於開啟遠端隧道。首次開啟隧道時會詢問是否安裝。"
+      }
+    },
     "links": {
       "title": "連結",
       "documentation": "文件",

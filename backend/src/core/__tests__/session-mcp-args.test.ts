@@ -47,4 +47,29 @@ describe('buildSessionMcpArgs', () => {
     const args = buildSessionMcpArgs({ SWTTCH_SESSION_MCP_BIN: '/x/cli.js', SWTTCH_SESSION_MCP_AREAS: 'sidebar,../evil, a b' }, 'sess-4');
     expect(Object.keys(JSON.parse(args[1]).mcpServers)).toEqual(['swttch_sidebar']);
   });
+
+  describe('an installed @swttch/session-manager-mcp', () => {
+    const installed = { entry: '/g/node_modules/@swttch/session-manager-mcp/src/cli.js', areas: ['session_mgmt', 'pr'] };
+
+    it('runs the installed entry under this backend\'s Node, one server per chosen area', () => {
+      const args = buildSessionMcpArgs({ CCG_HOME: '/data' }, 'sess-9', installed);
+      const config = JSON.parse(args[1]);
+      expect(Object.keys(config.mcpServers)).toEqual(['swttch_session_mgmt', 'swttch_pr']);
+      expect(config.mcpServers.swttch_pr.command).toBe(process.execPath);
+      expect(config.mcpServers.swttch_pr.args).toEqual([installed.entry, '--area', 'pr']);
+      expect(config.mcpServers.swttch_pr.env).toMatchObject({ SWTTCH_SESSION_ID: 'sess-9', CCG_HOME: '/data' });
+    });
+
+    it('adds nothing when no area is chosen', () => {
+      expect(buildSessionMcpArgs({}, 'sess-9', { entry: installed.entry, areas: [] })).toEqual([]);
+    });
+
+    it('lets the host variable win, so Swttch Desktop\'s own copy is never replaced', () => {
+      const args = buildSessionMcpArgs({ SWTTCH_SESSION_MCP_BIN: '/host/cli.js' }, 'sess-9', installed);
+      const config = JSON.parse(args[1]);
+      expect(config.mcpServers.swttch_session_mgmt.args[0]).toBe('/host/cli.js');
+      expect(Object.keys(config.mcpServers)).toHaveLength(11);
+    });
+  });
 });
+

@@ -118,7 +118,8 @@ const SETTINGS_ENV_CAPABILITY = 'settings.env';
  */
 const CLOSE_TIMEOUT_MS = 5_000;
 
-let cachedRoots: string[] | null = null;
+/** Candidate roots per executable name; one lookup serves every package that ships that name. */
+const cachedRootsByBinary = new Map<string, string[]>();
 let cachedEntry: string | null = null;
 let cachedExtEntry: string | null = null;
 let cachedExtCapabilities: string[] | null = null;
@@ -178,8 +179,9 @@ function lastLine(stdout: string): string | null {
  * have been put there by hand, or before this backend had an opinion. A manager
  * that is not installed simply makes its command fail.
  */
-async function candidateRoots(): Promise<string[]> {
-  if (cachedRoots) return cachedRoots;
+async function candidateRoots(binary: string = CCB_BINARY): Promise<string[]> {
+  const cached = cachedRootsByBinary.get(binary);
+  if (cached) return cached;
 
   const roots: string[] = [];
 
@@ -195,7 +197,7 @@ async function candidateRoots(): Promise<string[]> {
   // `volta which` resolves to the real executable rather than the shared shim
   // that `which` returns, and the package root is two levels above its bin.
   try {
-    const { stdout } = await new Command('volta', ['which', CCB_BINARY], {
+    const { stdout } = await new Command('volta', ['which', binary], {
       timeout: 15000,
       shell: ShellKind.LoginInteractive,
     }).exec();
@@ -291,7 +293,7 @@ async function candidateRoots(): Promise<string[]> {
   // this project's rule is to avoid shell tokenisation, and a script full of
   // quotes is exactly what breaks across cmd / PowerShell / bash.
   try {
-    const ccbPath = await new Command('ccb').which();
+    const ccbPath = await new Command(binary).which();
     if (ccbPath) {
       const real = await realpath(ccbPath);
       // …/node_modules/@swttch/extend-kit/dist/cli/index.js → …/node_modules
@@ -350,7 +352,7 @@ async function candidateRoots(): Promise<string[]> {
     }
   }
 
-  cachedRoots = roots;
+  cachedRootsByBinary.set(binary, roots);
   return roots;
 }
 
@@ -774,13 +776,25 @@ export async function probeSpeechToTextAvailable(workingDir?: string): Promise<b
  * than the one dictation actually loads.
  */
 export async function getExtendKitInstallation(): Promise<{ root: string; version: string } | null> {
-  for (const root of await candidateRoots()) {
+  return getGlobalPackageInstallation(EXTEND_KIT_PACKAGE, CCB_BINARY);
+}
+
+/**
+ * The same lookup for any globally installed package, found through one of the executables it
+ * provides (volta and `which` can only be asked by executable name). Used by companions that are
+ * installed the way the extend kit is: by the user, outside this backend's own bundle.
+ */
+export async function getGlobalPackageInstallation(
+  packageName: string,
+  binary: string,
+): Promise<{ root: string; version: string } | null> {
+  for (const root of await candidateRoots(binary)) {
     try {
       // Read the manifest as a plain file rather than resolving it as a subpath:
       // the package's `exports` map does not list "./package.json" (few do), so
       // asking node to resolve it throws ERR_PACKAGE_PATH_NOT_EXPORTED and an
       // installed kit reports as missing.
-      const manifest = `${root}${sep}${EXTEND_KIT_PACKAGE.split('/').join(sep)}${sep}package.json`;
+      const manifest = `${root}${sep}${packageName.split('/').join(sep)}${sep}package.json`;
       const { version } = JSON.parse(await readFile(manifest, 'utf8')) as { version?: string };
       if (typeof version === 'string' && version) return { root, version };
     } catch {
@@ -794,9 +808,14 @@ export async function getExtendKitVersion(): Promise<string | null> {
   return (await getExtendKitInstallation())?.version ?? null;
 }
 
+/** Forget where one executable's package was found, without touching the kit's other caches. */
+export function resetGlobalPackageRoots(binary: string): void {
+  cachedRootsByBinary.delete(binary);
+}
+
 /** Forget the cached resolution so a fresh install is picked up without a restart. */
 export function resetExtendKitCache(): void {
-  cachedRoots = null;
+  cachedRootsByBinary.clear();
   cachedEntry = null;
   cachedCapabilities = null;
   cachedExtEntry = null;

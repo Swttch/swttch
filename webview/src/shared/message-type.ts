@@ -309,6 +309,14 @@ export enum MessageType {
   GET_EXTEND_KIT_INFO = 'GET_EXTEND_KIT_INFO',
   /** Companion startup update completed. outbound backend→webview */
   EXTEND_KIT_UPDATED = 'EXTEND_KIT_UPDATED',
+  /** Installed and latest @swttch/session-manager-mcp versions, for the Dependencies section. An installed package behind the latest release starts updating on this lookup. Acks { packageName, installed, latest, updatable, updating }. inbound webview→backend */
+  GET_SESSION_MCP_INFO = 'GET_SESSION_MCP_INFO',
+  /** Install (or update) @swttch/session-manager-mcp globally. Only ever sent from the settings button the user confirmed. inbound webview→backend */
+  INSTALL_SESSION_MCP = 'INSTALL_SESSION_MCP',
+  /** Remove @swttch/session-manager-mcp from every global store that holds it. inbound webview→backend */
+  UNINSTALL_SESSION_MCP = 'UNINSTALL_SESSION_MCP',
+  /** An automatic update of the session-management MCP is over (at backend startup, or one a version lookup started), so the versions should be read again. outbound backend→webview */
+  SESSION_MCP_UPDATED = 'SESSION_MCP_UPDATED',
   /** Read whether the user has answered the one-time "use voice input?" question, and when. Resolves to accepted without asking when the kit is already installed. inbound webview→backend */
   GET_VOICE_PROMPT = 'GET_VOICE_PROMPT',
   /** Record that the one-time voice question was shown (`{ asked: true }`) or answered (`{ accepted }`). inbound webview→backend */
@@ -634,7 +642,7 @@ export enum MessageType {
   TUNNEL_STOP = 'TUNNEL_STOP',
   /** Read the current tunnel status. */
   GET_TUNNEL_STATUS = 'GET_TUNNEL_STATUS',
-  /** Read whether tunnel prerequisites (cloudflared, etc.) are satisfied. */
+  /** Read whether tunnel prerequisites (cloudflared, etc.) are satisfied. With { version: true } the ack also carries cloudflaredVersion, for the Dependencies list. */
   GET_TUNNEL_PREREQS = 'GET_TUNNEL_PREREQS',
   /** Install the cloudflared binary. */
   INSTALL_CLOUDFLARED = 'INSTALL_CLOUDFLARED',

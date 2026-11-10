@@ -458,6 +458,38 @@
       "refreshVersion": "Refresh version",
       "refresh": "Refresh"
     },
+    "dependencies": {
+      "title": "Dependencies",
+      "description": "Programs this app uses that are installed separately on this machine.",
+      "install": "Install",
+      "installing": "Installing…",
+      "notInstalled": "Not installed",
+      "extendKit": {
+        "description": "Runs voice input, read aloud and the usage panel."
+      },
+      "sessionMcp": {
+        "description": "MCP tools that let Claude start new Claude Code sessions and find, message, stop and archive your other ones. While installed, it is attached to every Claude Code session this app starts, and it updates itself when a newer version is out.",
+        "package": {
+          "installed": "Installed",
+          "updated": "Updated",
+          "failed": "Could not install",
+          "dismiss": "Dismiss",
+          "remove": "Remove",
+          "removed": "Removed",
+          "removeFailed": "Could not remove",
+          "installConfirmTitle": "Install the session-management MCP?",
+          "installConfirmMessage": "This runs a global package install of {{packageName}} on this machine. Once installed, it is attached to every Claude Code session this app starts, and its tools take up part of Claude's context. It is kept up to date automatically.",
+          "removeConfirmTitle": "Remove the session-management MCP?",
+          "removeConfirmMessage": "It is removed from this machine and no longer attached to new Claude processes. You can install it again at any time."
+        }
+      },
+      "node": {
+        "description": "The runtime this app's backend runs on."
+      },
+      "cloudflared": {
+        "description": "Opens the remote tunnel. You are asked to install it when you first turn the tunnel on."
+      }
+    },
     "links": {
       "title": "Links",
       "documentation": "Documentation",

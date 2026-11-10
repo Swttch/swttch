@@ -454,6 +454,38 @@
       "refreshVersion": "バージョンを更新",
       "refresh": "更新"
     },
+    "dependencies": {
+      "title": "依存関係",
+      "description": "このアプリが使用する、このコンピューターに別途インストールされるプログラムです。",
+      "install": "インストール",
+      "installing": "インストール中…",
+      "notInstalled": "未インストール",
+      "extendKit": {
+        "description": "音声入力、読み上げ、使用状況パネルを動かします。"
+      },
+      "sessionMcp": {
+        "description": "Claudeが新しいClaude Codeセッションを開始し、他のセッションの検索、メッセージ送信、停止、アーカイブを行えるようにするMCPツールです。インストールされている間は、このアプリが開始するすべてのClaude Codeセッションに接続され、新しいバージョンが出ると自動で更新されます。",
+        "package": {
+          "installed": "インストールしました",
+          "updated": "更新しました",
+          "failed": "インストールできませんでした",
+          "dismiss": "閉じる",
+          "remove": "削除",
+          "removed": "削除しました",
+          "removeFailed": "削除できませんでした",
+          "installConfirmTitle": "セッション管理MCPをインストールしますか？",
+          "installConfirmMessage": "このコンピューターに{{packageName}}をグローバルにインストールします。インストールすると、このアプリが開始するすべてのClaude Codeセッションに接続され、そのツールがClaudeのコンテキストの一部を占めます。自動的に最新版へ更新されます。",
+          "removeConfirmTitle": "セッション管理MCPを削除しますか？",
+          "removeConfirmMessage": "このコンピューターから削除し、新しく起動するClaudeプロセスには接続されなくなります。いつでも再インストールできます。"
+        }
+      },
+      "node": {
+        "description": "このアプリのバックエンドが動作するランタイムです。"
+      },
+      "cloudflared": {
+        "description": "リモートトンネルを開きます。トンネルを初めてオンにするときにインストールするか確認されます。"
+      }
+    },
     "links": {
       "title": "リンク",
       "documentation": "ドキュメント",

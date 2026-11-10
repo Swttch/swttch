@@ -88,6 +88,7 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   // Claude Code's official settings schema). See settings-migration.ts.
   uiLanguage: null,
   voice: {},
+  sessionMcp: { enabled: true, areas: ['session_mgmt', 'session'] },
   useCtrlEnterToSend: false,
   composerSendShortcut: null,
   composerSendShortcutCustom: null,
@@ -169,6 +170,7 @@ const COMMENT_MAP: Record<string, string> = {
   uiDirection: 'UI 미러링(레이아웃 방향): "ltr" | "rtl"',
   uiLanguage: 'GUI 인터페이스 표시 언어(예: "korean"). null이면 영어. Claude 응답 언어(language)와 무관',
   voice: '음성 입력 설정 중 공식 스키마에 없는 것들. speechLanguage: 말하는 언어의 BCP-47 코드(예: "ko"), 공식 language가 비었을 때만 쓰인다(VS Code 확장의 accessibility.voice.speechLanguage와 같은 자리). silenceTimeout: 말이 없을 때 녹음이 기다리는 초(1~15, 기본 15). 서비스가 15초 침묵이면 스스로 끊으므로 그 이상은 의미가 없다. enabled/mode/autoSubmit은 공식 키라 네이티브 settings.json에 있다. readAloudLanguage/readAloudVoice/readAloudSpeed: 답변을 소리로 읽을 때의 언어(예: "ko"), 목소리(예: "buttery"), 속도(0.7~1.5). null이면 각각 답변 글의 언어, Claude 계정(데스크탑)에 저장된 목소리, 계정에 저장된 속도를 따른다',
+  sessionMcp: '세션 관리 MCP(@swttch/session-manager-mcp)를 Claude CLI에 붙이는 방식. 패키지가 설치돼 있으면 CLI를 띄울 때 --mcp-config로 붙는다(설치와 버전은 설정 > 정보 > 의존성에서 다룬다). enabled: false로 두면 설치돼 있어도 붙이지 않는다. areas: 붙일 영역 이름 목록(session_mgmt, session, sidebar, window, view, host, pr, settings, directory, connectors, turn), 기본은 session_mgmt(있는 세션 다루기)와 session(새 세션 시작) 둘. 영역마다 서버가 하나이고 붙인 영역의 도구는 컨텍스트를 차지한다',
   useCtrlEnterToSend: '[레거시] true면 Ctrl/Cmd+Enter로 전송하고 Enter는 줄바꿈. false면 Enter로 전송. composerSendShortcut/composerNewlineShortcut이 비었을 때만 쓰인다',
   composerSendShortcut: '프롬프트를 보내는 키: "enter" | "modEnter"(Ctrl/Cmd+Enter) | "custom". null이면 useCtrlEnterToSend를 따른다',
   composerSendShortcutCustom: 'composerSendShortcut이 "custom"일 때 쓰는 조합(저장형, 예: "Meta+Enter")',
@@ -543,6 +545,21 @@ function validateSetting(key: string, value: unknown): string | null {
         return 'notificationSoundVolume must be an integer between 1 and 10';
       }
       break;
+    case 'sessionMcp': {
+      if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+        return 'sessionMcp must be an object';
+      }
+      const mcp = value as Record<string, unknown>;
+      if ('enabled' in mcp && typeof mcp.enabled !== 'boolean') {
+        return 'sessionMcp.enabled must be a boolean';
+      }
+      if ('areas' in mcp) {
+        if (!Array.isArray(mcp.areas) || !mcp.areas.every((a) => typeof a === 'string' && /^[a-z][a-z0-9_]*$/.test(a))) {
+          return 'sessionMcp.areas must be a list of area names';
+        }
+      }
+      break;
+    }
     case 'voice': {
       if (value === null || typeof value !== 'object' || Array.isArray(value)) {
         return 'voice must be an object';

@@ -11,6 +11,8 @@ interface VersionInfo {
   clientInfo: string | null;
   /** OS product name, version and build as resolved by the backend. Null when unknown. */
   osInfo: string | null;
+  /** Version of the Node.js the backend runs on. Null from a backend too old to report it. */
+  nodeVersion: string | null;
 }
 
 interface RawVersionResponse {
@@ -20,6 +22,7 @@ interface RawVersionResponse {
   requiresRestart?: boolean;
   clientInfo?: string | null;
   osInfo?: string | null;
+  nodeVersion?: string | null;
   error?: string | null;
 }
 
@@ -29,6 +32,7 @@ interface UseVersionInfoReturn {
   requiresRestart: boolean;
   clientInfo: string | null;
   osInfo: string | null;
+  nodeVersion: string | null;
   isLoading: boolean;
   refresh: () => Promise<void>;
 }
@@ -61,6 +65,7 @@ export function useVersionInfo(): UseVersionInfoReturn {
           requiresRestart: result.requiresRestart ?? true,
           clientInfo: result.clientInfo ?? null,
           osInfo: result.osInfo ?? null,
+          nodeVersion: result.nodeVersion ?? null,
         };
       }
       throw new Error(result?.error ?? 'Failed to load version info');
@@ -79,6 +84,7 @@ export function useVersionInfo(): UseVersionInfoReturn {
     requiresRestart: query.data?.requiresRestart ?? true,
     clientInfo: query.data?.clientInfo ?? null,
     osInfo: query.data?.osInfo ?? null,
+    nodeVersion: query.data?.nodeVersion ?? null,
     // isFetching (not isLoading) so the refresh spinner keeps spinning on manual
     // refetch, not just the very first load. Preserves the prior fetchVersion UX.
     isLoading: query.isFetching,

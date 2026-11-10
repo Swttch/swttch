@@ -356,6 +356,20 @@ describe('settings', () => {
       expect((await saveSettingToFile('voice', { speechLanguage: null })).status).toBe('ok');
     });
 
+    it('should accept a sessionMcp object with a boolean enabled and area names', async () => {
+      expect((await saveSettingToFile('sessionMcp', {})).status).toBe('ok');
+      expect((await saveSettingToFile('sessionMcp', { enabled: true, areas: ['session_mgmt', 'pr'] })).status).toBe('ok');
+      expect((await saveSettingToFile('sessionMcp', { enabled: false, areas: [] })).status).toBe('ok');
+    });
+
+    it('should reject a sessionMcp that is not an object, has a non-boolean enabled, or bad area names', async () => {
+      for (const bad of ['on', null, [], { enabled: 'yes' }, { areas: 'pr' }, { areas: ['../evil'] }, { areas: [1] }]) {
+        const result = await saveSettingToFile('sessionMcp', bad);
+        expect(result.status).toBe('error');
+        expect(result.error).toContain('sessionMcp');
+      }
+    });
+
     it('should reject a non-object voice', async () => {
       const result = await saveSettingToFile('voice', 'ko');
       expect(result.status).toBe('error');
@@ -756,6 +770,7 @@ describe('settings', () => {
         uiDirection: 'ltr',
         uiLanguage: null,
         voice: {},
+        sessionMcp: { enabled: true, areas: ['session_mgmt', 'session'] },
         useCtrlEnterToSend: false,
         composerSendShortcut: null,
         composerSendShortcutCustom: null,
@@ -901,6 +916,7 @@ export default {
         uiDirection: 'ltr',
         uiLanguage: null,
         voice: {},
+        sessionMcp: { enabled: true, areas: ['session_mgmt', 'session'] },
         useCtrlEnterToSend: false,
         composerSendShortcut: null,
         composerSendShortcutCustom: null,

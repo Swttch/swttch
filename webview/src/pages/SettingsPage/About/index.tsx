@@ -1,10 +1,11 @@
-import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import { SettingSection, SettingRow } from '../common';
 import { APP_NAME, REPO_URL, ISSUES_URL } from '@/config/app';
 import { useVersionInfo } from '@/hooks/useVersionInfo';
 import { useTranslation } from '@/i18n';
 import { CliUpdateControl } from './CliUpdateControl';
 import { CliAutoUpdateRow } from './CliAutoUpdateRow';
+import { VersionLine } from './VersionLine';
+import { DependenciesSection } from './Dependencies';
 
 export function AboutSettings() {
   const { t } = useTranslation('settings');
@@ -22,19 +23,12 @@ export function AboutSettings() {
         </SettingRow>
 
         <SettingRow label={t('about.versionInfo.cliVersion', { appName: APP_NAME })}>
-          <div className="flex items-center gap-2">
-            <CliUpdateControl />
-            <span className="text-sm text-text-secondary">{cliVersion ?? t('about.versionInfo.notDetected')}</span>
-            <button
-              onClick={refresh}
-              disabled={isLoading}
-              aria-label={t('about.versionInfo.refreshVersion')}
-              title={t('about.versionInfo.refresh')}
-              className="text-text-tertiary hover:text-text-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <ArrowPathIcon className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
+          <VersionLine
+            status={<CliUpdateControl />}
+            version={cliVersion ?? t('about.versionInfo.notDetected')}
+            onRefresh={() => void refresh()}
+            refreshing={isLoading}
+          />
         </SettingRow>
 
         <CliAutoUpdateRow />
@@ -53,6 +47,8 @@ export function AboutSettings() {
           </span>
         </SettingRow>
       </SettingSection>
+
+      <DependenciesSection />
 
       <SettingSection title={t('about.links.title')}>
         <SettingRow label={t('about.links.documentation')}>
