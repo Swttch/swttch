@@ -17,7 +17,7 @@ _最終更新: 2026-11-10_
 | [Android Studio の JCEF](android-studio-jcef.md) | Android Studio でチャット画面の代わりに案内パネルや例外が出る、またはウィンドウが空のとき |
 | [変更内容の画面の色](diff-colors-old-ide.md) | 2025.2 以前の IDE で変更内容の画面に色がつかないとき |
 | [Claude Desktop にセッションが表示されない](desktop-session-import.md) | プラグインで作成したセッションが Claude Desktop の Code タブに表示されないとき |
-| [CCG_HOME 設定後に設定・アカウントが初期化される](ccg-home-data-location.md) | `CCG_HOME` を設定していて、アップデート後に設定が初期値に戻る、または `swttch account` が保存済みアカウントなしと表示するとき |
+| [CCG_HOME 設定後にアカウント・ライセンスが初期化される](ccg-home-data-location.md) | `CCG_HOME` を設定していて、アップデート後に保存したアカウント、ライセンス、利用データの回答、予約したメッセージが消えたとき |
 
 ## ここにない問題の場合
 

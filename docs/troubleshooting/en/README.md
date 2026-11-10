@@ -17,7 +17,7 @@ Each document has the symptoms, the cause, how to fix it, and links to the relat
 | [Android Studio JCEF](android-studio-jcef.md) | Android Studio shows a guidance panel or an exception instead of the chat UI, or a blank window |
 | [Review screen colours](diff-colors-old-ide.md) | The review screen comes out with no colour on IDE 2025.2 and older |
 | [Plugin sessions missing from Claude Desktop](desktop-session-import.md) | Sessions you started in the plugin do not appear in the Claude Desktop Code tab |
-| [Settings and accounts look reset (CCG_HOME)](ccg-home-data-location.md) | You set `CCG_HOME`, and after updating your settings are back to defaults or `swttch account` shows no saved accounts |
+| [Settings and accounts look reset (CCG_HOME)](ccg-home-data-location.md) | You set `CCG_HOME`, and after updating your saved accounts, license, usage-data answer or scheduled messages are gone |
 
 ## If your problem is not here
 

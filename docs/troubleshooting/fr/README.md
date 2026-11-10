@@ -17,7 +17,7 @@ Chaque document présente les symptômes, la cause, la solution et des liens ver
 | [JCEF dans Android Studio](android-studio-jcef.md) | Android Studio affiche un panneau d'information ou une exception au lieu du chat, ou une fenêtre vide |
 | [Couleurs de l'écran de revue](diff-colors-old-ide.md) | L'écran de revue s'affiche sans couleur sur les IDE 2025.2 et antérieurs |
 | [Sessions absentes de Claude Desktop](desktop-session-import.md) | Les sessions créées dans le plugin n'apparaissent pas dans l'onglet Code de Claude Desktop |
-| [Réglages et comptes réinitialisés avec CCG_HOME](ccg-home-data-location.md) | Vous avez défini `CCG_HOME` et, après la mise à jour, les réglages sont revenus aux valeurs par défaut ou `swttch account` indique qu'aucun compte n'est enregistré |
+| [Comptes et licence réinitialisés avec CCG_HOME](ccg-home-data-location.md) | Vous avez défini `CCG_HOME` et, après la mise à jour, les comptes enregistrés, la licence, la réponse sur les données d'utilisation ou les messages programmés ont disparu |
 
 ## Si votre problème ne figure pas ici
 

@@ -17,7 +17,7 @@ Jedes Dokument enthält die Symptome, die Ursache, die Lösung und Links zu den 
 | [JCEF in Android Studio](android-studio-jcef.md) | Wenn Android Studio ein Hinweispanel oder eine Ausnahme statt der Chat-Oberfläche oder ein leeres Fenster zeigt |
 | [Farben der Prüfansicht](diff-colors-old-ide.md) | Die Prüfansicht kommt auf IDE 2025.2 und älter ohne Farbe |
 | [Sitzungen fehlen in Claude Desktop](desktop-session-import.md) | Im Plugin erstellte Sitzungen erscheinen nicht im Code-Tab von Claude Desktop |
-| [Einstellungen und Konten mit CCG_HOME zurückgesetzt](ccg-home-data-location.md) | Sie haben `CCG_HOME` gesetzt, und nach dem Update sind die Einstellungen wieder auf den Standardwerten oder `swttch account` meldet keine gespeicherten Konten |
+| [Konten und Lizenz mit CCG_HOME zurückgesetzt](ccg-home-data-location.md) | Sie haben `CCG_HOME` gesetzt, und nach dem Update fehlen gespeicherte Konten, Lizenz, Antwort zu Nutzungsdaten oder geplante Nachrichten |
 
 ## Wenn Ihr Problem hier nicht steht
 
