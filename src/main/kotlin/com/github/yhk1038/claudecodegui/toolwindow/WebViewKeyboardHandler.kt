@@ -40,6 +40,23 @@ class WebViewKeyboardHandler : CefKeyboardHandlerAdapter() {
             is_keyboard_shortcut.set(false)
         }
 
+        // WebStorm 263 reports the low byte of a character as its key code, so ě
+        // arrives as an Escape and Chromium drops it (#660). Type it ourselves
+        // and keep the event from reaching the page a second time.
+        val lost = WebViewKeyPolicy.discardedCharacter(
+            isCharEvent = event.type == CefKeyboardHandler.CefKeyEvent.EventType.KEYEVENT_CHAR,
+            keyCode = event.windows_key_code,
+            character = event.character.code
+        )
+        if (lost != null && browser != null) {
+            browser.executeJavaScript(
+                "document.execCommand('insertText', false, String.fromCodePoint($lost))",
+                browser.url,
+                0
+            )
+            return true
+        }
+
         // Return false to allow normal processing.
         return false
     }

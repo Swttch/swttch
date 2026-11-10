@@ -69,4 +69,27 @@ object WebViewKeyPolicy {
 
         return false
     }
+
+    /** Windows VK_ESCAPE, which is also the low byte of U+011B (ě). */
+    private const val VK_ESCAPE = 0x1B
+
+    /**
+     * The character a `KEYEVENT_CHAR` event carries when Chromium will throw it away.
+     *
+     * On WebStorm 263 the embedded browser fills a character event's
+     * `windows_key_code` with the low byte of the character instead of a key code
+     * (ě is U+011B, so the event says `0x1B`, Escape; issue #660). Chromium then
+     * takes the event for an Escape press and discards the character, so the
+     * letter never reaches the input. The same low-byte rule gives š `0x61` and
+     * č `0x0D`, which Chromium accepts, so Escape is the only value that loses text.
+     *
+     * A real Escape has no printable character, which is how the two are told apart.
+     *
+     * @return the code point to type on the page's behalf, or null when the event is fine
+     */
+    fun discardedCharacter(isCharEvent: Boolean, keyCode: Int, character: Int): Int? {
+        if (!isCharEvent || keyCode != VK_ESCAPE) return null
+        if (character < 0x20 || character == 0x7F) return null
+        return character
+    }
 }
