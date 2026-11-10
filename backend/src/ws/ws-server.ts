@@ -5,7 +5,7 @@ import { timingSafeEqual } from 'crypto';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { authToken, projectRoot } from '../config/environment';
 import { setBackendEndpoint } from '../core/backend-endpoint';
-import { handleSessionControlRequest } from './session-control-route';
+import { handleSessionControl } from './session-control-route';
 import { ConnectionManager } from './connection-manager';
 import { ConnectionHeartbeat, type HeartbeatSocket } from './connection-heartbeat';
 import { handleEditorContextRequest } from './editor-context-route';
@@ -517,7 +517,7 @@ export function startWebSocketServer(
             res.end(JSON.stringify({ error: 'Failed to read request body' }));
             return;
           }
-          const result = handleSessionControlRequest(connections, rawBody);
+          const result = await handleSessionControl(connections, rawBody);
           res.writeHead(result.status, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify(result.body));
           return;
