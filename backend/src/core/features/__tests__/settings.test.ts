@@ -63,6 +63,23 @@ describe('settings', () => {
       expect(result.error).toContain('theme must be one of');
     });
 
+    it('writes settings.js under CCG_HOME when it is set, not under the home directory', async () => {
+      const saved = process.env.CCG_HOME;
+      process.env.CCG_HOME = '/tmp/custom-ccg-home';
+      try {
+        const result = await saveSettingToFile('theme', 'dark');
+        expect(result.status).toBe('ok');
+        expect(mockMkdir).toHaveBeenCalledWith('/tmp/custom-ccg-home', { recursive: true });
+        // The temp file sits next to settings.js and is renamed over it.
+        const written = mockWriteFile.mock.calls.map((c) => String(c[0]));
+        expect(written.length).toBeGreaterThan(0);
+        expect(written.every((p) => p.startsWith('/tmp/custom-ccg-home'))).toBe(true);
+      } finally {
+        if (saved === undefined) delete process.env.CCG_HOME;
+        else process.env.CCG_HOME = saved;
+      }
+    });
+
     it('should accept valid theme values', async () => {
       for (const theme of ['system', 'light', 'dark']) {
         const result = await saveSettingToFile('theme', theme);

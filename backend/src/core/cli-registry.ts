@@ -50,7 +50,8 @@ export interface CliRegistryEntry {
 }
 
 function registryDir(): string {
-  return join(homedir(), '.claude-code-gui', 'cli-registry');
+  // `CCG_HOME` is the documented override for the user-data directory (cli/install.sh).
+  return join(process.env.CCG_HOME?.trim() || join(homedir(), '.claude-code-gui'), 'cli-registry');
 }
 
 /**
