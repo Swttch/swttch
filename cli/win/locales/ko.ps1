@@ -7,6 +7,7 @@ $Messages = @{
         '  ccg                  실행(기본). 포트 확인, 버전 비교, 백엔드 실행, 브라우저 열기.',
         '  ccg run              기본 동작과 같습니다.',
         '  ccg list, ls         백엔드 프로세스 트리를 보여 줍니다 (PID, 포트).',
+        '  ccg account, acct    저장된 Claude 계정을 관리합니다 (list/use/current/save/rm).',
         '  ccg update           런타임을 최신 릴리즈로 강제 업데이트합니다.',
         '  ccg stop             포트 19836의 백엔드를 자손까지 함께 종료합니다.',
         '  ccg version, -v      설치된 ccg, 캐시된 런타임, 실행 중인 백엔드를 보여 줍니다.',
@@ -95,7 +96,25 @@ $Messages = @{
     ccg_deprecated_notice   = "안내: 'ccg'는 예전 이름이며 더는 권장하지 않습니다. 대신 'swttch browser'(또는 'swttch <command>')를 쓰세요. 이 안내를 숨기려면 CCG_NO_DEPRECATION_NOTICE=1 을 설정하세요."
     swttch_usage_header     = "사용법: swttch <command> [args]"
     desktop_not_available   = "Swttch 데스크탑 앱은 아직 제공되지 않습니다."
-    help_swttch_body        = "  swttch browser        브라우저에서 Swttch를 엽니다 (백엔드를 시작하거나 재사용).`n                        자세한 내용은 -h. (예전 이름 'ccg'도 동작하지만 더는 권장하지 않습니다.)`n  swttch desktop        Swttch 데스크탑 앱을 엽니다 (아직 제공되지 않음).`n  swttch list, ls       백엔드 프로세스 트리를 보여 줍니다 (PID, 포트, 출처 라벨).`n  swttch update         런타임을 최신 릴리즈로 강제 업데이트합니다.`n  swttch stop           포트 19836의 백엔드를 자손까지 함께 종료합니다.`n  swttch version, -v    설치된 swttch, 캐시된 런타임, 실행 중인 백엔드를 보여 줍니다.`n  swttch doctor         환경을 진단합니다 (node, PATH, 캐시, 포트).`n  swttch self-update    설치 스크립트를 다시 실행해 swttch 자체를 업데이트합니다.`n  swttch uninstall      이 컴퓨터에서 swttch를 제거합니다.`n  swttch help, -h       이 도움말을 보여 줍니다.`n`n  각 명령의 자세한 설명은 'swttch <command> -h'로 볼 수 있습니다."
+    help_swttch_body        = "  swttch browser        브라우저에서 Swttch를 엽니다 (백엔드를 시작하거나 재사용).`n                        자세한 내용은 -h. (예전 이름 'ccg'도 동작하지만 더는 권장하지 않습니다.)`n  swttch desktop        Swttch 데스크탑 앱을 엽니다 (아직 제공되지 않음).`n  swttch list, ls       백엔드 프로세스 트리를 보여 줍니다 (PID, 포트, 출처 라벨).`n  swttch account, acct  저장된 Claude 계정을 관리합니다 (list/use/current/save/rm).`n  swttch update         런타임을 최신 릴리즈로 강제 업데이트합니다.`n  swttch stop           포트 19836의 백엔드를 자손까지 함께 종료합니다.`n  swttch version, -v    설치된 swttch, 캐시된 런타임, 실행 중인 백엔드를 보여 줍니다.`n  swttch doctor         환경을 진단합니다 (node, PATH, 캐시, 포트).`n  swttch self-update    설치 스크립트를 다시 실행해 swttch 자체를 업데이트합니다.`n  swttch uninstall      이 컴퓨터에서 swttch를 제거합니다.`n  swttch help, -h       이 도움말을 보여 줍니다.`n`n  각 명령의 자세한 설명은 'swttch <command> -h'로 볼 수 있습니다."
     help_browser_header     = "swttch browser - 백엔드를 시작(또는 재사용)하고 브라우저를 엽니다"
     help_browser_body       = "  swttch browser       19836 포트를 확인하고 백엔드를 실행(이미 실행 중이면 재사용)한 뒤`n                       브라우저에서 WebView를 엽니다.`n  swttch browser -b, --bind <주소>`n                       백엔드를 loopback(127.0.0.1) 대신 <주소>로 바인딩합니다.`n                       0.0.0.0을 지정하면 같은 네트워크의 다른 기기가`n                       http://<이 머신의 IP>:19836 으로 WebView에 접속할 수 있습니다.`n                       경고: 백엔드는 인증 없이 'claude' 실행과 파일 I/O를 수행하므로`n                       신뢰할 수 있는 네트워크에서만 노출하세요.`n  swttch browser -p, --port <번호>`n                       백엔드를 19836 대신 <번호> 포트로 바인딩합니다. 실행 전체에`n                       적용됩니다(점유 확인, 재사용, 종료, 브라우저 URL).`n  swttch browser -h, --help`n                       이 도움말을 표시합니다."
+    account_list_header     = '저장된 Claude 계정:'
+    account_active_marker   = '*'
+    account_none            = "저장된 계정이 없습니다. 'claude'로 로그인한 뒤 'ccg account save'를 실행하세요."
+    account_current         = '현재 계정: {0}'
+    account_switched        = '{0} 계정으로 전환했습니다.'
+    account_saved           = '{0} 계정을 저장했습니다.'
+    account_removed         = '{0} 계정을 삭제했습니다.'
+    account_rm_prompt       = '저장된 계정 {0} 을(를) 삭제할까요? (y/N): '
+    account_aborted         = '중단했습니다.'
+    err_account_need_token  = '계정을 지정하세요 (id, 이메일, 이름 또는 고유한 일부 문자열).'
+    err_account_unknown_sub = '알 수 없는 account 하위 명령: {0}'
+    err_account_helper_missing = "런타임에서 account 헬퍼를 찾을 수 없습니다. 'ccg update'로 갱신하세요."
+    err_account_not_found   = "'{0}' 와(과) 일치하는 저장된 계정이 없습니다."
+    err_account_ambiguous   = "'{0}' 가 여러 계정과 일치합니다:"
+    err_account_no_login    = "저장할 로그인된 Claude 계정이 없습니다. 먼저 'claude'로 로그인하세요."
+    err_account_generic     = 'account 명령이 실패했습니다.'
+    help_account_header     = 'ccg account - 저장된 Claude 계정 관리'
+    help_account_body       = "  ccg account [list]        저장된 계정 목록 (현재 계정은 * 표시).`n  ccg account current       현재 활성 계정 표시.`n  ccg account use <who>     활성 계정 전환 (who = id, 이메일, 이름 또는 일부 문자열).`n  ccg account save          현재 로그인된 계정을 빠른 전환용으로 저장.`n  ccg account rm <who>      저장된 계정 삭제 (확인 후).`n  ccg account -h, --help    이 도움말 표시.`n`n  전환은 시스템 전역 활성 자격증명을 교체하므로, 새로 실행되는 'claude'(터미널/GUI)가`n  선택한 계정을 사용합니다."
 }
