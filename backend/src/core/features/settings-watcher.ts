@@ -1,10 +1,10 @@
 import { watch, existsSync, type FSWatcher } from 'fs';
 import { join } from 'path';
-import { homedir } from 'os';
 import { readMergedSettings } from './settings';
 import { readMergedClaudeSettings } from './claude-settings';
 import { getClaudeConfigDir } from './claudeConfigDir';
 import { MessageType } from '../../shared';
+import { ideSharedDir } from '../../config/ccg-home';
 
 const DEBOUNCE_MS = 300;
 
@@ -34,7 +34,7 @@ export class SettingsFileWatcher {
    */
   startGlobalWatchers(): void {
     const claudeDir = getClaudeConfigDir();
-    const appDir = join(homedir(), '.claude-code-gui');
+    const appDir = ideSharedDir();
 
     this.watchDir(claudeDir, 'settings.json', async () => {
       const result = await readMergedClaudeSettings();

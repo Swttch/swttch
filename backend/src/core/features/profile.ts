@@ -1,17 +1,17 @@
 import { readFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
-import { homedir } from 'os';
 import { randomUUID } from 'crypto';
 import { atomicWriteFile, refusedWriteMessage } from './atomic-json';
+import { ccgHomeDir } from '../../config/ccg-home';
 
 // ─── User profile (global, telemetry-independent) ────────────────────────────
 // `~/.claude-code-gui/profile.json` holds a per-install pseudonymous uuid and the
 // telemetry consent decision. The uuid is created for EVERY user regardless of
 // consent; nothing is transmitted unless consent status is ACCEPTED.
 
-const PROFILE_DIR = join(homedir(), '.claude-code-gui');
-const PROFILE_FILE = join(PROFILE_DIR, 'profile.json');
+const profileDir = (): string => ccgHomeDir();
+const profileFile = (): string => join(profileDir(), 'profile.json');
 
 /** 텔레메트리 동의 상태. PENDING = 아직 수락/거절 중 무엇도 응답하지 않음. */
 export enum ConsentStatus {
@@ -252,8 +252,8 @@ export function normalizeVoicePrompt(value: unknown): VoicePrompt {
 }
 
 async function writeProfile(profile: ProfileData): Promise<void> {
-  await mkdir(PROFILE_DIR, { recursive: true });
-  await atomicWriteFile(PROFILE_FILE, JSON.stringify(profile, null, 2) + '\n');
+  await mkdir(profileDir(), { recursive: true });
+  await atomicWriteFile(profileFile(), JSON.stringify(profile, null, 2) + '\n');
 }
 
 /**
@@ -299,7 +299,7 @@ let lastUnreadableReason: string | null = null;
  * user's, so the same rule applies.
  */
 export async function loadProfile(): Promise<ProfileLoad> {
-  if (!existsSync(PROFILE_FILE)) {
+  if (!existsSync(profileFile())) {
     const profile = createDefaultProfile();
     await writeProfile(profile);
     lastUnreadableReason = null;
@@ -308,7 +308,7 @@ export async function loadProfile(): Promise<ProfileLoad> {
 
   let raw: string;
   try {
-    raw = await readFile(PROFILE_FILE, 'utf-8');
+    raw = await readFile(profileFile(), 'utf-8');
   } catch (err) {
     return await reportUnreadable(err instanceof Error ? err.message : String(err));
   }
@@ -402,7 +402,7 @@ async function reportUnreadable(reason: string): Promise<ProfileLoad> {
     lastUnreadableReason = reason;
     console.error(
       '[node-backend]',
-      `could not read ${PROFILE_FILE} (${reason}); leaving it untouched and treating this ` +
+      `could not read ${profileFile()} (${reason}); leaving it untouched and treating this ` +
         'install as having made no decisions until it can be read',
     );
   }
@@ -447,7 +447,7 @@ async function updateProfile(
     // thing the user asked for that did not happen.
     console.error(
       '[node-backend]',
-      `${refusedWriteMessage(PROFILE_FILE, load.reason)} — ${action} was not saved`,
+      `${refusedWriteMessage(profileFile(), load.reason)} — ${action} was not saved`,
     );
     return load.profile;
   }

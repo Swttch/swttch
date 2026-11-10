@@ -14,10 +14,10 @@
  * can hand back the same objects the live path did rather than a reconstruction.
  */
 
-import { homedir } from 'os';
 import { join } from 'path';
 import { mkdir, readFile, writeFile, readdir, stat, unlink } from 'fs/promises';
 import type { WorkflowAgent } from '../../shared';
+import { ccgHomeDir } from '../../config/ccg-home';
 
 /**
  * Snapshots to keep. One small JSON file per workflow run, so this is a cap on
@@ -28,7 +28,7 @@ const MAX_SNAPSHOTS = 500;
 
 /** Resolved per call rather than at import, so the home dir is read when used. */
 function snapshotDir(): string {
-  return join(homedir(), '.claude-code-gui', 'workflow-agents');
+  return join(ccgHomeDir(), 'workflow-agents');
 }
 
 function snapshotPath(workflowId: string): string {

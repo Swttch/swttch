@@ -1,6 +1,5 @@
 import { execFile } from 'child_process';
 import { mkdir, open, rm, stat } from 'fs/promises';
-import { homedir } from 'os';
 import { join } from 'path';
 import { Claude } from './claude';
 import { isNewerVersion } from './cli-update';
@@ -14,6 +13,7 @@ import {
   UpdateMode,
   type CliUpdateInfo,
 } from '../shared';
+import { ccgHomeDir } from '../config/ccg-home';
 
 /**
  * Background update of the Claude Code CLI.
@@ -183,8 +183,7 @@ function isClaudeRunning(): Promise<boolean> {
 }
 
 function lockPath(): string {
-  const home = process.env.CCG_HOME?.trim() || join(homedir(), '.claude-code-gui');
-  return join(home, 'cli-auto-update.lock');
+  return join(ccgHomeDir(), 'cli-auto-update.lock');
 }
 
 /**

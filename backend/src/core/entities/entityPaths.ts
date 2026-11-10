@@ -1,5 +1,5 @@
-import { homedir } from 'os';
 import { join } from 'path';
+import { ccgHomeDir } from '../../config/ccg-home';
 
 /**
  * Where entity files live: `~/.claude-code-gui/entities/`.
@@ -10,6 +10,5 @@ import { join } from 'path';
  * sets it late) is not stuck with the value from the moment this module loaded.
  */
 export function entitiesRoot(): string {
-  const home = process.env.CCG_HOME?.trim() || join(homedir(), '.claude-code-gui');
-  return join(home, 'entities');
+  return join(ccgHomeDir(), 'entities');
 }

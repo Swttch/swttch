@@ -18,9 +18,8 @@
 
 import { appendFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
-import { homedir } from 'os';
+import { ccgHomeDir } from '../config/ccg-home';
 
-const DEFAULT_LOG_DIR = join(homedir(), '.claude-code-gui', 'logs');
 const JOURNAL_FILENAME = 'lifecycle.log';
 
 /** Values rendered as `key=value` after the event name. `undefined` entries are dropped. */
@@ -62,7 +61,8 @@ export interface JournalDeps {
 }
 
 const defaultDeps: JournalDeps = {
-  logDir: DEFAULT_LOG_DIR,
+  // A getter: CCG_HOME is read when the journal writes, not when this module loads.
+  get logDir(): string { return join(ccgHomeDir(), 'logs'); },
   now: () => new Date(),
   append: (path, line) => appendFileSync(path, line, 'utf8'),
   ensureDir: (path) => mkdirSync(path, { recursive: true }),

@@ -1,7 +1,8 @@
 import { spawn, spawnSync } from 'child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'fs';
-import { homedir, userInfo } from 'os';
+import { userInfo } from 'os';
 import { dirname, join } from 'path';
+import { ccgHomeDir } from '../../config/ccg-home';
 
 /**
  * Keeping the machine awake when the lid is closed.
@@ -68,7 +69,7 @@ interface LidState {
 }
 
 export function stateFilePath(): string {
-  return join(process.env.CCG_HOME || join(homedir(), '.claude-code-gui'), 'sleep-guard.json');
+  return join(ccgHomeDir(), 'sleep-guard.json');
 }
 
 function readState(): LidState {

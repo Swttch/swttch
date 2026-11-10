@@ -1,7 +1,6 @@
 import { readFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
-import { homedir } from 'os';
 import { atomicWriteFile, updateJsonFile, refusedWriteMessage } from './atomic-json';
 import { normalizeSettingValue } from './path-settings';
 import {
@@ -15,15 +14,12 @@ import {
   ContextBadgeDisplay,
   CONTEXT_BADGE_DISPLAYS,
 } from '../../shared';
+import { ideSharedDir } from '../../config/ccg-home';
 
 // ─── Settings helpers ────────────────────────────────────────────────────────
 
-// `CCG_HOME` is the documented override for the user-data directory (cli/install.sh).
-function ccgHomeDir(): string {
-  return process.env.CCG_HOME?.trim() || join(homedir(), '.claude-code-gui');
-}
 function settingsFile(): string {
-  return join(ccgHomeDir(), 'settings.js');
+  return join(ideSharedDir(), 'settings.js');
 }
 
 // ─── Scope policy: project-local by default ──────────────────────────────────
@@ -293,7 +289,7 @@ async function readSettingsFileForUpdate(): Promise<SettingsReadForUpdate> {
   try {
     if (!existsSync(settingsFile())) {
       // Create with defaults
-      await mkdir(ccgHomeDir(), { recursive: true });
+      await mkdir(ideSharedDir(), { recursive: true });
       await atomicWriteFile(settingsFile(), generateSettingsContent(DEFAULT_SETTINGS));
       return { status: 'ok', settings: { ...DEFAULT_SETTINGS } };
     }
@@ -854,7 +850,7 @@ async function doSaveSettingToFile(key: string, value: unknown): Promise<SaveRes
     }
     const current = read.settings;
     current[key] = normalized;
-    await mkdir(ccgHomeDir(), { recursive: true });
+    await mkdir(ideSharedDir(), { recursive: true });
     await atomicWriteFile(settingsFile(), generateSettingsContent(current));
     return { status: 'ok' };
   } catch (err) {

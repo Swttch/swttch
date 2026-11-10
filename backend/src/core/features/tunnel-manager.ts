@@ -7,6 +7,7 @@ import { arch, platform, tmpdir, homedir } from 'os';
 import { augmentedEnv } from '../augmented-path';
 import { downloadToFile } from './download-file';
 import { consoleSafeExecOptions } from '../console-safe';
+import { ccgHomeDir } from '../../config/ccg-home';
 
 const execAsync = promisify(execCallback);
 
@@ -38,7 +39,7 @@ function getLocalBinPath(): string {
   // A stable, writable, per-user location (NOT process.cwd(), which for an
   // IDE-spawned backend is unpredictable and may be read-only). This dir is
   // also registered in candidateBinDirs so an installed binary is found later.
-  return resolve(homedir(), '.claude-code-gui', 'bin', getLocalBinName());
+  return resolve(ccgHomeDir(), 'bin', getLocalBinName());
 }
 
 function getDownloadUrl(): string | null {
