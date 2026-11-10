@@ -5,6 +5,7 @@ import { useCliConfig } from '@/contexts/CliConfigContext';
 import { isCaretInMentionToken } from '@/utils/isCaretInMentionToken';
 import { findSlashCommandToken } from '@/utils/findSlashCommandToken';
 import { typedKeys } from '../typedKeys';
+import { initialsOf, matchInitials } from '../commandInitials';
 
 interface UseCommandPaletteOptions {
   onChange: (value: string) => void;
@@ -64,9 +65,24 @@ export function useCommandPalette({ onChange, textareaRef, onCompleteInline }: U
         ...queries.map(q => label.indexOf(q)).map(idx => (idx === -1 ? Infinity : idx)),
       );
       if (labelIdx !== Infinity) return labelIdx;
+      // Initials ("gwd" for /grill-with-docs, issue #666): below every name hit,
+      // above keyword and description hits. An exact set of initials goes first.
+      if (item.type === PanelItemType.Command) {
+        const initials = queries.map(q => matchInitials(item.label, q));
+        if (initials.includes('exact')) return 40;
+        if (initials.includes('prefix')) return 50;
+      }
       if (item.keywords?.some(k => queries.some(q => k.toLowerCase().includes(q)))) return 500;
       return 1000; // description-only match
     };
+
+    // Commands whose initials are exactly the typed word. With arguments typed
+    // ("/gwd some text") the command is settled only if exactly one command has
+    // those initials; otherwise the word is left alone rather than guessed.
+    const exactInitialsLabels = sections.flatMap(section => section.items)
+      .filter(item => item.type === PanelItemType.Command && queries.some(q => initialsOf(item.label) === q.toLowerCase() && q.length >= 2))
+      .map(item => item.label);
+    const hasExactName = sections.some(section => section.items.some(item => queries.some(q => item.label.toLowerCase() === `/${q}`)));
 
     return sections
       .map((section, index) => {
@@ -77,7 +93,8 @@ export function useCommandPalette({ onChange, textareaRef, onCompleteInline }: U
             // Argument mode: the command is settled ("/model sonnet"), so only
             // the exact command name stays — no fuzzy/description matches.
             if (argMode) {
-              return queries.some(q => item.label.toLowerCase() === `/${q}`);
+              if (queries.some(q => item.label.toLowerCase() === `/${q}`)) return true;
+              return !hasExactName && exactInitialsLabels.length === 1 && exactInitialsLabels[0] === item.label;
             }
             const matchesLabel = queries.some(q => item.label.toLowerCase().includes(q));
             const matchesKeyword = item.keywords?.some(keyword =>
@@ -88,7 +105,10 @@ export function useCommandPalette({ onChange, textareaRef, onCompleteInline }: U
             const matchesDescription =
               item.type === PanelItemType.Command &&
               queries.some(q => (item as CommandItem).description.toLowerCase().includes(q));
-            return matchesLabel || (matchesKeyword ?? false) || matchesDescription;
+            const matchesInitialsOfName =
+              item.type === PanelItemType.Command &&
+              queries.some(q => matchInitials(item.label, q) !== null);
+            return matchesLabel || (matchesKeyword ?? false) || matchesDescription || matchesInitialsOfName;
           }
           return true;
         });

@@ -1,4 +1,5 @@
 import { hangulToQwerty } from './hangulKeys';
+import { initialsOf } from './commandInitials';
 
 /**
  * Typing a slash command with another layout still on, read from the keys
@@ -176,6 +177,13 @@ export function restoreCommandName(input: string, commandName: string): string {
   if (input.startsWith(commandName)) return input;
   const typed = input.split(/\s/, 1)[0];
   if (typed && typedKeys.keysFor(input).split(/\s/, 1)[0].toLowerCase() === commandName.toLowerCase()) {
+    return commandName + input.slice(typed.length);
+  }
+  // The initials of the name ("/gwd" for /grill-with-docs, issue #666): the
+  // command was picked from the list, so the first word is put back whole and
+  // the arguments after it stay.
+  const initials = initialsOf(commandName);
+  if (typed && initials && typed.toLowerCase() === `/${initials}`) {
     return commandName + input.slice(typed.length);
   }
   return input;
