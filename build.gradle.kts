@@ -188,7 +188,13 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
-            <h3>0.36.1 - Chat view modes, read aloud, and send index and imported session title improvements</h3>
+            <h3>0.36.2 - Slash command initials search, character input fix, and Transcript fixes</h3>
+            <ul>
+                <li>Fix some characters such as ě, Л, ț, and ป not being typed in the chat input (#660, reported by @BohuslavChlubna)</li>
+                <li>Add finding a slash command by the first letters of its words (#666, reported by @deniskrizanovic)</li>
+                <li>Fix Transcript thumbnail click and column width behavior</li>
+            </ul>
+            <h3>0.36.1 -Chat view modes, read aloud, and send index and imported session title improvements</h3>
             <ul>
                 <li>Add chat view modes (Normal, Thinking, Verbose) with a shortcut to cycle them (#608)</li>
                 <li>Add reading replies aloud (#608)</li>
