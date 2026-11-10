@@ -1,10 +1,13 @@
 import React from 'react';
 import { highlightQuery } from '../highlightQuery';
 import { typedKeys } from '../typedKeys';
+import { highlightInitials, matchInitials } from '../commandInitials';
 
 interface Props {
   text: string;
   query: string;
+  /** Also bold the first letters of the words when the query is their initials (issue #666). */
+  initials?: boolean;
 }
 
 /**
@@ -16,9 +19,13 @@ interface Props {
  * keys it stands for ("re"), so those are what get bolded when the text does
  * not hold the Hangul itself.
  */
-export const HighlightedText: React.FC<Props> = ({ text, query }) => {
+export const HighlightedText: React.FC<Props> = ({ text, query, initials }) => {
   const matchesAsTyped = text.toLowerCase().includes(query.toLowerCase());
-  const segments = highlightQuery(text, matchesAsTyped ? query : typedKeys.keysForQuery(query));
+  const keys = matchesAsTyped ? query : typedKeys.keysForQuery(query);
+  const segments =
+    initials && !text.toLowerCase().includes(keys.toLowerCase()) && matchInitials(text, keys)
+      ? highlightInitials(text, keys)
+      : highlightQuery(text, keys);
   return (
     <>
       {segments.map((seg, i) =>
