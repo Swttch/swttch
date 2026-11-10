@@ -19,8 +19,19 @@ export const NO_TITLE = 'No title';
  * dropdown toggle, the dropdown rows, the `@@` panel — so they cannot disagree
  * about what a session is called.
  */
-export const toTitle = (v?: string): string => {
-  if (!v) return NO_TITLE;
+export const toTitle = (v?: string): string => cleanTitle(v).substring(0, TITLE_LENGTH) || NO_TITLE;
+
+/** How many characters a title keeps where it has to fit a tab, a toggle or a row. */
+const TITLE_LENGTH = 50;
+
+/**
+ * The same label as {@link toTitle} without the cut, for the places that have room to say all of it
+ * (a tooltip). Empty when there is nothing to name the conversation after.
+ */
+export const toFullTitle = (v?: string): string => cleanTitle(v);
+
+function cleanTitle(v?: string): string {
+  if (!v) return '';
   const { text } = parseUserContent(v);
   // A session mention comes off before the cut, not after it. The tag runs to
   // about a hundred characters of id, name and path, so a conversation that
@@ -30,5 +41,5 @@ export const toTitle = (v?: string): string => {
   //
   // The label goes with it. A title says what the conversation is about, and who
   // the opening message was sent to is routing rather than subject.
-  return dropSessionMentions(text).substring(0, 50) || NO_TITLE;
+  return dropSessionMentions(text);
 }

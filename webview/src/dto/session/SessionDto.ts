@@ -1,7 +1,7 @@
 import { Type, Transform, Expose } from 'class-transformer';
 import { AnyMessageDto } from '../message/MessageDto';
 import { transformMessages } from '../../mappers/messageTransformer';
-import { toTitle } from '../../mappers/sessionTransformer';
+import { toFullTitle, toTitle } from '../../mappers/sessionTransformer';
 import { To, ToDate, Rename } from '../decorators';
 
 /**
@@ -31,6 +31,13 @@ export class SessionMarkDto {
 export class SessionMetaDto {
   @Rename('sessionId') id: string;
   @To(toTitle) title: string;
+  /**
+   * The whole title, where `title` is cut to fit a tab or a row. Empty (not "No title") when
+   * there is none, so a caller falls back on `title`.
+   */
+  @Expose()
+  @Transform(({ obj }) => toFullTitle(obj.title))
+  fullTitle?: string;
   @ToDate() createdAt: Date;
   @Expose()
   @Transform(({ obj }) => {

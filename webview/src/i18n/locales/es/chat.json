@@ -799,7 +799,17 @@
       "parent": "Sesión superior",
       "children": "Sesiones subordinadas",
       "none": "Ninguna",
-      "notInList": "No está en esta lista"
+      "notInList": "No está en esta lista",
+      "notInListHint": "Esta sesión no está en la lista. Puede que se haya eliminado o que pertenezca a otra carpeta.",
+      "searchPlaceholder": "Buscar sesiones",
+      "listTitle": "Elegir una sesión",
+      "noMatch": "Ninguna sesión coincide",
+      "open": "Haz clic para abrir esta sesión",
+      "removeParent": "Quita el vínculo con la sesión superior. Esta sesión pasa a ser de nivel superior.",
+      "removeChild": "Quita el vínculo con esta sesión subordinada. Pasa a ser de nivel superior y no se elimina.",
+      "change": "Cambiar",
+      "addChild": "Añadir",
+      "failed": "No se pudo cambiar el vínculo"
     },
     "showMore": "Mostrar más",
     "contextUsed": "{{percent}} % usado",

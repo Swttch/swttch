@@ -39,7 +39,9 @@ function BriefStep({ label, text, meta, defaultOpen }: { label: string; text: st
         onClick={() => setOpen((value) => !value)}
         className={`flex w-fit max-w-full items-center gap-1.5 text-[0.9375rem] hover:text-[var(--tr-hover)] ${QUIET_TEXT}`}
       >
-        <span>{label}</span>
+        {/* The label stays on one line and keeps its width: a narrow window shortens the title beside it
+            (which ends in an ellipsis) instead of pushing the label onto several lines. */}
+        <span className="shrink-0 whitespace-nowrap">{label}</span>
         {meta && <span className="min-w-0 truncate text-[var(--tr-text)]">{meta}</span>}
         {open ? <ChevronDownIcon className="h-4 w-4 shrink-0" /> : <ChevronRightIcon className="h-4 w-4 shrink-0" />}
       </button>

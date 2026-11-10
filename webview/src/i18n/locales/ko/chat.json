@@ -799,7 +799,17 @@
       "parent": "상위 세션",
       "children": "하위 세션",
       "none": "없음",
-      "notInList": "이 목록에 없는 세션"
+      "notInList": "이 목록에 없는 세션",
+      "notInListHint": "이 목록에 없는 세션입니다. 삭제되었거나 다른 폴더에 있는 세션일 수 있습니다.",
+      "searchPlaceholder": "세션 검색",
+      "listTitle": "세션 선택",
+      "noMatch": "맞는 세션이 없습니다",
+      "open": "누르면 이 세션으로 이동합니다",
+      "removeParent": "상위 세션과의 연결을 끊습니다. 이 세션이 최상위 세션이 됩니다.",
+      "removeChild": "이 하위 세션과의 연결을 끊습니다. 그 세션은 최상위 세션이 되며 삭제되지 않습니다.",
+      "change": "변경",
+      "addChild": "추가",
+      "failed": "연결을 바꾸지 못했습니다"
     },
     "showMore": "더 보기",
     "contextUsed": "{{percent}}% 사용됨",

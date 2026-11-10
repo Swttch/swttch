@@ -138,3 +138,60 @@ export async function uninstallSessionMcpHandler(
   }
   ack(connections, connectionId, message, { status: 'ok' });
 }
+
+/** The first package version that has the `set-parent` command. */
+const SET_PARENT_SINCE = '0.3.0';
+
+/**
+ * SET_SESSION_PARENT: put a session under another one by hand, or take it to the top level.
+ *
+ * The record of who started whom belongs to the session-management MCP, so the edit is made by
+ * the package's own `set-parent` command and not by this backend: the same edit a terminal user
+ * can make, with the same refusals (a session under itself, or under one of its own descendants).
+ * The command is run with this process's Node and the package's entry script, like the server the
+ * CLI is handed, and is never imported.
+ *
+ * Every screen is told to read its session list again afterwards.
+ */
+export async function setSessionParentHandler(
+  connectionId: string,
+  message: IPCMessage,
+  connections: ConnectionManager,
+  _bridge: Bridge,
+): Promise<void> {
+  const payload = (message.payload ?? {}) as { sessionId?: unknown; parentSessionId?: unknown };
+  const sessionId = typeof payload.sessionId === 'string' ? payload.sessionId : '';
+  const parentSessionId = typeof payload.parentSessionId === 'string' && payload.parentSessionId !== '' ? payload.parentSessionId : null;
+  if (sessionId === '') {
+    ack(connections, connectionId, message, { status: 'error', error: 'sessionId is required' });
+    return;
+  }
+
+  const [entry, version] = await Promise.all([resolveSessionMcpEntry(), getSessionMcpVersion()]);
+  if (!entry || !version) {
+    ack(connections, connectionId, message, { status: 'error', error: `The ${SESSION_MCP_PACKAGE} package is not installed.` });
+    return;
+  }
+  if (isNewerVersion(SET_PARENT_SINCE, version)) {
+    ack(connections, connectionId, message, {
+      status: 'error',
+      error: `The installed ${SESSION_MCP_PACKAGE} (${version}) cannot change a parent session. Version ${SET_PARENT_SINCE} or later can; it updates by itself, or update it in Settings > About.`,
+    });
+    return;
+  }
+
+  const result = await run(process.execPath, [entry, 'set-parent', sessionId, parentSessionId ?? 'none']);
+  type SetParentAnswer = { ok?: boolean; error?: string; changed?: boolean };
+  let answer: SetParentAnswer | null = null;
+  try {
+    answer = JSON.parse(result.stdout.trim().split('\n').pop() ?? '') as SetParentAnswer;
+  } catch {
+    answer = null;
+  }
+  if (answer?.ok !== true) {
+    ack(connections, connectionId, message, { status: 'error', error: answer?.error ?? (result.output || 'The set-parent command failed.') });
+    return;
+  }
+  connections.broadcastToAll(MessageType.SESSIONS_UPDATED, { action: 'refresh' });
+  ack(connections, connectionId, message, { status: 'ok', changed: answer.changed === true });
+}

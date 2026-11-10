@@ -37,7 +37,7 @@ export function SessionRail() {
         const onPointerDown = (e: MouseEvent) => {
             const target = e.target as Element | null;
             // The dock icon toggles on its own click; closing here too would reopen it at once.
-            if (rootRef.current?.contains(target as Node) || target?.closest('[data-session-rail-toggle]')) return;
+            if (rootRef.current?.contains(target as Node) || target?.closest('[data-session-rail-toggle], [data-session-rail-popover]')) return;
             setOpen(false);
         };
         const onKeyDown = (e: KeyboardEvent) => {

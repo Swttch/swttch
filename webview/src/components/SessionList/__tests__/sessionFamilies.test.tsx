@@ -99,6 +99,16 @@ describe('SessionMetaDto — the session mark', () => {
     expect((row.sessionMark as unknown as Record<string, unknown>).aColumnAddedLater).toBe('kept');
   });
 
+  it('keeps the whole title beside the one cut to fit a row', () => {
+    const long = '7+7 one-line answer 7+7 one-line answer 7+7 one-line answer';
+    const [row] = plainToInstance(SessionMetaDto, [
+      { sessionId: 'long', title: long, createdAt: '2026-11-10T00:00:00Z', lastTimestamp: null },
+    ]);
+
+    expect(row.title).toBe(long.substring(0, 50));
+    expect(row.fullTitle).toBe(long);
+  });
+
   it('leaves a session nobody recorded anything about without one', () => {
     const [row] = plainToInstance(SessionMetaDto, [
       { sessionId: 'plain', title: 'Plain', createdAt: '2026-11-10T00:00:00Z', lastTimestamp: null },

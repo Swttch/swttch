@@ -218,13 +218,13 @@ describe('SessionRail - linked sessions', () => {
         ];
         render(<SessionRail/>);
         openRail();
-        expect(screen.getByText('The manager')).toBeInTheDocument();
-        const rows = screen.getAllByRole('button', {name: /child/i}).map((b) => b.textContent);
+        expect(screen.getByRole("button", {name: "The manager"})).toBeInTheDocument();
+        const rows = screen.getAllByRole('button', {name: /^(First|Second) child$/}).map((b) => b.textContent);
         expect(rows).toEqual(['First child', 'Second child']);
-        expect(screen.queryByText('Somebody else child')).toBeNull();
-        fireEvent.click(screen.getByText('The manager'));
+        expect(screen.queryByRole("button", {name: "Somebody else child"})).toBeNull();
+        fireEvent.click(screen.getByRole("button", {name: "The manager"}));
         expect(sessionCtx.switchSession).toHaveBeenCalledWith('p1');
-        fireEvent.click(screen.getByText('Second child'));
+        fireEvent.click(screen.getByRole("button", {name: "Second child"}));
         expect(sessionCtx.switchSession).toHaveBeenCalledWith('c2');
     });
 
@@ -234,5 +234,155 @@ describe('SessionRail - linked sessions', () => {
         render(<SessionRail/>);
         openRail();
         expect(screen.getByText('sessionRail.linked.notInList')).toBeInTheDocument();
+    });
+});
+
+describe('SessionRail - changing the links by hand', () => {
+    beforeEach(() => {
+        mcpInstalled = '0.3.0';
+        send.mockResolvedValue({status: 'ok'});
+    });
+
+    /** The button after the title of the parent relation (Change) or of the children relation (Add). */
+    const addButton = (which: 'parent' | 'children') =>
+        screen.getByRole('button', {name: which === 'parent' ? 'sessionRail.linked.change' : 'sessionRail.linked.addChild'});
+    const optionTitles = () => screen.getAllByRole('option').map((o) => o.querySelector('span.truncate')?.textContent);
+
+    it('puts the session under the session picked from the search list', () => {
+        sessionCtx.sessions = [linked('s1', 'This one', null), linked('p1', 'The manager', null)];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(addButton('parent'));
+        fireEvent.click(screen.getByRole('option', {name: /The manager/}));
+        expect(send).toHaveBeenCalledWith('SET_SESSION_PARENT', {sessionId: 's1', parentSessionId: 'p1'});
+    });
+
+    it('keeps a click inside the search list from closing the rail', () => {
+        sessionCtx.sessions = [linked('s1', 'This one', null), linked('p1', 'The manager', null)];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(addButton('parent'));
+        fireEvent.mouseDown(screen.getByRole('option', {name: /The manager/}));
+        expect(screen.getByRole('dialog', {name: 'sessionRail.title'})).toBeInTheDocument();
+    });
+
+    it('filters the list by what is typed', () => {
+        sessionCtx.sessions = [linked('s1', 'This one', null), linked('p1', 'The manager', null), linked('o1', 'Unrelated', null)];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(addButton('parent'));
+        fireEvent.change(screen.getByPlaceholderText('sessionRail.linked.searchPlaceholder'), {target: {value: 'unrel'}});
+        expect(optionTitles()).toEqual(['Unrelated']);
+        fireEvent.change(screen.getByPlaceholderText('sessionRail.linked.searchPlaceholder'), {target: {value: 'zzz'}});
+        expect(screen.getByText('sessionRail.linked.noMatch')).toBeInTheDocument();
+    });
+
+    it('unlinks the parent, which makes the session top-level', () => {
+        sessionCtx.sessions = [linked('s1', 'This one', 'p1'), linked('p1', 'The manager', null)];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(screen.getByRole('button', {name: 'sessionRail.linked.removeParent'}));
+        expect(send).toHaveBeenCalledWith('SET_SESSION_PARENT', {sessionId: 's1', parentSessionId: null});
+    });
+
+    it('unlinks a parent that is not in the list, whose transcript may be gone', () => {
+        sessionCtx.sessions = [linked('s1', 'This one', 'a-session-that-is-gone')];
+        render(<SessionRail/>);
+        openRail();
+        expect(screen.getByText('sessionRail.linked.notInList')).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', {name: 'sessionRail.linked.removeParent'}));
+        expect(send).toHaveBeenCalledWith('SET_SESSION_PARENT', {sessionId: 's1', parentSessionId: null});
+    });
+
+    it('offers no session below this one as a parent, nor the parent it already has', () => {
+        sessionCtx.sessions = [
+            linked('s1', 'This one', 'p1'),
+            linked('p1', 'The manager', null),
+            linked('c1', 'A child', 's1', 10),
+            linked('g1', 'A grandchild', 'c1', 20),
+            linked('o1', 'Unrelated', null),
+        ];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(addButton('parent'));
+        expect(optionTitles()).toEqual(['Unrelated']);
+    });
+
+    it('adds a session below this one, offering neither this one, its parent, nor a child it already has', () => {
+        sessionCtx.sessions = [
+            linked('s1', 'This one', 'p1'),
+            linked('p1', 'The manager', null),
+            linked('c1', 'A child', 's1', 10),
+            linked('o1', 'Unrelated', null),
+        ];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(addButton('children'));
+        expect(optionTitles()).toEqual(['Unrelated']);
+        fireEvent.click(screen.getByRole('option', {name: /Unrelated/}));
+        expect(send).toHaveBeenCalledWith('SET_SESSION_PARENT', {sessionId: 'o1', parentSessionId: 's1'});
+    });
+
+    it('takes a child out of the group, without deleting it', () => {
+        sessionCtx.sessions = [linked('s1', 'This one', null), linked('c1', 'A child', 's1', 10)];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(screen.getByRole('button', {name: 'sessionRail.linked.removeChild'}));
+        expect(send).toHaveBeenCalledWith('SET_SESSION_PARENT', {sessionId: 'c1', parentSessionId: null});
+    });
+
+    it('closes the search list on a press outside it, the rail staying open, and on the next one the rail closes', () => {
+        sessionCtx.sessions = [linked('s1', 'This one', null), linked('p1', 'The manager', null)];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(addButton('parent'));
+        fireEvent.mouseDown(document.body);
+        expect(screen.queryByRole('listbox')).toBeNull();
+        expect(screen.getByRole('dialog', {name: 'sessionRail.title'})).toBeInTheDocument();
+        fireEvent.mouseDown(document.body);
+        expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    it('closes the search list on a press on the field itself, blank space beside its title included', () => {
+        sessionCtx.sessions = [linked('s1', 'This one', 'p1'), linked('p1', 'The manager', null)];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(addButton('parent'));
+        fireEvent.mouseDown(screen.getByRole('heading', {name: 'sessionRail.linked.parent'}));
+        expect(screen.queryByRole('listbox')).toBeNull();
+    });
+
+    it('closes the search list when the button that opened it is pressed again', () => {
+        sessionCtx.sessions = [linked('s1', 'This one', null), linked('p1', 'The manager', null)];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(addButton('parent'));
+        expect(screen.getByRole('listbox')).toBeInTheDocument();
+        fireEvent.mouseDown(addButton('parent'));
+        fireEvent.click(addButton('parent'));
+        expect(screen.queryByRole('listbox')).toBeNull();
+    });
+
+    it('closes only the search list on Escape, and the rail on the next one', () => {
+        sessionCtx.sessions = [linked('s1', 'This one', null), linked('p1', 'The manager', null)];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(addButton('parent'));
+        fireEvent.keyDown(document, {key: 'Escape'});
+        expect(screen.queryByRole('listbox')).toBeNull();
+        expect(screen.getByRole('dialog', {name: 'sessionRail.title'})).toBeInTheDocument();
+        fireEvent.keyDown(document, {key: 'Escape'});
+        expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    it('shows the refusal of the package instead of failing silently', async () => {
+        const toast = (await import('react-hot-toast')).default;
+        send.mockResolvedValue({status: 'error', error: 'A session cannot be its own parent.'});
+        sessionCtx.sessions = [linked('s1', 'This one', null), linked('p1', 'The manager', null)];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(addButton('parent'));
+        fireEvent.click(screen.getByRole('option', {name: /The manager/}));
+        await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('A session cannot be its own parent.'));
     });
 });

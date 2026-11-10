@@ -799,7 +799,17 @@
       "parent": "上層工作階段",
       "children": "下層工作階段",
       "none": "無",
-      "notInList": "不在此清單中"
+      "notInList": "不在此清單中",
+      "notInListHint": "此工作階段不在清單中。可能已被刪除,或屬於其他資料夾。",
+      "searchPlaceholder": "搜尋工作階段",
+      "listTitle": "選擇工作階段",
+      "noMatch": "沒有符合的工作階段",
+      "open": "點擊即可開啟此工作階段",
+      "removeParent": "取消與上層工作階段的關聯。此工作階段將成為最上層工作階段。",
+      "removeChild": "取消與此下層工作階段的關聯。該工作階段將成為最上層工作階段,不會被刪除。",
+      "change": "變更",
+      "addChild": "新增",
+      "failed": "無法變更關聯"
     },
     "showMore": "顯示更多",
     "contextUsed": "已使用 {{percent}}%",

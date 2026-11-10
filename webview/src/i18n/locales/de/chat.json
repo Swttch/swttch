@@ -799,7 +799,17 @@
       "parent": "Übergeordnete Sitzung",
       "children": "Untergeordnete Sitzungen",
       "none": "Keine",
-      "notInList": "Nicht in dieser Liste"
+      "notInList": "Nicht in dieser Liste",
+      "notInListHint": "Diese Sitzung steht nicht in der Liste. Sie wurde möglicherweise gelöscht oder gehört zu einem anderen Ordner.",
+      "searchPlaceholder": "Sitzungen suchen",
+      "listTitle": "Sitzung auswählen",
+      "noMatch": "Keine passende Sitzung",
+      "open": "Klicken, um diese Sitzung zu öffnen",
+      "removeParent": "Verknüpfung zur übergeordneten Sitzung lösen. Diese Sitzung wird zur Sitzung der obersten Ebene.",
+      "removeChild": "Verknüpfung zu dieser untergeordneten Sitzung lösen. Sie wird zur Sitzung der obersten Ebene und nicht gelöscht.",
+      "change": "Ändern",
+      "addChild": "Hinzufügen",
+      "failed": "Die Verknüpfung konnte nicht geändert werden"
     },
     "showMore": "Mehr anzeigen",
     "contextUsed": "{{percent}} % verwendet",

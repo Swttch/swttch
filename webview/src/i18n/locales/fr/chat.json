@@ -799,7 +799,17 @@
       "parent": "Session parente",
       "children": "Sessions enfants",
       "none": "Aucune",
-      "notInList": "Absente de cette liste"
+      "notInList": "Absente de cette liste",
+      "notInListHint": "Cette session n’est pas dans la liste. Elle a peut-être été supprimée ou appartient à un autre dossier.",
+      "searchPlaceholder": "Rechercher des sessions",
+      "listTitle": "Choisir une session",
+      "noMatch": "Aucune session correspondante",
+      "open": "Cliquez pour ouvrir cette session",
+      "removeParent": "Supprime le lien avec la session parente. Cette session passe au premier niveau.",
+      "removeChild": "Supprime le lien avec cette session enfant. Elle passe au premier niveau et n’est pas supprimée.",
+      "change": "Modifier",
+      "addChild": "Ajouter",
+      "failed": "Impossible de modifier le lien"
     },
     "showMore": "Afficher plus",
     "contextUsed": "{{percent}} % utilisé",

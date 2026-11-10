@@ -803,7 +803,17 @@
       "parent": "Parent session",
       "children": "Child sessions",
       "none": "None",
-      "notInList": "Not in this list"
+      "notInList": "Not in this list",
+      "notInListHint": "This session is not in the list. It may have been deleted, or it may belong to another folder.",
+      "searchPlaceholder": "Search sessions",
+      "listTitle": "Select a session",
+      "noMatch": "No matching sessions",
+      "open": "Click to open this session",
+      "removeParent": "Unlink the parent session. This session becomes a top-level session.",
+      "removeChild": "Unlink this child session. It becomes a top-level session and is not deleted.",
+      "change": "Change",
+      "addChild": "Add",
+      "failed": "Could not change the link"
     },
     "showMore": "Show more",
     "contextUsed": "{{percent}}% used",
