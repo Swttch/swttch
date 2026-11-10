@@ -5,7 +5,7 @@ import { extractSessionInfo, scanTail, type SessionInfo } from './extractSession
 import { getProjectSessionsPath } from './getProjectSessionsPath';
 import { readSessionTitleOverrides } from './sessionTitleOverrides';
 import { includeLastPromptInTitles } from './sessionTitleSettings';
-import { readSessionMarks, type SessionMark } from './sessionMarks';
+import { readSessionMarksToShow, type SessionMark } from './sessionMarks';
 
 /**
  * [sessionDir] is the working directory the session was recorded under. It is
@@ -14,8 +14,9 @@ import { readSessionMarks, type SessionMark } from './sessionMarks';
  * caller never has to work out which request produced which row.
  *
  * [sessionMark] is the row the session-management MCP keeps about the session
- * (which session started it, among other things), whole, when there is one. The
- * list draws a session under the one that started it from this.
+ * (which session started it, among other things), whole, when there is one and
+ * that package is installed. The list draws a session under the one that started
+ * it from this.
  */
 export type SessionListEntry = SessionInfo & {
   sessionId: string;
@@ -194,8 +195,9 @@ export async function resolvePage(
   };
 
   // Read once for the page. The file is small and another program appends to it
-  // at any time, so it is not cached between requests.
-  const marks = await readSessionMarks();
+  // at any time, so it is not cached between requests. Empty while the package
+  // that keeps the marks is not installed.
+  const marks = await readSessionMarksToShow();
 
   const sessions: SessionListEntry[] = [];
   let cursor = offset;

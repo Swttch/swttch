@@ -7,12 +7,20 @@ vi.mock('../getProjectSessionsPath', () => ({
   getProjectSessionsPath: vi.fn(),
 }));
 
-import { readSessionMarks } from '../sessionMarks';
+// Whether the session-management MCP is installed. Mocked because looking for a
+// global package runs the package managers of the machine the test runs on.
+vi.mock('../../session-mcp', () => ({
+  isSessionMcpInstalled: vi.fn(),
+}));
+
+import { readSessionMarks, readSessionMarksToShow } from '../sessionMarks';
+import { isSessionMcpInstalled } from '../../session-mcp';
 import { getSessionsList } from '../getSessionsList';
 import { getSessionEntry } from '../getSessionEntry';
 import { getProjectSessionsPath } from '../getProjectSessionsPath';
 
 const mockGetPath = vi.mocked(getProjectSessionsPath);
+const mockInstalled = vi.mocked(isSessionMcpInstalled);
 
 /**
  * The session-management MCP writes `sidebar/session_marks`; this backend only
@@ -30,6 +38,8 @@ describe('session marks', () => {
     savedHome = process.env.CCG_HOME;
     process.env.CCG_HOME = home;
     mockGetPath.mockResolvedValue(sessionsDir);
+    // Installed, unless a test says otherwise.
+    mockInstalled.mockResolvedValue(true);
   });
 
   afterEach(async () => {
@@ -115,6 +125,33 @@ describe('session marks', () => {
     });
     expect(parent).toBeDefined();
     expect(parent && 'sessionMark' in parent).toBe(false);
+  });
+
+  describe('while the session-management MCP is not installed', () => {
+    beforeEach(() => {
+      mockInstalled.mockResolvedValue(false);
+    });
+
+    it('shows no mark, though the file is still there', async () => {
+      await writeMarks([JSON.stringify({ id: 'child', parentSessionUid: 'parent' })]);
+
+      expect((await readSessionMarksToShow()).size).toBe(0);
+      // The file itself reads as before: only what the list shows is switched off.
+      expect((await readSessionMarks()).size).toBe(1);
+    });
+
+    it('leaves every row of the session list without one', async () => {
+      await writeSession('parent', 'Manage the release');
+      await writeSession('child', 'Deploy the release');
+      await writeMarks([JSON.stringify({ id: 'child', parentSessionUid: 'parent' })]);
+
+      const { sessions } = await getSessionsList('/work');
+      const entry = await getSessionEntry('/work', 'child');
+
+      expect(sessions).toHaveLength(2);
+      expect(sessions.every((s) => !('sessionMark' in s))).toBe(true);
+      expect(entry && 'sessionMark' in entry).toBe(false);
+    });
   });
 
   it('builds the same row for one session as the list builds', async () => {

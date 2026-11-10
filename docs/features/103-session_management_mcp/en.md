@@ -88,6 +88,8 @@ If the automatic update fails (no permission to write to the package manager's g
 
 Press the trash button at the end of the row. A confirmation explains that the package is removed from this machine and is no longer attached to new Claude processes. This is how you turn it off. Reinstalling is one button press.
 
+While the package is not installed, the session list draws every session as a row of its own: sessions are no longer drawn under the ones that started them, and the folding arrows are gone. What was recorded about who started whom is kept, so the tree is drawn again once the package is back (within a minute when it was installed from a terminal).
+
 ## Choosing areas, or turning it off for a project
 
 There is no screen for this. The setting `sessionMcp` in a settings file changes what an installed package attaches.

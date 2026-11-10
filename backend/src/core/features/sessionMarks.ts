@@ -1,6 +1,7 @@
 import { join } from 'path';
 import { entitiesRoot } from '../entities/entityPaths';
 import { JsonlFile } from '../entities/storage/JsonlFile';
+import { isSessionMcpInstalled } from '../session-mcp';
 
 /**
  * One row of `sidebar/session_marks`: what the session-management MCP
@@ -61,4 +62,19 @@ export async function readSessionMarks(): Promise<Map<string, SessionMark>> {
     else marks.set(row.id, new SessionMark(row));
   }
   return marks;
+}
+
+/**
+ * The marks the session list may show: every mark while the session-management
+ * MCP is installed, and none while it is not.
+ *
+ * What the marks draw (a session under the one that started it, the arrow that
+ * folds a family) is a feature of that package. The file can outlive the
+ * package, or be written by another program that ships it, and a user who has
+ * not installed the package here should not find its screens in their session
+ * list. So the package being installed is the switch, the same switch that
+ * decides whether its tools are handed to Claude.
+ */
+export async function readSessionMarksToShow(): Promise<Map<string, SessionMark>> {
+  return (await isSessionMcpInstalled()) ? readSessionMarks() : new Map();
 }

@@ -79,7 +79,14 @@ export async function getSessionMcpVersion(): Promise<string | null> {
  * manifest names no usable entry.
  */
 export async function resolveSessionMcpEntry(): Promise<string | null> {
-  if (cachedEntry !== undefined) return cachedEntry;
+  if (cachedEntry !== undefined) {
+    // A package removed in a terminal is not announced to this backend either. The remembered
+    // script is checked each time it is handed out: a path that is gone would otherwise be
+    // given to the CLI as a server that cannot start, and the session list would go on drawing
+    // what the package draws.
+    if (cachedEntry === null || existsSync(cachedEntry)) return cachedEntry;
+    resetSessionMcpCache();
+  }
   const install = await getSessionMcpInstallation();
   if (!install) return null; // not cached: an install a moment later must be seen
   const packageDir = join(install.root, ...SESSION_MCP_PACKAGE.split('/'));
@@ -123,6 +130,22 @@ export async function resolveInstalledSessionMcp(workingDir?: string): Promise<I
   const entry = await resolveSessionMcpEntry();
   if (!entry) lookAgainAfterMiss();
   return entry ? { entry, areas } : null;
+}
+
+/**
+ * Whether the package is on this machine, for the screens that only exist with it (a session
+ * drawn under the one that started it, in the session list).
+ *
+ * Asked on every list request, so it must stay cheap: a found package is one file check, and a
+ * missing one asks for the slow fresh look behind the request, at most once a minute, the same
+ * way a Claude start does. A package installed in a terminal therefore shows up within a minute.
+ */
+export async function isSessionMcpInstalled(): Promise<boolean> {
+  // A developer running the server from a checkout names it with this variable.
+  if (process.env.SWTTCH_SESSION_MCP_BIN) return true;
+  const entry = await resolveSessionMcpEntry();
+  if (!entry) lookAgainAfterMiss();
+  return entry !== null;
 }
 
 /** How often a start that found no package may ask for a fresh look. */

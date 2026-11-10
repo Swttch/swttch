@@ -78,6 +78,53 @@ describe('resolveInstalledSessionMcp', () => {
     expect(await resolveInstalledSessionMcp('/p')).not.toBeNull();
     expect(mocks.reset).toHaveBeenCalledWith('swttch-session-manager-mcp');
   });
+  it('stops handing out the script once the package is removed in a terminal, with no restart', async () => {
+    mocks.merged.mockResolvedValue({ settings: {} });
+    const { resolveInstalledSessionMcp, resolveSessionMcpEntry } = await load();
+    expect(await resolveInstalledSessionMcp('/p')).not.toBeNull();
+
+    // `npm uninstall -g`: the script is gone and so is the installation.
+    mocks.exists.mockReturnValue(false);
+    mocks.installation.mockResolvedValue(null);
+
+    expect(await resolveSessionMcpEntry()).toBeNull();
+    expect(await resolveInstalledSessionMcp('/p')).toBeNull();
+    // The remembered locations were dropped, so the package managers are asked again.
+    expect(mocks.reset).toHaveBeenCalledWith('swttch-session-manager-mcp');
+  });
+});
+
+describe('isSessionMcpInstalled', () => {
+  it('says yes for an installed package and no for a missing one', async () => {
+    const { isSessionMcpInstalled } = await load();
+    expect(await isSessionMcpInstalled()).toBe(true);
+
+    mocks.exists.mockReturnValue(false);
+    mocks.installation.mockResolvedValue(null);
+    expect(await isSessionMcpInstalled()).toBe(false);
+  });
+
+  it('asks for a fresh look when it misses, so a terminal install is seen without a restart', async () => {
+    mocks.installation.mockResolvedValue(null);
+    const { isSessionMcpInstalled } = await load();
+    expect(await isSessionMcpInstalled()).toBe(false);
+    expect(mocks.reset).toHaveBeenCalledWith('swttch-session-manager-mcp');
+
+    mocks.installation.mockResolvedValue({ root, version: '0.2.0' });
+    expect(await isSessionMcpInstalled()).toBe(true);
+  });
+
+  it('says yes for a server named by SWTTCH_SESSION_MCP_BIN without looking for a package', async () => {
+    mocks.installation.mockResolvedValue(null);
+    process.env.SWTTCH_SESSION_MCP_BIN = '/checkout/src/cli.js';
+    try {
+      const { isSessionMcpInstalled } = await load();
+      expect(await isSessionMcpInstalled()).toBe(true);
+      expect(mocks.installation).not.toHaveBeenCalled();
+    } finally {
+      delete process.env.SWTTCH_SESSION_MCP_BIN;
+    }
+  });
 });
 
 describe('a package installed in a terminal while the backend is running', () => {

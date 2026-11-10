@@ -4,7 +4,7 @@ import { getProjectSessionsPath } from './getProjectSessionsPath';
 import { readSessionTitleOverrides } from './sessionTitleOverrides';
 import { includeLastPromptInTitles } from './sessionTitleSettings';
 import type { SessionListEntry } from './getSessionsList';
-import { readSessionMarks } from './sessionMarks';
+import { readSessionMarksToShow } from './sessionMarks';
 
 /**
  * Build the list row for ONE session, by id.
@@ -36,7 +36,7 @@ export async function getSessionEntry(
     });
     if (info.isSidechain) return null;
 
-    const sessionMark = (await readSessionMarks()).get(sessionId);
+    const sessionMark = (await readSessionMarksToShow()).get(sessionId);
     return {
       sessionId,
       sessionDir: workingDir,
