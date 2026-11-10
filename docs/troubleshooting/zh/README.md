@@ -2,7 +2,7 @@
 
 🌐 [English](../en/README.md) | [한국어](../ko/README.md) | [日本語](../ja/README.md) | **中文** | [Español](../es/README.md) | [Deutsch](../de/README.md) | [Français](../fr/README.md)
 
-_最后更新：2026-11-07_
+_最后更新：2026-11-10_
 
 这里收集的是常见问题中，我们尚未能自行修复、但已有已知解决方法的那些。
 
@@ -17,6 +17,7 @@ _最后更新：2026-11-07_
 | [Android Studio JCEF](android-studio-jcef.md) | Android Studio 显示引导面板或抛出异常而不是聊天界面，或者窗口空白时 |
 | [变更界面颜色](diff-colors-old-ide.md) | 在 2025.2 及更早的 IDE 上变更界面没有颜色时 |
 | [Claude Desktop 中看不到会话](desktop-session-import.md) | 在插件中创建的会话没有出现在 Claude Desktop 的 Code 标签页时 |
+| [设置 CCG_HOME 后设置和账号被重置](ccg-home-data-location.md) | 设置了 `CCG_HOME`，更新后设置回到默认值，或 `swttch account` 显示没有已保存的账号时 |
 
 ## 如果这里没有您遇到的问题
 

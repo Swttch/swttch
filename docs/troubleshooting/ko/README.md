@@ -2,7 +2,7 @@
 
 🌐 [English](../en/README.md) | **한국어** | [日本語](../ja/README.md) | [中文](../zh/README.md) | [Español](../es/README.md) | [Deutsch](../de/README.md) | [Français](../fr/README.md)
 
-_최종 업데이트: 2026-11-07_
+_최종 업데이트: 2026-11-10_
 
 자주 발생하는 문제들 중, 아직 저희가 직접 고치지 못했지만 알려진 해결 방법이 있는 것들을 모아두었습니다.
 
@@ -17,6 +17,7 @@ _최종 업데이트: 2026-11-07_
 | [Android Studio JCEF](android-studio-jcef.md) | Android Studio 에서 채팅 화면 대신 안내 패널이나 예외가 뜨거나, 창이 비어 있을 때 |
 | [변경 내용 화면 색상](diff-colors-old-ide.md) | 2025.2 이하 IDE 에서 변경 내용 화면에 색이 나오지 않을 때 |
 | [Claude 데스크탑에 세션이 안 보임](desktop-session-import.md) | 플러그인에서 만든 세션이 Claude 데스크탑의 Code 탭에 나타나지 않을 때 |
+| [CCG_HOME 지정 후 설정·계정 초기화](ccg-home-data-location.md) | `CCG_HOME`을 지정해 두었는데 업데이트한 뒤 설정이 기본값으로 돌아갔거나 `swttch account`에 저장된 계정이 없다고 나올 때 |
 
 ## 여기에 없는 문제라면
 
