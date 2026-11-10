@@ -110,14 +110,15 @@ const NO_SESSION_IDS: ReadonlySet<string> = new Set();
  * @param collapsed - ids of the sessions whose started sessions are folded away.
  * @remarks session.updatedAt이 undefined일 경우 'pastYear' 그룹으로 분류
  *
- * With families, a session and the sessions it started stay together: the
- * started ones follow it directly, oldest start first, in the same group. The
- * whole family sits where its most recent member would sit. Placing it by the
- * top session alone would bury a session that is working right now under a
- * manager that last spoke a week ago; and when the top session arrives late (it
- * sat on a page not fetched yet), the rows already on screen stay where they
- * are and the top session appears above them, instead of rows the user was
- * looking at jumping down the list.
+ * With families, a session and everything under it stay together, in the same
+ * group: each session is followed at once by the sessions it started, oldest
+ * start first, and each of those by the sessions IT started. The whole family
+ * sits where its most recent member would sit. Placing it by the top session
+ * alone would bury a session that is working right now under a manager that
+ * last spoke a week ago; and when the top session arrives late (it sat on a page
+ * not fetched yet), the rows already on screen stay where they are and the top
+ * session appears above them, instead of rows the user was looking at jumping
+ * down the list.
  */
 export function groupSessionsByDate(
   sessions: SessionMetaDto[],
@@ -144,11 +145,13 @@ export function groupSessionsByDate(
 
   const timeOf = (session: SessionMetaDto) => session.updatedAt?.getTime() ?? 0;
   const tops = sessions
-    .filter((session) => families.topOf(session.id) === null)
+    .filter((session) => families.parentOf(session.id) === null)
     .map((session, index) => ({
       session,
       index,
-      latest: Math.max(timeOf(session), ...families.membersOf(session.id).map(timeOf)),
+      // Over the whole family, folded rows included: folding a family must not
+      // move it to another place in the list.
+      latest: Math.max(timeOf(session), ...families.descendantsOf(session.id).map(timeOf)),
     }));
   // Newest family first; the order given breaks a tie, so a list with no family
   // in play keeps exactly the order it arrived in.
@@ -156,8 +159,7 @@ export function groupSessionsByDate(
 
   for (const { session, latest } of tops) {
     const group = latest > 0 ? getSessionGroup(new Date(latest), now) : SessionGroup.PastYear;
-    groups[group].push(session);
-    if (!collapsed.has(session.id)) groups[group].push(...families.membersOf(session.id));
+    groups[group].push(session, ...families.descendantsOf(session.id, collapsed));
   }
 
   return groups;

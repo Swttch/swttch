@@ -6,6 +6,7 @@ import { useTranslation } from '@/i18n';
 import { SessionActivity } from '@/shared';
 import { TypewriterText } from '@/components/TypewriterText';
 import { Tooltip } from '@/components/Tooltip';
+import type { FamilyRowPlacement } from './families';
 
 interface Props {
   session: SessionMetaDto;
@@ -48,19 +49,36 @@ interface Props {
     onToggle: () => void;
   };
   /**
-   * Set on a session the list draws under the session that started it: that
-   * session, and whether this row is the last of the family. The row is then
-   * indented and carries the line the desktop app draws down a family, round to
-   * its last row.
+   * Set on a session the list draws under the session that started it: under
+   * which row, how deep, and which tree lines pass through. The row is then
+   * indented one step per level and carries the lines of the tree, each ending
+   * with a turn toward the title on the last row of its level.
    *
-   * The indent and the line live INSIDE the row, not in a box around it, so the
+   * The indent and the lines live INSIDE the row, not in a box around it, so the
    * row keeps its full width: its hover and selected background run from one
-   * edge of the list to the other with the line on top, as in the desktop app.
+   * edge of the list to the other with the lines on top, as in the desktop app.
    */
-  startedBy?: {
-    sessionId: string;
-    isLast: boolean;
-  };
+  placement?: FamilyRowPlacement;
+}
+
+/**
+ * How far one level of the tree indents a row, in rem.
+ *
+ * Kept as small as the turn of the line allows. The list is narrow (the header
+ * dropdown most of all) and every level takes this much from the title, so a
+ * wider step leaves a session three or four levels down with little title left.
+ */
+const LEVEL_STEP_REM = 1;
+/** How far a tree line stands in from the start of its level. */
+const LINE_GAP_REM = 0.1875;
+/** The space between the end of a line's turn and the row's content (its marker or its title). */
+const TURN_GAP_REM = 0.3125;
+/** The gap the row's flex layout puts between the indent and the content (`gap-1`). */
+const ROW_GAP_REM = 0.25;
+
+/** Where the line of [level] stands, measured from the row's start edge. */
+function lineStart(rowInsetRem: number, level: number): string {
+  return `${rowInsetRem + (level - 1) * LEVEL_STEP_REM + LINE_GAP_REM}rem`;
 }
 
 /** Dot colour per state. Only Running adds the turning ring. */
@@ -117,7 +135,7 @@ export function SessionItem(props: Props) {
     activity = SessionActivity.Idle,
     isOpen = false,
     startedSessions,
-    startedBy,
+    placement,
   } = props;
   const { t } = useTranslation('common');
   const scale = useSessionListScale();
@@ -204,24 +222,47 @@ export function SessionItem(props: Props) {
           : 'text-text-secondary hover:text-text-primary hover:bg-[var(--surface-selected)]'
       }`}
       title={isEditing ? undefined : session.title}
-      data-testid={startedBy ? 'session-started-row' : undefined}
-      data-started-by={startedBy?.sessionId}
+      data-testid={placement ? 'session-started-row' : undefined}
+      data-started-by={placement?.parentId}
+      data-depth={placement?.depth}
     >
-      {startedBy && (
+      {placement && (
         <>
-          {/* The line of the family. It spans the row from its top edge so the
-              lines of neighbouring rows join, and stops half-way down the last
-              row, where it turns toward the title. */}
+          {/* The lines of the levels above, where those levels go on below this
+              row. Each spans the row from edge to edge so the pieces in
+              neighbouring rows join. */}
+          {placement.passing.map(
+            (passes, index) =>
+              passes && (
+                <span
+                  key={index}
+                  aria-hidden
+                  data-testid="session-tree-line"
+                  className="pointer-events-none absolute top-0 h-full border-s border-text-tertiary/40"
+                  style={{ insetInlineStart: lineStart(scale.itemInsetRem, index + 1) }}
+                />
+              ),
+          )}
+          {/* The line of this row's own level. It runs the full height while
+              the level goes on, and on the last row stops half-way down, where
+              it turns toward the title. */}
           <span
             aria-hidden
-            className={`pointer-events-none absolute start-3 top-0 w-2.5 border-s border-text-tertiary/40 ${
-              startedBy.isLast ? 'h-1/2 border-b rounded-es-md' : 'h-full'
+            data-testid="session-tree-line"
+            className={`pointer-events-none absolute top-0 border-s border-text-tertiary/40 ${
+              placement.isLast ? 'h-1/2 border-b rounded-es-md' : 'h-full'
             }`}
+            style={{
+              insetInlineStart: lineStart(scale.itemInsetRem, placement.depth),
+              width: `${LEVEL_STEP_REM - LINE_GAP_REM - TURN_GAP_REM}rem`,
+            }}
           />
-          {/* Room for the line; this is what indents the row. Wider than the
-              activity marker, so the title still sits deeper than the title of
-              a starter that wears one. */}
-          <span aria-hidden className="w-6 shrink-0" />
+          {/* Room for the lines; this is what indents the row. */}
+          <span
+            aria-hidden
+            className="shrink-0"
+            style={{ width: `${placement.depth * LEVEL_STEP_REM - ROW_GAP_REM}rem` }}
+          />
         </>
       )}
       {/* The marker leads the whole ROW rather than the title line, so it stays

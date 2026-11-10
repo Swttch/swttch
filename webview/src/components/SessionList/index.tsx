@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { GroupedSessions, GROUP_ORDER, getSessionOriginLabel } from './utils';
+import { GroupedSessions, GROUP_ORDER, SessionGroup, getSessionOriginLabel } from './utils';
 import { SessionItem } from './SessionItem';
-import { SessionNesting } from './families';
+import { SessionNesting, placeFamilyRows } from './families';
 import { generatedTitleArrivedAt } from '@/contexts/generatedTitle';
 import { useSessionListScale } from './scale';
 import { useTranslation } from '@/i18n';
@@ -143,20 +143,20 @@ export function SessionList(props: Props) {
     [visibleGroups],
   );
 
-  // The rows that are drawn. A session is indented under its starter only while
-  // the starter is one of them: the filters above can hide a starter and keep a
-  // session it started, and that session is then an ordinary row.
-  const visibleIds = useMemo(
-    () => new Set(GROUP_ORDER.flatMap((key) => visibleGroups[key]).map((session) => session.id)),
-    [visibleGroups],
-  );
-  const drawnUnder = useCallback(
-    (sessionId: string): string | null => {
-      const top = nesting.families.topOf(sessionId);
-      return top !== null && visibleIds.has(top) ? top : null;
-    },
-    [nesting, visibleIds],
-  );
+  // Where each row sits in the tree of who started whom, worked out from the
+  // rows that are drawn: the filters above can hide a starter and keep a session
+  // it started, and that session then hangs under the nearest row above it that
+  // is still there, or stands as a row of its own.
+  const placements = useMemo(() => {
+    const drawn = new Set(
+      GROUP_ORDER.flatMap((key) => visibleGroups[key]).map((session) => session.id),
+    );
+    const byGroup = {} as Record<SessionGroup, ReturnType<typeof placeFamilyRows>>;
+    for (const key of GROUP_ORDER) {
+      byGroup[key] = placeFamilyRows(visibleGroups[key], nesting.families, drawn);
+    }
+    return byGroup;
+  }, [visibleGroups, nesting]);
 
   // Taken from the side that walked the directories, not guessed from the rows.
   //
@@ -240,13 +240,8 @@ export function SessionList(props: Props) {
             <div className={`${scale.groupHeader} text-text-tertiary`}>
               {t(`sessionList.groups.${groupKey}`)}
             </div>
-            {sessionsInGroup.map((session, index) => {
-              const top = drawnUnder(session.id);
-              const startedOthers = nesting.families.membersOf(session.id).length > 0;
-              // A session another one started is the last of its family when the
-              // row after it is not drawn under the same session.
-              const next = sessionsInGroup[index + 1];
-              const isLastOfFamily = !next || drawnUnder(next.id) !== top;
+            {sessionsInGroup.map((session) => {
+              const startedOthers = nesting.families.childrenOf(session.id).length > 0;
               return (
                 <SessionItem
                   key={session.id}
@@ -270,7 +265,7 @@ export function SessionList(props: Props) {
                         }
                       : undefined
                   }
-                  startedBy={top !== null ? { sessionId: top, isLast: isLastOfFamily } : undefined}
+                  placement={placements[groupKey].get(session.id)}
                 />
               );
             })}

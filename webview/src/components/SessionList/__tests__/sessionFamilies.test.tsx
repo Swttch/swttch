@@ -3,14 +3,18 @@ import { render, screen, fireEvent, renderHook, act } from '@testing-library/rea
 import { plainToInstance } from 'class-transformer';
 import { SessionList } from '../index';
 import { useSessionList } from '../useSessionList';
-import { SessionFamilies, SessionNesting } from '../families';
+import { SessionFamilies, SessionNesting, placeFamilyRows } from '../families';
 import { GROUP_ORDER, groupSessionsByDate, SessionGroup, type GroupedSessions } from '../utils';
 import { SessionMarkDto, SessionMetaDto } from '@/dto';
 
 /**
- * A session another session started is drawn under that session, the way the
- * Claude desktop app nests them. Who started whom comes from the row the
- * session-management MCP keeps (`sessionMark.parentSessionUid`).
+ * A session another session started is drawn under that session, and a session
+ * IT started under it in turn: the list shows the tree of who started whom. Who
+ * started whom comes from the row the session-management MCP keeps
+ * (`sessionMark.parentSessionUid`).
+ *
+ * The Claude desktop app flattens a family to one level under its top session.
+ * That is deliberately not copied: it hides who started whom.
  */
 
 const NOW = new Date('2026-11-11T12:00:00Z');
@@ -51,6 +55,26 @@ function idsOf(groups: GroupedSessions): string[] {
   return GROUP_ORDER.flatMap((key) => groups[key]).map((s) => s.id);
 }
 
+/**
+ * A manager that started `deploy` and `review`; `deploy` started `verify`,
+ * which started `report`:
+ *
+ *   manager
+ *   ├ deploy
+ *   │ └ verify
+ *   │   └ report
+ *   └ review
+ */
+function tree(): SessionMetaDto[] {
+  return [
+    session('manager'),
+    session('deploy', { startedBy: 'manager', startedAt: 10 }),
+    session('verify', { startedBy: 'deploy', startedAt: 20 }),
+    session('report', { startedBy: 'verify', startedAt: 30 }),
+    session('review', { startedBy: 'manager', startedAt: 40 }),
+  ];
+}
+
 describe('SessionMetaDto — the session mark', () => {
   it('keeps the row as the package wrote it, unknown columns included', () => {
     const [row] = plainToInstance(SessionMetaDto, [
@@ -88,9 +112,9 @@ describe('SessionFamilies', () => {
   it('draws a session under the session that started it', () => {
     const families = SessionFamilies.of([session('manager'), session('deploy', { startedBy: 'manager' })]);
 
-    expect(families.topOf('deploy')).toBe('manager');
-    expect(families.topOf('manager')).toBeNull();
-    expect(families.membersOf('manager').map((s) => s.id)).toEqual(['deploy']);
+    expect(families.parentOf('deploy')).toBe('manager');
+    expect(families.parentOf('manager')).toBeNull();
+    expect(families.childrenOf('manager').map((s) => s.id)).toEqual(['deploy']);
   });
 
   it('lists the started sessions in the order they were started', () => {
@@ -101,26 +125,54 @@ describe('SessionFamilies', () => {
       session('second', { startedBy: 'manager', startedAt: 20, hoursAgo: 3 }),
     ]);
 
-    expect(families.membersOf('manager').map((s) => s.id)).toEqual(['first', 'second', 'third']);
+    expect(families.childrenOf('manager').map((s) => s.id)).toEqual(['first', 'second', 'third']);
   });
 
   it('leaves a session alone when the one that started it is not on hand', () => {
     const families = SessionFamilies.of([session('deploy', { startedBy: 'a-manager-on-a-later-page' })]);
 
-    expect(families.topOf('deploy')).toBeNull();
+    expect(families.parentOf('deploy')).toBeNull();
     expect(families.isEmpty).toBe(true);
   });
 
-  it('draws a session started by a started session under the same top session', () => {
-    const families = SessionFamilies.of([
-      session('manager'),
-      session('deploy', { startedBy: 'manager', startedAt: 10 }),
-      session('verify', { startedBy: 'deploy', startedAt: 20 }),
-    ]);
+  it('keeps every level: a session started by a started session hangs under that one', () => {
+    const families = SessionFamilies.of(tree());
 
-    expect(families.topOf('verify')).toBe('manager');
-    expect(families.membersOf('manager').map((s) => s.id)).toEqual(['deploy', 'verify']);
-    expect(families.membersOf('deploy')).toEqual([]);
+    expect(families.parentOf('verify')).toBe('deploy');
+    expect(families.parentOf('report')).toBe('verify');
+    expect(families.childrenOf('manager').map((s) => s.id)).toEqual(['deploy', 'review']);
+    expect(families.childrenOf('deploy').map((s) => s.id)).toEqual(['verify']);
+  });
+
+  it('walks a family in the order it is drawn, each session followed by what it started', () => {
+    const families = SessionFamilies.of(tree());
+
+    expect(families.descendantsOf('manager').map((s) => s.id)).toEqual([
+      'deploy',
+      'verify',
+      'report',
+      'review',
+    ]);
+    expect(families.descendantsOf('deploy').map((s) => s.id)).toEqual(['verify', 'report']);
+  });
+
+  it('stops at a folded session and goes on with the ones after it', () => {
+    const families = SessionFamilies.of(tree());
+
+    expect(families.descendantsOf('manager', new Set(['deploy'])).map((s) => s.id)).toEqual([
+      'deploy',
+      'review',
+    ]);
+  });
+
+  it('lets the sessions under a missing starter keep what they started', () => {
+    // `deploy` is not on hand (filtered out, or on a later page): `verify` can
+    // no longer be tied to the manager, and stands on its own with `report`.
+    const families = SessionFamilies.of(tree().filter((s) => s.id !== 'deploy'));
+
+    expect(families.parentOf('verify')).toBeNull();
+    expect(families.parentOf('report')).toBe('verify');
+    expect(families.childrenOf('manager').map((s) => s.id)).toEqual(['review']);
   });
 
   it('keeps both rows when two records each claim the other started it', () => {
@@ -129,8 +181,8 @@ describe('SessionFamilies', () => {
       session('b', { startedBy: 'a' }),
     ]);
 
-    expect(families.topOf('a')).toBeNull();
-    expect(families.topOf('b')).toBeNull();
+    expect(families.parentOf('a')).toBeNull();
+    expect(families.parentOf('b')).toBeNull();
   });
 });
 
@@ -153,30 +205,114 @@ describe('groupSessionsByDate — with families', () => {
     expect(ids).toEqual(['other', 'manager', 'deploy']);
   });
 
-  it('places the whole family where its most recent session belongs', () => {
-    // The manager last moved four days ago; the session it started moved an
-    // hour ago. The family belongs with today, above the session from yesterday.
+  it('lays a deep family out depth first', () => {
+    const sessions = tree();
+
+    const ids = idsOf(groupSessionsByDate(sessions, NOW, SessionFamilies.of(sessions)));
+
+    expect(ids).toEqual(['manager', 'deploy', 'verify', 'report', 'review']);
+  });
+
+  it('places the whole family where its most recent session belongs, however deep that one is', () => {
+    // The manager last moved four days ago; a session three levels down moved
+    // an hour ago. The family belongs with today, above yesterday's session.
+    const sessions = [
+      session('report', { startedBy: 'verify', hoursAgo: 1 }),
+      session('yesterday', { hoursAgo: 30 }),
+      session('verify', { startedBy: 'deploy', hoursAgo: 3 * 24 }),
+      session('deploy', { startedBy: 'manager', hoursAgo: 3 * 24 }),
+      session('manager', { hoursAgo: 4 * 24 }),
+    ];
+
+    const groups = groupSessionsByDate(sessions, NOW, SessionFamilies.of(sessions));
+
+    expect(groups[SessionGroup.Today].map((s) => s.id)).toEqual(['manager', 'deploy', 'verify', 'report']);
+    expect(idsOf(groups)).toEqual(['manager', 'deploy', 'verify', 'report', 'yesterday']);
+    expect(NOW.getTime() - sessions[4].updatedAt.getTime()).toBe(4 * DAY);
+  });
+
+  it('folds only what the folded session started', () => {
+    const sessions = tree();
+    const families = SessionFamilies.of(sessions);
+
+    expect(idsOf(groupSessionsByDate(sessions, NOW, families, new Set(['deploy'])))).toEqual([
+      'manager',
+      'deploy',
+      'review',
+    ]);
+    expect(idsOf(groupSessionsByDate(sessions, NOW, families, new Set(['manager'])))).toEqual(['manager']);
+  });
+
+  it('does not move a family when it is folded', () => {
     const sessions = [
       session('deploy', { startedBy: 'manager', hoursAgo: 1 }),
       session('yesterday', { hoursAgo: 30 }),
       session('manager', { hoursAgo: 4 * 24 }),
     ];
 
-    const groups = groupSessionsByDate(sessions, NOW, SessionFamilies.of(sessions));
+    const groups = groupSessionsByDate(sessions, NOW, SessionFamilies.of(sessions), new Set(['manager']));
 
-    expect(groups[SessionGroup.Today].map((s) => s.id)).toEqual(['manager', 'deploy']);
-    expect(idsOf(groups)).toEqual(['manager', 'deploy', 'yesterday']);
-    expect(NOW.getTime() - sessions[2].updatedAt.getTime()).toBe(4 * DAY);
+    expect(groups[SessionGroup.Today].map((s) => s.id)).toEqual(['manager']);
+  });
+});
+
+describe('placeFamilyRows', () => {
+  function place(rows: SessionMetaDto[], drawn = rows.map((s) => s.id)) {
+    const families = SessionFamilies.of(rows);
+    const groups = groupSessionsByDate(rows, NOW, families);
+    const ordered = GROUP_ORDER.flatMap((key) => groups[key]).filter((s) => drawn.includes(s.id));
+    return placeFamilyRows(ordered, families, new Set(drawn));
+  }
+
+  it('gives a top session no placement', () => {
+    expect(place(tree()).get('manager')).toBeUndefined();
   });
 
-  it('leaves the started sessions out while their starter is folded', () => {
-    const sessions = [session('manager'), session('deploy', { startedBy: 'manager' })];
+  it('counts the levels above each row', () => {
+    const placements = place(tree());
 
-    const ids = idsOf(
-      groupSessionsByDate(sessions, NOW, SessionFamilies.of(sessions), new Set(['manager'])),
-    );
+    expect(placements.get('deploy')?.depth).toBe(1);
+    expect(placements.get('verify')?.depth).toBe(2);
+    expect(placements.get('report')?.depth).toBe(3);
+    expect(placements.get('review')?.depth).toBe(1);
+    expect(placements.get('report')?.parentId).toBe('verify');
+  });
 
-    expect(ids).toEqual(['manager']);
+  it('ends a level on the last row drawn under the same session', () => {
+    const placements = place(tree());
+
+    // `review` follows `deploy` under the manager, so the first level goes on.
+    expect(placements.get('deploy')?.isLast).toBe(false);
+    expect(placements.get('review')?.isLast).toBe(true);
+    // `verify` and `report` are each the only session their starter started.
+    expect(placements.get('verify')?.isLast).toBe(true);
+    expect(placements.get('report')?.isLast).toBe(true);
+  });
+
+  it('runs the line of a level through the deeper rows while that level goes on', () => {
+    const placements = place(tree());
+
+    // Level 1 goes on to `review`, so its line passes through both rows below
+    // `deploy`. Level 2 ended at `verify`, so it does not reach `report`.
+    expect(placements.get('verify')?.passing).toEqual([true]);
+    expect(placements.get('report')?.passing).toEqual([true, false]);
+    expect(placements.get('review')?.passing).toEqual([]);
+  });
+
+  it('hangs a row under the nearest row above it that is still drawn', () => {
+    // A filter hid `deploy` and kept what is under it.
+    const placements = place(tree(), ['manager', 'verify', 'report', 'review']);
+
+    expect(placements.get('verify')?.parentId).toBe('manager');
+    expect(placements.get('verify')?.depth).toBe(1);
+    expect(placements.get('report')?.depth).toBe(2);
+  });
+
+  it('lets a row stand on its own when nothing above it is drawn', () => {
+    const placements = place(tree(), ['verify', 'report']);
+
+    expect(placements.get('verify')).toBeUndefined();
+    expect(placements.get('report')?.depth).toBe(1);
   });
 });
 
@@ -217,23 +353,24 @@ describe('useSessionList — families', () => {
     hookSessions.current = [
       Object.assign(session('manager', { hoursAgo: 1 }), { title: 'Release manager' }),
       Object.assign(session('deploy', { startedBy: 'manager', hoursAgo: 2 }), { title: 'Deploy the release' }),
+      Object.assign(session('verify', { startedBy: 'deploy', hoursAgo: 2 }), { title: 'Verify the build' }),
       Object.assign(session('other', { hoursAgo: 3 }), { title: 'Something else' }),
     ];
   });
 
-  it('arranges the rows by family and folds one on request', () => {
+  it('arranges the rows by family and folds one level on request', () => {
     const { result } = renderHook(() => useSessionList());
 
-    expect(idsOf(result.current.groupedSessions)).toEqual(['manager', 'deploy', 'other']);
-    expect(result.current.sessionNesting.families.topOf('deploy')).toBe('manager');
+    expect(idsOf(result.current.groupedSessions)).toEqual(['manager', 'deploy', 'verify', 'other']);
+    expect(result.current.sessionNesting.families.parentOf('verify')).toBe('deploy');
 
-    act(() => result.current.sessionNesting.toggle('manager'));
+    act(() => result.current.sessionNesting.toggle('deploy'));
     // The keyboard walks groupedSessions, so a folded row must not be in it.
-    expect(idsOf(result.current.groupedSessions)).toEqual(['manager', 'other']);
-    expect(result.current.sessionNesting.collapsed.has('manager')).toBe(true);
-
-    act(() => result.current.sessionNesting.toggle('manager'));
     expect(idsOf(result.current.groupedSessions)).toEqual(['manager', 'deploy', 'other']);
+    expect(result.current.sessionNesting.collapsed.has('deploy')).toBe(true);
+
+    act(() => result.current.sessionNesting.toggle('deploy'));
+    expect(idsOf(result.current.groupedSessions)).toEqual(['manager', 'deploy', 'verify', 'other']);
   });
 
   it('shows a started session as an ordinary row when a search leaves its starter out', () => {
@@ -242,7 +379,7 @@ describe('useSessionList — families', () => {
     act(() => result.current.setSearchQuery('Deploy'));
 
     expect(idsOf(result.current.groupedSessions)).toEqual(['deploy']);
-    expect(result.current.sessionNesting.families.topOf('deploy')).toBeNull();
+    expect(result.current.sessionNesting.families.parentOf('deploy')).toBeNull();
   });
 });
 
@@ -274,39 +411,74 @@ function recent(id: string, shape: Shape = {}): SessionMetaDto {
   return Object.assign(session(id, shape), { createdAt: moved, updatedAt: moved });
 }
 
-describe('SessionList — sessions a session started', () => {
-  it('indents a started session under its starter and leaves the others alone', () => {
-    renderList([recent('manager'), recent('deploy', { startedBy: 'manager' }), recent('other')]);
+function recentTree(): SessionMetaDto[] {
+  return [
+    recent('manager'),
+    recent('deploy', { startedBy: 'manager', startedAt: 10 }),
+    recent('verify', { startedBy: 'deploy', startedAt: 20 }),
+    recent('review', { startedBy: 'manager', startedAt: 30 }),
+    recent('other'),
+  ];
+}
 
-    const started = screen.getAllByTestId('session-started-row');
-    expect(started).toHaveLength(1);
-    expect(started[0].getAttribute('data-started-by')).toBe('manager');
-    expect(started[0].textContent).toContain('title of deploy');
+function startedRow(id: string): HTMLElement {
+  const row = screen
+    .getAllByTestId('session-started-row')
+    .find((element) => element.textContent?.includes(`title of ${id}`));
+  if (!row) throw new Error(`no started row for ${id}`);
+  return row;
+}
+
+describe('SessionList — sessions a session started', () => {
+  it('indents each started session under the one that started it, one step per level', () => {
+    renderList(recentTree());
+
+    expect(screen.getAllByTestId('session-started-row')).toHaveLength(3);
+    expect(startedRow('deploy').getAttribute('data-started-by')).toBe('manager');
+    expect(startedRow('deploy').getAttribute('data-depth')).toBe('1');
+    expect(startedRow('verify').getAttribute('data-started-by')).toBe('deploy');
+    expect(startedRow('verify').getAttribute('data-depth')).toBe('2');
+    expect(startedRow('review').getAttribute('data-depth')).toBe('1');
   });
 
-  it('gives only the session that started others the arrow', () => {
-    renderList([recent('manager'), recent('deploy', { startedBy: 'manager' }), recent('other')]);
+  it('draws one line per level that reaches the row', () => {
+    renderList(recentTree());
+
+    const linesIn = (id: string) => startedRow(id).querySelectorAll('[data-testid="session-tree-line"]').length;
+    // `verify` sits two levels down and the first level goes on to `review`
+    // below it: its own line and the passing one.
+    expect(linesIn('verify')).toBe(2);
+    expect(linesIn('deploy')).toBe(1);
+    expect(linesIn('review')).toBe(1);
+  });
+
+  it('gives every session that started others its own arrow', () => {
+    renderList(recentTree());
 
     const toggles = screen.getAllByTestId('session-started-toggle');
-    expect(toggles).toHaveLength(1);
-    expect(toggles[0].getAttribute('aria-expanded')).toBe('true');
-    expect(toggles[0].closest('button')?.textContent).toContain('title of manager');
+    const owners = toggles.map((toggle) => toggle.closest('button')?.textContent ?? '');
+    expect(toggles).toHaveLength(2);
+    expect(owners.some((text) => text.includes('title of manager'))).toBe(true);
+    expect(owners.some((text) => text.includes('title of deploy'))).toBe(true);
+    expect(toggles.every((toggle) => toggle.getAttribute('aria-expanded') === 'true')).toBe(true);
   });
 
-  it('folds the family with the arrow without opening the session', () => {
-    const { toggle, onSelect } = renderList([recent('manager'), recent('deploy', { startedBy: 'manager' })]);
+  it('folds with the arrow of the row it sits on, without opening the session', () => {
+    const { toggle, onSelect } = renderList(recentTree());
 
-    fireEvent.click(screen.getByTestId('session-started-toggle'));
+    const deployArrow = startedRow('deploy').querySelector('[data-testid="session-started-toggle"]');
+    fireEvent.click(deployArrow as Element);
 
-    expect(toggle).toHaveBeenCalledWith('manager');
+    expect(toggle).toHaveBeenCalledWith('deploy');
     expect(onSelect).not.toHaveBeenCalled();
   });
 
-  it('keeps the arrow on a folded starter, turned, with its sessions gone', () => {
-    renderList([recent('manager'), recent('deploy', { startedBy: 'manager' })], { collapsed: ['manager'] });
+  it('keeps the arrow on a folded session, turned, with what it started gone', () => {
+    renderList(recentTree(), { collapsed: ['deploy'] });
 
-    expect(screen.queryByTestId('session-started-row')).toBeNull();
-    expect(screen.getByTestId('session-started-toggle').getAttribute('aria-expanded')).toBe('false');
+    expect(screen.getAllByTestId('session-started-row')).toHaveLength(2);
+    const deployArrow = startedRow('deploy').querySelector('[data-testid="session-started-toggle"]');
+    expect(deployArrow?.getAttribute('aria-expanded')).toBe('false');
   });
 
   it('draws nothing of the kind for a list where no session started another', () => {
