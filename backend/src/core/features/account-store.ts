@@ -46,8 +46,10 @@ export interface AccountsRegistry {
 const ACCOUNT_ID_PATTERN = /^acc-[a-f0-9-]+$/;
 const ACCOUNT_POOL_ID_PATTERN = /^pool-[a-f0-9-]+$/;
 
+// `CCG_HOME` is the documented override for the user-data directory (cli/install.sh),
+// so accounts.json and accounts/ must follow it like the other stores do.
 function baseDir(): string {
-  return join(homedir(), '.claude-code-gui');
+  return process.env.CCG_HOME?.trim() || join(homedir(), '.claude-code-gui');
 }
 function registryPath(): string {
   return join(baseDir(), 'accounts.json');
