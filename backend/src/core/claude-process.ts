@@ -28,6 +28,7 @@ import { getProjectSessionsPath } from './features/getProjectSessionsPath';
 import { isFolderGone } from './project-folder';
 import { removeSessionTitleOverride } from './features/sessionTitleOverrides';
 import { renamedSessionTitle } from './features/sessionRenamedReply';
+import { announceSessionToolChanges } from './features/sessionToolAnnouncer';
 import { swttchEntrypointName } from './features/sessionEntrypoint';
 import { MessageType, SessionActivity } from '../shared';
 import { ingestRateLimitWindows } from './handlers/getUsage';
@@ -1631,6 +1632,10 @@ function handleStreamEvent(
         console.error('[node-backend]', 'Failed to apply CLI session rename:', err);
       });
   }
+
+  // A session started, moved or archived through the session-management MCP:
+  // the session lists are told, because nothing else passes through here.
+  announceSessionToolChanges(event, connections);
 
   if (eventType === 'result') {
     sessionsWithResult.add(targetSessionId);

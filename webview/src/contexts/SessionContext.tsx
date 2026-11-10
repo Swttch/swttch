@@ -517,6 +517,13 @@ export function SessionProvider({ children }: SessionProviderProps) {
         mergeSession(session);
         return;
       }
+      if (action === 'refresh') {
+        // Something about the rows changed that no single row names: a session
+        // was moved under or out from under another, archived, or renamed by a
+        // tool of the session-management MCP. The list is read again.
+        void loadSessions();
+        return;
+      }
       if (action === 'rename' && session?.sessionId && session.title) {
         // A title Claude Code just generated arrives with the flag; one a user typed does not.
         if (session.generated === true) {
