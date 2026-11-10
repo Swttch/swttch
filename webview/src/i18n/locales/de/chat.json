@@ -794,6 +794,13 @@
     "context": "Kontext",
     "outputs": "Ergebnisse",
     "outputsEmpty": "Noch nichts vorhanden. Dateien, Bilder und Seiten, die Claude für dich erstellt, erscheinen in dieser Liste.",
+    "linked": {
+      "title": "Verknüpfte Sitzungen",
+      "parent": "Übergeordnete Sitzung",
+      "children": "Untergeordnete Sitzungen",
+      "none": "Keine",
+      "notInList": "Nicht in dieser Liste"
+    },
     "showMore": "Mehr anzeigen",
     "contextUsed": "{{percent}} % verwendet",
     "contextLoading": "Nutzung wird geladen...",

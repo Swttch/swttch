@@ -794,6 +794,13 @@
     "context": "上下文",
     "outputs": "產出",
     "outputsEmpty": "目前沒有內容。Claude 為你產生的檔案、圖片和頁面會顯示在這裡。",
+    "linked": {
+      "title": "關聯的工作階段",
+      "parent": "上層工作階段",
+      "children": "下層工作階段",
+      "none": "無",
+      "notInList": "不在此清單中"
+    },
     "showMore": "顯示更多",
     "contextUsed": "已使用 {{percent}}%",
     "contextLoading": "正在載入用量...",

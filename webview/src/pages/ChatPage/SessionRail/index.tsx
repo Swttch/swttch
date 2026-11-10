@@ -5,6 +5,8 @@ import {Section} from "./Section";
 import {EnvironmentSection} from "./EnvironmentSection";
 import {ContextSection} from "./ContextSection";
 import {OutputsSection} from "./OutputsSection";
+import {LinkedSessionsSection} from "./LinkedSessionsSection";
+import {useSessionMcp} from "@/hooks/queries/useSessionMcp";
 
 /**
  * The session rail: a panel of the session's environment, context usage and
@@ -17,6 +19,9 @@ import {OutputsSection} from "./OutputsSection";
  */
 export function SessionRail() {
     const {t} = useTranslation('chat');
+    // Who started whom is the session-management MCP's record: without the package there is
+    // nothing to show, and the section is left out rather than drawn empty.
+    const {info: sessionMcp} = useSessionMcp();
     const [open, setOpen] = useState(false);
     const [contextOpen, setContextOpen] = useState(false);
     const rootRef = useRef<HTMLDivElement>(null);
@@ -59,6 +64,11 @@ export function SessionRail() {
             <Section title={t('sessionRail.environment')} defaultOpen>
                 <EnvironmentSection/>
             </Section>
+            {sessionMcp?.installed && (
+                <Section title={t('sessionRail.linked.title')} defaultOpen>
+                    <LinkedSessionsSection/>
+                </Section>
+            )}
             <Section title={t('sessionRail.context')} defaultOpen={false} onToggle={setContextOpen}>
                 <ContextSection open={contextOpen}/>
             </Section>

@@ -794,6 +794,13 @@
     "context": "컨텍스트",
     "outputs": "결과물",
     "outputsEmpty": "아직 없습니다. Claude가 만들어 주는 파일, 그림, 페이지가 이 목록에 나옵니다.",
+    "linked": {
+      "title": "연결된 세션",
+      "parent": "상위 세션",
+      "children": "하위 세션",
+      "none": "없음",
+      "notInList": "이 목록에 없는 세션"
+    },
     "showMore": "더 보기",
     "contextUsed": "{{percent}}% 사용됨",
     "contextLoading": "사용량을 불러오는 중...",

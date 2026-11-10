@@ -16,8 +16,22 @@ vi.mock('@/adapters', () => ({getAdapter: () => ({openUrl})}));
 vi.mock('@/utils/openChatFile', () => ({openChatFile}));
 vi.mock('react-hot-toast', () => ({default: {error: vi.fn()}}));
 vi.mock('@/contexts/ChatStreamContext', () => ({useChatStreamContext: () => ({messages, isStreaming: false})}));
+const sessionCtx = vi.hoisted(() => ({
+    sessions: [] as unknown[],
+    switchSession: undefined as unknown as (sessionId: string) => void,
+}));
 vi.mock('@/contexts/SessionContext', () => ({
-    useSessionContext: () => ({workingDirectory: '/Users/me/Projects/swttch', currentSessionId: 's1'}),
+    useSessionContext: () => ({
+        workingDirectory: '/Users/me/Projects/swttch',
+        currentSessionId: 's1',
+        sessions: sessionCtx.sessions,
+        switchSession: sessionCtx.switchSession,
+    }),
+}));
+// Whether the session-management MCP is installed: what decides if the rail draws the linked sessions.
+let mcpInstalled: string | null = null;
+vi.mock('@/hooks/queries/useSessionMcp', () => ({
+    useSessionMcp: () => ({info: {packageName: '@swttch/session-manager-mcp', installed: mcpInstalled, latest: null, updatable: false, updating: false}}),
 }));
 // One object for every render: a fresh one would change the effect's dependencies each time and loop it.
 const bridge = vi.hoisted(() => ({isConnected: true, send: undefined as unknown}));
@@ -83,6 +97,9 @@ beforeEach(() => {
     send.mockResolvedValue({status: 'ok', markdown: REPORT});
     messages = [];
     outputsIndex = [];
+    mcpInstalled = null;
+    sessionCtx.sessions = [];
+    sessionCtx.switchSession = vi.fn();
 });
 
 describe('SessionRail', () => {
@@ -158,5 +175,64 @@ describe('SessionRail', () => {
         render(<SessionRail/>);
         openRail();
         expect(screen.getAllByText('sessionRail.contextLoading').length).toBeGreaterThan(0);
+    });
+});
+
+function linked(id: string, title: string, startedBy: string | null, startedAt = 0) {
+    return {
+        id,
+        title,
+        createdAt: new Date(startedAt || 0),
+        updatedAt: new Date(startedAt || 0),
+        sessionMark: {id, parentSessionUid: startedBy, startedAt},
+    };
+}
+
+describe('SessionRail - linked sessions', () => {
+    it('is left out while the session-management MCP is not installed', () => {
+        mcpInstalled = null;
+        sessionCtx.sessions = [linked('s1', 'This one', null)];
+        render(<SessionRail/>);
+        openRail();
+        expect(screen.queryByText('sessionRail.linked.title')).toBeNull();
+    });
+
+    it('says none for a session no other session started and that started none', () => {
+        mcpInstalled = '0.2.0';
+        sessionCtx.sessions = [linked('s1', 'This one', null)];
+        render(<SessionRail/>);
+        openRail();
+        expect(screen.getByText('sessionRail.linked.parent')).toBeInTheDocument();
+        expect(screen.getByText('sessionRail.linked.children')).toBeInTheDocument();
+        expect(screen.getAllByText('sessionRail.linked.none')).toHaveLength(2);
+    });
+
+    it('names the parent and lists the children in the order they were started, and opens one on a click', () => {
+        mcpInstalled = '0.2.0';
+        sessionCtx.sessions = [
+            linked('s1', 'This one', 'p1'),
+            linked('p1', 'The manager', null),
+            linked('c2', 'Second child', 's1', 20),
+            linked('c1', 'First child', 's1', 10),
+            linked('x', 'Somebody else child', 'p1', 5),
+        ];
+        render(<SessionRail/>);
+        openRail();
+        expect(screen.getByText('The manager')).toBeInTheDocument();
+        const rows = screen.getAllByRole('button', {name: /child/i}).map((b) => b.textContent);
+        expect(rows).toEqual(['First child', 'Second child']);
+        expect(screen.queryByText('Somebody else child')).toBeNull();
+        fireEvent.click(screen.getByText('The manager'));
+        expect(sessionCtx.switchSession).toHaveBeenCalledWith('p1');
+        fireEvent.click(screen.getByText('Second child'));
+        expect(sessionCtx.switchSession).toHaveBeenCalledWith('c2');
+    });
+
+    it('says the parent is not in the list when it runs in a folder the list does not cover', () => {
+        mcpInstalled = '0.2.0';
+        sessionCtx.sessions = [linked('s1', 'This one', 'a-session-in-another-folder')];
+        render(<SessionRail/>);
+        openRail();
+        expect(screen.getByText('sessionRail.linked.notInList')).toBeInTheDocument();
     });
 });

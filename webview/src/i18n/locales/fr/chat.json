@@ -794,6 +794,13 @@
     "context": "Contexte",
     "outputs": "Productions",
     "outputsEmpty": "Rien pour l'instant. Les fichiers, images et pages que Claude crée pour vous apparaissent dans cette liste.",
+    "linked": {
+      "title": "Sessions liées",
+      "parent": "Session parente",
+      "children": "Sessions enfants",
+      "none": "Aucune",
+      "notInList": "Absente de cette liste"
+    },
     "showMore": "Afficher plus",
     "contextUsed": "{{percent}} % utilisé",
     "contextLoading": "Chargement de l'utilisation...",

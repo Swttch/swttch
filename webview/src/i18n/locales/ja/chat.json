@@ -794,6 +794,13 @@
     "context": "コンテキスト",
     "outputs": "成果物",
     "outputsEmpty": "まだありません。Claudeが作成したファイル、画像、ページがここに並びます。",
+    "linked": {
+      "title": "リンクされたセッション",
+      "parent": "親セッション",
+      "children": "子セッション",
+      "none": "なし",
+      "notInList": "この一覧にありません"
+    },
     "showMore": "もっと見る",
     "contextUsed": "{{percent}}% 使用",
     "contextLoading": "使用状況を読み込み中...",

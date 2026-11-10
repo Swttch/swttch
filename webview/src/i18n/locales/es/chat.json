@@ -794,6 +794,13 @@
     "context": "Contexto",
     "outputs": "Resultados",
     "outputsEmpty": "Todavía no hay nada. Los archivos, imágenes y páginas que Claude crea para ti aparecen en esta lista.",
+    "linked": {
+      "title": "Sesiones vinculadas",
+      "parent": "Sesión superior",
+      "children": "Sesiones subordinadas",
+      "none": "Ninguna",
+      "notInList": "No está en esta lista"
+    },
     "showMore": "Mostrar más",
     "contextUsed": "{{percent}} % usado",
     "contextLoading": "Cargando el uso...",

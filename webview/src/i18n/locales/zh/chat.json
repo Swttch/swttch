@@ -794,6 +794,13 @@
     "context": "上下文",
     "outputs": "产出",
     "outputsEmpty": "暂无内容。Claude 为你生成的文件、图片和页面会显示在这里。",
+    "linked": {
+      "title": "关联的会话",
+      "parent": "上级会话",
+      "children": "下级会话",
+      "none": "无",
+      "notInList": "不在此列表中"
+    },
     "showMore": "显示更多",
     "contextUsed": "已使用 {{percent}}%",
     "contextLoading": "正在加载用量...",

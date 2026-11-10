@@ -798,6 +798,13 @@
     "context": "Context",
     "outputs": "Outputs",
     "outputsEmpty": "Nothing here yet. Files, pictures and pages Claude makes for you appear in this list.",
+    "linked": {
+      "title": "Linked sessions",
+      "parent": "Parent session",
+      "children": "Child sessions",
+      "none": "None",
+      "notInList": "Not in this list"
+    },
     "showMore": "Show more",
     "contextUsed": "{{percent}}% used",
     "contextLoading": "Loading the usage...",
