@@ -210,6 +210,8 @@
     "refreshSessions": "Actualizar sesiones",
     "renameSession": "Renombrar sesión",
     "deleteSession": "Eliminar sesión",
+    "archiveSession": "Archivar sesión",
+    "unarchiveSession": "Desarchivar sesión",
     "startedSessions": {
       "show": "Mostrar las sesiones que inició",
       "hide": "Ocultar las sesiones que inició"
@@ -244,6 +246,7 @@
       "active": "Activas",
       "countsTitle": "Sesiones por estado",
       "activeTitle": "Mostrar solo sesiones que esperan respuesta, están trabajando o sin leer",
+      "showArchived": "Mostrar sesiones archivadas",
       "noneActive": "Ninguna sesión te está esperando"
     }
   },

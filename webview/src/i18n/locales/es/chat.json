@@ -59,6 +59,10 @@
       "reclaim": "Reclamar sesión"
     }
   },
+  "archivedSession": {
+    "message": "Esta sesión está archivada. Para seguir trabajando en ella, desarchívala.",
+    "unarchive": "Desarchivar"
+  },
   "missingFolder": {
     "message": "La carpeta de trabajo ya no existe. Elige otra carpeta para continuar.",
     "chooseFolder": "Elegir carpeta",
@@ -801,6 +805,7 @@
       "none": "Ninguna",
       "notInList": "No está en esta lista",
       "notInListHint": "Esta sesión no está en la lista. Puede que se haya eliminado o que pertenezca a otra carpeta.",
+      "archived": "Archivada",
       "resetToDesktop": "Restablecer los vínculos cambiados a mano a lo que registra la app de escritorio de Claude",
       "resetSynced": "Nada que restablecer: los vínculos de esta sesión ya coinciden con los de la app de escritorio de Claude",
       "resetNoRecord": "Nada que restablecer: la app de escritorio de Claude no tiene ningún vínculo registrado para esta sesión",

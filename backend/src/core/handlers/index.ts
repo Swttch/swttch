@@ -112,7 +112,7 @@ import {
   getDictationAvailabilityHandler,
   getExtendKitInfoHandler,
 } from './dictation';
-import { getSessionMcpInfoHandler, installSessionMcpHandler, setSessionParentHandler, uninstallSessionMcpHandler } from './sessionMcp';
+import { getSessionMcpInfoHandler, installSessionMcpHandler, setSessionArchivedHandler, setSessionParentHandler, uninstallSessionMcpHandler } from './sessionMcp';
 import { startReadAloudHandler, stopReadAloudHandler, getReadAloudAvailabilityHandler, getReadAloudVoiceSettingsHandler } from './readAloud';
 import { getCcbInstallHintHandler } from './getCcbInstallHint';
 import { getAccountHandler } from './getAccount';
@@ -555,6 +555,9 @@ export async function handleMessage(
       break;
     case MessageType.INSTALL_SESSION_MCP:
       await installSessionMcpHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.SET_SESSION_ARCHIVED:
+      await setSessionArchivedHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.SET_SESSION_PARENT:
       await setSessionParentHandler(connectionId, message, connections, bridge);

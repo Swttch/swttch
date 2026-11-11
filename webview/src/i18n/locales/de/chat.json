@@ -59,6 +59,10 @@
       "reclaim": "Sitzung zurückholen"
     }
   },
+  "archivedSession": {
+    "message": "Diese Sitzung ist archiviert. Um darin weiterzuarbeiten, heben Sie die Archivierung auf.",
+    "unarchive": "Archivierung aufheben"
+  },
   "missingFolder": {
     "message": "Der Arbeitsordner existiert nicht mehr. Wähle einen anderen Ordner, um fortzufahren.",
     "chooseFolder": "Ordner wählen",
@@ -801,6 +805,7 @@
       "none": "Keine",
       "notInList": "Nicht in dieser Liste",
       "notInListHint": "Diese Sitzung steht nicht in der Liste. Sie wurde möglicherweise gelöscht oder gehört zu einem anderen Ordner.",
+      "archived": "Archiviert",
       "resetToDesktop": "Von Hand geänderte Verknüpfungen auf die Aufzeichnung der Claude-Desktop-App zurücksetzen",
       "resetSynced": "Nichts zurückzusetzen: Die Verknüpfungen dieser Sitzung stimmen bereits mit der Claude-Desktop-App überein",
       "resetNoRecord": "Nichts zurückzusetzen: Die Claude-Desktop-App hat keine Verknüpfung für diese Sitzung aufgezeichnet",

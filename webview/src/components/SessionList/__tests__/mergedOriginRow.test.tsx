@@ -6,6 +6,12 @@ import { SessionGroup, type GroupedSessions } from '../utils';
 
 const ROOT = '/repo';
 
+// Whether the session-management MCP is installed decides if the list offers to archive; these tests are about
+// something else, so it is not installed.
+vi.mock('@/hooks/queries/useSessionMcp', () => ({
+  useSessionMcp: () => ({ info: { installed: null } }),
+}));
+
 // i18n is deliberately NOT mocked: SessionList's utils reach for the `i18n`
 // instance as well as `useTranslation`, and the strings asserted here are
 // project paths, which are never translated.

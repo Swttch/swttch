@@ -26,8 +26,10 @@ export class SessionMarkDto {
   handle: string | null = null;
   /** When the package started the session, in milliseconds; 0 when it did not start it. */
   startedAt: number = 0;
-  /** When the session was archived, in milliseconds; 0 when it is not archived. */
+  /** When the session was archived, in milliseconds; 0 when nothing was chosen; -1 when it was brought back on purpose. */
   archivedAt: number = 0;
+  /** Whether the Claude desktop app says the session is archived. Added beside the row by this app; see `isArchivedMark`. */
+  desktopArchived: boolean = false;
 }
 
 /**

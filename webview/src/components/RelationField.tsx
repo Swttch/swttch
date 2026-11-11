@@ -10,6 +10,19 @@ export interface RelationItem {
     fullTitle?: string;
     /** A dim word after the title in the picker, e.g. how long ago. */
     hint?: string;
+    /** The session is archived: its title is led by a pill that says so. */
+    archived?: boolean;
+    /** The word on that pill. */
+    archivedLabel?: string;
+}
+
+/** The small pill that leads the title of an archived session. */
+function ArchivedPill({label}: {label?: string}) {
+    return (
+        <span data-testid="archived-pill" className="shrink-0 rounded-full bg-surface-hover px-1.5 text-[0.6875rem] leading-4 text-text-secondary">
+            {label}
+        </span>
+    );
 }
 
 interface Props {
@@ -114,6 +127,7 @@ export function RelationField(props: Props) {
                             className="flex min-w-0 flex-1 items-center gap-1.5 text-start text-text-primary"
                         >
                             <PageIcon/>
+                            {item.archived && <ArchivedPill label={item.archivedLabel}/>}
                             <span className="truncate underline decoration-text-tertiary/60 underline-offset-1">{item.title}</span>
                         </button>
                     </Tooltip>
@@ -245,6 +259,7 @@ function RelationPicker({anchorRef, menuRef, candidates, searchPlaceholder, list
                             className={`flex w-full items-center gap-2 px-3 py-1.5 text-start text-sm text-text-primary ${index === active ? 'bg-surface-hover' : ''}`}
                         >
                             <PageIcon/>
+                            {item.archived && <ArchivedPill label={item.archivedLabel}/>}
                             <span className="min-w-0 flex-1 truncate">{item.title}</span>
                             {item.hint && <span className="shrink-0 text-xs text-text-tertiary">{item.hint}</span>}
                         </button>

@@ -210,6 +210,8 @@
     "refreshSessions": "Refresh sessions",
     "renameSession": "Rename session",
     "deleteSession": "Delete session",
+    "archiveSession": "Archive session",
+    "unarchiveSession": "Unarchive session",
     "startedSessions": {
       "show": "Show the sessions it started",
       "hide": "Hide the sessions it started"
@@ -244,6 +246,7 @@
       "active": "Active",
       "countsTitle": "Session counts by state",
       "activeTitle": "Show only sessions that need input, are working, or are unread",
+      "showArchived": "Show archived sessions",
       "noneActive": "No session is waiting on you"
     }
   },

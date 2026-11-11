@@ -332,6 +332,12 @@ describe('placeFamilyRows', () => {
 
 const hookSessions: { current: SessionMetaDto[] } = { current: [] };
 
+// Whether the session-management MCP is installed decides if the list offers to archive; these tests are about
+// something else, so it is not installed.
+vi.mock('@/hooks/queries/useSessionMcp', () => ({
+  useSessionMcp: () => ({ info: { installed: null } }),
+}));
+
 vi.mock('@/contexts/SessionContext', () => ({
   useSessionContext: () => ({
     sessions: hookSessions.current,

@@ -4,6 +4,12 @@ import { SessionList } from '../index';
 import { SessionGroup, GroupedSessions } from '../utils';
 import { SessionMetaDto } from '@/dto';
 
+// Whether the session-management MCP is installed decides if the list offers to archive; these tests are about
+// something else, so it is not installed.
+vi.mock('@/hooks/queries/useSessionMcp', () => ({
+  useSessionMcp: () => ({ info: { installed: null } }),
+}));
+
 vi.mock('@/contexts/WorkingDirContext', () => ({
   useWorkingDirOrNull: () => ({ rootDir: '/repo' }),
 }));

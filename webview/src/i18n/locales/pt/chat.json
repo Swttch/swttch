@@ -59,6 +59,10 @@
       "reclaim": "Reivindicar Sessão"
     }
   },
+  "archivedSession": {
+    "message": "Esta sessão está arquivada. Para continuar trabalhando nela, desarquive-a.",
+    "unarchive": "Desarquivar"
+  },
   "missingFolder": {
     "message": "A pasta de trabalho não existe mais. Escolha outra pasta para continuar.",
     "chooseFolder": "Escolher pasta",
@@ -801,6 +805,7 @@
       "none": "Nenhuma",
       "notInList": "Fora desta lista",
       "notInListHint": "Esta sessão não está na lista. Ela pode ter sido excluída ou pertencer a outra pasta.",
+      "archived": "Arquivada",
       "resetToDesktop": "Redefinir os vínculos alterados à mão para o que o app de desktop do Claude registra",
       "resetSynced": "Nada a redefinir: os vínculos desta sessão já coincidem com os do app de desktop do Claude",
       "resetNoRecord": "Nada a redefinir: o app de desktop do Claude não registrou nenhum vínculo para esta sessão",

@@ -59,6 +59,10 @@
       "reclaim": "接管工作階段"
     }
   },
+  "archivedSession": {
+    "message": "此工作階段已封存。若要繼續在此工作階段中工作,請先取消封存。",
+    "unarchive": "取消封存"
+  },
   "missingFolder": {
     "message": "工作資料夾已不存在。請選擇其他資料夾以繼續。",
     "chooseFolder": "選擇資料夾",
@@ -801,6 +805,7 @@
       "none": "無",
       "notInList": "不在此清單中",
       "notInListHint": "此工作階段不在清單中。可能已被刪除,或屬於其他資料夾。",
+      "archived": "已封存",
       "resetToDesktop": "將手動變更的關聯還原為 Claude 桌面版的記錄",
       "resetSynced": "無需還原:此工作階段的關聯已與 Claude 桌面版的記錄一致",
       "resetNoRecord": "無需還原:Claude 桌面版沒有此工作階段的關聯記錄",

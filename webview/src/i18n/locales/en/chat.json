@@ -59,6 +59,10 @@
       "reclaim": "Reclaim Session"
     }
   },
+  "archivedSession": {
+    "message": "This session is archived. To keep working in it, unarchive it.",
+    "unarchive": "Unarchive"
+  },
   "missingFolder": {
     "message": "The working folder no longer exists. Choose another folder to continue.",
     "chooseFolder": "Choose folder",
@@ -805,6 +809,7 @@
       "none": "None",
       "notInList": "Not in this list",
       "notInListHint": "This session is not in the list. It may have been deleted, or it may belong to another folder.",
+      "archived": "Archived",
       "resetToDesktop": "Reset the links you changed by hand to what the Claude desktop app records",
       "resetSynced": "Nothing to reset: this session's links already match the Claude desktop app's",
       "resetNoRecord": "Nothing to reset: the Claude desktop app has no link recorded for this session",

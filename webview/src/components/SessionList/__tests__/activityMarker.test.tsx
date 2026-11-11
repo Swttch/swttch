@@ -7,6 +7,12 @@ import { SessionActivity, type SessionActivityMap } from '@/shared';
 
 const ROOT = '/repo';
 
+// Whether the session-management MCP is installed decides if the list offers to archive; these tests are about
+// something else, so it is not installed.
+vi.mock('@/hooks/queries/useSessionMcp', () => ({
+  useSessionMcp: () => ({ info: { installed: null } }),
+}));
+
 let mockRootDir: string | null = ROOT;
 vi.mock('@/contexts/WorkingDirContext', () => ({
   useWorkingDirOrNull: () => ({ rootDir: mockRootDir }),

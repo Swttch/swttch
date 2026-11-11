@@ -59,6 +59,10 @@
       "reclaim": "세션 되찾기"
     }
   },
+  "archivedSession": {
+    "message": "이 세션은 보관되었습니다. 이 세션에서 계속 작업하려면 보관을 취소하세요.",
+    "unarchive": "보관 해제"
+  },
   "missingFolder": {
     "message": "작업 폴더가 더 이상 존재하지 않습니다. 계속하려면 다른 폴더를 선택하세요.",
     "chooseFolder": "폴더 선택",
@@ -801,6 +805,7 @@
       "none": "없음",
       "notInList": "이 목록에 없는 세션",
       "notInListHint": "이 목록에 없는 세션입니다. 삭제되었거나 다른 폴더에 있는 세션일 수 있습니다.",
+      "archived": "보관됨",
       "resetToDesktop": "손으로 바꾼 연결을 지우고 Claude 데스크탑이 기록한 연결로 되돌립니다",
       "resetSynced": "되돌릴 것이 없습니다. 이 세션의 연결이 이미 Claude 데스크탑의 기록과 같습니다",
       "resetNoRecord": "되돌릴 것이 없습니다. Claude 데스크탑에 이 세션의 연결 기록이 없습니다",

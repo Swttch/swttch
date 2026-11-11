@@ -17,6 +17,7 @@ import { Route, routeToPath, sessionToPath, parseSessionIdFromPath, withWorkingD
 import { InputMode, getAvailableModes, resolveConfiguredInputMode, FALLBACK_INPUT_MODE } from '../types/chatInput';
 import {isJetBrains} from "@/config/environment.ts";
 import { MessageType } from '@/shared';
+import toast from 'react-hot-toast';
 import type { GeneratedSessionTitle } from './generatedTitle';
 
 
@@ -61,6 +62,11 @@ interface SessionContextValue {
   navigateToSession: (sessionId: string, sessionDir?: string, handoff?: SessionHandoff) => void;
   navigateToNewSession: () => void;
   loadSessions: () => Promise<void>;
+  /**
+   * Archive a session or bring it back, in the record the session-management MCP keeps. The lists read again once
+   * the backend says it is done; a refusal is shown as a toast.
+   */
+  setSessionArchived: (sessionId: string, archived: boolean) => Promise<void>;
   /**
    * Append the next page of sessions. No-op while one is already in flight or
    * when the list is complete, so a scroll handler can call it freely.
@@ -619,6 +625,16 @@ export function SessionProvider({ children }: SessionProviderProps) {
     }
   }, [currentSessionId, api.sessions, navigateToNewSession, workingDirectory]);
 
+  const setSessionArchived = useCallback(async (sessionId: string, archived: boolean) => {
+    try {
+      const answer = (await send(MessageType.SET_SESSION_ARCHIVED, { sessionId, archived })) as { status?: string; error?: string };
+      if (answer?.status !== 'ok') throw new Error(answer?.error ?? 'Could not change whether the session is archived.');
+      // The lists are told to read again by the backend (SESSIONS_UPDATED refresh).
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not change whether the session is archived.');
+    }
+  }, [send]);
+
   const renameSession = useCallback(async (sessionId: string, title: string) => {
     const trimmed = title.trim();
     if (!trimmed) return;
@@ -744,6 +760,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
     navigateToSession,
     navigateToNewSession,
     loadSessions,
+    setSessionArchived,
     loadMoreSessions,
     loadAllSessions,
     mergeSession,

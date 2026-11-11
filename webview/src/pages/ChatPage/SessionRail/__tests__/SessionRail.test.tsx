@@ -237,6 +237,26 @@ describe('SessionRail - linked sessions', () => {
     });
 });
 
+describe('SessionRail - archived sessions', () => {
+    beforeEach(() => {
+        mcpInstalled = '0.4.0';
+    });
+
+    it('leads the title of an archived session with a pill, and leaves a live one bare', () => {
+        sessionCtx.sessions = [
+            linked('s1', 'This one', 'p1'),
+            {...linked('p1', 'The manager', null), sessionMark: {id: 'p1', parentSessionUid: null, archivedAt: 1794301002844}},
+            linked('c1', 'A live child', 's1', 10),
+        ];
+        render(<SessionRail/>);
+        openRail();
+        const pills = screen.getAllByTestId('archived-pill');
+        expect(pills).toHaveLength(1);
+        expect(pills[0]).toHaveTextContent('sessionRail.linked.archived');
+        expect(pills[0].nextElementSibling).toHaveTextContent('The manager');
+    });
+});
+
 describe('SessionRail - the links the Claude desktop app records', () => {
     beforeEach(() => {
         mcpInstalled = '0.4.0';

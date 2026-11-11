@@ -59,6 +59,10 @@
       "reclaim": "Récupérer la session"
     }
   },
+  "archivedSession": {
+    "message": "Cette session est archivée. Pour continuer à y travailler, désarchivez-la.",
+    "unarchive": "Désarchiver"
+  },
   "missingFolder": {
     "message": "Le dossier de travail n'existe plus. Choisissez un autre dossier pour continuer.",
     "chooseFolder": "Choisir un dossier",
@@ -801,6 +805,7 @@
       "none": "Aucune",
       "notInList": "Absente de cette liste",
       "notInListHint": "Cette session n’est pas dans la liste. Elle a peut-être été supprimée ou appartient à un autre dossier.",
+      "archived": "Archivée",
       "resetToDesktop": "Rétablir les liens modifiés à la main selon l’enregistrement de l’application de bureau Claude",
       "resetSynced": "Rien à rétablir : les liens de cette session correspondent déjà à ceux de l’application de bureau Claude",
       "resetNoRecord": "Rien à rétablir : l’application de bureau Claude n’a enregistré aucun lien pour cette session",

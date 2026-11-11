@@ -15,6 +15,8 @@ import {
   type StatusFilterKey,
 } from './SessionFilterBar';
 import { SessionActivity } from '@/shared';
+import { useSessionMcp } from '@/hooks/queries/useSessionMcp';
+import { isArchivedMark } from './archive';
 
 interface Props {
   groupedSessions: GroupedSessions;
@@ -71,6 +73,10 @@ export function SessionList(props: Props) {
   // an empty list to stay literal.
   const [statusFilter, setStatusFilter] = useState<Set<StatusFilterKey>>(() => new Set());
   const [tabFilter, setTabFilter] = useState<Set<TabState>>(() => new Set());
+  // Archived sessions are left out of the list unless this is on. Archiving belongs to the session-management MCP, so
+  // the toggle and the archive buttons exist only while it is installed.
+  const [showArchived, setShowArchived] = useState(false);
+  const archivingAvailable = useSessionMcp().info?.installed != null;
 
   // Counted over the rows the list is holding — what the user can see — rather
   // than over every session on disk. A count that included rows behind a search
@@ -130,13 +136,15 @@ export function SessionList(props: Props) {
   const hasFilter = activeOnly || statusFilter.size > 0 || tabFilter.size > 0;
 
   const visibleGroups = useMemo(() => {
-    if (!hasFilter) return groupedSessions;
+    if (!hasFilter && showArchived) return groupedSessions;
     const filtered = {} as GroupedSessions;
     for (const key of GROUP_ORDER) {
-      filtered[key] = groupedSessions[key].filter((session) => passesFilters(session.id));
+      filtered[key] = groupedSessions[key].filter(
+        (session) => (showArchived || !isArchivedMark(session.sessionMark)) && passesFilters(session.id),
+      );
     }
     return filtered;
-  }, [hasFilter, groupedSessions, passesFilters]);
+  }, [hasFilter, showArchived, groupedSessions, passesFilters]);
 
   const visibleCount = useMemo(
     () => GROUP_ORDER.reduce((n, key) => n + visibleGroups[key].length, 0),
@@ -220,6 +228,8 @@ export function SessionList(props: Props) {
         onTabFilterChange={setTabFilter}
         activeOnly={activeOnly}
         onActiveOnlyChange={setActiveOnly}
+        showArchived={showArchived}
+        onShowArchivedChange={archivingAvailable ? setShowArchived : undefined}
       />
       <div
         ref={scrollRef}
@@ -256,6 +266,12 @@ export function SessionList(props: Props) {
                   onSelect={() => onSelectSession(session.id)}
                   onDelete={() => onDeleteSession(session.id)}
                   onRename={(title) => onRenameSession(session.id, title)}
+                  isArchived={isArchivedMark(session.sessionMark)}
+                  onArchive={
+                    archivingAvailable && sessionContext
+                      ? (archived) => void sessionContext.setSessionArchived(session.id, archived)
+                      : undefined
+                  }
                   titleArrivedAt={generatedTitleArrivedAt(generatedTitle, session.id, session.title)}
                   startedSessions={
                     startedOthers

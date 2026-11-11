@@ -210,6 +210,8 @@
     "refreshSessions": "Actualiser les sessions",
     "renameSession": "Renommer la session",
     "deleteSession": "Supprimer la session",
+    "archiveSession": "Archiver la session",
+    "unarchiveSession": "Désarchiver la session",
     "startedSessions": {
       "show": "Afficher les sessions qu’elle a lancées",
       "hide": "Masquer les sessions qu’elle a lancées"
@@ -244,6 +246,7 @@
       "active": "Actives",
       "countsTitle": "Sessions par état",
       "activeTitle": "N'afficher que les sessions en attente de réponse, en cours ou non lues",
+      "showArchived": "Afficher les sessions archivées",
       "noneActive": "Aucune session ne vous attend"
     }
   },

@@ -4,6 +4,7 @@ import {useTranslation} from "@/i18n";
 import {useSessionContext} from "@/contexts/SessionContext";
 import {useBridgeContext} from "@/contexts/BridgeContext";
 import {SessionFamilies, starterIdOf} from "@/components/SessionList/families";
+import {isArchivedMark} from "@/components/SessionList/archive";
 import {getRelativeTime} from "@/components/SessionList/utils";
 import {RelationField, type RelationItem} from "@/components/RelationField";
 import {Tooltip} from "@/components/Tooltip";
@@ -28,6 +29,7 @@ export function LinkedSessionsSection() {
     const {t} = useTranslation('chat');
     const {sessions, currentSessionId, switchSession} = useSessionContext();
     const {send} = useBridgeContext();
+    const archivedLabel = t('sessionRail.linked.archived');
 
     const {parentId, parentItems, childItems, parentChoices, childChoices, apart, hasDesktopRecord} = useMemo(() => {
         const held: SessionMetaDto[] = sessions ?? [];
@@ -55,14 +57,14 @@ export function LinkedSessionsSection() {
             apart,
             hasDesktopRecord,
             parentId,
-            parentItems: parent ? [toItem(parent)] : [],
-            childItems: children.map(toItem),
+            parentItems: parent ? [toItem(parent, archivedLabel)] : [],
+            childItems: children.map((s) => toItem(s, archivedLabel)),
             // A session cannot be put under itself or under one of its own descendants; the one it is under already is held.
-            parentChoices: others.filter((s) => !below.has(s.id) && s.id !== parentId).map(toItem),
+            parentChoices: others.filter((s) => !below.has(s.id) && s.id !== parentId).map((s) => toItem(s, archivedLabel)),
             // Nor can its own ancestors, or sessions it already started, be added below it.
-            childChoices: others.filter((s) => !above.has(s.id) && s.id !== parentId && starterIdOf(s.sessionMark) !== currentSessionId).map(toItem),
+            childChoices: others.filter((s) => !above.has(s.id) && s.id !== parentId && starterIdOf(s.sessionMark) !== currentSessionId).map((s) => toItem(s, archivedLabel)),
         };
-    }, [sessions, currentSessionId]);
+    }, [sessions, currentSessionId, archivedLabel]);
 
     const setParent = async (sessionId: string, parentSessionId: string | null) => {
         try {
@@ -149,6 +151,13 @@ export function LinkedSessionsSection() {
     );
 }
 
-function toItem(session: SessionMetaDto): RelationItem {
-    return {id: session.id, title: session.title, fullTitle: session.fullTitle, hint: session.updatedAt ? getRelativeTime(session.updatedAt) : undefined};
+function toItem(session: SessionMetaDto, archivedLabel: string): RelationItem {
+    return {
+        id: session.id,
+        title: session.title,
+        fullTitle: session.fullTitle,
+        hint: session.updatedAt ? getRelativeTime(session.updatedAt) : undefined,
+        archived: isArchivedMark(session.sessionMark),
+        archivedLabel,
+    };
 }

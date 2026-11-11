@@ -210,6 +210,8 @@
     "refreshSessions": "Sitzungen aktualisieren",
     "renameSession": "Sitzung umbenennen",
     "deleteSession": "Sitzung löschen",
+    "archiveSession": "Sitzung archivieren",
+    "unarchiveSession": "Archivierung der Sitzung aufheben",
     "startedSessions": {
       "show": "Von dieser Sitzung gestartete Sitzungen anzeigen",
       "hide": "Von dieser Sitzung gestartete Sitzungen ausblenden"
@@ -244,6 +246,7 @@
       "active": "Aktiv",
       "countsTitle": "Sitzungen nach Status",
       "activeTitle": "Nur Sitzungen zeigen, die eine Antwort brauchen, arbeiten oder ungelesen sind",
+      "showArchived": "Archivierte Sitzungen anzeigen",
       "noneActive": "Keine Sitzung wartet auf dich"
     }
   },
