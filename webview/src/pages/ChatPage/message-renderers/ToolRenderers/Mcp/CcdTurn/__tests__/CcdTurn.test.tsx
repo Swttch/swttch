@@ -6,7 +6,7 @@ import type { LoadedMessageDto } from '@/types';
 // The registry first: it is the entry the app reaches these renderers through, and entering from the renderers
 // instead walks the module cycle the other way round.
 import { ToolRendererMap } from '../../..';
-import { applyPlanCall, planAfterCall, type PlanItem } from '../planState';
+import { applyPlanCall, isLastPlanCall, planAfterCall, type PlanItem } from '../planState';
 import { UpdatePlanRenderer, WrapUpRenderer, WrapUpBox, CcdTurnRenderers, findWrapUpInput, wrapUpAnswers } from '../index';
 
 function makeToolUse(name: string, input: Record<string, unknown>, id = 'tool_1'): ToolUseBlockDto {
@@ -79,6 +79,21 @@ describe('planAfterCall', () => {
       { content: 'a', status: 'completed' },
     ]);
     expect(planAfterCall(undefined, 'x', { advance: true })).toEqual([]);
+  });
+});
+
+describe('isLastPlanCall', () => {
+  it('is true only for the last update_plan call, so only the last box can spin', () => {
+    const messages = transcriptOf(
+      { id: 'c1', input: { items: [{ content: 'a', status: 'in_progress' }] } },
+      { id: 'c2', input: { advance: true } },
+    );
+    expect(isLastPlanCall(messages, 'c1')).toBe(false);
+    expect(isLastPlanCall(messages, 'c2')).toBe(true);
+  });
+
+  it('is true when there is no transcript to say otherwise', () => {
+    expect(isLastPlanCall(undefined, 'x')).toBe(true);
   });
 });
 

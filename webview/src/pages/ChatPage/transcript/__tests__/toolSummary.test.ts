@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { TFunction } from 'i18next';
 import type { LoadedMessageDto } from '../../../../types';
 import type { ToolCall } from '../buildSegments';
-import { commandStandIn, groupIntoRows, groupLabel, hasFailed, isExpandable, rowLabel, sumLineStats, wasStopped } from '../toolSummary';
+import { commandStandIn, groupIntoRows, groupLabel, groupLabelParts, hasFailed, isExpandable, rowLabel, sumLineStats, wasStopped } from '../toolSummary';
 
 // A translator that shows what it was asked for: the key's last part, then what it was given.
 const t = ((key: string, options?: { count?: number; name?: string }) => {
@@ -50,6 +50,33 @@ describe('groupLabel', () => {
   it('adds how many calls failed', () => {
     const calls = [call('1', 'Bash'), call('2', 'Bash', {}, true)];
     expect(groupLabel(calls, t)).toBe('ranCommands:2 (failed:1)');
+  });
+});
+
+describe('groupLabelParts', () => {
+  it('writes the failed count as a phrase of its own after a line of several phrases', () => {
+    const calls = [call('1', 'Bash'), call('2', 'Read', { file_path: '/a/x.ts' }), call('3', 'Read', { file_path: '/a/y.ts' }, true)];
+    const parts = groupLabelParts(calls, t);
+    expect(parts.tail).toBe('failed:1');
+    expect(parts.tailIsParen).toBe(false);
+    expect(groupLabel(calls, t)).toBe('ranCommands:1, readFiles:2, failed:1');
+  });
+
+  it('puts the failed count in parentheses after a line of one phrase', () => {
+    const parts = groupLabelParts([call('1', 'Bash'), call('2', 'Bash', {}, true)], t);
+    expect(parts).toMatchObject({ tail: '(failed:1)', tailIsParen: true });
+  });
+
+  it('hands the one file that was read over as its own piece, so it can be a link', () => {
+    const parts = groupLabelParts([call('1', 'Bash'), call('2', 'Read', { file_path: '/a/x.ts' })], t);
+    expect(parts.pieces[0]).toBe('ranCommands:1');
+    expect(parts.pieces[1]).toMatchObject({ fileName: 'x.ts', path: '/a/x.ts' });
+  });
+
+  it('keeps other actions in the tail, outside what may be cut off', () => {
+    const parts = groupLabelParts([call('1', 'Bash'), call('2', 'SomethingElse')], t);
+    expect(parts.pieces).toEqual(['ranCommands:1']);
+    expect(parts.tail).toBe('otherActions:1');
   });
 });
 
