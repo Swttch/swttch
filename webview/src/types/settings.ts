@@ -183,6 +183,8 @@ export enum SettingKey {
 
   // Auto-resume on usage-limit reset (sponsor-only); seeds the limit banner default.
   AUTO_RESUME_ON_LIMIT = 'autoResumeOnLimit',
+  /** Sponsor-only: reflect what the Claude desktop app records about its sessions in the session lists. */
+  DESKTOP_SESSION_SYNC = 'desktopSessionSync',
 
   // Whether every session starts with "Allow all command in this session" already
   // on (sponsor-only). A session can still turn it off for itself. Written to
@@ -514,6 +516,7 @@ export interface SettingsState {
   [SettingKey.NOTIFICATION_SOUND_VOLUME]: number;
   [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: boolean;
   [SettingKey.AUTO_RESUME_ON_LIMIT]: boolean;
+  [SettingKey.DESKTOP_SESSION_SYNC]: boolean;
   [SettingKey.ALLOW_ALL_COMMANDS_BY_DEFAULT]: boolean;
   [SettingKey.ATTACH_EDITOR_CONTEXT]: boolean;
   [SettingKey.AUTO_OPEN_DIFF_ON_PERMISSION]: boolean;
@@ -565,6 +568,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.NOTIFICATION_SOUND_VOLUME]: 5,
   [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: true,
   [SettingKey.AUTO_RESUME_ON_LIMIT]: false,
+  [SettingKey.DESKTOP_SESSION_SYNC]: false,
   [SettingKey.ALLOW_ALL_COMMANDS_BY_DEFAULT]: false,
   [SettingKey.ATTACH_EDITOR_CONTEXT]: true,
   [SettingKey.AUTO_OPEN_DIFF_ON_PERMISSION]: true,

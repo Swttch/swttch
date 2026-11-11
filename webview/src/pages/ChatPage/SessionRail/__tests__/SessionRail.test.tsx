@@ -45,7 +45,16 @@ vi.mock('@/hooks/useSessionOutputs', async (importOriginal) => ({
     useSessionOutputs: () => outputsIndex,
     useSessionOutputImages: () => ({loaded: {}, ensure: vi.fn()}),
 }));
-vi.mock('@/hooks/queries/useSponsorStatus', () => ({useSponsorStatus: () => ({isSponsor: false})}));
+let mockSponsor = false;
+vi.mock('@/hooks/queries/useSponsorStatus', () => ({useSponsorStatus: () => ({isSponsor: mockSponsor})}));
+// The switch "Reflect changes from Claude Desktop": the desktop app's records are shown only while it is on.
+let mockSync = false;
+vi.mock('@/contexts/SettingsContext', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@/contexts/SettingsContext')>()),
+    useSettingsOrNull: () => ({settings: {desktopSessionSync: mockSync}}),
+}));
+const openSettingsAt = vi.fn();
+vi.mock('@/utils/openSettingsAt', () => ({openSettingsAt: (route: string) => openSettingsAt(route)}));
 let mockActivity: Record<string, string> = {};
 vi.mock('@/hooks/useSessionActivity', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@/hooks/useSessionActivity')>()),
@@ -96,6 +105,9 @@ function openRail() {
 
 beforeEach(() => {
     mockActivity = {};
+    mockSponsor = false;
+    mockSync = false;
+    openSettingsAt.mockClear();
     openUrl.mockClear();
     openChatFile.mockClear();
     bridge.send = send;
@@ -282,6 +294,8 @@ describe('SessionRail - archived sessions', () => {
 describe('SessionRail - the links the Claude desktop app records', () => {
     beforeEach(() => {
         mcpInstalled = '0.4.0';
+        mockSponsor = true;
+        mockSync = true;
         send.mockResolvedValue({status: 'ok'});
     });
 
@@ -325,6 +339,40 @@ describe('SessionRail - the links the Claude desktop app records', () => {
         expect(send).toHaveBeenCalledWith('SET_SESSION_PARENT', {sessionId: 's1', parentSessionId: null, inherit: true});
         expect(send).toHaveBeenCalledWith('SET_SESSION_PARENT', {sessionId: 'c1', parentSessionId: null, inherit: true});
         expect(send).not.toHaveBeenCalledWith('SET_SESSION_PARENT', expect.objectContaining({sessionId: 'c2'}));
+    });
+});
+
+describe('SessionRail - the Claude logo button while the desktop sync is off', () => {
+    beforeEach(() => {
+        mcpInstalled = '0.4.0';
+        send.mockResolvedValue({status: 'ok'});
+    });
+
+    const logoButton = () => screen.getByRole('button', {name: 'sessionRail.linked.resetToDesktop'});
+
+    it.each([
+        ['the switch is off', false, true],
+        ['the person is not a sponsor', true, false],
+    ])('stays, worded as when it works, and opens the settings when %s', (_why, sync, sponsor) => {
+        mockSync = sync;
+        mockSponsor = sponsor;
+        sessionCtx.sessions = [linked('s1', 'This one', null), linked('c1', 'A child', 's1', 10)];
+        render(<SessionRail/>);
+        openRail();
+        expect(logoButton()).toHaveAttribute('aria-disabled', 'false');
+        fireEvent.click(logoButton());
+        expect(openSettingsAt).toHaveBeenCalledWith('settings/general');
+        expect(send).not.toHaveBeenCalled();
+    });
+
+    it('does not open the settings once the sync is on', () => {
+        mockSync = true;
+        mockSponsor = true;
+        sessionCtx.sessions = [linked('s1', 'This one', null)];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(logoButton());
+        expect(openSettingsAt).not.toHaveBeenCalled();
     });
 });
 

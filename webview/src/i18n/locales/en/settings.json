@@ -229,6 +229,38 @@
       "failed": "Sessions that could not be prepared: {{count}}",
       "error": "Could not prepare the sessions: {{message}}"
     },
+    "sessionManager": {
+      "title": "Session manager",
+      "required": "Needs the session-management package. Install it from the top right.",
+      "package": {
+        "install": "Install",
+        "installing": "Installing…",
+        "update": "Update",
+        "updating": "Updating…",
+        "upToDate": "Up to date",
+        "refresh": "Check again",
+        "refreshing": "Checking…",
+        "remove": "Remove"
+      },
+      "desktopSync": {
+        "label": "Reflect changes from Claude Desktop",
+        "description": "Shows in the session lists and the session rail what Claude Desktop records about your sessions.",
+        "learnMore": "Learn more",
+        "details": {
+          "title": "Reflect changes from Claude Desktop",
+          "intro": "While this is on, this app reads the session records that Claude Desktop keeps on this computer. It only reads them and never writes anything back to Claude Desktop.",
+          "items": {
+            "relations": "Parent and child sessions: a session that another session started in Claude Desktop is shown under that session, and a session you move to the top level there is shown at the top level here.",
+            "archived": "Archived sessions: a session you archive or unarchive in Claude Desktop is hidden or shown here as well.",
+            "titles": "Titles: a session you rename in Claude Desktop is renamed here too, without reloading.",
+            "running": "Running sessions: a session that is working in Claude Desktop shows the running marker in the session list and in the session rail."
+          },
+          "yours": "A link or archive state you set here is kept as your own choice and is not overwritten by Claude Desktop. The Claude button next to Linked sessions in the session rail hands a session back to what Claude Desktop records.",
+          "needs": "Needs the session manager package and Claude Desktop on this computer. Sponsors only.",
+          "close": "Close"
+        }
+      }
+    },
     "readAloud": {
       "title": "Read aloud",
       "description": "Settings for the voice that reads a reply aloud when you press the speaker button under it. Until you change them, the voice and the speed are the ones stored in your Claude account.",

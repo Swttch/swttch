@@ -229,6 +229,38 @@
       "failed": "未能准备的会话：{{count}} 个",
       "error": "无法准备会话：{{message}}"
     },
+    "sessionManager": {
+      "title": "会话管理器",
+      "required": "需要会话管理软件包。请从右上角安装。",
+      "package": {
+        "install": "安装",
+        "installing": "正在安装…",
+        "update": "更新",
+        "updating": "正在更新…",
+        "upToDate": "已是最新",
+        "refresh": "重新检查",
+        "refreshing": "正在检查…",
+        "remove": "移除"
+      },
+      "desktopSync": {
+        "label": "同步 Claude Desktop 的更改",
+        "description": "在会话列表和会话侧栏中显示 Claude Desktop 对你的会话所做的记录。",
+        "learnMore": "了解详情",
+        "details": {
+          "title": "同步 Claude Desktop 的更改",
+          "intro": "开启后,本应用会读取 Claude Desktop 保存在这台电脑上的会话记录。只读取,绝不会向 Claude Desktop 写入任何内容。",
+          "items": {
+            "relations": "父子会话:在 Claude Desktop 中由其他会话发起的会话会显示在该会话之下,在那里移到顶层的会话在这里也显示在顶层。",
+            "archived": "已归档会话:在 Claude Desktop 中归档或取消归档的会话,在这里也会隐藏或重新显示。",
+            "titles": "标题:在 Claude Desktop 中重命名的会话,在这里无需刷新也会随之改名。",
+            "running": "运行中的会话:在 Claude Desktop 中正在工作的会话,会在会话列表和会话侧栏中显示运行标记。"
+          },
+          "yours": "你在这里设置的关联或归档状态会作为你自己的选择保留,不会被 Claude Desktop 覆盖。会话侧栏“关联会话”旁的 Claude 按钮可把会话恢复为 Claude Desktop 的记录。",
+          "needs": "需要这台电脑上安装会话管理软件包和 Claude Desktop。仅限赞助者。",
+          "close": "关闭"
+        }
+      }
+    },
     "readAloud": {
       "title": "朗读",
       "description": "点击回复下方的扬声器按钮时朗读回复的声音的设置。在你修改之前，声音和语速是你的 Claude 账号中保存的值。",

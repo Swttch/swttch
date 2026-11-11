@@ -2,6 +2,11 @@ import {useMemo} from "react";
 import toast from "react-hot-toast";
 import {useTranslation} from "@/i18n";
 import {useSessionContext} from "@/contexts/SessionContext";
+import {useSettingsOrNull} from "@/contexts/SettingsContext";
+import {useSponsorStatus} from "@/hooks/queries/useSponsorStatus";
+import {SettingKey} from "@/types/settings";
+import {Route} from "@/router";
+import {openSettingsAt} from "@/utils/openSettingsAt";
 import {useBridgeContext} from "@/contexts/BridgeContext";
 import {SessionFamilies, starterIdOf} from "@/components/SessionList/families";
 import {isArchivedMark} from "@/components/SessionList/archive";
@@ -31,6 +36,9 @@ export function LinkedSessionsSection() {
     const {sessions, currentSessionId, switchSession} = useSessionContext();
     const {send} = useBridgeContext();
     const {activity} = useSessionActivity();
+    const {isSponsor} = useSponsorStatus();
+    // The desktop app's records are shown only while the sync switch is on, which is a sponsor-only setting.
+    const syncOn = useSettingsOrNull()?.settings[SettingKey.DESKTOP_SESSION_SYNC] === true && isSponsor;
     const archivedLabel = t('sessionRail.linked.archived');
 
     const {parentId, parentItems, childItems, parentChoices, childChoices, apart, hasDesktopRecord} = useMemo(() => {
@@ -100,20 +108,25 @@ export function LinkedSessionsSection() {
 
     // The tooltip says what the button does now: reset the links, or why there is nothing to reset. It is not `disabled`
     // because a disabled button gets no pointer events, and so no tooltip.
+    //
+    // While the sync is off nothing of the desktop app is shown, so there is nothing to reset and nothing to explain
+    // away. The button stays, drawn and worded as when it works, and a press opens the settings where the switch is.
     const canReset = apart.length > 0;
-    const resetHint = canReset
-        ? t('sessionRail.linked.resetToDesktop')
-        : t(hasDesktopRecord ? 'sessionRail.linked.resetSynced' : 'sessionRail.linked.resetNoRecord');
+    const active = canReset || !syncOn;
+    const resetHint = !active
+        ? t(hasDesktopRecord ? 'sessionRail.linked.resetSynced' : 'sessionRail.linked.resetNoRecord')
+        : t('sessionRail.linked.resetToDesktop');
     const resetButton = (
         <Tooltip content={resetHint} placement="bottom">
             <button
                 type="button"
                 aria-label={t('sessionRail.linked.resetToDesktop')}
-                aria-disabled={!canReset}
+                aria-disabled={!active}
                 onClick={() => {
-                    if (canReset) void resetToDesktop();
+                    if (!syncOn) void openSettingsAt(Route.SETTINGS_GENERAL);
+                    else if (canReset) void resetToDesktop();
                 }}
-                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${canReset ? 'hover:bg-surface-hover' : 'cursor-default opacity-40'}`}
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${active ? 'hover:bg-surface-hover' : 'cursor-default opacity-40'}`}
             >
                 <img src={claudeLogo} alt="" className="h-4 w-4"/>
             </button>

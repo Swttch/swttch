@@ -229,6 +229,38 @@
       "failed": "Sesiones que no se pudieron preparar: {{count}}",
       "error": "No se pudieron preparar las sesiones: {{message}}"
     },
+    "sessionManager": {
+      "title": "Administrador de sesiones",
+      "required": "Necesita el paquete de gestión de sesiones. Instálalo desde la parte superior derecha.",
+      "package": {
+        "install": "Instalar",
+        "installing": "Instalando…",
+        "update": "Actualizar",
+        "updating": "Actualizando…",
+        "upToDate": "Actualizado",
+        "refresh": "Comprobar de nuevo",
+        "refreshing": "Comprobando…",
+        "remove": "Quitar"
+      },
+      "desktopSync": {
+        "label": "Reflejar los cambios de Claude Desktop",
+        "description": "Muestra en las listas de sesiones y en el panel lateral lo que Claude Desktop registra sobre tus sesiones.",
+        "learnMore": "Más información",
+        "details": {
+          "title": "Reflejar los cambios de Claude Desktop",
+          "intro": "Mientras esté activado, esta aplicación lee los registros de sesiones que Claude Desktop guarda en este ordenador. Solo los lee y nunca escribe nada en Claude Desktop.",
+          "items": {
+            "relations": "Sesiones principales y secundarias: una sesión que otra sesión inició en Claude Desktop se muestra debajo de esa sesión, y una sesión que muevas allí al nivel superior se muestra aquí en el nivel superior.",
+            "archived": "Sesiones archivadas: una sesión que archives o desarchives en Claude Desktop se oculta o se muestra también aquí.",
+            "titles": "Títulos: una sesión que renombres en Claude Desktop se renombra también aquí, sin recargar.",
+            "running": "Sesiones en curso: una sesión que está trabajando en Claude Desktop muestra el indicador de ejecución en la lista de sesiones y en el panel lateral."
+          },
+          "yours": "Un vínculo o un estado de archivado que establezcas aquí se conserva como elección tuya y Claude Desktop no lo sobrescribe. El botón de Claude junto a «Sesiones vinculadas» en el panel lateral devuelve una sesión a lo que registra Claude Desktop.",
+          "needs": "Necesita el paquete del administrador de sesiones y Claude Desktop en este ordenador. Solo para patrocinadores.",
+          "close": "Cerrar"
+        }
+      }
+    },
     "readAloud": {
       "title": "Leer en voz alta",
       "description": "Ajustes de la voz que lee una respuesta cuando pulsas el botón del altavoz que hay debajo. Hasta que los cambies, la voz y la velocidad son las guardadas en tu cuenta de Claude.",

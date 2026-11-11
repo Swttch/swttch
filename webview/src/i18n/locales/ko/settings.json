@@ -229,6 +229,38 @@
       "failed": "준비하지 못한 세션: {{count}}개",
       "error": "세션을 준비하지 못했습니다: {{message}}"
     },
+    "sessionManager": {
+      "title": "세션 매니저",
+      "required": "세션 관리 패키지가 필요합니다. 오른쪽 위에서 설치하세요.",
+      "package": {
+        "install": "설치",
+        "installing": "설치 중…",
+        "update": "업데이트",
+        "updating": "업데이트 중…",
+        "upToDate": "최신 버전",
+        "refresh": "다시 확인",
+        "refreshing": "확인 중…",
+        "remove": "제거"
+      },
+      "desktopSync": {
+        "label": "Claude Desktop의 변경을 반영",
+        "description": "Claude Desktop이 세션에 대해 기록한 내용을 세션 목록과 세션 레일에 보여줍니다.",
+        "learnMore": "자세히",
+        "details": {
+          "title": "Claude Desktop의 변경을 반영",
+          "intro": "이 기능을 켜면 Claude Desktop이 이 컴퓨터에 보관하는 세션 기록을 읽습니다. 읽기만 하며 Claude Desktop에는 아무것도 쓰지 않습니다.",
+          "items": {
+            "relations": "상위·하위 세션: Claude Desktop에서 다른 세션이 시작한 세션은 그 세션 아래에 보이고, 거기서 최상위로 옮긴 세션은 여기서도 최상위에 보입니다.",
+            "archived": "보관된 세션: Claude Desktop에서 세션을 보관하거나 보관 해제하면 여기서도 숨겨지거나 다시 보입니다.",
+            "titles": "제목: Claude Desktop에서 세션 제목을 바꾸면 새로고침 없이 여기서도 바뀝니다.",
+            "running": "진행 중인 세션: Claude Desktop에서 작업 중인 세션은 세션 목록과 세션 레일에 진행 중 표시가 붙습니다."
+          },
+          "yours": "여기서 직접 정한 연결이나 보관 상태는 내 선택으로 남으며 Claude Desktop이 덮어쓰지 않습니다. 세션 레일의 '연결된 세션' 옆 Claude 버튼을 누르면 세션을 Claude Desktop의 기록으로 되돌립니다.",
+          "needs": "이 컴퓨터에 세션 매니저 패키지와 Claude Desktop이 있어야 합니다. 후원자 전용 기능입니다.",
+          "close": "닫기"
+        }
+      }
+    },
     "readAloud": {
       "title": "소리 내어 읽기",
       "description": "답변 아래의 스피커 버튼을 눌렀을 때 답변을 읽어 주는 목소리의 설정입니다. 바꾸기 전까지 목소리와 속도는 Claude 계정에 저장된 값입니다.",

@@ -229,6 +229,38 @@
       "failed": "無法準備的工作階段：{{count}} 個",
       "error": "無法準備工作階段：{{message}}"
     },
+    "sessionManager": {
+      "title": "工作階段管理員",
+      "required": "需要工作階段管理套件。請從右上角安裝。",
+      "package": {
+        "install": "安裝",
+        "installing": "安裝中…",
+        "update": "更新",
+        "updating": "更新中…",
+        "upToDate": "已是最新",
+        "refresh": "重新檢查",
+        "refreshing": "檢查中…",
+        "remove": "移除"
+      },
+      "desktopSync": {
+        "label": "同步 Claude Desktop 的變更",
+        "description": "在工作階段清單與工作階段側欄中顯示 Claude Desktop 對你的工作階段所做的記錄。",
+        "learnMore": "了解詳情",
+        "details": {
+          "title": "同步 Claude Desktop 的變更",
+          "intro": "開啟後,本應用程式會讀取 Claude Desktop 保存在這台電腦上的工作階段記錄。只讀取,絕不會向 Claude Desktop 寫入任何內容。",
+          "items": {
+            "relations": "父子工作階段:在 Claude Desktop 中由其他工作階段開始的工作階段會顯示在該工作階段之下,在那裡移到頂層的工作階段在這裡也顯示在頂層。",
+            "archived": "已封存工作階段:在 Claude Desktop 中封存或取消封存的工作階段,在這裡也會隱藏或重新顯示。",
+            "titles": "標題:在 Claude Desktop 中重新命名的工作階段,在這裡無需重新載入也會跟著改名。",
+            "running": "執行中的工作階段:在 Claude Desktop 中正在工作的工作階段,會在工作階段清單與工作階段側欄中顯示執行標記。"
+          },
+          "yours": "你在這裡設定的連結或封存狀態會作為你自己的選擇保留,不會被 Claude Desktop 覆寫。工作階段側欄「連結的工作階段」旁的 Claude 按鈕可將工作階段還原為 Claude Desktop 的記錄。",
+          "needs": "需要這台電腦上安裝工作階段管理套件與 Claude Desktop。僅限贊助者。",
+          "close": "關閉"
+        }
+      }
+    },
     "readAloud": {
       "title": "朗讀",
       "description": "按下回覆下方的喇叭按鈕時朗讀回覆的聲音的設定。在你修改之前，聲音和語速是你的 Claude 帳號中儲存的值。",

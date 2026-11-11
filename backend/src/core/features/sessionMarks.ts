@@ -2,7 +2,11 @@ import { join } from 'path';
 import { entitiesRoot } from '../entities/entityPaths';
 import { JsonlFile } from '../entities/storage/JsonlFile';
 import { isSessionMcpInstalled } from '../session-mcp';
-import { readDesktopState } from './desktopSessions';
+import { readDesktopState, type DesktopSessionState } from './desktopSessions';
+import { desktopSyncEnabled } from './desktopSync';
+
+/** What the lists draw from the desktop app while the sync is off: nothing. */
+const EMPTY_DESKTOP_STATE: DesktopSessionState = { starters: new Map(), archived: new Set(), titles: new Map(), running: new Set() };
 
 /**
  * One row of `sidebar/session_marks`: what the session-management MCP
@@ -116,7 +120,7 @@ export async function readSessionMarksToShow(): Promise<Map<string, SessionMark>
   // (a row of its own for a session the package has none for), and no field of the package's row is
   // changed. It decides nothing where the package chose (see starterIdOfRow, isArchivedRow); it is
   // kept on every row it covers so that a screen can tell a value that differs from the desktop app's.
-  const desktop = await readDesktopState();
+  const desktop = (await desktopSyncEnabled()) ? await readDesktopState() : EMPTY_DESKTOP_STATE;
   const beside = new Map<string, Record<string, unknown>>();
   for (const [sessionId, starterId] of desktop.starters) beside.set(sessionId, { desktopParentSessionId: starterId });
   for (const sessionId of desktop.archived) beside.set(sessionId, { ...beside.get(sessionId), desktopArchived: true });

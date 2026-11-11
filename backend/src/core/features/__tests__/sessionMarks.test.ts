@@ -20,6 +20,10 @@ vi.mock('../desktopSessions', () => ({
   readDesktopState: vi.fn(async () => ({ starters: desktopStarters.value, archived: desktopStarters.archived })),
 }));
 
+// Whether the sync switch is on (and the person a sponsor): off, nothing from the desktop app is shown.
+const desktopSync = vi.hoisted(() => ({ enabled: true }));
+vi.mock('../desktopSync', () => ({ desktopSyncEnabled: vi.fn(async () => desktopSync.enabled) }));
+
 import { isArchivedRow, readSessionMarks, readSessionMarksToShow, starterIdOfRow } from '../sessionMarks';
 import { isSessionMcpInstalled } from '../../session-mcp';
 import { getSessionsList } from '../getSessionsList';
@@ -42,6 +46,7 @@ describe('session marks', () => {
     vi.clearAllMocks();
     desktopStarters.value = new Map();
     desktopStarters.archived = new Set();
+    desktopSync.enabled = true;
     home = await mkdtemp(join(tmpdir(), 'session-marks-home-'));
     sessionsDir = await mkdtemp(join(tmpdir(), 'session-marks-sessions-'));
     savedHome = process.env.CCG_HOME;
@@ -200,6 +205,19 @@ describe('session marks', () => {
       desktopStarters.value = new Map([['child', 'manager']]);
 
       expect((await readSessionMarksToShow()).get('child')?.row).toEqual({ id: 'child', desktopParentSessionId: 'manager' });
+    });
+
+    it('shows nothing from the desktop app while the sync is off', async () => {
+      desktopSync.enabled = false;
+      desktopStarters.value = new Map([['child', 'manager']]);
+      desktopStarters.archived = new Set(['one']);
+      await writeMarks([JSON.stringify({ id: 'two', parentSessionUid: 'manager' })]);
+
+      const marks = await readSessionMarksToShow();
+
+      expect(marks.get('child')).toBeUndefined();
+      expect(marks.get('one')).toBeUndefined();
+      expect(marks.get('two')?.row).toEqual({ id: 'two', parentSessionUid: 'manager' });
     });
 
     it('keeps the desktop app\'s record on a row whose parent the package chose, which decides nothing there', async () => {

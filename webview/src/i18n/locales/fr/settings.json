@@ -229,6 +229,38 @@
       "failed": "Sessions qui n'ont pas pu être préparées : {{count}}",
       "error": "Impossible de préparer les sessions : {{message}}"
     },
+    "sessionManager": {
+      "title": "Gestionnaire de sessions",
+      "required": "Nécessite le paquet de gestion des sessions. Installez-le en haut à droite.",
+      "package": {
+        "install": "Installer",
+        "installing": "Installation…",
+        "update": "Mettre à jour",
+        "updating": "Mise à jour…",
+        "upToDate": "À jour",
+        "refresh": "Revérifier",
+        "refreshing": "Vérification…",
+        "remove": "Supprimer"
+      },
+      "desktopSync": {
+        "label": "Refléter les changements de Claude Desktop",
+        "description": "Affiche dans les listes de sessions et dans le panneau latéral ce que Claude Desktop enregistre sur vos sessions.",
+        "learnMore": "En savoir plus",
+        "details": {
+          "title": "Refléter les changements de Claude Desktop",
+          "intro": "Tant que cette option est activée, cette application lit les enregistrements de sessions que Claude Desktop conserve sur cet ordinateur. Elle les lit seulement et n’écrit jamais rien dans Claude Desktop.",
+          "items": {
+            "relations": "Sessions parentes et enfants : une session démarrée par une autre session dans Claude Desktop s’affiche sous cette session, et une session que vous y placez au niveau supérieur s’affiche ici au niveau supérieur.",
+            "archived": "Sessions archivées : une session que vous archivez ou désarchivez dans Claude Desktop est aussi masquée ou affichée ici.",
+            "titles": "Titres : une session que vous renommez dans Claude Desktop est aussi renommée ici, sans rechargement.",
+            "running": "Sessions en cours : une session qui travaille dans Claude Desktop affiche l’indicateur d’exécution dans la liste des sessions et dans le panneau latéral."
+          },
+          "yours": "Un lien ou un état d’archivage défini ici reste votre choix et n’est pas écrasé par Claude Desktop. Le bouton Claude à côté de « Sessions liées » dans le panneau latéral rend une session à ce qu’enregistre Claude Desktop.",
+          "needs": "Nécessite le paquet du gestionnaire de sessions et Claude Desktop sur cet ordinateur. Réservé aux sponsors.",
+          "close": "Fermer"
+        }
+      }
+    },
     "readAloud": {
       "title": "Lire à voix haute",
       "description": "Réglages de la voix qui lit une réponse quand vous appuyez sur le bouton haut-parleur placé dessous. Tant que vous ne les changez pas, la voix et la vitesse sont celles enregistrées dans votre compte Claude.",

@@ -101,6 +101,9 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   notificationSoundVolume: 5,
   focusInputOnEditorContext: true,
   autoResumeOnLimit: false,
+  // Sponsor-only. Whether what the Claude desktop app records about its sessions (who is under whom, what is archived,
+  // titles, which are running) is reflected in the session lists. Read-only: nothing is written to the desktop app.
+  desktopSessionSync: false,
   allowAllCommandsByDefault: false,
   attachEditorContext: true,
   autoOpenDiffOnPermission: true,
@@ -182,6 +185,7 @@ const COMMENT_MAP: Record<string, string> = {
   notificationSoundVolume: '알림음의 음량(1~10, 미설정 시 5). 한 눈금의 절대 크기는 운영체제마다 다르다 — 맥은 1이 원음이고 10이 원음의 10배(afplay 게인), 윈도우와 리눅스는 증폭이 안 되므로 10이 원음이고 1이 그 10분의 1이다',
   focusInputOnEditorContext: 'true면 Alt+K로 파일 경로 삽입 후 채팅 입력창으로 포커스 이동',
   autoResumeOnLimit: '사용량 리밋 리셋 시 자동 재개(후원자 전용). 기본 off. 리밋 배너의 기본 동작을 seed',
+  desktopSessionSync: '후원자 전용. 클로드 데스크탑 앱이 자기 세션에 대해 기록한 것(상하위 관계, 보관, 제목, 진행 중 여부)을 세션 목록과 세션 레일에 반영할지. 기본 off. 읽기만 하며 데스크탑 앱의 파일은 건드리지 않는다. 세션 매니저 패키지가 설치돼 있어야 동작',
   allowAllCommandsByDefault: 'Sponsor-only. Whether every session starts with "Allow all command in this session" already on, so the GUI answers the CLI safety prompts itself. Off by default; a session can still turn it off for itself',
   attachEditorContext: '세션 시작 시 에디터 컨텍스트 칩을 활성 상태로 둘지. false면 칩은 뜨되 비활성으로 시작(세션 중 클릭 변경은 저장되지 않음)',
   autoOpenDiffOnPermission: '파일 편집 권한을 물을 때 diff를 저절로 열지. false면 승인 패널만 뜨고, 프롬프트의 파일명을 눌렀을 때만 diff가 열린다(변경 내용은 어느 쪽이든 보관되므로 나중에 눌러도 볼 수 있다)',
@@ -625,6 +629,7 @@ function validateSetting(key: string, value: unknown): string | null {
     case 'useCtrlEnterToSend':
     case 'focusInputOnEditorContext':
     case 'autoResumeOnLimit':
+    case 'desktopSessionSync':
     case 'allowAllCommandsByDefault':
     case 'attachEditorContext':
     case 'syncModelToDefault':

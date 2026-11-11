@@ -229,6 +229,38 @@
       "failed": "準備できなかったセッション: {{count}} 件",
       "error": "セッションを準備できませんでした: {{message}}"
     },
+    "sessionManager": {
+      "title": "セッションマネージャー",
+      "required": "セッション管理パッケージが必要です。右上からインストールしてください。",
+      "package": {
+        "install": "インストール",
+        "installing": "インストール中…",
+        "update": "更新",
+        "updating": "更新中…",
+        "upToDate": "最新です",
+        "refresh": "再確認",
+        "refreshing": "確認中…",
+        "remove": "削除"
+      },
+      "desktopSync": {
+        "label": "Claude Desktop の変更を反映",
+        "description": "Claude Desktop がセッションについて記録した内容を、セッション一覧とセッションレールに表示します。",
+        "learnMore": "詳細",
+        "details": {
+          "title": "Claude Desktop の変更を反映",
+          "intro": "オンにすると、Claude Desktop がこのコンピューターに保存しているセッションの記録を読み取ります。読み取るだけで、Claude Desktop には何も書き込みません。",
+          "items": {
+            "relations": "親子セッション: Claude Desktop で別のセッションが開始したセッションはそのセッションの下に表示され、そちらで最上位に移したセッションはここでも最上位に表示されます。",
+            "archived": "アーカイブ済みセッション: Claude Desktop でアーカイブまたはアーカイブ解除したセッションは、ここでも非表示または表示になります。",
+            "titles": "タイトル: Claude Desktop で名前を変更したセッションは、再読み込みなしでここでも変わります。",
+            "running": "実行中のセッション: Claude Desktop で作業中のセッションには、セッション一覧とセッションレールに実行中のマークが付きます。"
+          },
+          "yours": "ここで設定したリンクやアーカイブの状態はあなたの選択として保持され、Claude Desktop に上書きされません。セッションレールの「リンクされたセッション」の横にある Claude ボタンで、セッションを Claude Desktop の記録に戻せます。",
+          "needs": "このコンピューターにセッションマネージャーのパッケージと Claude Desktop が必要です。スポンサー限定の機能です。",
+          "close": "閉じる"
+        }
+      }
+    },
     "readAloud": {
       "title": "読み上げ",
       "description": "返信の下のスピーカーボタンを押したときに返信を読み上げる声の設定です。変更するまで、声と速度は Claude アカウントに保存されている値です。",
