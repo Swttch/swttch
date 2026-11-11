@@ -46,6 +46,11 @@ vi.mock('@/hooks/useSessionOutputs', async (importOriginal) => ({
     useSessionOutputImages: () => ({loaded: {}, ensure: vi.fn()}),
 }));
 vi.mock('@/hooks/queries/useSponsorStatus', () => ({useSponsorStatus: () => ({isSponsor: false})}));
+let mockActivity: Record<string, string> = {};
+vi.mock('@/hooks/useSessionActivity', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@/hooks/useSessionActivity')>()),
+    useSessionActivity: () => ({activity: mockActivity, open: new Set<string>(), markRead: vi.fn()}),
+}));
 vi.mock('@/hooks/useSessionPictures', async () => {
     const actual = await vi.importActual<typeof import('@/hooks/useSessionPictures')>('@/hooks/useSessionPictures');
     const {isPictureOutput} = await vi.importActual<typeof import('@/hooks/useSessionOutputs')>('@/hooks/useSessionOutputs');
@@ -90,6 +95,7 @@ function openRail() {
 }
 
 beforeEach(() => {
+    mockActivity = {};
     openUrl.mockClear();
     openChatFile.mockClear();
     bridge.send = send;
@@ -226,6 +232,22 @@ describe('SessionRail - linked sessions', () => {
         expect(sessionCtx.switchSession).toHaveBeenCalledWith('p1');
         fireEvent.click(screen.getByRole("button", {name: "Second child"}));
         expect(sessionCtx.switchSession).toHaveBeenCalledWith('c2');
+    });
+
+    it('marks a child that is running, as the Claude desktop app does, and leaves the idle ones bare', () => {
+        mcpInstalled = '0.2.0';
+        mockActivity = {c1: 'running'};
+        sessionCtx.sessions = [
+            linked('s1', 'This one', null),
+            linked('c1', 'First child', 's1', 10),
+            linked('c2', 'Second child', 's1', 20),
+        ];
+        render(<SessionRail/>);
+        openRail();
+        const first = screen.getByRole('button', {name: 'First child'});
+        const second = screen.getByRole('button', {name: 'Second child'});
+        expect(first.querySelector('[data-testid="session-activity"][data-activity="running"]')).not.toBeNull();
+        expect(second.querySelector('[data-testid="session-activity"]')).toBeNull();
     });
 
     it('says the parent is not in the list when it runs in a folder the list does not cover', () => {

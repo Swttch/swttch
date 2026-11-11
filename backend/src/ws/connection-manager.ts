@@ -893,12 +893,30 @@ export class ConnectionManager {
    */
   getSessionActivity(): SessionActivityMap {
     const activity: SessionActivityMap = {};
+    // A turn running in the Claude desktop app has no CLI under this backend, so no tab reports it;
+    // the desktop app's own record says so. What a tab here reports for the session wins.
+    for (const sessionId of this.desktopRunning) activity[sessionId] = SessionActivity.Running;
     for (const session of this.sessionRegistry.values()) {
       if (session.activity !== SessionActivity.Idle) {
         activity[session.sessionId] = session.activity;
       }
     }
     return activity;
+  }
+
+  /** Sessions with a turn in flight in the Claude desktop app (see desktopSessions.ts). */
+  private desktopRunning = new Set<string>();
+
+  /** Record which sessions are running in the Claude desktop app, and tell every connection when that moved. */
+  setDesktopRunning(sessionIds: ReadonlySet<string>): void {
+    if (
+      sessionIds.size === this.desktopRunning.size &&
+      [...sessionIds].every((id) => this.desktopRunning.has(id))
+    ) {
+      return;
+    }
+    this.desktopRunning = new Set(sessionIds);
+    this.announceSessions();
   }
 
   /**

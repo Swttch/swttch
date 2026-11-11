@@ -1,6 +1,8 @@
 import {useEffect, useLayoutEffect, useMemo, useRef, useState} from "react";
 import {Portal} from "./Portal";
 import {Tooltip} from "./Tooltip";
+import {SessionActivity} from "@/shared";
+import {ActivityDot} from "@/components/SessionList/SessionItem";
 
 /** One page-like thing a relation points at: a session, here. */
 export interface RelationItem {
@@ -14,6 +16,8 @@ export interface RelationItem {
     archived?: boolean;
     /** The word on that pill. */
     archivedLabel?: string;
+    /** What the session is doing now, when it is doing something: a turn running, or waiting on an answer. */
+    activity?: SessionActivity;
 }
 
 /** The small pill that leads the title of an archived session. */
@@ -127,6 +131,9 @@ export function RelationField(props: Props) {
                             className="flex min-w-0 flex-1 items-center gap-1.5 text-start text-text-primary"
                         >
                             <PageIcon/>
+                            {item.activity && item.activity !== SessionActivity.Idle && (
+                                <ActivityDot activity={item.activity} isOpen/>
+                            )}
                             {item.archived && <ArchivedPill label={item.archivedLabel}/>}
                             <span className="truncate underline decoration-text-tertiary/60 underline-offset-1">{item.title}</span>
                         </button>

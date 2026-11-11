@@ -78,6 +78,13 @@ export function SessionList(props: Props) {
   const [showArchived, setShowArchived] = useState(false);
   const archivingAvailable = useSessionMcp().info?.installed != null;
 
+  // A session reports a state while a tab has it open, and also while it runs in the Claude desktop app, where no
+  // tab here has it open but the backend still says it is running.
+  const reportsState = useCallback(
+    (sessionId: string) => open.has(sessionId) || activityOf(activity, sessionId) === SessionActivity.Running,
+    [activity, open],
+  );
+
   // Counted over the rows the list is holding — what the user can see — rather
   // than over every session on disk. A count that included rows behind a search
   // or past the loaded page would name a number nothing on screen adds up to.
@@ -96,20 +103,20 @@ export function SessionList(props: Props) {
         else tally[TabState.Closed]++;
         // A closed session reports no state, exactly as its row draws no
         // marker, so it is not counted into any of the three above.
-        if (!isOpen) continue;
+        if (!reportsState(session.id)) continue;
         const state = activityOf(activity, session.id);
         if (state !== SessionActivity.Idle) tally[state]++;
       }
     }
     return tally;
-  }, [groupedSessions, activity, open]);
+  }, [groupedSessions, activity, open, reportsState]);
 
   // The filter keeps the same three states the Active count adds up, so the
   // number on the button is exactly how many rows survive it.
   const isActive = useCallback(
     (sessionId: string) =>
-      open.has(sessionId) && activityOf(activity, sessionId) !== SessionActivity.Idle,
-    [activity, open],
+      reportsState(sessionId) && activityOf(activity, sessionId) !== SessionActivity.Idle,
+    [activity, reportsState],
   );
 
   // Every filter that is set has to pass. An unset one says nothing, so it
@@ -123,14 +130,14 @@ export function SessionList(props: Props) {
         return false;
       }
       if (statusFilter.size > 0) {
-        if (!isOpen) return false;
+        if (!reportsState(sessionId)) return false;
         const state = activityOf(activity, sessionId);
         if (state === SessionActivity.Idle) return false;
         if (!statusFilter.has(state as StatusFilterKey)) return false;
       }
       return true;
     },
-    [activeOnly, isActive, open, tabFilter, statusFilter, activity],
+    [activeOnly, isActive, open, tabFilter, statusFilter, activity, reportsState],
   );
 
   const hasFilter = activeOnly || statusFilter.size > 0 || tabFilter.size > 0;
@@ -262,7 +269,7 @@ export function SessionList(props: Props) {
                     isMerged ? getSessionOriginLabel(session.sessionDir, rootDir) : undefined
                   }
                   activity={activityOf(activity, session.id)}
-                  isOpen={open.has(session.id)}
+                  isOpen={reportsState(session.id)}
                   onSelect={() => onSelectSession(session.id)}
                   onDelete={() => onDeleteSession(session.id)}
                   onRename={(title) => onRenameSession(session.id, title)}

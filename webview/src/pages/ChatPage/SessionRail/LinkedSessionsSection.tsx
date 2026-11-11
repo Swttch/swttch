@@ -10,7 +10,8 @@ import {RelationField, type RelationItem} from "@/components/RelationField";
 import {Tooltip} from "@/components/Tooltip";
 import claudeLogo from "@/assets/claude-logo.svg";
 import {Section} from "./Section";
-import {MessageType} from "@/shared";
+import {MessageType, type SessionActivityMap} from "@/shared";
+import {activityOf, useSessionActivity} from "@/hooks/useSessionActivity";
 import type {SessionMetaDto} from "@/dto";
 
 /**
@@ -29,6 +30,7 @@ export function LinkedSessionsSection() {
     const {t} = useTranslation('chat');
     const {sessions, currentSessionId, switchSession} = useSessionContext();
     const {send} = useBridgeContext();
+    const {activity} = useSessionActivity();
     const archivedLabel = t('sessionRail.linked.archived');
 
     const {parentId, parentItems, childItems, parentChoices, childChoices, apart, hasDesktopRecord} = useMemo(() => {
@@ -57,14 +59,14 @@ export function LinkedSessionsSection() {
             apart,
             hasDesktopRecord,
             parentId,
-            parentItems: parent ? [toItem(parent, archivedLabel)] : [],
-            childItems: children.map((s) => toItem(s, archivedLabel)),
+            parentItems: parent ? [toItem(parent, archivedLabel, activity)] : [],
+            childItems: children.map((s) => toItem(s, archivedLabel, activity)),
             // A session cannot be put under itself or under one of its own descendants; the one it is under already is held.
             parentChoices: others.filter((s) => !below.has(s.id) && s.id !== parentId).map((s) => toItem(s, archivedLabel)),
             // Nor can its own ancestors, or sessions it already started, be added below it.
             childChoices: others.filter((s) => !above.has(s.id) && s.id !== parentId && starterIdOf(s.sessionMark) !== currentSessionId).map((s) => toItem(s, archivedLabel)),
         };
-    }, [sessions, currentSessionId, archivedLabel]);
+    }, [sessions, currentSessionId, archivedLabel, activity]);
 
     const setParent = async (sessionId: string, parentSessionId: string | null) => {
         try {
@@ -151,7 +153,7 @@ export function LinkedSessionsSection() {
     );
 }
 
-function toItem(session: SessionMetaDto, archivedLabel: string): RelationItem {
+function toItem(session: SessionMetaDto, archivedLabel: string, activity: SessionActivityMap = {}): RelationItem {
     return {
         id: session.id,
         title: session.title,
@@ -159,5 +161,6 @@ function toItem(session: SessionMetaDto, archivedLabel: string): RelationItem {
         hint: session.updatedAt ? getRelativeTime(session.updatedAt) : undefined,
         archived: isArchivedMark(session.sessionMark),
         archivedLabel,
+        activity: activityOf(activity, session.id),
     };
 }

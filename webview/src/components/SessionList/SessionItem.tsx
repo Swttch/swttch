@@ -115,7 +115,7 @@ const ACTIVITY_COLOR: Record<SessionActivity, string> = {
  * The box is a fixed 14px in every state it IS drawn in, so a title does not
  * shift sideways as its session moves between them.
  */
-function ActivityDot({ activity, isOpen }: { activity: SessionActivity; isOpen: boolean }) {
+export function ActivityDot({ activity, isOpen }: { activity: SessionActivity; isOpen: boolean }) {
   const { t } = useTranslation('common');
   if (!isOpen) return null;
   return (

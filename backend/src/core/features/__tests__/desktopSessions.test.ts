@@ -2,7 +2,13 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mkdir, mkdtemp, rm, utimes, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { readDesktopState, readDesktopStarters, resetDesktopSessionsCache, watchDesktopState } from '../desktopSessions';
+import {
+  RUNNING_FRESH_MS,
+  readDesktopState,
+  readDesktopStarters,
+  resetDesktopSessionsCache,
+  watchDesktopState,
+} from '../desktopSessions';
 
 /**
  * The Claude desktop app keeps a JSON file per session. A session another one started names it in
@@ -103,7 +109,7 @@ describe('desktop app sessions', () => {
     try {
       await new Promise((r) => setTimeout(r, 150));
 
-      await writeSession('local_c', { sessionId: 'local_c', cliSessionId: 'cli-child', title: 'renamed' });
+      await writeSession('local_c', { sessionId: 'local_c', cliSessionId: 'cli-child', title: 'one', model: 'other' });
       await new Promise((r) => setTimeout(r, 250));
       expect(announced).toBe(0);
 
@@ -113,5 +119,64 @@ describe('desktop app sessions', () => {
     } finally {
       stop();
     }
+  });
+
+  it('announces a rename, as a change to the list and not to what is running', async () => {
+    await writeSession('local_c', { sessionId: 'local_c', cliSessionId: 'cli-child', title: 'one' });
+    const changes: { list: boolean; running: boolean }[] = [];
+    const stop = watchDesktopState((_state, change) => changes.push(change), root, 20);
+    try {
+      await new Promise((r) => setTimeout(r, 150));
+      await writeSession('local_c', { sessionId: 'local_c', cliSessionId: 'cli-child', title: 'renamed' });
+      await new Promise((r) => setTimeout(r, 300));
+      expect(changes).toEqual([{ list: true, running: false }]);
+    } finally {
+      stop();
+    }
+  });
+
+  describe('running turns', () => {
+    const now = () => Date.now();
+
+    it('takes a user message newer than the last turn end as a turn in flight', async () => {
+      await writeSession('local_r', {
+        sessionId: 'local_r', cliSessionId: 'cli-run', lastActivityAt: now(), latestUserFrameAt: now(), lastTurnEdgeAt: now() - 5000,
+      });
+      await writeSession('local_i', {
+        sessionId: 'local_i', cliSessionId: 'cli-idle', lastActivityAt: now(), latestUserFrameAt: now() - 5000, lastTurnEdgeAt: now(),
+      });
+      await writeSession('local_n', { sessionId: 'local_n', cliSessionId: 'cli-never', lastActivityAt: now(), latestUserFrameAt: now() });
+      expect([...(await readDesktopState(root)).running].sort()).toEqual(['cli-never', 'cli-run']);
+    });
+
+    it('does not count a turn that was cut off and has been silent for long', async () => {
+      await writeSession('local_s', {
+        sessionId: 'local_s', cliSessionId: 'cli-stale', lastActivityAt: now() - RUNNING_FRESH_MS - 1000, latestUserFrameAt: now() - RUNNING_FRESH_MS - 1000,
+      });
+      expect((await readDesktopState(root)).running.size).toBe(0);
+    });
+
+    it('announces a turn that starts and one that ends, and already knows one running at the first look', async () => {
+      await writeSession('local_r', {
+        sessionId: 'local_r', cliSessionId: 'cli-run', lastActivityAt: now(), latestUserFrameAt: now(), lastTurnEdgeAt: now() - 5000,
+      });
+      const seen: { running: string[]; list: boolean; changed: boolean }[] = [];
+      const stop = watchDesktopState(
+        (state, change) => seen.push({ running: [...state.running], list: change.list, changed: change.running }),
+        root,
+        20,
+      );
+      try {
+        await new Promise((r) => setTimeout(r, 150));
+        expect(seen).toEqual([{ running: ['cli-run'], list: false, changed: true }]);
+        await writeSession('local_r', {
+          sessionId: 'local_r', cliSessionId: 'cli-run', lastActivityAt: now(), latestUserFrameAt: now() - 1000, lastTurnEdgeAt: now(),
+        });
+        await new Promise((r) => setTimeout(r, 300));
+        expect(seen[1]).toEqual({ running: [], list: false, changed: true });
+      } finally {
+        stop();
+      }
+    });
   });
 });

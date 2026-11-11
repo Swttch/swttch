@@ -597,6 +597,21 @@ describe('ConnectionManager', () => {
       expect(cm.getSessionActivity()).toEqual({ 'sess-1': SessionActivity.Running });
     });
 
+    it('shows a turn running in the Claude desktop app, and what a screen says about the same session wins', () => {
+      cm.setDesktopRunning(new Set(['desk-1', 'sess-1']));
+      expect(cm.getSessionActivity()).toEqual({
+        'desk-1': SessionActivity.Running,
+        'sess-1': SessionActivity.Running,
+      });
+
+      cm.getOrCreateSession('sess-1');
+      cm.reportSessionActivity('sess-1', SessionActivity.Awaiting);
+      expect(cm.getSessionActivity()['sess-1']).toBe(SessionActivity.Awaiting);
+
+      cm.setDesktopRunning(new Set());
+      expect(cm.getSessionActivity()).toEqual({ 'sess-1': SessionActivity.Awaiting });
+    });
+
     it('takes a screen at its word when it says it is waiting on an answer', () => {
       cm.getOrCreateSession('sess-1');
 
