@@ -6,6 +6,8 @@ import { SessionGroup, type GroupedSessions } from '../utils';
 import { isArchivedMark } from '../archive';
 
 let mockInstalled: string | null = '0.4.0';
+let mockActivity: Record<string, string> = {};
+let mockOpen = new Set<string>();
 vi.mock('@/hooks/queries/useSessionMcp', () => ({
   useSessionMcp: () => ({ info: { installed: mockInstalled } }),
 }));
@@ -21,11 +23,13 @@ vi.mock('@/contexts/SessionContext', () => ({
 
 vi.mock('@/hooks/useSessionActivity', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/hooks/useSessionActivity')>()),
-  useSessionActivity: () => ({ activity: {}, open: new Set<string>(), markRead: vi.fn() }),
+  useSessionActivity: () => ({ activity: mockActivity, open: mockOpen, markRead: vi.fn() }),
 }));
 
 beforeEach(() => {
   mockInstalled = '0.4.0';
+  mockActivity = {};
+  mockOpen = new Set<string>();
   setSessionArchived.mockReset();
 });
 
@@ -154,5 +158,15 @@ describe('SessionList - archived sessions', () => {
     expect(screen.queryByTestId('session-archived-filter')).toBeNull();
     fireEvent.mouseEnter(screen.getByText('A live session').closest('button') as HTMLElement);
     expect(screen.queryByTestId('session-archive')).toBeNull();
+  });
+
+  it('counts only what is on screen: an archived session that is running is counted once the archived ones are shown', () => {
+    mockActivity = { live: 'running', old: 'running' };
+    mockOpen = new Set(['live', 'old']);
+    renderList([LIVE, ARCHIVED]);
+    const active = screen.getByTestId('session-active-filter');
+    expect(active.textContent).toContain('1');
+    fireEvent.click(screen.getByTestId('session-archived-filter'));
+    expect(screen.getByTestId('session-active-filter').textContent).toContain('2');
   });
 });

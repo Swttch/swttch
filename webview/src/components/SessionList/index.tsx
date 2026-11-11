@@ -101,6 +101,8 @@ export function SessionList(props: Props) {
     };
     for (const key of GROUP_ORDER) {
       for (const session of groupedSessions[key]) {
+        // An archived session is not on screen unless the toggle is on, so it is not counted either.
+        if (!showArchived && isArchivedMark(session.sessionMark)) continue;
         const isOpen = open.has(session.id);
         if (isOpen) tally[TabState.Open]++;
         else tally[TabState.Closed]++;
@@ -112,7 +114,7 @@ export function SessionList(props: Props) {
       }
     }
     return tally;
-  }, [groupedSessions, activity, open, reportsState]);
+  }, [groupedSessions, activity, open, reportsState, showArchived]);
 
   // The filter keeps the same three states the Active count adds up, so the
   // number on the button is exactly how many rows survive it.
