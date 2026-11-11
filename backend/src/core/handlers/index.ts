@@ -112,6 +112,7 @@ import {
   getDictationAvailabilityHandler,
   getExtendKitInfoHandler,
 } from './dictation';
+import { getSessionMcpInfoHandler, installSessionMcpHandler, setSessionArchivedHandler, setSessionParentHandler, uninstallSessionMcpHandler } from './sessionMcp';
 import { startReadAloudHandler, stopReadAloudHandler, getReadAloudAvailabilityHandler, getReadAloudVoiceSettingsHandler } from './readAloud';
 import { getCcbInstallHintHandler } from './getCcbInstallHint';
 import { getAccountHandler } from './getAccount';
@@ -548,6 +549,21 @@ export async function handleMessage(
       break;
     case MessageType.GET_READ_ALOUD_AVAILABILITY:
       await getReadAloudAvailabilityHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_SESSION_MCP_INFO:
+      await getSessionMcpInfoHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.INSTALL_SESSION_MCP:
+      await installSessionMcpHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.SET_SESSION_ARCHIVED:
+      await setSessionArchivedHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.SET_SESSION_PARENT:
+      await setSessionParentHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.UNINSTALL_SESSION_MCP:
+      await uninstallSessionMcpHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_EXTEND_KIT_INFO:
       await getExtendKitInfoHandler(connectionId, message, connections, bridge);

@@ -37,6 +37,27 @@ export const SessionFacts: React.FC<{ session: DesktopSession }> =({ session }) 
   );
 };
 
+/** Where a link to a session points: the session's address, with the folder it works in when that is known. */
+export function sessionLinkHref(sessionId: string, cwd?: string): string {
+  return `${window.location.origin}/sessions/${sessionId}${cwd ? `?workingDir=${encodeURIComponent(cwd)}` : ''}`;
+}
+
+/**
+ * The click on a link to a session (`target="_blank"` anchor): in a browser the anchor's own work opens the new
+ * tab; in the IDE the click goes through the adapter, because the popup that target asks for is not reliably
+ * handed to the plugin. The click never also toggles a surrounding container.
+ */
+export function openSessionFromClick(event: React.MouseEvent, sessionId: string, cwd?: string): void {
+  event.stopPropagation();
+  const adapter = getAdapter();
+  if (adapter.type === ClientEnv.BROWSER) return;
+  event.preventDefault();
+  adapter.openSession(sessionId, cwd).catch((err) => {
+    console.error('[openSessionFromClick] Failed to open session:', err);
+    toast.error(i18n.t('chat:chatInput.agentMentionDropdown.openSessionFailed'));
+  });
+}
+
 /**
  * A mention of a session in the chat text, as Claude Desktop draws it: its name on a blue background. A click
  * opens that session in a new tab. It is a real link (`target="_blank"`). In a browser the link does its own
@@ -63,21 +84,8 @@ export const DesktopSessionLink: React.FC<{ id: string; children?: ReactNode; pl
 
   if (!sessionId) return chip(<span className={plain ? '' : 'richInputChip'}>{name}</span>);
 
-  const href = `${window.location.origin}/sessions/${sessionId}${session.cwd ? `?workingDir=${encodeURIComponent(session.cwd)}` : ''}`;
-  const open = (event: React.MouseEvent) => {
-    // Keep the click from also toggling a surrounding container.
-    event.stopPropagation();
-    const adapter = getAdapter();
-    // In a browser the anchor's own `target="_blank"` opens the new tab; nothing to add.
-    if (adapter.type === ClientEnv.BROWSER) return;
-    event.preventDefault();
-    adapter
-      .openSession(sessionId, session.cwd)
-      .catch((err) => {
-        console.error('[DesktopSessionLink] Failed to open session:', err);
-        toast.error(i18n.t('chat:chatInput.agentMentionDropdown.openSessionFailed'));
-      });
-  };
+  const href = sessionLinkHref(sessionId, session.cwd);
+  const open = (event: React.MouseEvent) => openSessionFromClick(event, sessionId, session.cwd);
 
   return chip(
     <a href={href} target="_blank" rel="noreferrer" className={plain ? 'cursor-pointer underline' : 'richInputChip cursor-pointer'} onClick={open}>

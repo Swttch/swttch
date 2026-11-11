@@ -81,12 +81,6 @@
 .transcript-prose p { margin: 0.65em 0 0 !important; }
 .transcript-prose p:first-child { margin-top: 0 !important; }
 
-/* The lit dots of the working indicator: each dot takes its turn, so one to three of the four are lit at a time. */
-@keyframes transcript-grid-dot {
-  0%, 100% { opacity: 0.18; }
-  20%, 55% { opacity: 1; }
-}
-
 /* The words of what is running are swept by a lighter band from left to right, over and over. */
 .transcript-shimmer {
   background-image: linear-gradient(100deg, var(--tr-muted) 40%, rgb(var(--text-primary-rgb)) 50%, var(--tr-muted) 60%);

@@ -59,6 +59,10 @@
       "reclaim": "Reclaim Session"
     }
   },
+  "archivedSession": {
+    "message": "This session is archived. To keep working in it, unarchive it.",
+    "unarchive": "Unarchive"
+  },
   "missingFolder": {
     "message": "The working folder no longer exists. Choose another folder to continue.",
     "chooseFolder": "Choose folder",
@@ -798,6 +802,27 @@
     "context": "Context",
     "outputs": "Outputs",
     "outputsEmpty": "Nothing here yet. Files, pictures and pages Claude makes for you appear in this list.",
+    "linked": {
+      "title": "Linked sessions",
+      "parent": "Parent session",
+      "children": "Child sessions",
+      "none": "None",
+      "notInList": "Not in this list",
+      "notInListHint": "This session is not in the list. It may have been deleted, or it may belong to another folder.",
+      "archived": "Archived",
+      "resetToDesktop": "Reset the links you changed by hand to what the Claude desktop app records",
+      "resetSynced": "Nothing to reset: this session's links already match the Claude desktop app's",
+      "resetNoRecord": "Nothing to reset: the Claude desktop app has no link recorded for this session",
+      "searchPlaceholder": "Search sessions",
+      "listTitle": "Select a session",
+      "noMatch": "No matching sessions",
+      "open": "Click to open this session",
+      "removeParent": "Unlink the parent session. This session becomes a top-level session.",
+      "removeChild": "Unlink this child session. It becomes a top-level session and is not deleted.",
+      "change": "Change",
+      "addChild": "Add",
+      "failed": "Could not change the link"
+    },
     "showMore": "Show more",
     "contextUsed": "{{percent}}% used",
     "contextLoading": "Loading the usage...",
@@ -1077,6 +1102,10 @@
       "outputHeading": "Output",
       "noOutput": "No output",
       "archivedSession": "Archived session",
+      "sessionDetached": "Moved session to top level",
+      "sessionDetaching": "Moving session to top level",
+      "sessionDeleted": "Deleted session",
+      "sessionDeleting": "Deleting session",
       "appAskedReport": "The app asked Claude to report back",
       "startedByClaudeFrom": "Started by Claude from",
       "startedByClaude": "Started by Claude from another session",

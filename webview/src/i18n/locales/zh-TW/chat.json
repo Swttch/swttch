@@ -59,6 +59,10 @@
       "reclaim": "接管工作階段"
     }
   },
+  "archivedSession": {
+    "message": "此工作階段已封存。若要繼續在此工作階段中工作,請先取消封存。",
+    "unarchive": "取消封存"
+  },
   "missingFolder": {
     "message": "工作資料夾已不存在。請選擇其他資料夾以繼續。",
     "chooseFolder": "選擇資料夾",
@@ -794,6 +798,27 @@
     "context": "上下文",
     "outputs": "產出",
     "outputsEmpty": "目前沒有內容。Claude 為你產生的檔案、圖片和頁面會顯示在這裡。",
+    "linked": {
+      "title": "關聯的工作階段",
+      "parent": "上層工作階段",
+      "children": "下層工作階段",
+      "none": "無",
+      "notInList": "不在此清單中",
+      "notInListHint": "此工作階段不在清單中。可能已被刪除,或屬於其他資料夾。",
+      "archived": "已封存",
+      "resetToDesktop": "將手動變更的關聯還原為 Claude 桌面版的記錄",
+      "resetSynced": "無需還原:此工作階段的關聯已與 Claude 桌面版的記錄一致",
+      "resetNoRecord": "無需還原:Claude 桌面版沒有此工作階段的關聯記錄",
+      "searchPlaceholder": "搜尋工作階段",
+      "listTitle": "選擇工作階段",
+      "noMatch": "沒有符合的工作階段",
+      "open": "點擊即可開啟此工作階段",
+      "removeParent": "取消與上層工作階段的關聯。此工作階段將成為最上層工作階段。",
+      "removeChild": "取消與此下層工作階段的關聯。該工作階段將成為最上層工作階段,不會被刪除。",
+      "change": "變更",
+      "addChild": "新增",
+      "failed": "無法變更關聯"
+    },
     "showMore": "顯示更多",
     "contextUsed": "已使用 {{percent}}%",
     "contextLoading": "正在載入用量...",
@@ -1065,6 +1090,10 @@
       "outputHeading": "輸出",
       "noOutput": "無輸出",
       "archivedSession": "已封存工作階段",
+      "sessionDetached": "已將工作階段移至最上層",
+      "sessionDetaching": "正在將工作階段移至最上層",
+      "sessionDeleted": "已刪除工作階段",
+      "sessionDeleting": "正在刪除工作階段",
       "appAskedReport": "應用程式請 Claude 回報結果",
       "startedByClaudeFrom": "Claude 從以下工作階段啟動",
       "startedByClaude": "Claude 從另一個工作階段啟動",

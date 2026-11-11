@@ -59,6 +59,10 @@
       "reclaim": "セッションを再取得"
     }
   },
+  "archivedSession": {
+    "message": "このセッションはアーカイブされています。作業を続けるにはアーカイブを解除してください。",
+    "unarchive": "アーカイブを解除"
+  },
   "missingFolder": {
     "message": "作業フォルダが存在しなくなりました。続けるには別のフォルダを選んでください。",
     "chooseFolder": "フォルダを選択",
@@ -794,6 +798,27 @@
     "context": "コンテキスト",
     "outputs": "成果物",
     "outputsEmpty": "まだありません。Claudeが作成したファイル、画像、ページがここに並びます。",
+    "linked": {
+      "title": "リンクされたセッション",
+      "parent": "親セッション",
+      "children": "子セッション",
+      "none": "なし",
+      "notInList": "この一覧にありません",
+      "notInListHint": "このセッションは一覧にありません。削除されたか、別のフォルダのセッションの可能性があります。",
+      "archived": "アーカイブ済み",
+      "resetToDesktop": "手動で変更した連携を、Claude デスクトップアプリの記録に戻します",
+      "resetSynced": "戻すものはありません。このセッションの連携は Claude デスクトップアプリの記録と同じです",
+      "resetNoRecord": "戻すものはありません。Claude デスクトップアプリにこのセッションの連携記録がありません",
+      "searchPlaceholder": "セッションを検索",
+      "listTitle": "セッションを選択",
+      "noMatch": "一致するセッションがありません",
+      "open": "クリックするとこのセッションに移動します",
+      "removeParent": "親セッションとのリンクを外します。このセッションは最上位になります。",
+      "removeChild": "この子セッションとのリンクを外します。そのセッションは最上位になり、削除はされません。",
+      "change": "変更",
+      "addChild": "追加",
+      "failed": "リンクを変更できませんでした"
+    },
     "showMore": "もっと見る",
     "contextUsed": "{{percent}}% 使用",
     "contextLoading": "使用状況を読み込み中...",
@@ -1065,6 +1090,10 @@
       "outputHeading": "出力",
       "noOutput": "出力なし",
       "archivedSession": "セッションをアーカイブしました",
+      "sessionDetached": "セッションを最上位に移動しました",
+      "sessionDetaching": "セッションを最上位に移動中…",
+      "sessionDeleted": "セッションを削除しました",
+      "sessionDeleting": "セッションを削除中",
       "appAskedReport": "アプリが Claude に報告を求めました",
       "startedByClaudeFrom": "Claude が次のセッションから開始：",
       "startedByClaude": "別のセッションから Claude が開始",

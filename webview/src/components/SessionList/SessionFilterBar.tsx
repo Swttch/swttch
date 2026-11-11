@@ -3,6 +3,7 @@ import Tippy from '@tippyjs/react/headless';
 import { useTranslation } from '@/i18n';
 import { useSessionListScale } from './scale';
 import { SessionActivity } from '@/shared';
+import { Tooltip } from '@/components/Tooltip';
 
 /** Whether a session has a tab showing it. */
 export enum TabState {
@@ -36,6 +37,12 @@ interface Props {
   /** Only sessions that need input, are working, or are unread are shown. */
   activeOnly: boolean;
   onActiveOnlyChange: (next: boolean) => void;
+  /**
+   * The toggle that lists archived sessions with the rest. Left out (undefined) where nothing can be archived, which
+   * is while the session-management MCP is not installed.
+   */
+  showArchived?: boolean;
+  onShowArchivedChange?: (next: boolean) => void;
 }
 
 const STATUS_ORDER: StatusFilterKey[] = [
@@ -95,6 +102,8 @@ export function SessionFilterBar(props: Props) {
     onTabFilterChange,
     activeOnly,
     onActiveOnlyChange,
+    showArchived,
+    onShowArchivedChange,
   } = props;
   const { t } = useTranslation('common');
   const scale = useSessionListScale();
@@ -190,7 +199,35 @@ export function SessionFilterBar(props: Props) {
         </span>
       </button>
 
+      {onShowArchivedChange && (
+        // At the far end of the bar, apart from the filters that narrow the list: this one widens it.
+        <Tooltip content={t('sessionList.filter.showArchived')} placement="bottom">
+          <button
+            type="button"
+            onClick={() => onShowArchivedChange(!showArchived)}
+            aria-pressed={showArchived === true}
+            aria-label={t('sessionList.filter.showArchived')}
+            data-testid="session-archived-filter"
+            className={`${BAR_BUTTON} ms-auto ${
+              showArchived
+                ? 'text-text-primary bg-[var(--surface-selected)]'
+                : 'text-text-tertiary hover:text-text-primary hover:bg-[var(--surface-selected)]'
+            }`}
+          >
+            <ArchiveIcon />
+          </button>
+        </Tooltip>
+      )}
     </div>
+  );
+}
+
+/** The box with a lid that says archive. */
+export function ArchiveIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+      <path d="M1.5 2.5h9v2h-9zM2.5 4.5v5a.5.5 0 0 0 .5.5h6a.5.5 0 0 0 .5-.5v-5M5 6.75h2" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 

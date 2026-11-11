@@ -1236,6 +1236,34 @@ describe('SessionContext', () => {
     });
   });
 
+  describe('session list refresh after a session tool changed it', () => {
+    async function renderAndGetSessionsUpdatedHandler(): Promise<SubscribedHandler> {
+      render(
+        <SessionProvider>
+          <TestConsumer onMount={() => {}} />
+        </SessionProvider>
+      );
+      await waitFor(() => {
+        expect(mockSubscribe.mock.calls.some(([type]) => type === MessageType.SESSIONS_UPDATED)).toBe(true);
+      });
+      const calls = mockSubscribe.mock.calls.filter(([type]) => type === MessageType.SESSIONS_UPDATED);
+      return calls[calls.length - 1][1];
+    }
+
+    it('reads the list again when the backend says the rows changed', async () => {
+      // What the backend sends after a session was moved under or out from under
+      // another, archived or renamed through the session-management MCP.
+      const handler = await renderAndGetSessionsUpdatedHandler();
+      mockSessionsIndex.mockClear();
+
+      await act(async () => {
+        handler({ payload: { action: 'refresh' } });
+      });
+
+      await waitFor(() => expect(mockSessionsIndex).toHaveBeenCalledTimes(1));
+    });
+  });
+
   describe('inputMode - 사용자가 고른 모드를 CLI에 전달 (#393)', () => {
     function modeMessages() {
       return mockSend.mock.calls.filter(([type]) => type === MessageType.SET_PERMISSION_MODE);

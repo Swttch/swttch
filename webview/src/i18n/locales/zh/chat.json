@@ -59,6 +59,10 @@
       "reclaim": "接管会话"
     }
   },
+  "archivedSession": {
+    "message": "此会话已归档。若要继续在此会话中工作,请先取消归档。",
+    "unarchive": "取消归档"
+  },
   "missingFolder": {
     "message": "工作文件夹已不存在。请选择其他文件夹以继续。",
     "chooseFolder": "选择文件夹",
@@ -794,6 +798,27 @@
     "context": "上下文",
     "outputs": "产出",
     "outputsEmpty": "暂无内容。Claude 为你生成的文件、图片和页面会显示在这里。",
+    "linked": {
+      "title": "关联的会话",
+      "parent": "上级会话",
+      "children": "下级会话",
+      "none": "无",
+      "notInList": "不在此列表中",
+      "notInListHint": "此会话不在列表中。它可能已被删除,或属于其他文件夹。",
+      "archived": "已归档",
+      "resetToDesktop": "将手动更改的关联恢复为 Claude 桌面版的记录",
+      "resetSynced": "无需恢复:此会话的关联已与 Claude 桌面版的记录一致",
+      "resetNoRecord": "无需恢复:Claude 桌面版没有此会话的关联记录",
+      "searchPlaceholder": "搜索会话",
+      "listTitle": "选择会话",
+      "noMatch": "没有匹配的会话",
+      "open": "点击即可打开此会话",
+      "removeParent": "取消与上级会话的关联。此会话将成为顶层会话。",
+      "removeChild": "取消与此下级会话的关联。该会话将成为顶层会话,不会被删除。",
+      "change": "更改",
+      "addChild": "添加",
+      "failed": "无法更改关联"
+    },
     "showMore": "显示更多",
     "contextUsed": "已使用 {{percent}}%",
     "contextLoading": "正在加载用量...",
@@ -1065,6 +1090,10 @@
       "outputHeading": "输出",
       "noOutput": "无输出",
       "archivedSession": "已归档会话",
+      "sessionDetached": "已将会话移至顶层",
+      "sessionDetaching": "正在将会话移至顶层",
+      "sessionDeleted": "已删除会话",
+      "sessionDeleting": "正在删除会话",
       "appAskedReport": "应用请求 Claude 汇报结果",
       "startedByClaudeFrom": "Claude 从以下会话启动",
       "startedByClaude": "Claude 从另一个会话启动",

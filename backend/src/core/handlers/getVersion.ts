@@ -67,6 +67,8 @@ export async function getVersionHandler(
       requiresRestart,
       clientInfo,
       osInfo,
+      // For the Dependencies list: the Node.js this backend itself runs on.
+      nodeVersion: process.versions.node,
     });
   } catch (err) {
     connections.sendTo(connectionId, MessageType.ACK, {

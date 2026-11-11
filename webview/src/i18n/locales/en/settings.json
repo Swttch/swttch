@@ -229,6 +229,42 @@
       "failed": "Sessions that could not be prepared: {{count}}",
       "error": "Could not prepare the sessions: {{message}}"
     },
+    "sessionManager": {
+      "title": "Session manager",
+      "required": "Needs the session-management package. Install it from the top right.",
+      "dragDrop": {
+        "label": "Drag a session onto another to make it a child session",
+        "description": "In the session list, drag a session row onto another session row and the dragged session becomes a child of that session. Drop it on the strip that appears at the top of the list and it becomes a top-level session. It does what the Change button in the session rail does, by dragging."
+      },
+      "package": {
+        "install": "Install",
+        "installing": "Installing…",
+        "update": "Update",
+        "updating": "Updating…",
+        "upToDate": "Up to date",
+        "refresh": "Check again",
+        "refreshing": "Checking…",
+        "remove": "Remove"
+      },
+      "desktopSync": {
+        "label": "Reflect changes from Claude Desktop",
+        "description": "Shows in the session lists and the session rail what Claude Desktop records about your sessions.",
+        "learnMore": "Learn more",
+        "details": {
+          "title": "Reflect changes from Claude Desktop",
+          "intro": "While this is on, this app reads the session records that Claude Desktop keeps on this computer. It only reads them and never writes anything back to Claude Desktop.",
+          "items": {
+            "relations": "Parent and child sessions: a session that another session started in Claude Desktop is shown under that session, and a session you move to the top level there is shown at the top level here.",
+            "archived": "Archived sessions: a session you archive or unarchive in Claude Desktop is hidden or shown here as well.",
+            "titles": "Titles: a session you rename in Claude Desktop is renamed here too, without reloading.",
+            "running": "Running sessions: a session that is working in Claude Desktop shows the running marker in the session list and in the session rail."
+          },
+          "yours": "A link or archive state you set here is kept as your own choice and is not overwritten by Claude Desktop. The Claude button next to Linked sessions in the session rail hands a session back to what Claude Desktop records.",
+          "needs": "Needs the session manager package and Claude Desktop on this computer. Sponsors only.",
+          "close": "Close"
+        }
+      }
+    },
     "readAloud": {
       "title": "Read aloud",
       "description": "Settings for the voice that reads a reply aloud when you press the speaker button under it. Until you change them, the voice and the speed are the ones stored in your Claude account.",
@@ -457,6 +493,38 @@
       "notDetected": "not detected",
       "refreshVersion": "Refresh version",
       "refresh": "Refresh"
+    },
+    "dependencies": {
+      "title": "Dependencies",
+      "description": "Programs this app uses that are installed separately on this machine.",
+      "install": "Install",
+      "installing": "Installing…",
+      "notInstalled": "Not installed",
+      "extendKit": {
+        "description": "Runs voice input, read aloud and the usage panel."
+      },
+      "sessionMcp": {
+        "description": "MCP tools that let Claude start new Claude Code sessions and find, message, stop and archive your other ones. While installed, it is attached to every Claude Code session this app starts, and it updates itself when a newer version is out.",
+        "package": {
+          "installed": "Installed",
+          "updated": "Updated",
+          "failed": "Could not install",
+          "dismiss": "Dismiss",
+          "remove": "Remove",
+          "removed": "Removed",
+          "removeFailed": "Could not remove",
+          "installConfirmTitle": "Install the session-management MCP?",
+          "installConfirmMessage": "This runs a global package install of {{packageName}} on this machine. Once installed, it is attached to every Claude Code session this app starts, and its tools take up part of Claude's context. It is kept up to date automatically.",
+          "removeConfirmTitle": "Remove the session-management MCP?",
+          "removeConfirmMessage": "It is removed from this machine and no longer attached to new Claude processes. You can install it again at any time."
+        }
+      },
+      "node": {
+        "description": "The runtime this app's backend runs on."
+      },
+      "cloudflared": {
+        "description": "Opens the remote tunnel. You are asked to install it when you first turn the tunnel on."
+      }
     },
     "links": {
       "title": "Links",

@@ -58,9 +58,9 @@ If you have turned **Show thinking summaries** on in your Claude settings yourse
 
 The chat shows that a turn is running in the same way the desktop app does:
 
-![The working indicator: four orange dots, the word Thinking and "3s", and the input placeholder "↵ to send, ⌘↵ to queue for later".](./assets/working-indicator.png)
+![The working indicator: orange dots, the word Thinking and "3s", and the input placeholder "↵ to send, ⌘↵ to queue for later".](./assets/working-indicator.png)
 
-- **Four orange dots** in a square, with some of them lit and the lit ones travelling around.
+- **A small mark of orange dots** that moves while the work goes on, and changes with what is being done, as the desktop app's does. While Claude thinks it is a group of three dots that travel, line up, draw together into one point and part again. While a command runs it is four dots in a square that twist into a diagonal and settle back. While a file is read it is a few dots circling one another. For any other call it is a row of three dots, the outer ones drawing in as the middle one swells. It is drawn by this app, so it looks the same whether or not the desktop app is installed, and it stands still when the system asks for reduced motion.
 - **A shimmering label** that says what is going on: `Thinking`, or the line of the tool call being waited on (its description when it has one, otherwise `Running a command`, `Reading`, `Searching`, `Editing` and so on), with how long the turn has been running (`12s`, then `1m 6s`).
 - **Tokens** once Claude has started writing: for example `725 tokens 55s`.
 - When a tool call runs, its folded line becomes the indicator. It stays folded: the line does not open by itself while the run goes on and does not close when it ends. Click it if you want to watch the calls.

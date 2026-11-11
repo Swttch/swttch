@@ -30,6 +30,7 @@ export function SessionPanelPage() {
     setSearchQuery,
     filteredSessions,
     groupedSessions,
+    sessionNesting,
     handleDeleteSession,
     renameSession,
     confirmDialog,
@@ -101,6 +102,7 @@ export function SessionPanelPage() {
               onRenameSession={renameSession}
               onLoadMore={loadMoreSessions}
               hasMore={hasMoreSessions}
+              nesting={sessionNesting}
             />
           ) : (
             <div className="flex-1 px-3 py-3 text-sm text-text-tertiary text-center">

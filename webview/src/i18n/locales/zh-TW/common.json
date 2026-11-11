@@ -210,6 +210,15 @@
     "refreshSessions": "重新整理工作階段",
     "renameSession": "重新命名工作階段",
     "deleteSession": "刪除工作階段",
+    "dragLinks": {
+      "topLevel": "放在這裡,使其成為頂層工作階段"
+    },
+    "archiveSession": "封存工作階段",
+    "unarchiveSession": "取消封存工作階段",
+    "startedSessions": {
+      "show": "顯示此工作階段啟動的工作階段",
+      "hide": "隱藏此工作階段啟動的工作階段"
+    },
     "groups": {
       "today": "今天",
       "yesterday": "昨天",
@@ -240,6 +249,7 @@
       "active": "活躍",
       "countsTitle": "依狀態統計的工作階段數",
       "activeTitle": "僅顯示需要答覆、正在處理或未讀的工作階段",
+      "showArchived": "顯示已封存的工作階段",
       "noneActive": "沒有需要你處理的工作階段"
     }
   },

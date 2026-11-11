@@ -229,6 +229,42 @@
       "failed": "Sessões que não puderam ser preparadas: {{count}}",
       "error": "Não foi possível preparar as sessões: {{message}}"
     },
+    "sessionManager": {
+      "title": "Gerenciador de sessões",
+      "required": "Requer o pacote de gerenciamento de sessões. Instale-o no canto superior direito.",
+      "dragDrop": {
+        "label": "Arrastar uma sessão sobre outra para torná-la sessão filha",
+        "description": "Na lista de sessões, arraste uma linha de sessão sobre outra linha de sessão e a sessão arrastada passa a ser filha dessa sessão. Se você a soltar na faixa que aparece no topo da lista, ela passa ao nível superior. Faz o mesmo que o botão “Alterar” do painel lateral, mas arrastando."
+      },
+      "package": {
+        "install": "Instalar",
+        "installing": "Instalando…",
+        "update": "Atualizar",
+        "updating": "Atualizando…",
+        "upToDate": "Atualizado",
+        "refresh": "Verificar novamente",
+        "refreshing": "Verificando…",
+        "remove": "Remover"
+      },
+      "desktopSync": {
+        "label": "Refletir as alterações do Claude Desktop",
+        "description": "Mostra nas listas de sessões e no painel lateral o que o Claude Desktop registra sobre as suas sessões.",
+        "learnMore": "Saiba mais",
+        "details": {
+          "title": "Refletir as alterações do Claude Desktop",
+          "intro": "Enquanto estiver ativado, este aplicativo lê os registros de sessões que o Claude Desktop guarda neste computador. Ele apenas lê e nunca grava nada no Claude Desktop.",
+          "items": {
+            "relations": "Sessões pai e filhas: uma sessão que outra sessão iniciou no Claude Desktop aparece abaixo dessa sessão, e uma sessão que você move para o nível superior lá aparece aqui no nível superior.",
+            "archived": "Sessões arquivadas: uma sessão que você arquiva ou desarquiva no Claude Desktop também fica oculta ou visível aqui.",
+            "titles": "Títulos: uma sessão que você renomeia no Claude Desktop também é renomeada aqui, sem recarregar.",
+            "running": "Sessões em andamento: uma sessão que está trabalhando no Claude Desktop mostra o indicador de execução na lista de sessões e no painel lateral."
+          },
+          "yours": "Um vínculo ou estado de arquivamento definido aqui permanece como escolha sua e não é sobrescrito pelo Claude Desktop. O botão do Claude ao lado de “Sessões vinculadas” no painel lateral devolve uma sessão ao que o Claude Desktop registra.",
+          "needs": "Requer o pacote do gerenciador de sessões e o Claude Desktop neste computador. Somente para patrocinadores.",
+          "close": "Fechar"
+        }
+      }
+    },
     "readAloud": {
       "title": "Ler em voz alta",
       "description": "Configurações da voz que lê uma resposta quando você aperta o botão de alto-falante abaixo dela. Até você mudá-las, a voz e a velocidade são as guardadas na sua conta do Claude.",
@@ -457,6 +493,38 @@
       "notDetected": "não detectado",
       "refreshVersion": "Atualizar versão",
       "refresh": "Atualizar"
+    },
+    "dependencies": {
+      "title": "Dependências",
+      "description": "Programas que este aplicativo usa e que são instalados separadamente neste computador.",
+      "install": "Instalar",
+      "installing": "Instalando…",
+      "notInstalled": "Não instalado",
+      "extendKit": {
+        "description": "Executa a entrada por voz, a leitura em voz alta e o painel de uso."
+      },
+      "sessionMcp": {
+        "description": "Ferramentas MCP que permitem ao Claude iniciar novas sessões do Claude Code e encontrar, enviar mensagens, interromper e arquivar suas outras sessões. Enquanto está instalado, ele é anexado a cada sessão do Claude Code que este aplicativo inicia e se atualiza sozinho quando sai uma versão nova.",
+        "package": {
+          "installed": "Instalado",
+          "updated": "Atualizado",
+          "failed": "Não foi possível instalar",
+          "dismiss": "Fechar",
+          "remove": "Remover",
+          "removed": "Removido",
+          "removeFailed": "Não foi possível remover",
+          "installConfirmTitle": "Instalar o MCP de gerenciamento de sessões?",
+          "installConfirmMessage": "Isso instala {{packageName}} globalmente neste computador. Depois de instalado, ele é anexado a cada sessão do Claude Code que este aplicativo inicia, e suas ferramentas ocupam parte do contexto do Claude. Ele é mantido atualizado automaticamente.",
+          "removeConfirmTitle": "Remover o MCP de gerenciamento de sessões?",
+          "removeConfirmMessage": "Ele é removido deste computador e deixa de ser anexado a novos processos do Claude. Você pode instalá-lo novamente quando quiser."
+        }
+      },
+      "node": {
+        "description": "O ambiente de execução em que o backend deste aplicativo roda."
+      },
+      "cloudflared": {
+        "description": "Abre o túnel remoto. Você será solicitado a instalá-lo na primeira vez que ativar o túnel."
+      }
     },
     "links": {
       "title": "Links",

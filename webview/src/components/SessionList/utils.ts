@@ -1,6 +1,7 @@
 import { SessionMetaDto } from '@/dto';
 import { i18n } from '@/i18n';
 import { isSameWorkingDir, relativeWorkingDir, workingDirName } from '@/shared';
+import { SessionFamilies } from './families';
 
 /**
  * 상대 시간 표시 (Cursor 방식). 표기는 활성 로케일을 따른다.
@@ -98,13 +99,33 @@ export function getSessionGroup(date: Date, now: Date = new Date()): SessionGrou
   return SessionGroup.PastYear;
 }
 
+const NO_SESSION_IDS: ReadonlySet<string> = new Set();
+
 /**
  * 세션 목록을 날짜별 그룹으로 분류
  * @param sessions - 분류할 세션 목록
  * @param now - 현재 시간 (테스트 시 시간 주입용, 기본값: new Date())
+ * @param families - which sessions are drawn under which (see SessionFamilies).
+ *   Without it every session is a row of its own, in the order given.
+ * @param collapsed - ids of the sessions whose started sessions are folded away.
  * @remarks session.updatedAt이 undefined일 경우 'pastYear' 그룹으로 분류
+ *
+ * With families, a session and everything under it stay together, in the same
+ * group: each session is followed at once by the sessions it started, oldest
+ * start first, and each of those by the sessions IT started. The whole family
+ * sits where its most recent member would sit. Placing it by the top session
+ * alone would bury a session that is working right now under a manager that
+ * last spoke a week ago; and when the top session arrives late (it sat on a page
+ * not fetched yet), the rows already on screen stay where they are and the top
+ * session appears above them, instead of rows the user was looking at jumping
+ * down the list.
  */
-export function groupSessionsByDate(sessions: SessionMetaDto[], now: Date = new Date()): GroupedSessions {
+export function groupSessionsByDate(
+  sessions: SessionMetaDto[],
+  now: Date = new Date(),
+  families: SessionFamilies = SessionFamilies.none,
+  collapsed: ReadonlySet<string> = NO_SESSION_IDS,
+): GroupedSessions {
   const groups: GroupedSessions = {
     [SessionGroup.Today]: [],
     [SessionGroup.Yesterday]: [],
@@ -113,10 +134,32 @@ export function groupSessionsByDate(sessions: SessionMetaDto[], now: Date = new 
     [SessionGroup.PastYear]: [],
   };
 
-  for (const session of sessions) {
-    // updatedAt이 런타임에 undefined일 수 있음 (DTO 타입은 non-optional이지만 방어적 처리)
-    const group = session.updatedAt ? getSessionGroup(session.updatedAt, now) : SessionGroup.PastYear;
-    groups[group].push(session);
+  if (families.isEmpty) {
+    for (const session of sessions) {
+      // updatedAt이 런타임에 undefined일 수 있음 (DTO 타입은 non-optional이지만 방어적 처리)
+      const group = session.updatedAt ? getSessionGroup(session.updatedAt, now) : SessionGroup.PastYear;
+      groups[group].push(session);
+    }
+    return groups;
+  }
+
+  const timeOf = (session: SessionMetaDto) => session.updatedAt?.getTime() ?? 0;
+  const tops = sessions
+    .filter((session) => families.parentOf(session.id) === null)
+    .map((session, index) => ({
+      session,
+      index,
+      // Over the whole family, folded rows included: folding a family must not
+      // move it to another place in the list.
+      latest: Math.max(timeOf(session), ...families.descendantsOf(session.id).map(timeOf)),
+    }));
+  // Newest family first; the order given breaks a tie, so a list with no family
+  // in play keeps exactly the order it arrived in.
+  tops.sort((a, b) => b.latest - a.latest || a.index - b.index);
+
+  for (const { session, latest } of tops) {
+    const group = latest > 0 ? getSessionGroup(new Date(latest), now) : SessionGroup.PastYear;
+    groups[group].push(session, ...families.descendantsOf(session.id, collapsed));
   }
 
   return groups;

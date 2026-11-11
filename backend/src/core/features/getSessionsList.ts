@@ -5,17 +5,32 @@ import { extractSessionInfo, scanTail, type SessionInfo } from './extractSession
 import { getProjectSessionsPath } from './getProjectSessionsPath';
 import { readSessionTitleOverrides } from './sessionTitleOverrides';
 import { includeLastPromptInTitles } from './sessionTitleSettings';
+import { readSessionMarksToShow, type SessionMark } from './sessionMarks';
+import { orderByFamily } from './sessionFamilyOrder';
 
 /**
  * [sessionDir] is the working directory the session was recorded under. It is
  * the requested directory for a flat listing and can be a directory below it
  * once nested listings merge several — every row carries it either way, so a
  * caller never has to work out which request produced which row.
+ *
+ * [sessionMark] is the row the session-management MCP keeps about the session
+ * (which session started it, among other things), whole, when there is one and
+ * that package is installed. The list draws a session under the one that started
+ * it from this.
  */
-export type SessionListEntry = SessionInfo & { sessionId: string; sessionDir: string };
+export type SessionListEntry = SessionInfo & {
+  sessionId: string;
+  sessionDir: string;
+  sessionMark?: SessionMark;
+};
 
 /**
  * One page of sessions, newest first.
+ *
+ * A page holds whole families: a top-level session and everything under it (the
+ * sessions it started through the session-management MCP, and the ones those
+ * started). A family is never cut by the end of a page.
  *
  * `total` counts every transcript in scope rather than the page, so a caller
  * can say how much is left without asking for it.
@@ -29,7 +44,8 @@ export interface SessionListPage {
    *
    * NOT the same as offset + sessions.length: skipped sessions advance the walk
    * without filling the page, so counting returned rows would ask for a range
-   * that overlaps what was already read.
+   * that overlaps what was already read. It is a position in the listing's own
+   * order (family after family), to be handed back as it came.
    */
   nextOffset: number;
   /**
@@ -46,9 +62,13 @@ export interface SessionListPage {
 }
 
 export interface SessionListOptions {
-  /** How many entries to skip in the sorted order. */
+  /** Where to start: 0, or the `nextOffset` of the page before. */
   offset?: number;
-  /** How many sessions to return. Omit to return every one of them. */
+  /**
+   * How many top-level sessions to return. Each comes with everything under it,
+   * however many that is, so a page can hold more rows than this. Omit to return
+   * every session.
+   */
   limit?: number;
 }
 
@@ -154,6 +174,11 @@ export async function collectSortKeys(
  * never held a conversation) do not fill a slot and the walk continues past
  * them — 2.2% of transcripts here, which is why skipping them needs nothing
  * cleverer than reading one more.
+ *
+ * The page is counted in top-level sessions, and each brings its whole family
+ * (see `orderByFamily`). [sortedKeys] is the plain newest-first order; the
+ * family order is worked out here, from the marks, so every caller pages the
+ * same way.
  */
 export async function resolvePage(
   sortedKeys: SessionSortKey[],
@@ -184,21 +209,35 @@ export async function resolvePage(
     return loaded;
   };
 
+  // Read once for the page. The file is small and another program appends to it
+  // at any time, so it is not cached between requests. Empty while the package
+  // that keeps the marks is not installed.
+  const marks = await readSessionMarksToShow();
+
+  const order = orderByFamily(sortedKeys, marks);
+  const keys = order.keys;
+
   const sessions: SessionListEntry[] = [];
-  let cursor = offset;
+  // Families that put at least one row on the page: the unit the page is counted in.
+  let families = 0;
+  let cursor = Math.min(offset, keys.length);
 
-  while (cursor < sortedKeys.length) {
-    if (limit !== undefined && sessions.length >= limit) break;
+  while (cursor < keys.length) {
+    if (limit !== undefined && families >= limit) break;
 
-    const remaining = sortedKeys.length - cursor;
-    // Read exactly what the page still needs. Reading a fixed block instead
-    // would open transcripts the page has no room for, which is the cost this
-    // whole function exists to avoid. Skipped sessions leave the page short, so
+    // Read exactly what the page still needs: the next families, as many as are
+    // still missing. Reading a fixed block instead would open transcripts the
+    // page has no room for, which is the cost this whole function exists to
+    // avoid. A family none of whose sessions is shown leaves the page short, so
     // the loop simply comes back for however many are still missing.
-    const stillNeeded = limit === undefined ? remaining : limit - sessions.length;
-    const batchSize = Math.min(Math.max(stillNeeded, 1), remaining);
-    const batch = sortedKeys.slice(cursor, cursor + batchSize);
-    cursor += batch.length;
+    const stillNeeded = limit === undefined ? Number.POSITIVE_INFINITY : limit - families;
+    const batchStart = cursor;
+    let batchEnd = cursor;
+    for (let taken = 0; batchEnd < keys.length && taken < stillNeeded; taken++) {
+      batchEnd = order.familyEnd(batchEnd);
+    }
+    const batch = keys.slice(batchStart, batchEnd);
+    cursor = batchEnd;
 
     const infos = await mapWithLimit(batch, READ_CONCURRENCY, async (key) => {
       try {
@@ -214,19 +253,29 @@ export async function resolvePage(
       }
     });
 
-    for (const resolved of infos) {
-      if (resolved === null) continue;
-      // A sidechain (and a transcript that never held a conversation, which is
-      // reported the same way) is not a row the list shows, so it must not use
-      // up a slot — a page of 20 that returned 19 rows would leave the caller
-      // unable to tell a short page from the end of the list.
-      if (resolved.info.isSidechain) continue;
-      if (limit !== undefined && sessions.length >= limit) break;
-      sessions.push({
-        sessionId: resolved.key.sessionId,
-        sessionDir: resolved.key.sessionDir,
-        ...resolved.info,
-      });
+    for (let familyStart = batchStart; familyStart < batchEnd; ) {
+      const familyEnd = order.familyEnd(familyStart);
+      let shown = 0;
+      for (let index = familyStart; index < familyEnd; index++) {
+        const resolved = infos[index - batchStart];
+        if (resolved === null) continue;
+        // A sidechain (and a transcript that never held a conversation, which
+        // is reported the same way) is not a row the list shows.
+        if (resolved.info.isSidechain) continue;
+        const sessionMark = marks.get(resolved.key.sessionId);
+        sessions.push({
+          sessionId: resolved.key.sessionId,
+          sessionDir: resolved.key.sessionDir,
+          ...resolved.info,
+          ...(sessionMark ? { sessionMark } : {}),
+        });
+        shown++;
+      }
+      // A family with nothing to show must not use up a slot — a page of 20
+      // that returned 19 would leave the caller unable to tell a short page
+      // from the end of the list.
+      if (shown > 0) families++;
+      familyStart = familyEnd;
     }
   }
 
@@ -242,7 +291,7 @@ export async function resolvePage(
   return {
     sessions,
     total: sortedKeys.length,
-    hasMore: cursor < sortedKeys.length,
+    hasMore: cursor < keys.length,
     nextOffset: cursor,
     scopeDirCount,
   };

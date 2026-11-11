@@ -210,6 +210,15 @@
     "refreshSessions": "세션 새로고침",
     "renameSession": "세션 이름 바꾸기",
     "deleteSession": "세션 삭제",
+    "dragLinks": {
+      "topLevel": "여기에 놓으면 최상위 세션이 됩니다"
+    },
+    "archiveSession": "세션 보관",
+    "unarchiveSession": "세션 보관 해제",
+    "startedSessions": {
+      "show": "이 세션이 시작한 세션 펼치기",
+      "hide": "이 세션이 시작한 세션 접기"
+    },
     "groups": {
       "today": "오늘",
       "yesterday": "어제",
@@ -240,6 +249,7 @@
       "active": "활성",
       "countsTitle": "상태별 세션 개수",
       "activeTitle": "답변이 필요하거나 작업 중이거나 읽지 않은 세션만 보기",
+      "showArchived": "보관된 세션 보기",
       "noneActive": "기다리는 세션이 없습니다"
     }
   },

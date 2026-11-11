@@ -4,6 +4,7 @@ import { getProjectSessionsPath } from './getProjectSessionsPath';
 import { readSessionTitleOverrides } from './sessionTitleOverrides';
 import { includeLastPromptInTitles } from './sessionTitleSettings';
 import type { SessionListEntry } from './getSessionsList';
+import { readSessionMarksToShow } from './sessionMarks';
 
 /**
  * Build the list row for ONE session, by id.
@@ -16,7 +17,7 @@ import type { SessionListEntry } from './getSessionsList';
  * so the list contains it regardless of where it ranks. See #434.
  *
  * Assembled exactly as `resolvePage` assembles a row (same info, same title
- * override), because a row that differs from its list counterpart would make
+ * override, same session mark), because a row that differs from its list counterpart would make
  * the header change as soon as paging happens to reach it.
  *
  * Returns null when the session is not a row the list shows: a sidechain, a
@@ -35,10 +36,12 @@ export async function getSessionEntry(
     });
     if (info.isSidechain) return null;
 
+    const sessionMark = (await readSessionMarksToShow()).get(sessionId);
     return {
       sessionId,
       sessionDir: workingDir,
       ...info,
+      ...(sessionMark ? { sessionMark } : {}),
     };
   } catch (err) {
     console.error('[node-backend]', 'Failed to build session entry:', sessionId, err);

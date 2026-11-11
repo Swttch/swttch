@@ -26,6 +26,7 @@ export {
 export {
   SessionDto,
   SessionMetaDto,
+  SessionMarkDto,
   SessionListResponseDto,
 } from './session/SessionDto';
 

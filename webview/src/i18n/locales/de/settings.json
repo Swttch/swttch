@@ -229,6 +229,42 @@
       "failed": "Sitzungen, die nicht vorbereitet werden konnten: {{count}}",
       "error": "Die Sitzungen konnten nicht vorbereitet werden: {{message}}"
     },
+    "sessionManager": {
+      "title": "Sitzungsmanager",
+      "required": "Benötigt das Sitzungsverwaltungs-Paket. Installieren Sie es oben rechts.",
+      "dragDrop": {
+        "label": "Sitzung auf eine andere ziehen, um sie zur Unter-Sitzung zu machen",
+        "description": "Ziehen Sie in der Sitzungsliste eine Sitzungszeile auf eine andere Sitzungszeile, dann wird die gezogene Sitzung zur Unter-Sitzung dieser Sitzung. Legen Sie sie auf dem Streifen ab, der oben in der Liste erscheint, wird sie zur Sitzung der obersten Ebene. Das tut dasselbe wie die Schaltfläche „Ändern“ in der Sitzungsleiste, nur per Ziehen."
+      },
+      "package": {
+        "install": "Installieren",
+        "installing": "Wird installiert…",
+        "update": "Aktualisieren",
+        "updating": "Wird aktualisiert…",
+        "upToDate": "Aktuell",
+        "refresh": "Erneut prüfen",
+        "refreshing": "Wird geprüft…",
+        "remove": "Entfernen"
+      },
+      "desktopSync": {
+        "label": "Änderungen aus Claude Desktop übernehmen",
+        "description": "Zeigt in den Sitzungslisten und in der Sitzungsleiste, was Claude Desktop zu Ihren Sitzungen aufzeichnet.",
+        "learnMore": "Mehr erfahren",
+        "details": {
+          "title": "Änderungen aus Claude Desktop übernehmen",
+          "intro": "Solange dies aktiv ist, liest diese App die Sitzungsaufzeichnungen, die Claude Desktop auf diesem Computer speichert. Sie liest sie nur und schreibt nie etwas in Claude Desktop zurück.",
+          "items": {
+            "relations": "Übergeordnete und untergeordnete Sitzungen: Eine Sitzung, die in Claude Desktop von einer anderen Sitzung gestartet wurde, erscheint unter dieser Sitzung. Eine Sitzung, die dort auf die oberste Ebene verschoben wurde, erscheint auch hier auf der obersten Ebene.",
+            "archived": "Archivierte Sitzungen: Eine Sitzung, die Sie in Claude Desktop archivieren oder wiederherstellen, wird hier ebenfalls ausgeblendet oder wieder angezeigt.",
+            "titles": "Titel: Eine Sitzung, die Sie in Claude Desktop umbenennen, wird hier ohne Neuladen ebenfalls umbenannt.",
+            "running": "Laufende Sitzungen: Eine Sitzung, die in Claude Desktop arbeitet, zeigt in der Sitzungsliste und in der Sitzungsleiste die Laufend-Markierung."
+          },
+          "yours": "Eine Verknüpfung oder ein Archivstatus, den Sie hier festlegen, bleibt Ihre eigene Wahl und wird von Claude Desktop nicht überschrieben. Die Claude-Schaltfläche neben „Verknüpfte Sitzungen“ in der Sitzungsleiste gibt eine Sitzung an die Aufzeichnung von Claude Desktop zurück.",
+          "needs": "Benötigt das Sitzungsmanager-Paket und Claude Desktop auf diesem Computer. Nur für Sponsoren.",
+          "close": "Schließen"
+        }
+      }
+    },
     "readAloud": {
       "title": "Vorlesen",
       "description": "Einstellungen für die Stimme, die eine Antwort vorliest, wenn Sie auf die Lautsprechertaste darunter drücken. Bis Sie sie ändern, sind Stimme und Tempo die in Ihrem Claude-Konto gespeicherten Werte.",
@@ -457,6 +493,38 @@
       "notDetected": "nicht erkannt",
       "refreshVersion": "Version aktualisieren",
       "refresh": "Aktualisieren"
+    },
+    "dependencies": {
+      "title": "Abhängigkeiten",
+      "description": "Programme, die diese App nutzt und die separat auf diesem Computer installiert werden.",
+      "install": "Installieren",
+      "installing": "Wird installiert…",
+      "notInstalled": "Nicht installiert",
+      "extendKit": {
+        "description": "Führt Spracheingabe, Vorlesen und das Nutzungs-Panel aus."
+      },
+      "sessionMcp": {
+        "description": "MCP-Tools, mit denen Claude neue Claude-Code-Sitzungen starten und Ihre anderen Sitzungen finden, anschreiben, anhalten und archivieren kann. Solange es installiert ist, wird es an jede Claude-Code-Sitzung angehängt, die diese App startet, und aktualisiert sich selbst, sobald eine neuere Version erscheint.",
+        "package": {
+          "installed": "Installiert",
+          "updated": "Aktualisiert",
+          "failed": "Installation fehlgeschlagen",
+          "dismiss": "Schließen",
+          "remove": "Entfernen",
+          "removed": "Entfernt",
+          "removeFailed": "Entfernen fehlgeschlagen",
+          "installConfirmTitle": "MCP für Sitzungsverwaltung installieren?",
+          "installConfirmMessage": "Dies installiert {{packageName}} global auf diesem Computer. Nach der Installation wird es an jede Claude-Code-Sitzung angehängt, die diese App startet, und seine Tools belegen einen Teil des Kontexts von Claude. Es wird automatisch aktuell gehalten.",
+          "removeConfirmTitle": "MCP für Sitzungsverwaltung entfernen?",
+          "removeConfirmMessage": "Es wird von diesem Computer entfernt und nicht mehr an neue Claude-Prozesse angehängt. Sie können es jederzeit erneut installieren."
+        }
+      },
+      "node": {
+        "description": "Die Laufzeitumgebung, auf der das Backend dieser App läuft."
+      },
+      "cloudflared": {
+        "description": "Öffnet den Remote-Tunnel. Beim ersten Einschalten des Tunnels werden Sie gefragt, ob es installiert werden soll."
+      }
     },
     "links": {
       "title": "Links",

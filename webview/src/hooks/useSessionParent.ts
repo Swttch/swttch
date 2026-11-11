@@ -5,12 +5,17 @@ import { useSessionScope } from './useSessionAssets';
 
 interface ParentResponse {
   status?: string;
+  parentSessionId?: string;
+  parentSessionDir?: string;
   title?: string;
   isArchived?: boolean;
 }
 
 /** What Claude Desktop's own file says about the session that started this one; a field is absent when the file has none. */
 export interface SessionParent {
+  /** The session that started this one, and the folder it works in, which is what opening it needs. */
+  sessionId?: string;
+  dir?: string;
   title?: string;
   isArchived?: boolean;
 }
@@ -32,6 +37,8 @@ export function useSessionParent(enabled: boolean): SessionParent | undefined {
       const res = await send<ParentResponse>(MessageType.GET_SESSION_PARENT_TITLE, { sessionId });
       if (res?.status !== 'ok') return null;
       return {
+        ...(typeof res.parentSessionId === 'string' && { sessionId: res.parentSessionId }),
+        ...(typeof res.parentSessionDir === 'string' && { dir: res.parentSessionDir }),
         ...(typeof res.title === 'string' && { title: res.title }),
         ...(typeof res.isArchived === 'boolean' && { isArchived: res.isArchived }),
       };
