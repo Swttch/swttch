@@ -21,7 +21,7 @@ A session that another session starts gets its first message from that session: 
 
 ![A line "Started from //// 이슈 #596 피알 #643 - MCP 도구 호출 인자 보기" over two cards. The Task card has the label "Task" with the session's own title beside it and the text of the task. The Context card has the label "Context" and the background text, cut off at the bottom with a fade and a "Show more" button.](./assets/session-brief-cards.png)
 
-- **The line on top** says which session started this one: "Started from" and that session's title. The title comes from Claude Desktop's own session files, so it is there only when the desktop app's files are on the same computer. Otherwise the line says "Started from another session". Click the line to fold both cards.
+- **The line on top** says which session started this one: "Started from" and that session's title. Who started the session comes from the session-management package (its own record first, Claude Desktop's after), and the title is the one this app shows for that session, so a name changed here shows here. The title is a link: a click opens that session in a new tab, as a session link in the chat text does. When the package is missing or older than 0.5.0, or the starting session is not found, the line says "Started from another session". Click the line to fold both cards.
 - **The Task card** holds the task. Beside its label is the title of the session you are in, as in the desktop app.
 - **The Context card** holds the background. When the first message ends with the note about the shared notes folder, that note is moved into this card.
 - **Each label folds its card.** The arrow beside it turns when it is folded.
@@ -88,7 +88,7 @@ When Claude writes a session into a reply as a link (`[title](#local_<id>)`), th
 
 ## What it does not do
 
-- Nothing here reads anything from the desktop app but its own session files, which sit in the desktop app's data folder (`~/Library/Application Support/Claude/claude-code-sessions` on a Mac, `%APPDATA%\Claude\claude-code-sessions` on Windows, `~/.config/Claude/claude-code-sessions` on Linux). If your sessions never touch the desktop app, the titles it would show are not there.
+- Nothing here reads anything from the desktop app but its own session files, and this app does not open them itself: the session-management package (version 0.5.0 or later) reads them and this app shows the answer. They sit in the desktop app's data folder (`~/Library/Application Support/Claude/claude-code-sessions` on a Mac, `%APPDATA%\Claude\claude-code-sessions` on Windows, `~/.config/Claude/claude-code-sessions` on Linux). If your sessions never touch the desktop app, the titles it would show are not there.
 - The **Read** state that the desktop app shows after "Delivered" on a message to another session is not shown: the chat has no way to know whether the other session read it.
 - The little arrow after the session title in the desktop app, which opens a menu, is not drawn.
 - Links in a message get no `(→ github.com)` mark after them.

@@ -7,6 +7,7 @@ import { timeAgo } from '@/utils/timeAgo';
 import type { LoadedMessageDto } from '../../../types';
 import type { SessionBrief } from '../message-renderers/utils/sessionBrief';
 import { UserMessageText } from '../message-renderers/components/UserMessageText';
+import { openSessionFromClick, sessionLinkHref } from '../message-renderers/components/DesktopSessionLink';
 import './prose.css';
 
 const QUIET_TEXT = 'text-[var(--tr-muted)]';
@@ -77,28 +78,36 @@ export function TranscriptSessionBrief({ brief, message }: { brief: SessionBrief
   const sessionTitle = useSessionContextOrNull()?.currentSession?.title || undefined;
   const sent = message.timestamp ? Date.parse(message.timestamp) : NaN;
   const ago = Number.isNaN(sent) ? undefined : timeAgo(sent, i18n.language);
+  const toggle = () => setOpen((value) => !value);
 
   return (
     <div className="flex flex-col gap-2 px-4 py-2" data-transcript-brief>
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-        className={`flex w-fit max-w-full items-center gap-1.5 text-start text-[0.9375rem] hover:text-[var(--tr-hover)] ${QUIET_TEXT}`}
-      >
-        <span className="min-w-0 truncate">
-          {parent?.title ? (
-            <>
-              {t('transcript.tools.startedByClaudeFrom')} <bdi className="text-[var(--tr-text)] underline underline-offset-2">{parent.title}</bdi>
-            </>
+      <div className={`flex w-fit max-w-full items-center gap-1.5 text-[0.9375rem] ${QUIET_TEXT}`}>
+        {/* The starter's title is a link to it, so it cannot sit inside the button that folds the cards: the line is the
+            words before it, the link, and the rest, the two button parts both folding the cards. */}
+        <button type="button" aria-expanded={open} onClick={toggle} className="min-w-0 truncate text-start hover:text-[var(--tr-hover)]">
+          {parent?.title ? t('transcript.tools.startedByClaudeFrom') : t('transcript.tools.startedByClaude')}
+        </button>
+        {parent?.title &&
+          (parent.sessionId ? (
+            <a
+              href={sessionLinkHref(parent.sessionId, parent.dir)}
+              target="_blank"
+              rel="noreferrer"
+              onClick={(event) => openSessionFromClick(event, parent.sessionId!, parent.dir)}
+              className="min-w-0 cursor-pointer truncate text-[var(--tr-text)] underline underline-offset-2 hover:text-[var(--tr-hover)]"
+            >
+              <bdi>{parent.title}</bdi>
+            </a>
           ) : (
-            t('transcript.tools.startedByClaude')
-          )}
-        </span>
-        {ago && <span className="shrink-0">{ago}</span>}
-        {parent?.isArchived && <span className="shrink-0">· {i18n.t('sessionLink.archived', { ns: 'chatTools' })}</span>}
-        {open ? <ChevronDownIcon className="h-4 w-4 shrink-0" /> : <ChevronRightIcon className="h-4 w-4 shrink-0" />}
-      </button>
+            <bdi className="min-w-0 truncate text-[var(--tr-text)] underline underline-offset-2">{parent.title}</bdi>
+          ))}
+        <button type="button" aria-expanded={open} onClick={toggle} tabIndex={-1} className="flex shrink-0 items-center gap-1.5 hover:text-[var(--tr-hover)]">
+          {ago && <span>{ago}</span>}
+          {parent?.isArchived && <span>· {i18n.t('sessionLink.archived', { ns: 'chatTools' })}</span>}
+          {open ? <ChevronDownIcon className="h-4 w-4 shrink-0" /> : <ChevronRightIcon className="h-4 w-4 shrink-0" />}
+        </button>
+      </div>
       {open && (
         <div className="flex flex-col gap-3 rounded-lg border border-border-default/70 bg-surface-hover px-3.5 py-3">
           <BriefStep label={i18n.t('sessionBrief.task', { ns: 'chatTools' })} text={brief.task} meta={sessionTitle} defaultOpen />
