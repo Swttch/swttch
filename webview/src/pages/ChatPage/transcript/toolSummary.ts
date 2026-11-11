@@ -521,6 +521,31 @@ const PAGE_KINDS = new Set<ToolKind>(['pageScript', 'click', 'doubleClick', 'hov
  * together as other actions.
  */
 export function groupLabel(calls: ToolCall[], t: TFunction): string {
+  const { pieces, tail, tailIsParen } = groupLabelParts(calls, t);
+  const main = pieces.map((piece) => (typeof piece === 'string' ? piece : piece.before + piece.fileName + piece.after)).join(', ');
+  if (!tail) return main;
+  return main ? (tailIsParen ? `${main} ${tail}` : `${main}, ${tail}`) : tail;
+}
+
+/** One file the line over a group names, in pieces, so the screen can draw its name as a link. */
+export interface GroupFilePiece {
+  before: string;
+  fileName: string;
+  after: string;
+  path: string;
+}
+
+/** What `groupLabelParts` hands the screen: the phrases that may be cut off, and the end of the line that never is. */
+export interface GroupLabelParts {
+  /** The phrases in order; a phrase that names one file read is a `GroupFilePiece`. */
+  pieces: Array<string | GroupFilePiece>;
+  /** "Other actions" and the count of failed calls, which stay in view at the end of the line. Empty when there is neither. */
+  tail: string;
+  /** True when the tail is the failed count alone, written in parentheses after a line of one phrase ("Ran 6 commands (2 failed)"). */
+  tailIsParen: boolean;
+}
+
+export function groupLabelParts(calls: ToolCall[], t: TFunction): GroupLabelParts {
   const order: ToolKind[] = [];
   const keys = new Map<ToolKind, Set<string>>();
   const first = new Map<ToolKind, ToolCall>();
@@ -592,7 +617,11 @@ export function groupLabel(calls: ToolCall[], t: TFunction): string {
           return t('transcript.tools.ranCommands', { ns: 'chat', count });
         case 'read':
           if (readAndEdited) return t('transcript.tools.readAndEditedFile', { ns: 'chat', name: baseName(readPath) });
-          return count === 1 ? oneRow(kind) : t('transcript.tools.readFiles', { ns: 'chat', count });
+          if (count === 1) {
+            const label = rowLabel(first.get(kind) as ToolCall, t);
+            return label.fileName ? { before: label.before, fileName: label.fileName, after: label.after, path: readPath } : oneRow(kind);
+          }
+          return t('transcript.tools.readFiles', { ns: 'chat', count });
         case 'searchCode':
           return t('transcript.tools.searchedCode', { ns: 'chat' });
         case 'searchFiles':
@@ -645,10 +674,14 @@ export function groupLabel(calls: ToolCall[], t: TFunction): string {
       }
     });
 
-  const line = parts.filter(Boolean).join(', ');
-  // How many failed goes after the line in parentheses, as the desktop app writes it ("Ran 2 commands (1 failed)").
+  const otherText = order.includes('other') ? t('transcript.tools.otherActions', { ns: 'chat', count: countOf('other') }) : '';
+  const pieces = parts.filter((part, index) => part !== '' && !(otherText !== '' && index === parts.length - 1 && part === otherText));
+  // How many failed is said after the line, as the desktop app writes it: "Ran 6 commands (2 failed)" when the line is one phrase, and a phrase of its own ("..., 2 failed") when it is more.
   const failed = calls.filter(hasFailed).length;
-  return failed > 0 ? `${line} (${t('transcript.tools.failed', { ns: 'chat', count: failed })})` : line;
+  const failedText = failed > 0 ? t('transcript.tools.failed', { ns: 'chat', count: failed }) : '';
+  const phrases = pieces.length + (otherText ? 1 : 0);
+  if (failedText && phrases <= 1 && !otherText) return { pieces, tail: `(${failedText})`, tailIsParen: true };
+  return { pieces, tail: [otherText, failedText].filter(Boolean).join(', '), tailIsParen: false };
 }
 
 function pageGroupPhrase(kind: ToolKind, t: TFunction, unfinished: boolean): string {
