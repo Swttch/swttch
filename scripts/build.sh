@@ -299,7 +299,9 @@ case "${1:-}" in
     sandbox="$ROOT/build/idea-installed-sandbox/IU-${PLATFORM_VERSION}"
     mkdir -p "$sandbox/config" "$sandbox/system" "$sandbox/plugins" "$sandbox/log"
     echo "=== Installing $(basename "$plugin_zip") into 2026 sandbox ==="
-    rm -rf "$sandbox/plugins"/claude-code-gui-* 2>/dev/null || true
+    # The plugin folder was renamed from claude-code-gui-* to swttch. Both names are cleaned: without the new one a
+    # reinstall unzips over the previous build and the two versions end up mixed.
+    rm -rf "$sandbox/plugins"/claude-code-gui-* "$sandbox/plugins"/swttch* 2>/dev/null || true
     unzip -q -o "$plugin_zip" -d "$sandbox/plugins"
 
     # macOS rejects launching IntelliJ binaries that aren't inside a proper .app
