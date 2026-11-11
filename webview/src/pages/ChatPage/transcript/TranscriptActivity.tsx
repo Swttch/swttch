@@ -2,23 +2,14 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from '@/i18n';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import type { StreamingActivity } from './streamingActivity';
+import { WorkingMark, type WorkingActivity } from './WorkingMark';
 
 /**
- * The dots that say the model is working, drawn as the desktop app draws them: four orange dots in two rows of two,
- * of which some are lit at any moment and the lit ones travel around the square.
+ * The mark that says the model is working, drawn as the desktop app draws its own: orange dots that travel and
+ * breathe while the model thinks, and an amber ring while the work waits on the person. See WorkingMark.
  */
-export function ActivityGlyph() {
-  return (
-    <span className="grid h-[14px] w-[14px] flex-shrink-0 grid-cols-2 gap-[3px]" aria-hidden="true">
-      {[0, 1, 3, 2].map((slot, order) => (
-        <span
-          key={slot}
-          className="h-[5px] w-[5px] rounded-full bg-[#d97757]"
-          style={{ order: slot, animation: 'transcript-grid-dot 1.2s ease-in-out infinite', animationDelay: `${order * 0.3}s` }}
-        />
-      ))}
-    </span>
-  );
+export function ActivityGlyph({ activity = 'think' }: { activity?: WorkingActivity }) {
+  return <WorkingMark activity={activity} />;
 }
 
 /** The seconds the running turn has taken, counted from the moment its message was sent, once a second. */
