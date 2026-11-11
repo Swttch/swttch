@@ -83,6 +83,10 @@ Archiving takes a session out of your way without deleting it. It needs package 
 - **In the chat**, an archived session shows a notice in place of the input: "This session is archived. To keep working in it, unarchive it." with an **Unarchive** button. On a wide screen the button sits beside the sentence; on a narrow one it moves under it. Press it and the input comes back.
 - **From the desktop app**, a session archived in the Claude desktop app is shown as archived here too, while the sync described next is on. A session you unarchive here stays unarchived even when the desktop app still has it archived, because what you chose here is kept as your choice.
 
+![The session dropdown with archived sessions shown: the archived row is faint, and its rename, unarchive and delete buttons are on the right.](./assets/archived-in-list.jpg)
+
+![The notice that replaces the chat input in an archived session: "This session is archived. To keep working in it, unarchive it." with an Unarchive button.](./assets/archived-banner.jpg)
+
 ## Showing what the Claude desktop app records
 
 The Claude desktop app keeps its own record of your sessions: who started whom, which are archived, their titles, and which are running. With the switch **Settings → General → Session manager → Reflect changes from Claude Desktop** on, this app reads that record and shows it:
@@ -98,9 +102,13 @@ Changes in the desktop app arrive as they happen: the app watches the desktop ap
 
 **What you choose here is yours.** A parent you set in the session rail, a session you took to the top level, and a session you archived or unarchived are recorded in the package as your choice, and the desktop app's record does not overwrite them. The **Claude button** at the right end of the Linked sessions title hands the sessions you changed by hand back to what the desktop app records. Its tooltip says what it does at that moment: it resets the links you changed, it says that everything already matches the desktop app, or it says that the desktop app has no record of this session's links. When the switch is off the button stays and the tooltip still says what it does, and pressing it opens Settings → General, where the switch is.
 
+![The session rail's Linked sessions section: the Claude button at the right of the title, the parent session, and two child sessions, each led by an "Archived" pill.](./assets/rail-linked-sessions.jpg)
+
 **It is a sponsor feature.** The switch can be turned on only by a sponsor, and it is off until then. Turning it off never asks. While it is off, or when the person is not a sponsor, nothing from the desktop app's files reaches the lists and the running marker is dropped; what the package recorded and what this app knows itself are shown as before. Turning the switch on or off applies at once.
 
 The same section has the package's install button, version and removal at the right of its title, so the package can be installed, updated and removed from there as well as from **Settings → About**. Under **Learn more** the switch lists what it reflects, item by item.
+
+![Settings, General, Session manager: the package's version and up-to-date mark at the right of the title, and the two sponsor-only switches, "Reflect changes from Claude Desktop" and "Drag a session onto another to make it a child session".](./assets/settings-session-manager.jpg)
 
 ## Dragging sessions in the list
 
