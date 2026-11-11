@@ -17,6 +17,9 @@ vi.mock('../getProjectSessionsPath', () => ({
 vi.mock('../sessionTitleSettings', () => ({
   includeLastPromptInTitles: async () => true,
 }));
+// Naming a session also reads its marks, which asks whether the session-management package is installed. Asking runs
+// the package managers of the machine the test runs on, which takes seconds and is no business of this test.
+vi.mock('../../session-mcp', () => ({ isSessionMcpInstalled: async () => false }));
 
 import { stopAllSessionTitleWatchers, watchSessionTitle } from '../session-title-watcher';
 import { MessageType } from '../../../shared';
