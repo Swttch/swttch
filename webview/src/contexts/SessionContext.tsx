@@ -218,6 +218,17 @@ export function SessionProvider({ children }: SessionProviderProps) {
   // render: putting a title back when a rename fails.
   const sessionsRef = useRef(sessions);
   sessionsRef.current = sessions;
+
+  // The directory a session's transcript is filed under. A row of the list says it
+  // itself: a nested listing, or the listing of a directory a session was opened in
+  // before it moved into a worktree (#658), holds rows from other directories than
+  // the one the list was asked for. A session the list does not hold has no better
+  // answer than the working directory.
+  const directoryOfSession = useCallback(
+    (sessionId: string): string | undefined =>
+      sessionsRef.current.find((s) => s.id === sessionId)?.sessionDir ?? workingDirectory ?? undefined,
+    [workingDirectory],
+  );
   const [generatedTitle, setGeneratedTitle] = useState<GeneratedSessionTitle | null>(null);
   /**
    * The open session's id, for the list refresh to read without depending on it.
@@ -619,7 +630,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
 
   const deleteSession = useCallback(async (sessionId: string) => {
     try {
-      await api.sessions.destroy(sessionId, workingDirectory ?? undefined);
+      await api.sessions.destroy(sessionId, directoryOfSession(sessionId));
       setSessions(prev => prev.filter(s => s.id !== sessionId));
       if (currentSessionId === sessionId) {
         setSessionState(SessionState.Idle);
@@ -628,7 +639,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
     } catch (error) {
       console.error('[SessionContext] Failed to delete session:', error);
     }
-  }, [currentSessionId, api.sessions, navigateToNewSession, workingDirectory]);
+  }, [currentSessionId, api.sessions, navigateToNewSession, directoryOfSession]);
 
   const setSessionArchived = useCallback(async (sessionId: string, archived: boolean) => {
     try {
@@ -664,7 +675,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
     ));
 
     try {
-      await api.sessions.rename(sessionId, trimmed, workingDirectory ?? undefined);
+      await api.sessions.rename(sessionId, trimmed, directoryOfSession(sessionId));
     } catch (error) {
       console.error('[SessionContext] Failed to rename session:', error);
       // The name was not recorded, so showing it would be telling the user
@@ -679,7 +690,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
         ));
       }
     }
-  }, [api.sessions, workingDirectory]);
+  }, [api.sessions, directoryOfSession]);
 
   const addNewSession = useCallback((
     sessionId: string,
