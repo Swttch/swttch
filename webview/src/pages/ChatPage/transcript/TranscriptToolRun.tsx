@@ -424,8 +424,8 @@ function ToolDetail({ calls, withPictures = true }: { calls: ToolCall[]; withPic
     // A start the app refused shows what it said, in the quiet grey (the classic card paints it red), and not what was asked for.
     return <div className="whitespace-pre-wrap break-words px-1 pb-3 text-[0.9375rem] leading-[1.5] text-[var(--tr-muted)]">{output}</div>;
   }
-  if (kind === 'sessionArchive' &&typeof call.toolUse.input?.reason === 'string' && call.toolUse.input.reason) {
-    // What archiving a session shows is the reason it was archived for, in the quiet grey, and nothing of what the call returned.
+  if ((kind === 'sessionArchive' || kind === 'sessionDelete') && typeof call.toolUse.input?.reason === 'string' && call.toolUse.input.reason) {
+    // What archiving or deleting a session shows is the reason it was archived for, in the quiet grey, and nothing of what the call returned.
     return <div className="whitespace-pre-wrap break-words px-1 pb-3 text-[0.9375rem] leading-[1.5] text-[var(--tr-muted)]">{call.toolUse.input.reason as string}</div>;
   }
   if (kind === 'sessionLookup') return <SessionFactsDetail call={call} />;

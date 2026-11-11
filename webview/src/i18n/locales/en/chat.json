@@ -1104,6 +1104,8 @@
       "archivedSession": "Archived session",
       "sessionDetached": "Moved session to top level",
       "sessionDetaching": "Moving session to top level",
+      "sessionDeleted": "Deleted session",
+      "sessionDeleting": "Deleting session",
       "appAskedReport": "The app asked Claude to report back",
       "startedByClaudeFrom": "Started by Claude from",
       "startedByClaude": "Started by Claude from another session",

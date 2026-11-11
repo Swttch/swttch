@@ -1100,6 +1100,8 @@
       "archivedSession": "جلسه بایگانی شد",
       "sessionDetached": "نشست به سطح بالا منتقل شد",
       "sessionDetaching": "در حال انتقال نشست به سطح بالا",
+      "sessionDeleted": "نشست حذف شد",
+      "sessionDeleting": "در حال حذف نشست",
       "appAskedReport": "برنامه از Claude خواست گزارش دهد",
       "startedByClaudeFrom": "شروع‌شده توسط Claude از",
       "startedByClaude": "شروع‌شده توسط Claude از جلسه‌ای دیگر",

@@ -1092,6 +1092,8 @@
       "archivedSession": "已归档会话",
       "sessionDetached": "已将会话移至顶层",
       "sessionDetaching": "正在将会话移至顶层",
+      "sessionDeleted": "已删除会话",
+      "sessionDeleting": "正在删除会话",
       "appAskedReport": "应用请求 Claude 汇报结果",
       "startedByClaudeFrom": "Claude 从以下会话启动",
       "startedByClaude": "Claude 从另一个会话启动",

@@ -29,6 +29,7 @@ export type ToolKind =
   | 'toolLoad'
   | 'sessionArchive'
   | 'sessionDetach'
+  | 'sessionDelete'
   | 'appRequest'
   | 'skill'
   | 'webFetch'
@@ -89,6 +90,8 @@ export function toolKindOf(call: ToolCall): ToolKind {
       return 'sessionArchive';
     case 'detach_session':
       return 'sessionDetach';
+    case 'delete_session':
+      return 'sessionDelete';
     case 'get_session':
       return 'sessionLookup';
     case 'list_events':
@@ -308,6 +311,17 @@ function archivedTitle(call: ToolCall): string {
   return /\("([\s\S]*)"\)\.?$/.exec(text)?.[1] ?? '';
 }
 
+/**
+ * The titles of the sessions a `delete_session` call deleted, from its answer
+ * ("Deleted 1 session: local_x ("Title")." or, for several, "Deleted 2 sessions: local_x ("A"), local_y ("B").").
+ * Nothing while the call runs, and nothing for the answer of a call that deleted nothing.
+ */
+function deletedTitles(call: ToolCall): string {
+  const text = toolResultText(call.toolUse.tool_result as LoadedMessageDto | undefined);
+  if (!/^\s*Deleted \d+ sessions?:/.test(text)) return '';
+  return [...text.matchAll(/\("([\s\S]*?)"\)/g)].map((match) => match[1]).join(', ');
+}
+
 /** The title of the session a `SendMessage` went to, when the answer names it. */
 export function sentTo(call: ToolCall): string {
   return parseSessionDelivery(toolResultText(call.toolUse.tool_result as LoadedMessageDto | undefined)).title ?? '';
@@ -426,6 +440,12 @@ export function rowLabel(call: ToolCall, t: TFunction): RowLabel {
       return { ...plain(t('transcript.tools.receivedMessageFrom', { ns: 'chat' })), meta: inputString(call, 'name') };
     case 'sessionArchive':
       return { ...plain(t('transcript.tools.archivedSession', { ns: 'chat' })), meta: archivedTitle(call) };
+    case 'sessionDelete':
+      // As the desktop app words it: a delete that is still running, or was refused, stays at its running wording.
+      return {
+        ...plain(t(isRunning(call) || hasFailed(call) ? 'transcript.tools.sessionDeleting' : 'transcript.tools.sessionDeleted', { ns: 'chat' })),
+        meta: deletedTitles(call),
+      };
     case 'sessionDetach':
       // A move that failed, or is still under way, stays at its running wording: it is not reported as done.
       return {
@@ -545,6 +565,7 @@ export function groupLabel(calls: ToolCall[], t: TFunction): string {
         return 5;
       case 'sessionRename':
       case 'sessionArchive':
+      case 'sessionDelete':
       case 'sessionDetach':
       case 'sessionStart':
       case 'sessionList':
@@ -604,6 +625,7 @@ export function groupLabel(calls: ToolCall[], t: TFunction): string {
         case 'sessionRead':
         case 'sessionRename':
         case 'sessionArchive':
+        case 'sessionDelete':
         case 'sessionDetach':
         case 'sessionStart':
         case 'sessionList':

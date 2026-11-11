@@ -1148,6 +1148,8 @@
       "archivedSession": "تمت أرشفة الجلسة",
       "sessionDetached": "تم نقل الجلسة إلى المستوى الأعلى",
       "sessionDetaching": "جارٍ نقل الجلسة إلى المستوى الأعلى",
+      "sessionDeleted": "تم حذف الجلسة",
+      "sessionDeleting": "جارٍ حذف الجلسة",
       "appAskedReport": "طلب التطبيق من Claude الإبلاغ بالنتائج",
       "startedByClaudeFrom": "بدأها Claude من",
       "startedByClaude": "بدأها Claude من جلسة أخرى",

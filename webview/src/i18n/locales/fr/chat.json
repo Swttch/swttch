@@ -1108,6 +1108,8 @@
       "archivedSession": "Session archivée",
       "sessionDetached": "Session déplacée au premier niveau",
       "sessionDetaching": "Déplacement de la session au premier niveau",
+      "sessionDeleted": "Session supprimée",
+      "sessionDeleting": "Suppression de la session",
       "appAskedReport": "L’application a demandé à Claude de faire un compte rendu",
       "startedByClaudeFrom": "Démarrée par Claude depuis",
       "startedByClaude": "Démarrée par Claude depuis une autre session",

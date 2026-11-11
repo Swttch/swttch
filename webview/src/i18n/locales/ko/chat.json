@@ -1092,6 +1092,8 @@
       "archivedSession": "세션 보관됨",
       "sessionDetached": "세션이 최상위 수준으로 이동됨",
       "sessionDetaching": "세션을 최상위 수준으로 이동하는 중",
+      "sessionDeleted": "세션 삭제됨",
+      "sessionDeleting": "세션 삭제 중",
       "appAskedReport": "앱이 Claude에게 결과 보고를 요청했습니다",
       "startedByClaudeFrom": "Claude가 다음 세션에서 시작함",
       "startedByClaude": "Claude가 다른 세션에서 시작함",

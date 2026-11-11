@@ -1108,6 +1108,8 @@
       "archivedSession": "Se ha archivado la sesión",
       "sessionDetached": "Sesión movida al nivel superior",
       "sessionDetaching": "Moviendo la sesión al nivel superior",
+      "sessionDeleted": "Sesión eliminada",
+      "sessionDeleting": "Eliminando sesión",
       "appAskedReport": "La aplicación pidió a Claude que informara de vuelta",
       "startedByClaudeFrom": "Iniciada por Claude desde",
       "startedByClaude": "Iniciado por Claude desde otra sesión",

@@ -35,6 +35,7 @@ describe('the session-management MCP\'s tools read like the desktop app\'s own',
     ['mcp__swttch_session_mgmt__list_events', 'sessionRead'],
     ['mcp__swttch_session_mgmt__detach_session', 'sessionDetach'],
     ['mcp__ccd_session_mgmt__detach_session', 'sessionDetach'],
+    ['mcp__ccd_session_mgmt__delete_session', 'sessionDelete'],
   ])('%s is %s', (name, kind) => {
     expect(toolKindOf(call(name, {}, answerOf('ok')))).toBe(kind);
   });
@@ -72,6 +73,35 @@ describe('moving a session to the top level', () => {
   it('does not report a move that was refused as done', () => {
     const label = rowLabel(call('mcp__swttch_session_mgmt__detach_session', { session_id: SESSION }, answerOf('unavailable: the sidebar has no nesting yet', true)), t);
     expect(label.before).toBe('sessionDetaching');
+  });
+});
+
+describe('deleting sessions', () => {
+  const NAME = 'mcp__ccd_session_mgmt__delete_session';
+  const ids = { session_ids: ['local_93508842-3e98-4107-8341-f848fe09295d'], reason: 'done' };
+
+  it('says the session was deleted, and names it by its title, as the desktop app does', () => {
+    const label = rowLabel(call(NAME, ids, answerOf('Deleted 1 session: local_93508842-3e98-4107-8341-f848fe09295d ("스타 확인2").')), t);
+    expect(label.before).toBe('sessionDeleted');
+    expect(label.meta).toBe('스타 확인2');
+  });
+
+  it('names every session a call deleted', () => {
+    const label = rowLabel(call(NAME, ids, answerOf('Deleted 2 sessions: local_a ("First"), local_b ("Second").')), t);
+    expect(label.meta).toBe('First, Second');
+  });
+
+  it('says it is being deleted while the call runs', () => {
+    expect(rowLabel(call(NAME, ids, undefined, true), t).before).toBe('sessionDeleting');
+  });
+
+  it('does not report a delete the app refused as done, and names nothing', () => {
+    const label = rowLabel(
+      call(NAME, ids, answerOf('Deleted nothing. Not deleted: local_x ("스타 확인2") — the app is keeping it for the user (pinned or in use).', true)),
+      t,
+    );
+    expect(label.before).toBe('sessionDeleting');
+    expect(label.meta).toBe('');
   });
 });
 

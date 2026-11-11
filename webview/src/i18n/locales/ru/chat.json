@@ -1124,6 +1124,8 @@
       "archivedSession": "Сеанс заархивирован",
       "sessionDetached": "Сеанс перемещён на верхний уровень",
       "sessionDetaching": "Перемещение сеанса на верхний уровень",
+      "sessionDeleted": "Сессия удалена",
+      "sessionDeleting": "Удаление сессии",
       "appAskedReport": "Приложение попросило Claude сообщить о результатах",
       "startedByClaudeFrom": "Запущено Claude из сеанса",
       "startedByClaude": "Запущено Claude из другого сеанса",

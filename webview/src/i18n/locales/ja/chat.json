@@ -1092,6 +1092,8 @@
       "archivedSession": "セッションをアーカイブしました",
       "sessionDetached": "セッションを最上位に移動しました",
       "sessionDetaching": "セッションを最上位に移動中…",
+      "sessionDeleted": "セッションを削除しました",
+      "sessionDeleting": "セッションを削除中",
       "appAskedReport": "アプリが Claude に報告を求めました",
       "startedByClaudeFrom": "Claude が次のセッションから開始：",
       "startedByClaude": "別のセッションから Claude が開始",
