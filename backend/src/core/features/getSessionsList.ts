@@ -7,6 +7,7 @@ import { readSessionTitleOverrides } from './sessionTitleOverrides';
 import { includeLastPromptInTitles } from './sessionTitleSettings';
 import { readSessionMarksToShow, type SessionMark } from './sessionMarks';
 import { orderByFamily } from './sessionFamilyOrder';
+import { findWorktreeOriginTranscripts } from './worktreeSessions';
 
 /**
  * [sessionDir] is the working directory the session was recorded under. It is
@@ -135,34 +136,53 @@ export async function collectSortKeys(
   const sessionsPath = await getProjectSessionsPath(workingDir);
   console.error('[getSessionsList]', 'looking in:', sessionsPath);
 
-  if (!existsSync(sessionsPath)) {
+  let jsonlFiles: string[] = [];
+  if (existsSync(sessionsPath)) {
+    const files = await readdir(sessionsPath);
+    jsonlFiles = files.filter((f) => f.endsWith('.jsonl'));
+    console.error('[node-backend]', 'Found .jsonl files:', jsonlFiles.length);
+  } else {
     console.error('[node-backend]', 'Sessions dir not found:', sessionsPath);
-    return [];
   }
 
-  const files = await readdir(sessionsPath);
-  const jsonlFiles = files.filter((f) => f.endsWith('.jsonl'));
-  console.error('[node-backend]', 'Found .jsonl files:', jsonlFiles.length);
+  const own = await mapWithLimit(jsonlFiles, READ_CONCURRENCY, (file) =>
+    sortKeyOf(sessionsPath, file, sessionDir),
+  );
 
-  return mapWithLimit(jsonlFiles, READ_CONCURRENCY, async (file) => {
-    const sessionId = file.replace(/\.jsonl$/, '');
-    const fullPath = join(sessionsPath, file);
-    const base = { sessionId, fullPath, sessionsPath, sessionDir };
-    try {
-      const { lastTimestamp } = await scanTail(fullPath);
-      if (lastTimestamp) {
-        const parsed = Date.parse(lastTimestamp);
-        if (!Number.isNaN(parsed)) return { ...base, sortedAt: parsed };
-      }
-      // No timestamped entry in the window: an empty or barely-started
-      // transcript. mtime is a poor ordering signal in general but it is the
-      // only one such a file has, and it beats bunching them all at zero.
-      const { mtimeMs } = await stat(fullPath);
-      return { ...base, sortedAt: mtimeMs };
-    } catch {
-      return { ...base, sortedAt: 0 };
+  // Sessions opened here that stopped inside a worktree are filed under the
+  // worktree's folder, not this one. Their rows belong to the worktree, which is
+  // where the session is, so every action on one (open, rename, delete) finds the
+  // transcript (#658).
+  const fromWorktrees = await findWorktreeOriginTranscripts(workingDir);
+  const moved = await mapWithLimit(fromWorktrees, READ_CONCURRENCY, (t) =>
+    sortKeyOf(t.sessionsPath, t.file, t.worktreePath),
+  );
+
+  return [...own, ...moved];
+}
+
+async function sortKeyOf(
+  sessionsPath: string,
+  file: string,
+  sessionDir: string,
+): Promise<SessionSortKey> {
+  const sessionId = file.replace(/\.jsonl$/, '');
+  const fullPath = join(sessionsPath, file);
+  const base = { sessionId, fullPath, sessionsPath, sessionDir };
+  try {
+    const { lastTimestamp } = await scanTail(fullPath);
+    if (lastTimestamp) {
+      const parsed = Date.parse(lastTimestamp);
+      if (!Number.isNaN(parsed)) return { ...base, sortedAt: parsed };
     }
-  });
+    // No timestamped entry in the window: an empty or barely-started
+    // transcript. mtime is a poor ordering signal in general but it is the
+    // only one such a file has, and it beats bunching them all at zero.
+    const { mtimeMs } = await stat(fullPath);
+    return { ...base, sortedAt: mtimeMs };
+  } catch {
+    return { ...base, sortedAt: 0 };
+  }
 }
 
 /**

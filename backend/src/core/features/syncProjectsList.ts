@@ -1,7 +1,8 @@
 import { createReadStream } from 'fs';
 import { readFile, readdir, stat } from 'fs/promises';
-import { join } from 'path';
+import { basename, join } from 'path';
 import { createInterface } from 'readline';
+import { isWorktreeFolderName, worktreePathForFolder } from './worktreeSessions';
 import { EntityChange } from '../entities/AbstractEntityCollection';
 import { ProjectCollection } from '../entities/project/Project.collection';
 import { Project } from '../entities/project/Project.entity';
@@ -155,7 +156,20 @@ async function scanJsonlFolder(folderPath: string): Promise<ScannedProject[]> {
   const createdAtMs = Math.min(...stated.map((entry) => entry.birthtimeMs));
 
   let projectPath: string | undefined;
+
+  // The transcripts in a worktree's folder may have been opened elsewhere: the CLI
+  // files the whole transcript of a session that moved into a worktree under the
+  // worktree's folder, so its first `cwd` is the directory it was opened in. The
+  // folder stands for the worktree, which the recorded worktree state names (#658).
+  if (isWorktreeFolderName(basename(folderPath))) {
+    projectPath = await worktreePathForFolder(
+      folderPath,
+      stated.map(({ file }) => file),
+    );
+  }
+
   for (const { file } of stated) {
+    if (projectPath) break;
     try {
       projectPath = await readCwdFromJsonl(join(folderPath, file));
     } catch {
