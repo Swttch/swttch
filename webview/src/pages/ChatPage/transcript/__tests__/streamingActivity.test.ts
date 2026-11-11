@@ -16,12 +16,19 @@ const call = (id: string, name: string, input: Record<string, unknown> = {}, too
 describe('runningActivity', () => {
   it('finds the last call that has no result, with its own description', () => {
     const found = runningActivity([assistant([call('1', 'Bash', { description: 'Run the tests', command: 'x' })])]);
-    expect(found).toEqual({ toolUseId: '1', description: 'Run the tests', phrase: 'command' });
+    expect(found).toEqual({ toolUseId: '1', description: 'Run the tests', phrase: 'command', mark: 'code' });
   });
 
   it('falls back to the phrase for the kind of call when there is no description', () => {
     expect(runningActivity([assistant([call('1', 'Edit', { file_path: '/a' })])])?.phrase).toBe('editing');
     expect(runningActivity([assistant([call('2', 'Read', { file_path: '/a' })])])?.phrase).toBe('reading');
+  });
+
+  it('says which mark draws the call: four dots for a command, circling dots for a read, a row of three for the rest', () => {
+    expect(runningActivity([assistant([call('1', 'Bash', { command: 'x' })])])?.mark).toBe('code');
+    expect(runningActivity([assistant([call('2', 'Read', { file_path: '/a' })])])?.mark).toBe('read');
+    expect(runningActivity([assistant([call('3', 'Edit', { file_path: '/a' })])])?.mark).toBe('default');
+    expect(runningActivity([assistant([call('4', 'WebFetch', { url: 'https://a.example' })])])?.mark).toBe('default');
   });
 
   it('is null when every call has come back', () => {

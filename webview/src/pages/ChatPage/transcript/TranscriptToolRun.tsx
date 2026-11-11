@@ -11,6 +11,7 @@ import { useTranscriptViewMode } from '../message-renderers/transcriptViewMode';
 import { APP_EVENT_TOOL, type ToolCall } from './buildSegments';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { ActivityGlyph, useActivityLabel, useFormatElapsed, useTurnSeconds } from './TranscriptActivity';
+import type { WorkingActivity } from './WorkingMark';
 import { runningActivity } from './streamingActivity';
 import { FileChangeDetail } from './FileChangeDetail';
 import { useDesktopSession } from '@/hooks/useDesktopSession';
@@ -513,7 +514,7 @@ function NestedRequestRow({ call }: { call: ToolCall }) {
 }
 
 /** One call: a line that opens to its details. */
-function TranscriptToolRow({ calls, defaultOpen, inBox, live }: { calls: ToolCall[]; defaultOpen: boolean; inBox: boolean; live?: { label: string; elapsed: string } }) {
+function TranscriptToolRow({ calls, defaultOpen, inBox, live }: { calls: ToolCall[]; defaultOpen: boolean; inBox: boolean; live?: { label: string; elapsed: string; mark: WorkingActivity } }) {
   const { t } = useTranslation('chat');
   const call = calls[0];
   const [open, setOpen] = useState(defaultOpen);
@@ -536,7 +537,7 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live }: { calls: ToolCal
       >
         {live ? (
           <>
-            <ActivityGlyph />
+            <ActivityGlyph activity={live.mark} />
             <span className="min-w-0 truncate transcript-shimmer">{live.label}</span>
             <span className="flex-shrink-0">{live.elapsed}</span>
           </>
@@ -623,7 +624,7 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
           calls={[calls[0]]}
           defaultOpen={verbose}
           inBox={false}
-          live={active && live ? { label: label(live), elapsed: formatElapsed(seconds) } : undefined}
+          live={active && live ? { label: label(live), elapsed: formatElapsed(seconds), mark: live.mark } : undefined}
         />
       </div>
     );
@@ -639,7 +640,7 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
       >
         {active && live ? (
           <>
-            <span className="me-2 flex"><ActivityGlyph /></span>
+            <span className="me-2 flex"><ActivityGlyph activity={live.mark} /></span>
             <span className="min-w-0 truncate transcript-shimmer">{label(live)}</span>
             <span className="ms-2 me-1 flex-shrink-0">{formatElapsed(seconds)}</span>
           </>
