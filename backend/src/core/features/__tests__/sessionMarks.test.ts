@@ -13,16 +13,19 @@ vi.mock('../../session-mcp', () => ({
   isSessionMcpInstalled: vi.fn(),
 }));
 
-// The Claude desktop app's record of who started whom: what the machine running the test has of it is no
-// business of these tests, so each test says what it is.
+// The Claude desktop app's records reach this backend only through the session-management package (see desktopSync),
+// so what the machine running the test has of them is no business of these tests: each test says what it is.
 const desktopStarters = vi.hoisted(() => ({ value: new Map<string, string>(), archived: new Set<string>() }));
-vi.mock('../desktopSessions', () => ({
-  readDesktopState: vi.fn(async () => ({ starters: desktopStarters.value, archived: desktopStarters.archived })),
-}));
 
 // Whether the sync switch is on (and the person a sponsor): off, nothing from the desktop app is shown.
 const desktopSync = vi.hoisted(() => ({ enabled: true }));
-vi.mock('../desktopSync', () => ({ desktopSyncEnabled: vi.fn(async () => desktopSync.enabled) }));
+vi.mock('../desktopSync', () => ({
+  currentDesktopState: vi.fn(async () =>
+    desktopSync.enabled
+      ? { starters: desktopStarters.value, archived: desktopStarters.archived, titles: new Map(), running: new Set() }
+      : { starters: new Map(), archived: new Set(), titles: new Map(), running: new Set() },
+  ),
+}));
 
 import { isArchivedRow, readSessionMarks, readSessionMarksToShow, starterIdOfRow } from '../sessionMarks';
 import { isSessionMcpInstalled } from '../../session-mcp';

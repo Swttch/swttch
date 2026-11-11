@@ -1,182 +1,87 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdir, mkdtemp, rm, utimes, writeFile } from 'fs/promises';
-import { tmpdir } from 'os';
-import { join } from 'path';
-import {
-  RUNNING_FRESH_MS,
-  readDesktopState,
-  readDesktopStarters,
-  resetDesktopSessionsCache,
-  watchDesktopState,
-} from '../desktopSessions';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-/**
- * The Claude desktop app keeps a JSON file per session. A session another one started names it in
- * `spawnedFrom.sessionId` (the desktop app's own id); `cliSessionId` is the id the lists are keyed by.
- */
-describe('desktop app sessions', () => {
-  let root: string;
+// This backend never opens the Claude desktop app's files: the session-management package does, and these
+// tests say what the package's commands print (or that the package is missing or too old).
+const pkg = vi.hoisted(() => ({
+  entry: '/pkg/src/cli.js' as string | null,
+  version: '0.5.0' as string | null,
+  stdout: '',
+  calls: [] as string[][],
+}));
 
-  beforeEach(async () => {
-    resetDesktopSessionsCache();
-    root = await mkdtemp(join(tmpdir(), 'desktop-sessions-'));
+vi.mock('../../session-mcp', () => ({
+  resolveSessionMcpEntry: vi.fn(async () => pkg.entry),
+  getSessionMcpVersion: vi.fn(async () => pkg.version),
+}));
+vi.mock('../../run-launcher', () => ({
+  runLauncher: vi.fn(async (_command: string, args: string[]) => {
+    pkg.calls.push(args);
+    return { ok: true, output: pkg.stdout, stdout: pkg.stdout, stderr: '' };
+  }),
+}));
+
+import { EMPTY_DESKTOP_STATE, findDesktopSession, findStarter, parseDesktopState, readDesktopState } from '../desktopSessions';
+
+describe('the desktop app\'s records, through the package', () => {
+  beforeEach(() => {
+    pkg.entry = '/pkg/src/cli.js';
+    pkg.version = '0.5.0';
+    pkg.stdout = '';
+    pkg.calls.length = 0;
   });
 
-  afterEach(async () => {
-    await rm(root, { recursive: true, force: true });
+  it('turns the package\'s desktop-state answer into maps and sets', () => {
+    const state = parseDesktopState({ ok: true, starters: { b: 'a' }, archived: ['a'], titles: { a: 'Boss' }, running: ['b'] });
+    expect([...state.starters]).toEqual([['b', 'a']]);
+    expect([...state.archived]).toEqual(['a']);
+    expect([...state.titles]).toEqual([['a', 'Boss']]);
+    expect([...state.running]).toEqual(['b']);
   });
 
-  async function writeSession(name: string, file: Record<string, unknown>, mtime?: number): Promise<void> {
-    const dir = join(root, 'account', 'workspace');
-    await mkdir(dir, { recursive: true });
-    const path = join(dir, `${name}.json`);
-    await writeFile(path, JSON.stringify(file));
-    if (mtime !== undefined) await utimes(path, mtime, mtime);
-  }
-
-  it('answers nothing on a machine without the desktop app', async () => {
-    expect((await readDesktopStarters(join(root, 'missing'))).size).toBe(0);
+  it('ignores what is not of the shape the package promises', () => {
+    const state = parseDesktopState({ ok: true, starters: { b: 7 }, archived: 'a', titles: null, running: [1, 'x'] });
+    expect(state.starters.size).toBe(0);
+    expect(state.archived.size).toBe(0);
+    expect(state.titles.size).toBe(0);
+    expect([...state.running]).toEqual(['x']);
   });
 
-  it('names, for a session, the CLI id of the session the desktop app says started it', async () => {
-    await writeSession('local_m', { sessionId: 'local_m', cliSessionId: 'cli-manager' });
-    await writeSession('local_c', { sessionId: 'local_c', cliSessionId: 'cli-child', spawnedFrom: { sessionId: 'local_m', title: 'x' } });
-
-    expect([...(await readDesktopStarters(root))]).toEqual([['cli-child', 'cli-manager']]);
+  it('reads the state by running the package\'s desktop-state command', async () => {
+    pkg.stdout = JSON.stringify({ ok: true, starters: { b: 'a' }, archived: [], titles: {}, running: [] }) + '\n';
+    expect([...(await readDesktopState()).starters]).toEqual([['b', 'a']]);
+    expect(pkg.calls).toEqual([['/pkg/src/cli.js', 'desktop-state']]);
   });
 
-  it('leaves a session at the top level when it was taken there in the desktop app, whoever created it', async () => {
-    await writeSession('local_m', { sessionId: 'local_m', cliSessionId: 'cli-manager' });
-    await writeSession('local_a', { sessionId: 'local_a', cliSessionId: 'cli-a', spawnedFrom: { sessionId: 'local_m' }, lineageDetached: true, lineageDetachedBy: 'agent' });
-    await writeSession('local_b', { sessionId: 'local_b', cliSessionId: 'cli-b', spawnedFrom: { sessionId: 'local_m' }, lineageDetached: false });
-
-    expect([...(await readDesktopStarters(root))]).toEqual([['cli-b', 'cli-manager']]);
+  it('answers nothing, and runs nothing, when the package is not installed or is older than the commands', async () => {
+    pkg.entry = null;
+    expect(await readDesktopState()).toBe(EMPTY_DESKTOP_STATE);
+    pkg.entry = '/pkg/src/cli.js';
+    pkg.version = '0.4.0';
+    expect(await readDesktopState()).toBe(EMPTY_DESKTOP_STATE);
+    expect(await findStarter('x')).toBeUndefined();
+    expect(await findDesktopSession('local_x')).toBeUndefined();
+    expect(pkg.calls).toEqual([]);
   });
 
-  it('leaves out a pair when either side never ran, or the starter is not on this machine', async () => {
-    await writeSession('local_m', { sessionId: 'local_m' });
-    await writeSession('local_a', { sessionId: 'local_a', cliSessionId: 'cli-a', spawnedFrom: { sessionId: 'local_m' } });
-    await writeSession('local_b', { sessionId: 'local_b', cliSessionId: 'cli-b', spawnedFrom: { sessionId: 'local_gone' } });
-
-    expect((await readDesktopStarters(root)).size).toBe(0);
+  it('answers nothing when the command printed something that is not an answer', async () => {
+    pkg.stdout = 'Error: boom\n';
+    expect(await readDesktopState()).toBe(EMPTY_DESKTOP_STATE);
+    pkg.stdout = JSON.stringify({ ok: false, error: 'no' }) + '\n';
+    expect(await findStarter('x')).toBeUndefined();
   });
 
-  it('skips a file that is not JSON and keeps the rest', async () => {
-    await mkdir(join(root, 'account'), { recursive: true });
-    await writeFile(join(root, 'account', 'local_broken.json'), '{"sessionId": "local_br');
-    await writeSession('local_m', { sessionId: 'local_m', cliSessionId: 'cli-manager' });
-    await writeSession('local_c', { sessionId: 'local_c', cliSessionId: 'cli-child', spawnedFrom: { sessionId: 'local_m' } });
-
-    expect((await readDesktopStarters(root)).get('cli-child')).toBe('cli-manager');
+  it('names who started a session and the folder that one works in', async () => {
+    pkg.stdout = JSON.stringify({ ok: true, startedBy: 'boss', source: 'desktop', cwd: '/work/app' }) + '\n';
+    expect(await findStarter('child')).toEqual({ sessionId: 'boss', cwd: '/work/app' });
+    expect(pkg.calls).toEqual([['/pkg/src/cli.js', 'started-by', 'child']]);
+    pkg.stdout = JSON.stringify({ ok: true, startedBy: null, source: null, cwd: null }) + '\n';
+    expect(await findStarter('child')).toBeUndefined();
   });
 
-  it('reads a file again when it changed', async () => {
-    await writeSession('local_m', { sessionId: 'local_m', cliSessionId: 'cli-manager' });
-    await writeSession('local_c', { sessionId: 'local_c', cliSessionId: 'cli-child', spawnedFrom: { sessionId: 'local_m' } }, 1000);
-    expect((await readDesktopStarters(root)).get('cli-child')).toBe('cli-manager');
-
-    await writeSession('local_c', { sessionId: 'local_c', cliSessionId: 'cli-child' }, 2000);
-    expect((await readDesktopStarters(root)).has('cli-child')).toBe(false);
-  });
-
-  it('lists the sessions archived in the desktop app by their CLI id', async () => {
-    await writeSession('local_a', { sessionId: 'local_a', cliSessionId: 'cli-a', isArchived: true });
-    await writeSession('local_b', { sessionId: 'local_b', cliSessionId: 'cli-b', isArchived: false });
-    await writeSession('local_c', { sessionId: 'local_c', isArchived: true });
-
-    expect([...(await readDesktopState(root)).archived]).toEqual(['cli-a']);
-  });
-
-  it('announces an archive or a restore', async () => {
-    await writeSession('local_a', { sessionId: 'local_a', cliSessionId: 'cli-a', isArchived: false });
-    let announced = 0;
-    const stop = watchDesktopState(() => announced++, root, 20);
-    try {
-      await new Promise((r) => setTimeout(r, 150));
-      await writeSession('local_a', { sessionId: 'local_a', cliSessionId: 'cli-a', isArchived: true });
-      await new Promise((r) => setTimeout(r, 300));
-      expect(announced).toBe(1);
-    } finally {
-      stop();
-    }
-  });
-
-  it('announces a change of who started whom, and not a change that reads to the same answer', async () => {
-    await writeSession('local_m', { sessionId: 'local_m', cliSessionId: 'cli-manager' });
-    await writeSession('local_c', { sessionId: 'local_c', cliSessionId: 'cli-child', title: 'one' });
-    let announced = 0;
-    const stop = watchDesktopState(() => announced++, root, 20);
-    try {
-      await new Promise((r) => setTimeout(r, 150));
-
-      await writeSession('local_c', { sessionId: 'local_c', cliSessionId: 'cli-child', title: 'one', model: 'other' });
-      await new Promise((r) => setTimeout(r, 250));
-      expect(announced).toBe(0);
-
-      await writeSession('local_c', { sessionId: 'local_c', cliSessionId: 'cli-child', spawnedFrom: { sessionId: 'local_m' } });
-      await new Promise((r) => setTimeout(r, 300));
-      expect(announced).toBe(1);
-    } finally {
-      stop();
-    }
-  });
-
-  it('announces a rename, as a change to the list and not to what is running', async () => {
-    await writeSession('local_c', { sessionId: 'local_c', cliSessionId: 'cli-child', title: 'one' });
-    const changes: { list: boolean; running: boolean }[] = [];
-    const stop = watchDesktopState((_state, change) => changes.push(change), root, 20);
-    try {
-      await new Promise((r) => setTimeout(r, 150));
-      await writeSession('local_c', { sessionId: 'local_c', cliSessionId: 'cli-child', title: 'renamed' });
-      await new Promise((r) => setTimeout(r, 300));
-      expect(changes).toEqual([{ list: true, running: false }]);
-    } finally {
-      stop();
-    }
-  });
-
-  describe('running turns', () => {
-    const now = () => Date.now();
-
-    it('takes a user message newer than the last turn end as a turn in flight', async () => {
-      await writeSession('local_r', {
-        sessionId: 'local_r', cliSessionId: 'cli-run', lastActivityAt: now(), latestUserFrameAt: now(), lastTurnEdgeAt: now() - 5000,
-      });
-      await writeSession('local_i', {
-        sessionId: 'local_i', cliSessionId: 'cli-idle', lastActivityAt: now(), latestUserFrameAt: now() - 5000, lastTurnEdgeAt: now(),
-      });
-      await writeSession('local_n', { sessionId: 'local_n', cliSessionId: 'cli-never', lastActivityAt: now(), latestUserFrameAt: now() });
-      expect([...(await readDesktopState(root)).running].sort()).toEqual(['cli-never', 'cli-run']);
-    });
-
-    it('does not count a turn that was cut off and has been silent for long', async () => {
-      await writeSession('local_s', {
-        sessionId: 'local_s', cliSessionId: 'cli-stale', lastActivityAt: now() - RUNNING_FRESH_MS - 1000, latestUserFrameAt: now() - RUNNING_FRESH_MS - 1000,
-      });
-      expect((await readDesktopState(root)).running.size).toBe(0);
-    });
-
-    it('announces a turn that starts and one that ends, and already knows one running at the first look', async () => {
-      await writeSession('local_r', {
-        sessionId: 'local_r', cliSessionId: 'cli-run', lastActivityAt: now(), latestUserFrameAt: now(), lastTurnEdgeAt: now() - 5000,
-      });
-      const seen: { running: string[]; list: boolean; changed: boolean }[] = [];
-      const stop = watchDesktopState(
-        (state, change) => seen.push({ running: [...state.running], list: change.list, changed: change.running }),
-        root,
-        20,
-      );
-      try {
-        await new Promise((r) => setTimeout(r, 150));
-        expect(seen).toEqual([{ running: ['cli-run'], list: false, changed: true }]);
-        await writeSession('local_r', {
-          sessionId: 'local_r', cliSessionId: 'cli-run', lastActivityAt: now(), latestUserFrameAt: now() - 1000, lastTurnEdgeAt: now(),
-        });
-        await new Promise((r) => setTimeout(r, 300));
-        expect(seen[1]).toEqual({ running: [], list: false, changed: true });
-      } finally {
-        stop();
-      }
-    });
+  it('hands over one desktop session\'s record, or nothing when the package knows of none', async () => {
+    pkg.stdout = JSON.stringify({ ok: true, session: { title: 'Boss', cliSessionId: 'cli-1', isArchived: false } }) + '\n';
+    expect(await findDesktopSession('local_a')).toEqual({ title: 'Boss', cliSessionId: 'cli-1', isArchived: false });
+    pkg.stdout = JSON.stringify({ ok: true, session: null }) + '\n';
+    expect(await findDesktopSession('local_none')).toBeUndefined();
   });
 });

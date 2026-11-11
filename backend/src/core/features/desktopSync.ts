@@ -1,6 +1,6 @@
 import type { ConnectionManager } from '../../ws/connection-manager';
 import { MessageType } from '../../shared';
-import type { DesktopSessionState } from './desktopSessions';
+import { EMPTY_DESKTOP_STATE, readDesktopState, watchDesktopState, type DesktopSessionState } from './desktopSessions';
 import { getSponsorStatus } from './license';
 import { readMergedSettings } from './settings';
 import { isSessionMcpInstalled } from '../session-mcp';
@@ -40,6 +40,58 @@ export function rememberDesktopState(state: DesktopSessionState): void {
   lastState = state;
 }
 
+/**
+ * The desktop app's records for the session lists: what the package's watching command last printed while the
+ * sync is on, and nothing while it is off. Read once when no watching has seeded it yet.
+ */
+export async function currentDesktopState(): Promise<DesktopSessionState> {
+  if (!(await desktopSyncEnabled())) return EMPTY_DESKTOP_STATE;
+  if (lastState === null) {
+    const read = await readDesktopState();
+    if (read === EMPTY_DESKTOP_STATE) return read;
+    lastState = read;
+  }
+  return lastState;
+}
+
+let stopWatching: (() => void) | null = null;
+let syncChain: Promise<void> = Promise.resolve();
+
+async function syncNow(connections: ConnectionManager, restart: boolean): Promise<void> {
+  if (stopWatching && restart) {
+    stopWatching();
+    stopWatching = null;
+  }
+  const wanted = (await isSessionMcpInstalled()) && (await desktopSyncEnabled());
+  if (!wanted) {
+    stopWatching?.();
+    stopWatching = null;
+    lastState = null;
+    connections.setDesktopRunning(new Set());
+    return;
+  }
+  if (stopWatching) return;
+  const seeded = await readDesktopState();
+  if (seeded !== EMPTY_DESKTOP_STATE) lastState = seeded;
+  await applyDesktopRunning(connections);
+  stopWatching = watchDesktopState((state, change) => {
+    rememberDesktopState(state);
+    if (change.list) connections.broadcastToAll(MessageType.SESSIONS_UPDATED, { action: 'refresh' });
+    if (change.running) void applyDesktopRunning(connections);
+  });
+}
+
+/**
+ * Watch the desktop app's records through the package while the sync is on and the package is installed, and
+ * stop while either is not so (no process runs for a machine that does not use the sync). Asked at start, when
+ * the switch is flipped and after the package was installed or updated (`restart`, so that a package that just
+ * gained the commands is picked up). Calls queue, so two never race to start two watchers.
+ */
+export function syncDesktopWatch(connections: ConnectionManager, restart = false): Promise<void> {
+  syncChain = syncChain.then(() => syncNow(connections, restart)).catch(() => undefined);
+  return syncChain;
+}
+
 /** Hand the sessions running in the desktop app to every screen, or none while the sync is off or the package is not installed. */
 export async function applyDesktopRunning(connections: ConnectionManager): Promise<void> {
   const on = lastState !== null && (await isSessionMcpInstalled()) && (await desktopSyncEnabled());
@@ -49,6 +101,7 @@ export async function applyDesktopRunning(connections: ConnectionManager): Promi
 /** The switch was flipped: every screen reads its lists again, and what runs in the desktop app is shown or taken off. */
 export async function desktopSyncSettingChanged(connections: ConnectionManager): Promise<void> {
   resetDesktopSyncCache();
+  await syncDesktopWatch(connections);
   await applyDesktopRunning(connections);
   connections.broadcastToAll(MessageType.SESSIONS_UPDATED, { action: 'refresh' });
 }

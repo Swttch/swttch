@@ -15,6 +15,7 @@ import {
   buildUninstallSpecsForAllStores,
 } from '../global-install-target';
 import { getSessionMcpVersion, resolveSessionMcpEntry, resetSessionMcpCache } from '../session-mcp';
+import { syncDesktopWatch } from '../features/desktopSync';
 
 /**
  * The session-management MCP (`@swttch/session-manager-mcp`) is installed the way the extend kit
@@ -60,7 +61,10 @@ export async function getSessionMcpInfoHandler(
   const latest = tags.latest;
   const updatable = Boolean(installed && latest && isNewerVersion(latest, installed));
   const updating = updatable && latest
-    ? autoUpdateSessionMcp(latest, () => connections.broadcastToAll(MessageType.SESSION_MCP_UPDATED, {}))
+    ? autoUpdateSessionMcp(latest, () => {
+        connections.broadcastToAll(MessageType.SESSION_MCP_UPDATED, {});
+        void syncDesktopWatch(connections, true);
+      })
     : false;
   ack(connections, connectionId, message, {
     status: 'ok',
@@ -101,6 +105,7 @@ export async function installSessionMcpHandler(
     }
     resetSessionMcpCache();
     if (await resolveSessionMcpEntry()) {
+      void syncDesktopWatch(connections, true);
       ack(connections, connectionId, message, { status: 'ok' });
       return;
     }
@@ -136,6 +141,7 @@ export async function uninstallSessionMcpHandler(
     ack(connections, connectionId, message, { status: 'error', error });
     return;
   }
+  void syncDesktopWatch(connections, true);
   ack(connections, connectionId, message, { status: 'ok' });
 }
 

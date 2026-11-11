@@ -96,7 +96,7 @@ The Claude desktop app keeps its own record of your sessions: who started whom, 
 - **Titles.** Renaming a session in the desktop app renames it here without reloading.
 - **Running sessions.** A session that is working in the desktop app shows the running marker in the session list and on its row in the session rail's Linked sessions section, the way the desktop app does, and it is counted in the list's Active filter. The desktop app has no field that says a turn is running, so the app takes a user message that is newer than the last end of a turn as a running turn. A session that has written nothing for 30 minutes is not shown as running, so that a turn that was cut off does not look running for good.
 
-Changes in the desktop app arrive as they happen: the app watches the desktop app's session folder and reads again what changed.
+Changes in the desktop app arrive as they happen. This app never opens the desktop app's files itself: the session-management package reads and watches the desktop app's session folder and prints what changed, and this app shows it. It needs package version 0.5.0 or later, which an installed package updates to by itself; an older package, or none, shows nothing from the desktop app.
 
 **It only reads.** Nothing is ever written to the desktop app's files, which belong to the desktop app. Its format is not a contract, so a file that cannot be read is skipped, and a machine without the desktop app simply shows nothing extra.
 

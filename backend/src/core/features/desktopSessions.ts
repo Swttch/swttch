@@ -1,187 +1,38 @@
-import { watch, type FSWatcher } from 'fs';
-import { readdir, readFile, stat } from 'fs/promises';
-import { homedir } from 'os';
-import { join } from 'path';
+import { spawn, type ChildProcess } from 'child_process';
+import { runLauncher } from '../run-launcher';
+import { isNewerVersion } from '../cli-update';
+import { getSessionMcpVersion, resolveSessionMcpEntry } from '../session-mcp';
 
 /**
- * Who started whom in the Claude desktop app.
+ * What the Claude desktop app records about its sessions: who started whom, which are archived, the titles it
+ * shows, and which have a turn running.
  *
- * The desktop app keeps one JSON file per session under its own data folder
- * (`claude-code-sessions/<account>/<workspace>/local_<id>.json`). A session that
- * another session started names that session in `spawnedFrom.sessionId`, in the
- * desktop app's own id (`local_…`). The same file holds `cliSessionId`, the id
- * the CLI gave the session, which is the id every list here is keyed by.
- *
- * `spawnedFrom` is only who created the session. A session taken to the top level in the
- * desktop app (by the user, or by Claude) stays marked as spawned and carries
- * `lineageDetached: true` besides, and the desktop app draws it as a top-level
- * session. Reading `spawnedFrom` alone put such a session under the one that
- * created it, which the desktop app does not.
- *
- * `isArchived` in the same file says the session is archived there. `title` is the name the
- * desktop app shows for it.
- *
- * Whether a turn is running in the desktop app is not a field of its own. The file records
- * when the last user message arrived (`latestUserFrameAt`) and when the last turn ended
- * (`lastTurnEdgeAt`): a user message newer than the last end is a turn still going. A turn
- * that was cut off without ever ending would look running for good, so a session that has
- * written nothing for [RUNNING_FRESH_MS] is not counted as running.
- *
- * The folder belongs to the desktop app and is only read, never written. Its
- * shape is not a contract: a file that cannot be read, or one without the
- * fields, is skipped, and a machine without the app has no such folder and an
- * empty answer.
+ * This plugin never opens the desktop app's files. All of it is the session-management MCP's business
+ * (`@swttch/session-manager-mcp`): the package reads and watches that folder, and this backend only runs the
+ * package's own commands (`desktop-state`, `desktop-session`, `started-by`, `desktop-watch`) with this process's
+ * Node and the package's entry script, and reads what they print. Like the extend kit, the package is never
+ * imported. A package that is not installed, or is older than the version that has these commands, answers
+ * nothing: the desktop app's records are then simply not shown.
  */
 
-/** The desktop app's session folder on this machine. */
-export function desktopSessionsRoot(): string {
-  if (process.platform === 'darwin') return join(homedir(), 'Library', 'Application Support', 'Claude', 'claude-code-sessions');
-  if (process.platform === 'win32') {
-    return join(process.env.APPDATA ?? join(homedir(), 'AppData', 'Roaming'), 'Claude', 'claude-code-sessions');
-  }
-  return join(process.env.XDG_CONFIG_HOME ?? join(homedir(), '.config'), 'Claude', 'claude-code-sessions');
-}
+/** The first package version that has the desktop commands. */
+export const DESKTOP_COMMANDS_SINCE = '0.5.0';
 
-/** A session with a user message newer than its last turn end, and no activity for this long, is taken as no longer running. */
-export const RUNNING_FRESH_MS = 30 * 60 * 1000;
+const COMMAND_TIMEOUT_MS = 15_000;
+const COMMAND_MAX_BUFFER = 10 * 1024 * 1024;
+/** After the watching command ends on its own (it crashed), it is started again after this long. */
+const RESTART_AFTER_MS = 5_000;
 
-interface DesktopSessionFile {
-  mtimeMs: number;
-  /** The desktop app's id of the session (`local_…`), and the CLI's. */
-  localId: string | null;
-  cliSessionId: string | null;
-  /** The desktop app's id of the session that created it. */
-  spawnedFromId: string | null;
-  /** Taken to the top level in the desktop app, which makes `spawnedFrom` no longer its place in a tree. */
-  lineageDetached: boolean;
-  isArchived: boolean;
-  title: string | null;
-  /** A user message newer than the last turn end: a turn is in flight (before the staleness check). */
-  turnOpen: boolean;
-  lastActivityAt: number;
-}
-
-/** Files already read, by path, so that a refresh reads only the files that changed. */
-const readFiles = new Map<string, DesktopSessionFile>();
-
-/** The session files under [root]: `<account>/<workspace>/local_*.json`, looked for down to a few levels. */
-async function sessionFilesUnder(root: string, depth = 0): Promise<string[]> {
-  let names: import('fs').Dirent[];
-  try {
-    names = await readdir(root, { withFileTypes: true });
-  } catch {
-    return [];
-  }
-  const files: string[] = [];
-  for (const entry of names) {
-    const path = join(root, entry.name);
-    if (entry.isDirectory()) {
-      if (depth < 3) files.push(...(await sessionFilesUnder(path, depth + 1)));
-    } else if (/^local_.+\.json$/.test(entry.name)) {
-      files.push(path);
-    }
-  }
-  return files;
-}
-
-async function readSessionFile(path: string): Promise<DesktopSessionFile | null> {
-  try {
-    const { mtimeMs } = await stat(path);
-    const cached = readFiles.get(path);
-    if (cached && cached.mtimeMs === mtimeMs) return cached;
-    const parsed = JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>;
-    const spawnedFrom = parsed.spawnedFrom as { sessionId?: unknown } | null | undefined;
-    const read: DesktopSessionFile = {
-      mtimeMs,
-      localId: typeof parsed.sessionId === 'string' ? parsed.sessionId : null,
-      cliSessionId: typeof parsed.cliSessionId === 'string' && parsed.cliSessionId !== '' ? parsed.cliSessionId : null,
-      spawnedFromId: typeof spawnedFrom?.sessionId === 'string' ? spawnedFrom.sessionId : null,
-      lineageDetached: parsed.lineageDetached === true,
-      isArchived: parsed.isArchived === true,
-      title: typeof parsed.title === 'string' && parsed.title !== '' ? parsed.title : null,
-      turnOpen:
-        typeof parsed.latestUserFrameAt === 'number' &&
-        (typeof parsed.lastTurnEdgeAt !== 'number' || parsed.latestUserFrameAt > parsed.lastTurnEdgeAt),
-      lastActivityAt: typeof parsed.lastActivityAt === 'number' ? parsed.lastActivityAt : 0,
-    };
-    readFiles.set(path, read);
-    return read;
-  } catch {
-    // Written while being read, or not a session file: the next read will see it whole.
-    return null;
-  }
-}
-
-/** What the desktop app records about its sessions, by the CLI id of each. */
+/** The desktop app's records, by the CLI id of each session. */
 export interface DesktopSessionState {
   /** For every session the desktop app draws under another one: the CLI id of the session, to the CLI id of the one it is under. */
   starters: Map<string, string>;
   /** The sessions archived in the desktop app. */
   archived: Set<string>;
-  /** The title the desktop app shows for each session, by the CLI id. */
+  /** The title the desktop app shows for each session. */
   titles: Map<string, string>;
   /** The sessions with a turn in flight in the desktop app. */
   running: Set<string>;
-}
-
-/**
- * For every session the desktop app draws under another one: the CLI id of the
- * session, to the CLI id of the one that started it. A pair is left out when
- * either side has no CLI id (a session that never ran).
- */
-export async function readDesktopStarters(root: string = desktopSessionsRoot()): Promise<Map<string, string>> {
-  return (await readDesktopState(root)).starters;
-}
-
-/** Who is under whom, and which sessions are archived, in the desktop app. */
-export async function readDesktopState(root: string = desktopSessionsRoot()): Promise<DesktopSessionState> {
-  const paths = await sessionFilesUnder(root);
-  const files = (await Promise.all(paths.map(readSessionFile))).filter((f): f is DesktopSessionFile => f !== null);
-  const cliByLocal = new Map<string, string>();
-  for (const file of files) {
-    if (file.localId && file.cliSessionId) cliByLocal.set(file.localId, file.cliSessionId);
-  }
-  const starters = new Map<string, string>();
-  for (const file of files) {
-    if (!file.cliSessionId || !file.spawnedFromId || file.lineageDetached) continue;
-    const starter = cliByLocal.get(file.spawnedFromId);
-    if (starter && starter !== file.cliSessionId) starters.set(file.cliSessionId, starter);
-  }
-  const archived = new Set<string>();
-  for (const file of files) {
-    if (file.cliSessionId && file.isArchived) archived.add(file.cliSessionId);
-  }
-  const titles = new Map<string, string>();
-  const running = new Set<string>();
-  const now = Date.now();
-  for (const file of files) {
-    if (!file.cliSessionId) continue;
-    if (file.title) titles.set(file.cliSessionId, file.title);
-    if (file.turnOpen && now - file.lastActivityAt < RUNNING_FRESH_MS) running.add(file.cliSessionId);
-  }
-  return { starters, archived, titles, running };
-}
-
-/** Forget the files read (a test, or a folder that changed under another name). */
-export function resetDesktopSessionsCache(): void {
-  readFiles.clear();
-}
-
-/** Whether what the session list draws (who is under whom, what is archived, the titles) is the same. */
-function sameListState(a: DesktopSessionState, b: DesktopSessionState): boolean {
-  if (a.starters.size !== b.starters.size || a.archived.size !== b.archived.size || a.titles.size !== b.titles.size) {
-    return false;
-  }
-  for (const [id, starter] of a.starters) if (b.starters.get(id) !== starter) return false;
-  for (const id of a.archived) if (!b.archived.has(id)) return false;
-  for (const [id, title] of a.titles) if (b.titles.get(id) !== title) return false;
-  return true;
-}
-
-function sameRunning(a: DesktopSessionState, b: DesktopSessionState): boolean {
-  if (a.running.size !== b.running.size) return false;
-  for (const id of a.running) if (!b.running.has(id)) return false;
-  return true;
 }
 
 /** What moved in the desktop app since the last look. */
@@ -192,51 +43,131 @@ export interface DesktopChange {
   running: boolean;
 }
 
-/**
- * Call [onChange] when who is under whom, which sessions are archived, a title, or which
- * sessions are running, in the desktop app changes, with the state now and what moved.
- *
- * The desktop app sends nothing, so the folder is watched and the files that
- * changed are read again. A write that reads to the same answer is not announced.
- * Returns the function that stops watching; a machine without the folder watches nothing.
- */
-export function watchDesktopState(
-  onChange: (state: DesktopSessionState, change: DesktopChange) => void,
-  root: string = desktopSessionsRoot(),
-  debounceMs = 400,
-): () => void {
-  let watcher: FSWatcher | null = null;
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  let known: DesktopSessionState | null = null;
-  let stopped = false;
+export const EMPTY_DESKTOP_STATE: DesktopSessionState = {
+  starters: new Map(),
+  archived: new Set(),
+  titles: new Map(),
+  running: new Set(),
+};
 
-  const check = async () => {
-    const now = await readDesktopState(root);
-    const before = known;
-    known = now;
-    if (stopped) return;
-    // The first read has nothing to compare with, but a turn already running is news to every screen.
-    const change: DesktopChange = {
-      list: before !== null && !sameListState(before, now),
-      running: before === null ? now.running.size > 0 : !sameRunning(before, now),
-    };
-    if (change.list || change.running) onChange(now, change);
-  };
-  void check();
+/** What one desktop session's own record says (by its desktop id); a field is absent when the record has none. */
+export interface DesktopSessionInfo {
+  title?: string;
+  /** The CLI session it runs: the id this app's own sessions are named by. */
+  cliSessionId?: string;
+  /** The folder it works in. */
+  cwd?: string;
+  isArchived?: boolean;
+  lastActivityAt?: number;
+  /** Whether the session's last turn ended on a question for the person. */
+  awaitingPerson?: boolean;
+}
 
+/** The package's entry script, when an installed package has the desktop commands. */
+async function desktopCommandsEntry(): Promise<string | null> {
+  const [entry, version] = await Promise.all([resolveSessionMcpEntry(), getSessionMcpVersion()]);
+  if (!entry || !version || isNewerVersion(DESKTOP_COMMANDS_SINCE, version)) return null;
+  return entry;
+}
+
+/** What the package printed (its last line is the answer), or null when it failed or printed something else. */
+async function runDesktopCommand(args: string[]): Promise<Record<string, unknown> | null> {
+  const entry = await desktopCommandsEntry();
+  if (!entry) return null;
+  const result = await runLauncher(process.execPath, [entry, ...args], { timeout: COMMAND_TIMEOUT_MS, maxBuffer: COMMAND_MAX_BUFFER });
+  return parseAnswer(result.stdout);
+}
+
+function parseAnswer(stdout: string): Record<string, unknown> | null {
   try {
-    watcher = watch(root, { recursive: true, persistent: false }, () => {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => void check(), debounceMs);
-    });
-    watcher.on('error', () => watcher?.close());
+    const parsed: unknown = JSON.parse(stdout.trim().split('\n').pop() ?? '');
+    return parsed && typeof parsed === 'object' && (parsed as { ok?: unknown }).ok === true ? (parsed as Record<string, unknown>) : null;
   } catch {
-    // No such folder (the desktop app is not installed), or this platform cannot watch a tree.
+    return null;
   }
+}
+
+function strings(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
+}
+
+function pairs(value: unknown): Array<[string, string]> {
+  if (!value || typeof value !== 'object') return [];
+  return Object.entries(value as Record<string, unknown>).filter((e): e is [string, string] => typeof e[1] === 'string');
+}
+
+/** The package's `desktop-state` answer (also one line of `desktop-watch`) as maps and sets. */
+export function parseDesktopState(answer: Record<string, unknown>): DesktopSessionState {
+  return {
+    starters: new Map(pairs(answer.starters)),
+    archived: new Set(strings(answer.archived)),
+    titles: new Map(pairs(answer.titles)),
+    running: new Set(strings(answer.running)),
+  };
+}
+
+/** What the desktop app records now, or nothing when the package cannot say. */
+export async function readDesktopState(): Promise<DesktopSessionState> {
+  const answer = await runDesktopCommand(['desktop-state']);
+  return answer ? parseDesktopState(answer) : EMPTY_DESKTOP_STATE;
+}
+
+/** One desktop session's own record by its desktop id (`local_…`), or undefined when the package knows of none. */
+export async function findDesktopSession(desktopSessionId: string): Promise<DesktopSessionInfo | undefined> {
+  const answer = await runDesktopCommand(['desktop-session', desktopSessionId]);
+  const session = answer?.session;
+  return session && typeof session === 'object' ? (session as DesktopSessionInfo) : undefined;
+}
+
+/** Who started a session: the session's CLI id and the folder it works in; undefined when nothing says. */
+export async function findStarter(sessionId: string): Promise<{ sessionId: string; cwd?: string } | undefined> {
+  const answer = await runDesktopCommand(['started-by', sessionId]);
+  if (!answer || typeof answer.startedBy !== 'string' || answer.startedBy === '') return undefined;
+  return { sessionId: answer.startedBy, ...(typeof answer.cwd === 'string' && { cwd: answer.cwd }) };
+}
+
+/**
+ * Call [onChange] when something in the desktop app's records moves (who is under whom, an archive, a title,
+ * which sessions are running), with the state now and what moved. The package does the watching in its own
+ * `desktop-watch` process, which prints one line per change and ends when this side closes its input.
+ *
+ * Returns the function that stops watching. When the package cannot do it (not installed, too old) nothing is
+ * started and nothing is ever announced.
+ */
+export function watchDesktopState(onChange: (state: DesktopSessionState, change: DesktopChange) => void): () => void {
+  let stopped = false;
+  let child: ChildProcess | null = null;
+  let restart: ReturnType<typeof setTimeout> | null = null;
+
+  const start = async () => {
+    const entry = await desktopCommandsEntry();
+    if (stopped || !entry) return;
+    child = spawn(process.execPath, [entry, 'desktop-watch'], { stdio: ['pipe', 'pipe', 'ignore'], windowsHide: true });
+    let pending = '';
+    child.stdout?.on('data', (chunk: Buffer) => {
+      pending += chunk.toString('utf8');
+      let at: number;
+      while ((at = pending.indexOf('\n')) !== -1) {
+        const line = pending.slice(0, at);
+        pending = pending.slice(at + 1);
+        const answer = parseAnswer(line);
+        const change = answer?.change as Partial<DesktopChange> | undefined;
+        if (answer && change && !stopped) onChange(parseDesktopState(answer), { list: change.list === true, running: change.running === true });
+      }
+    });
+    child.on('error', () => undefined);
+    child.on('exit', () => {
+      child = null;
+      if (!stopped) restart = setTimeout(() => void start(), RESTART_AFTER_MS);
+    });
+  };
+  void start();
 
   return () => {
     stopped = true;
-    if (timer) clearTimeout(timer);
-    watcher?.close();
+    if (restart) clearTimeout(restart);
+    // The package ends when its input closes; the signal is for one that does not notice.
+    child?.stdin?.end();
+    child?.kill();
   };
 }
