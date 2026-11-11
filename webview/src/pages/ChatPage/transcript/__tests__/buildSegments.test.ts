@@ -68,9 +68,11 @@ describe('buildSegments', () => {
     expect(segments[0].kind === 'tools' && segments[0].calls).toHaveLength(2);
   });
 
-  it('draws the checklist as a card of its own, since the desktop app draws it as a box', () => {
+  it('leaves the checklist out of the segments: it is one box at the turn\'s end, and neither a line of a run nor a break in one', () => {
     const body = [assistant('a', [tool('1'), tool('2', 'mcp__ccd_turn__update_plan'), tool('3')])];
-    expect(kinds(body)).toEqual(['tools', 'card', 'tools']);
+    const segments = buildSegments(body);
+    expect(segments.map((s) => s.kind)).toEqual(['tools']);
+    expect(segments[0].kind === 'tools' && segments[0].calls).toHaveLength(2);
   });
 
   it('draws a reply that only has text in blocks too, so its text can be drawn without the status bullet', () => {

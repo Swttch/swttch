@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { Fragment, memo, useMemo } from 'react';
 import type { LoadedMessageDto } from '../../../types';
 import {
   ContentBlockType,
@@ -15,6 +15,8 @@ import { useSendActionsValue } from '../SendActionsContext';
 import { APP_EVENT_TOOL, buildSegments, PEER_MESSAGE_TOOL, type Segment } from './buildSegments';
 import { TranscriptToolRun } from './TranscriptToolRun';
 import { CliNotice, CompactDivider } from './CompactNotices';
+import { PlanBox } from '../message-renderers/ToolRenderers/Mcp/CcdTurn';
+import { planOfTurn } from '../message-renderers/ToolRenderers/Mcp/CcdTurn/planState';
 import { isCliNotice, isCompactBoundary, isCompactSummaryEntry } from './compact';
 
 /** The text and thinking of an assistant entry that also called tools, around where the calls are gathered. */
@@ -132,6 +134,24 @@ function entryOf(segment: Segment): LoadedMessageDto {
   }
 }
 
+/**
+ * The turn's checklist, one box that stands after everything the turn has drawn so far, and moves down with it, as
+ * the desktop app keeps it: under the last message, and above the line saying what is being done right now. It is
+ * drawn at the same inset as the reply's text and the lines of calls, so the three stand in one column.
+ *
+ * It is there while the turn is running and goes when the turn is over, with or without a card after it: the desktop
+ * app's finished turn is its last message and the summary line of what it did, with no checklist under them.
+ */
+function TranscriptPlan({ body, running }: { body: LoadedMessageDto[]; running: boolean }) {
+  const plan = useMemo(() => planOfTurn(body), [body]);
+  if (!running || plan.length === 0) return null;
+  return (
+    <div className="px-4 py-2" data-transcript-plan>
+      <PlanBox plan={plan} running />
+    </div>
+  );
+}
+
 interface Props {
   body: LoadedMessageDto[];
   mergedMessages: LoadedMessageDto[];
@@ -160,11 +180,17 @@ export const TranscriptBody = memo(function TranscriptBody({ body, mergedMessage
     return ends;
   }, [segments, turnRunning]);
 
+  // While the turn is running and its last segment is a run of calls, that run is the line saying what is being
+  // done now (see TranscriptToolRun). The plan stands above it; otherwise it stands at the very end.
+  const planBefore = turnRunning && segments.length > 0 && segments[segments.length - 1].kind === 'tools' ? segments[segments.length - 1].key : null;
+  const plan = <TranscriptPlan body={body} running={turnRunning} />;
+
   return (
     <>
       {segments.map((segment) => (
+        <Fragment key={segment.key}>
+          {segment.key === planBefore && plan}
         <div
-          key={segment.key}
           // What kind of segment this is, for prose.css: some entries draw nothing and leave an empty
           // wrapper, so "the first thing under the bubble" cannot be read off the position in this list.
           data-seg={segment.kind}
@@ -175,7 +201,9 @@ export const TranscriptBody = memo(function TranscriptBody({ body, mergedMessage
         >
           <SegmentView segment={segment} endsTurn={turnEnds.has(segment.key)} onRetry={onRetry} />
         </div>
+        </Fragment>
       ))}
+      {planBefore === null && plan}
     </>
   );
 });

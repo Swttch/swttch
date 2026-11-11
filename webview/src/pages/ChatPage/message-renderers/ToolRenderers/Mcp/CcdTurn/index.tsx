@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type FC, type ReactNode } from 'react';
-import { CheckCircleIcon } from '@heroicons/react/24/solid';
 import { useChatStreamContextOrNull } from '@/contexts/ChatStreamContext';
 import { RendererProps } from '../../common';
-import { planAfterCall, UPDATE_PLAN_TOOL, type PlanItem } from './planState';
+import './planCheck.css';
+import { isLastPlanCall, planAfterCall, UPDATE_PLAN_TOOL, type PlanItem } from './planState';
 
 /**
  * Claude Desktop's `ccd_turn` server has two tools, and Desktop draws neither as a tool call with a title: each
@@ -27,42 +27,85 @@ const TurnBoxSlot: FC<{ children: ReactNode; testId?: string }> = ({ children, t
   </div>
 );
 
-function PlanMark({ status }: { status: PlanItem['status'] }) {
-  if (status === 'completed') return <CheckCircleIcon className="h-4 w-4 shrink-0 text-text-primary/60" aria-hidden="true" />;
-  if (status === 'in_progress') {
+/** Claude's orange, the one the working mark uses: a step's mark is this colour whatever its state. */
+const MARK_COLOR = 'rgb(var(--accent-claude-rgb))';
+
+function PlanMark({ status, running }: { status: PlanItem['status']; running: boolean }) {
+  // The check is drawn only when the step is ticked off while this mark is on screen. One that was done when it first
+  // appeared (a card drawn again, a session opened) shows the finished check without moving.
+  const before = useRef(status);
+  const [ticked, setTicked] = useState(false);
+  useEffect(() => {
+    if (before.current !== 'completed' && status === 'completed') setTicked(true);
+    before.current = status;
+  }, [status]);
+
+  if (status === 'completed') {
+    // A bare check, as a step that is done needs no ring around it.
     return (
-      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 border-text-primary/80" aria-hidden="true">
-        <span className="h-1.5 w-1.5 rounded-full bg-text-primary/80" />
-      </span>
+      <svg
+        viewBox="0 0 24 24"
+        className={`h-4 w-4 shrink-0 ${ticked ? 'plan-check-draw' : ''}`}
+        fill="none"
+        stroke={MARK_COLOR}
+        strokeWidth={2.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M4.5 12.75l6 6 9-13.5" pathLength={1} />
+      </svg>
+    );
+  }
+  if (status === 'in_progress') {
+    // A ring whose tail fades out, turning while the turn is running.
+    return (
+      <span
+        data-testid="plan-spinner"
+        className={`block h-4 w-4 shrink-0 rounded-full ${running ? 'animate-spin' : ''}`}
+        style={{
+          background: `conic-gradient(from 0deg, transparent 0, ${MARK_COLOR} 100%)`,
+          WebkitMask: 'radial-gradient(circle, transparent 5px, #000 6px)',
+          mask: 'radial-gradient(circle, transparent 5px, #000 6px)',
+        }}
+        aria-hidden="true"
+      />
     );
   }
   // `block`: a bare span is inline, and an inline box ignores its width and height, which drew this circle as a
   // thin dashed vertical line.
-  return <span className="block h-4 w-4 shrink-0 rounded-full border-2 border-dashed border-text-primary/40" aria-hidden="true" />;
+  return <span className="block h-4 w-4 shrink-0 rounded-full border-2 border-dashed" style={{ borderColor: 'rgb(var(--accent-claude-rgb) / 0.55)' }} aria-hidden="true" />;
+}
+
+/** The box of a plan's steps, without the slot it stands in. */
+export function PlanBox({ plan, running = false }: { plan: PlanItem[]; running?: boolean }) {
+  return (
+    <ul className={`flex flex-col gap-2 ${BOX_CLASS}`} data-testid="update-plan-list">
+      {plan.map((item, index) => (
+        <li
+          key={index}
+          data-status={item.status}
+          className={`flex items-start gap-2 ${item.status === 'completed' ? 'text-text-primary/50' : 'text-text-primary/80'}`}
+        >
+          <span className="mt-[3px] flex">
+            <PlanMark status={item.status} running={running} />
+          </span>
+          <span className="min-w-0 break-words">{item.content}</span>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 export function UpdatePlanRenderer(props: RendererProps) {
   const { toolUse } = props;
-  const messages = useChatStreamContextOrNull()?.messages;
-  const plan = planAfterCall(messages, toolUse.id, toolUse.input as Record<string, unknown> | undefined);
+  const stream = useChatStreamContextOrNull();
+  const plan = planAfterCall(stream?.messages, toolUse.id, toolUse.input as Record<string, unknown> | undefined);
   if (plan.length === 0) return null;
 
   return (
     <TurnBoxSlot>
-      <ul className={`flex flex-col gap-2 ${BOX_CLASS}`} data-testid="update-plan-list">
-        {plan.map((item, index) => (
-          <li
-            key={index}
-            data-status={item.status}
-            className={`flex items-start gap-2 ${item.status === 'completed' ? 'text-text-primary/50' : 'text-text-primary/80'}`}
-          >
-            <span className="mt-[3px] flex">
-              <PlanMark status={item.status} />
-            </span>
-            <span className="min-w-0 break-words">{item.content}</span>
-          </li>
-        ))}
-      </ul>
+      <PlanBox plan={plan} running={(stream?.isStreaming ?? false) && isLastPlanCall(stream?.messages, toolUse.id)} />
     </TurnBoxSlot>
   );
 }

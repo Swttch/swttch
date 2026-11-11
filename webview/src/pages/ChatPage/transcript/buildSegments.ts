@@ -292,6 +292,8 @@ export function buildSegments(body: LoadedMessageDto[]): Segment[] {
       // The turn's wrap-up is not drawn where its call sits, which is ahead of the closing message: it is drawn
       // after the turn's last message (`TurnWrapUp`). Here it is neither a line of a run nor a break in one.
       if (toolUse.name === WRAP_UP_TOOL) return;
+      // The checklist is one box for the whole turn, drawn at the turn's end and changed in place (`TranscriptPlan`), not a box at every call.
+      if (toolUse.name === UPDATE_PLAN_TOOL) return;
       flushBlocks(false);
       const call: ToolCall = { toolUse, message };
       if (toolUse.name === CHAPTER_TOOL) {
