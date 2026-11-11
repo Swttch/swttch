@@ -212,6 +212,9 @@
     "refreshSessions": "Обновить сессии",
     "renameSession": "Переименовать сессию",
     "deleteSession": "Удалить сессию",
+    "dragLinks": {
+      "topLevel": "Отпустите здесь, чтобы сделать её сессией верхнего уровня"
+    },
     "archiveSession": "Архивировать сессию",
     "unarchiveSession": "Разархивировать сессию",
     "startedSessions": {

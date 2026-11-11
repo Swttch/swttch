@@ -210,6 +210,9 @@
     "refreshSessions": "Sitzungen aktualisieren",
     "renameSession": "Sitzung umbenennen",
     "deleteSession": "Sitzung löschen",
+    "dragLinks": {
+      "topLevel": "Hier ablegen, um sie zur Sitzung der obersten Ebene zu machen"
+    },
     "archiveSession": "Sitzung archivieren",
     "unarchiveSession": "Archivierung der Sitzung aufheben",
     "startedSessions": {

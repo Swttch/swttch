@@ -232,6 +232,10 @@
     "sessionManager": {
       "title": "Administrador de sesiones",
       "required": "Necesita el paquete de gestión de sesiones. Instálalo desde la parte superior derecha.",
+      "dragDrop": {
+        "label": "Arrastrar una sesión sobre otra para convertirla en sesión secundaria",
+        "description": "En la lista de sesiones, arrastra una fila de sesión sobre otra fila de sesión y la sesión arrastrada pasa a ser secundaria de esa sesión. Si la sueltas en la franja que aparece arriba de la lista, pasa al nivel superior. Hace lo mismo que el botón «Cambiar» del panel lateral, pero arrastrando."
+      },
       "package": {
         "install": "Instalar",
         "installing": "Instalando…",

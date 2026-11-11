@@ -232,6 +232,10 @@
     "sessionManager": {
       "title": "Gerenciador de sessões",
       "required": "Requer o pacote de gerenciamento de sessões. Instale-o no canto superior direito.",
+      "dragDrop": {
+        "label": "Arrastar uma sessão sobre outra para torná-la sessão filha",
+        "description": "Na lista de sessões, arraste uma linha de sessão sobre outra linha de sessão e a sessão arrastada passa a ser filha dessa sessão. Se você a soltar na faixa que aparece no topo da lista, ela passa ao nível superior. Faz o mesmo que o botão “Alterar” do painel lateral, mas arrastando."
+      },
       "package": {
         "install": "Instalar",
         "installing": "Instalando…",

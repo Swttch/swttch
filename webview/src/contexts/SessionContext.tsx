@@ -68,6 +68,11 @@ interface SessionContextValue {
    */
   setSessionArchived: (sessionId: string, archived: boolean) => Promise<void>;
   /**
+   * Put a session under another one, or at the top level when [parentSessionId] is null. The package records the
+   * link and the backend tells the lists to read again; a refusal is shown as a toast.
+   */
+  setSessionParent: (sessionId: string, parentSessionId: string | null) => Promise<void>;
+  /**
    * Append the next page of sessions. No-op while one is already in flight or
    * when the list is complete, so a scroll handler can call it freely.
    */
@@ -635,6 +640,15 @@ export function SessionProvider({ children }: SessionProviderProps) {
     }
   }, [send]);
 
+  const setSessionParent = useCallback(async (sessionId: string, parentSessionId: string | null) => {
+    try {
+      const answer = (await send(MessageType.SET_SESSION_PARENT, { sessionId, parentSessionId })) as { status?: string; error?: string };
+      if (answer?.status !== 'ok') throw new Error(answer?.error ?? 'Could not change which session this one is under.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not change which session this one is under.');
+    }
+  }, [send]);
+
   const renameSession = useCallback(async (sessionId: string, title: string) => {
     const trimmed = title.trim();
     if (!trimmed) return;
@@ -761,6 +775,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
     navigateToNewSession,
     loadSessions,
     setSessionArchived,
+    setSessionParent,
     loadMoreSessions,
     loadAllSessions,
     mergeSession,

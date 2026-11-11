@@ -210,6 +210,9 @@
     "refreshSessions": "セッションを更新",
     "renameSession": "セッション名を変更",
     "deleteSession": "セッションを削除",
+    "dragLinks": {
+      "topLevel": "ここに置くと最上位セッションになります"
+    },
     "archiveSession": "セッションをアーカイブ",
     "unarchiveSession": "セッションのアーカイブを解除",
     "startedSessions": {

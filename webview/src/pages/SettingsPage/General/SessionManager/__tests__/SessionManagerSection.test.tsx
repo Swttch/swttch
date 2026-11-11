@@ -3,10 +3,11 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { SessionManagerSection } from '../index';
 
 let syncOn = false;
+let dragOn = false;
 const updateSetting = vi.fn();
 vi.mock('@/contexts/SettingsContext', () => ({
   useSettingsOrNull: () => null,
-  useSettings: () => ({ settings: { desktopSessionSync: syncOn }, updateSetting }),
+  useSettings: () => ({ settings: { desktopSessionSync: syncOn, sessionListDragDrop: dragOn }, updateSetting }),
 }));
 
 let installed: string | null = '0.4.0';
@@ -29,6 +30,7 @@ vi.mock('@/utils/ensureSponsor', () => ({ ensureSponsor: (...args: unknown[]) =>
 
 beforeEach(() => {
   syncOn = false;
+  dragOn = false;
   sponsor = true;
   installed = '0.4.0';
   updateSetting.mockReset();
@@ -94,5 +96,32 @@ describe('Settings > General > Session manager', () => {
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Close' })[0]);
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  describe('the drag and drop switch', () => {
+    const DRAG = 'Drag a session onto another to make it a child session';
+
+    it('turns on for a sponsor', async () => {
+      render(<SessionManagerSection />);
+      fireEvent.click(screen.getByRole('switch', { name: DRAG }));
+      await waitFor(() => expect(updateSetting).toHaveBeenCalledWith('sessionListDragDrop', true));
+    });
+
+    it('stays off for someone who is not a sponsor', async () => {
+      sponsor = false;
+      render(<SessionManagerSection />);
+      fireEvent.click(screen.getByRole('switch', { name: DRAG }));
+      await waitFor(() => expect(ensureSponsor).toHaveBeenCalledTimes(1));
+      expect(updateSetting).not.toHaveBeenCalled();
+    });
+
+    it('turns off without asking whether the person is a sponsor', async () => {
+      dragOn = true;
+      sponsor = false;
+      render(<SessionManagerSection />);
+      fireEvent.click(screen.getByRole('switch', { name: DRAG }));
+      await waitFor(() => expect(updateSetting).toHaveBeenCalledWith('sessionListDragDrop', false));
+      expect(ensureSponsor).not.toHaveBeenCalled();
+    });
   });
 });

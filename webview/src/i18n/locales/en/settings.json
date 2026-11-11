@@ -232,6 +232,10 @@
     "sessionManager": {
       "title": "Session manager",
       "required": "Needs the session-management package. Install it from the top right.",
+      "dragDrop": {
+        "label": "Drag a session onto another to make it a child session",
+        "description": "In the session list, drag a session row onto another session row and the dragged session becomes a child of that session. Drop it on the strip that appears at the top of the list and it becomes a top-level session. It does what the Change button in the session rail does, by dragging."
+      },
       "package": {
         "install": "Install",
         "installing": "Installing…",

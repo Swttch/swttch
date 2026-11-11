@@ -210,6 +210,9 @@
     "refreshSessions": "刷新会话",
     "renameSession": "重命名会话",
     "deleteSession": "删除会话",
+    "dragLinks": {
+      "topLevel": "放在这里,使其成为顶层会话"
+    },
     "archiveSession": "归档会话",
     "unarchiveSession": "取消归档会话",
     "startedSessions": {

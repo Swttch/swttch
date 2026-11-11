@@ -1,6 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { GroupedSessions, GROUP_ORDER, SessionGroup, getSessionOriginLabel } from './utils';
 import { SessionItem } from './SessionItem';
+import { DragLinksProvider, DraggableRow, TopLevelDropZone } from './DragLinks';
+import { useSettingsOrNull } from '@/contexts/SettingsContext';
+import { SettingKey } from '@/types/settings';
 import { SessionNesting, placeFamilyRows } from './families';
 import { generatedTitleArrivedAt } from '@/contexts/generatedTitle';
 import { useSessionListScale } from './scale';
@@ -203,6 +206,22 @@ export function SessionList(props: Props) {
     );
   }, [scopeDirCount, groupedSessions, rootDir]);
 
+  // Dragging a session onto another to put it under that one is a sponsor-only convenience for the change the rail
+  // makes with its buttons, and needs the session-management package like the rest of the links do.
+  const dragSetting = useSettingsOrNull()?.settings[SettingKey.SESSION_LIST_DRAG_DROP] === true;
+  const dragLinksOn = archivingAvailable && sessionContext !== null && dragSetting;
+  const withDragLinks = (list: ReactNode) =>
+    dragLinksOn && sessionContext ? (
+      <DragLinksProvider
+        families={nesting.families}
+        onMove={(sessionId, parentId) => void sessionContext.setSessionParent(sessionId, parentId)}
+      >
+        {list}
+      </DragLinksProvider>
+    ) : (
+      list
+    );
+
   const requestMoreIfNeeded = useCallback(() => {
     if (!hasMore || !onLoadMore) return;
     const el = scrollRef.current;
@@ -238,11 +257,13 @@ export function SessionList(props: Props) {
         showArchived={showArchived}
         onShowArchivedChange={archivingAvailable ? setShowArchived : undefined}
       />
+      {withDragLinks(
       <div
         ref={scrollRef}
         onScroll={requestMoreIfNeeded}
         className={`${className} overflow-y-auto ${scale.listPad} flex flex-col gap-0.5`}
       >
+        <TopLevelDropZone />
         {hasFilter && visibleCount === 0 && (
           <div className="px-2.5 py-3 text-xs text-text-tertiary text-center">
             {t('sessionList.filter.noneActive')}
@@ -260,8 +281,8 @@ export function SessionList(props: Props) {
             {sessionsInGroup.map((session) => {
               const startedOthers = nesting.families.childrenOf(session.id).length > 0;
               return (
+                <DraggableRow key={session.id} sessionId={session.id}>
                 <SessionItem
-                  key={session.id}
                   session={session}
                   isSelected={session.id === currentSessionId}
                   isHighlighted={session.id === highlightedSessionId}
@@ -290,12 +311,14 @@ export function SessionList(props: Props) {
                   }
                   placement={placements[groupKey].get(session.id)}
                 />
+                </DraggableRow>
               );
             })}
           </div>
         );
         })}
       </div>
+      )}
     </>
   );
 }

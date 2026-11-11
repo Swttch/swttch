@@ -2,6 +2,7 @@ import { SettingSection } from '../../common';
 import { useSessionMcp } from '@/hooks/queries/useSessionMcp';
 import { useTranslation } from '@/i18n';
 import { DesktopSyncRow } from './DesktopSyncRow';
+import { DragDropRow } from './DragDropRow';
 import { SessionMcpControl } from './SessionMcpControl';
 
 /**
@@ -22,6 +23,7 @@ export function SessionManagerSection() {
       disabled={missing}
     >
       <DesktopSyncRow />
+      <DragDropRow />
     </SettingSection>
   );
 }

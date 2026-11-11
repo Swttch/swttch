@@ -232,6 +232,10 @@
     "sessionManager": {
       "title": "Sitzungsmanager",
       "required": "Benötigt das Sitzungsverwaltungs-Paket. Installieren Sie es oben rechts.",
+      "dragDrop": {
+        "label": "Sitzung auf eine andere ziehen, um sie zur Unter-Sitzung zu machen",
+        "description": "Ziehen Sie in der Sitzungsliste eine Sitzungszeile auf eine andere Sitzungszeile, dann wird die gezogene Sitzung zur Unter-Sitzung dieser Sitzung. Legen Sie sie auf dem Streifen ab, der oben in der Liste erscheint, wird sie zur Sitzung der obersten Ebene. Das tut dasselbe wie die Schaltfläche „Ändern“ in der Sitzungsleiste, nur per Ziehen."
+      },
       "package": {
         "install": "Installieren",
         "installing": "Wird installiert…",

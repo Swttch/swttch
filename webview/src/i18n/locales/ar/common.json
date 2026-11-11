@@ -214,6 +214,9 @@
     "refreshSessions": "تحديث الجلسات",
     "renameSession": "إعادة تسمية الجلسة",
     "deleteSession": "حذف الجلسة",
+    "dragLinks": {
+      "topLevel": "أفلتها هنا لتصبح جلسة من المستوى الأعلى"
+    },
     "archiveSession": "أرشفة الجلسة",
     "unarchiveSession": "إلغاء أرشفة الجلسة",
     "startedSessions": {

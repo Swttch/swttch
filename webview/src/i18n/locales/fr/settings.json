@@ -232,6 +232,10 @@
     "sessionManager": {
       "title": "Gestionnaire de sessions",
       "required": "Nécessite le paquet de gestion des sessions. Installez-le en haut à droite.",
+      "dragDrop": {
+        "label": "Faire glisser une session sur une autre pour la rendre enfant",
+        "description": "Dans la liste des sessions, faites glisser une ligne de session sur une autre ligne de session : la session déplacée devient une session enfant de celle-ci. Déposée sur la bande qui apparaît en haut de la liste, elle passe au niveau supérieur. Cela fait la même chose que le bouton « Modifier » du panneau latéral, mais par glisser-déposer."
+      },
       "package": {
         "install": "Installer",
         "installing": "Installation…",

@@ -210,6 +210,9 @@
     "refreshSessions": "Actualiser les sessions",
     "renameSession": "Renommer la session",
     "deleteSession": "Supprimer la session",
+    "dragLinks": {
+      "topLevel": "Déposez ici pour la passer au niveau supérieur"
+    },
     "archiveSession": "Archiver la session",
     "unarchiveSession": "Désarchiver la session",
     "startedSessions": {

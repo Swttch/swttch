@@ -210,6 +210,9 @@
     "refreshSessions": "تازه‌سازی نشست‌ها",
     "renameSession": "تغییر نام نشست",
     "deleteSession": "حذف نشست",
+    "dragLinks": {
+      "topLevel": "اینجا رها کنید تا نشست سطح بالا شود"
+    },
     "archiveSession": "بایگانی نشست",
     "unarchiveSession": "خروج نشست از بایگانی",
     "startedSessions": {
