@@ -387,6 +387,39 @@ class ClaudeCodePanel(
         }
     }
 
+    // ─── Telling the page whether this tab is on screen ─────────────────
+    // The page asks `document.visibilityState`, and on IDE 2024.2 a tab behind another editor
+    // tab turns hidden. On 2026.3 it does not: measured on a tab covered by another one, the page
+    // still reported visible and kept drawing frames. So the host says it itself. The backend
+    // stops the CLI of a session nobody is looking at, and needs this answer to be right.
+
+    /** The listener that watches the browser component being shown or hidden; removed on dispose. */
+    private var showingListener: java.awt.event.HierarchyListener? = null
+
+    private fun watchShowing(target: ClaudeCodeBrowserService.BrowserHolder) {
+        if (showingListener != null) return
+        val listener = java.awt.event.HierarchyListener { event ->
+            if (event.changeFlags and java.awt.event.HierarchyEvent.SHOWING_CHANGED.toLong() == 0L) return@HierarchyListener
+            tellPageShowing(target)
+        }
+        target.browser.component.addHierarchyListener(listener)
+        showingListener = listener
+    }
+
+    private fun tellPageShowing(target: ClaudeCodeBrowserService.BrowserHolder) {
+        if (isPanelDisposed) return
+        val showing = target.browser.component.isShowing
+        try {
+            JcefHandlers.executeJavaScript(
+                target.browser,
+                "window.__ccgHostShowing = $showing;" +
+                    "window.dispatchEvent(new CustomEvent('ide-panel-showing', { detail: { showing: $showing } }));",
+            )
+        } catch (e: Exception) {
+            logger.warn("Failed to tell the WebView whether its tab is showing", e)
+        }
+    }
+
     // ─── Stalled-screen guide ───────────────────────────────────────────
     // The one page shown over a screen that has not come up, with a restart button, how to
     // quit the IDE completely, and the IDE options to change. See [StalledHelpPanel].
@@ -919,6 +952,7 @@ class ClaudeCodePanel(
         activityStaging.flush(acquired.onActivityChanged) { acquired.onActivityChanged = it }
 
         val b = acquired.browser
+        watchShowing(acquired)
 
         if (acquired.isLoaded) {
             // Browser already loaded (tab move/split): detach from previous parent if any,
@@ -1522,18 +1556,31 @@ class ClaudeCodePanel(
             vars["editor-bg"] = scheme.defaultBackground
             vars["editor-fg"] = scheme.defaultForeground
 
-            // Panel/tool-window surface — used for raised chrome (headers, bars).
-            vars["panel-bg"] = UIUtil.getPanelBackground()
+            // Panel/tool-window surface — used for raised chrome (headers, bars) — and the
+            // input controls. A theme that gives all three the same color (IDEA 2026.3 dark)
+            // would flatten every button, card and field into the background, so the layers
+            // are kept apart; a theme with distinct layers passes through untouched. See
+            // [IdeThemeLayers].
+            val layers = IdeThemeLayers.separate(
+                base = scheme.defaultBackground,
+                raised = UIUtil.getPanelBackground(),
+                input = UIUtil.getTextFieldBackground(),
+            )
+            vars["panel-bg"] = layers.raised
             vars["panel-fg"] = UIUtil.getLabelForeground()
-
-            // Input controls.
-            vars["input-bg"] = UIUtil.getTextFieldBackground()
+            vars["input-bg"] = layers.input
 
             // Borders and accents come from the LAF's named keys when present;
             // UIManager.getColor returns null for keys a theme does not define,
             // and putIfPresent simply skips those (the CSS fallback then wins).
             putIfPresent(vars, "border", UIManager.getColor("Component.borderColor"))
-            putIfPresent(vars, "border-focus", UIManager.getColor("Component.focusedBorderColor"))
+            // A focus border the same color as the surface it is drawn on shows nothing; leave it
+            // out so the WebView's own focus color applies.
+            UIManager.getColor("Component.focusedBorderColor")?.let { focus ->
+                if (IdeThemeLayers.focusBorderUsable(focus, layers.base, layers.raised, layers.input)) {
+                    vars["border-focus"] = focus
+                }
+            }
             putIfPresent(vars, "accent", UIManager.getColor("Component.focusColor"))
             putIfPresent(vars, "link", UIManager.getColor("Link.activeForeground"))
             putIfPresent(vars, "separator", UIManager.getColor("Separator.separatorColor"))
@@ -1554,9 +1601,11 @@ class ClaudeCodePanel(
             // not translucent overlays: Tailwind compiles `bg-surface-hover` to
             // `rgb(var(--surface-hover-rgb) / <alpha>)`, so only the `-rgb` channel
             // form reaches the utility classes.
-            val panelBg = UIUtil.getPanelBackground()
-            vars["hover-bg"] = shiftAwayFromBrightness(panelBg, 0.09f)
-            vars["pressed-bg"] = shiftAwayFromBrightness(panelBg, 0.17f)
+            // Taken from the raised surface AFTER the correction above, so the step from a raised
+            // row to its hover fill stays visible too.
+            val panelBg = layers.raised
+            vars["hover-bg"] = IdeThemeLayers.shiftAwayFromBrightness(panelBg, 0.09f)
+            vars["pressed-bg"] = IdeThemeLayers.shiftAwayFromBrightness(panelBg, 0.17f)
 
             putIfPresent(vars, "tooltip-bg", UIManager.getColor("ToolTip.background"))
             putIfPresent(vars, "tooltip-fg", UIManager.getColor("ToolTip.foreground"))
@@ -1586,23 +1635,6 @@ class ClaudeCodePanel(
         color: java.awt.Color?,
     ) {
         if (color != null) target[name] = color
-    }
-
-    /**
-     * Returns [base] moved [amount] (0..1) toward white on dark surfaces and
-     * toward black on light ones — i.e. always *away* from its own brightness,
-     * so the result stays visible against [base] on any theme.
-     *
-     * Used to derive hover/pressed fills from the IDE's panel color; see
-     * [ideColorsScript] for why they are not read from the LAF directly.
-     */
-    private fun shiftAwayFromBrightness(base: java.awt.Color, amount: Float): java.awt.Color {
-        // Perceived brightness (ITU-R BT.601) — matches how dark/light a surface
-        // actually looks better than a plain channel average.
-        val brightness = (base.red * 0.299f + base.green * 0.587f + base.blue * 0.114f) / 255f
-        val target = if (brightness < 0.5f) 255 else 0
-        fun blend(channel: Int) = (channel + (target - channel) * amount).toInt().coerceIn(0, 255)
-        return java.awt.Color(blend(base.red), blend(base.green), blend(base.blue))
     }
 
     private fun hex(c: java.awt.Color): String = String.format("#%02x%02x%02x", c.red, c.green, c.blue)
@@ -3552,6 +3584,8 @@ class ClaudeCodePanel(
         // The browser is owned by ClaudeCodeBrowserService and survives tab move/split.
         // It will be reattached when a new ClaudeCodePanel is created for the same session.
         // When holder is null (JCEF unavailable), browser was never added, so nothing to detach.
+        showingListener?.let { holder?.browser?.component?.removeHierarchyListener(it) }
+        showingListener = null
         holder?.let { remove(it.browser.component) }
 
         scope.coroutineContext[kotlinx.coroutines.Job]?.cancel()
