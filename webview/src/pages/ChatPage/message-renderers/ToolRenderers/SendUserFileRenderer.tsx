@@ -7,7 +7,7 @@ import {i18n, useTranslation} from "@/i18n";
 import {openSentFile} from "@/utils/openChatFile";
 import {cn} from "@/utils/cn";
 import {RendererProps, ToolWrapper, toolResultBlockIndex} from "./common";
-import {SentFileMoreButton} from "./SentFileMenu";
+import {SentFileContextMenu, SentFileMoreButton, type MenuPoint} from "./SentFileMenu";
 import {downloadSentFile, formatSentSize, loadSentMedia, sentFilesOf, type SentFile} from "./sendUserFile";
 
 /** The `src` of a sent picture, video or sound; null when it cannot be had, undefined while loading. */
@@ -60,11 +60,20 @@ function ItemActions({file, className}: {file: SentFile; className?: string}) {
 
 /** Wraps an item so its full path shows on hover, and the buttons have something to sit on. */
 function Item({file, className, downloadClassName, children}: {file: SentFile; className?: string; downloadClassName?: string; children: React.ReactNode}) {
+    const [menuPoint, setMenuPoint] = useState<MenuPoint | null>(null);
     return (
         <Tooltip content={<span dir="ltr">{file.path}</span>} placement="bottom">
-            <div className={cn("group/sent relative", className)}>
+            <div
+                className={cn("group/sent relative", className)}
+                // The file's menu where the pointer is, the same one the more button opens.
+                onContextMenu={(event) => {
+                    event.preventDefault();
+                    setMenuPoint({x: event.clientX, y: event.clientY});
+                }}
+            >
                 {children}
                 <ItemActions file={file} className={downloadClassName}/>
+                {menuPoint && <SentFileContextMenu file={file} point={menuPoint} onClose={() => setMenuPoint(null)}/>}
             </div>
         </Tooltip>
     );

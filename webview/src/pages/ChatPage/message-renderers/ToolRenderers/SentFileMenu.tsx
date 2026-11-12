@@ -1,4 +1,4 @@
-import {useRef, useState, type ComponentType, type ReactNode, type SVGProps} from "react";
+import {useEffect, useRef, useState, type ComponentType, type ReactNode, type SVGProps} from "react";
 import Tippy from "@tippyjs/react/headless";
 import type {Instance} from "tippy.js";
 import toast from "react-hot-toast";
@@ -54,6 +54,11 @@ export function SentFileMenuItems({file, onDone}: {file: SentFileTarget; onDone:
             // The menu is drawn into <body>, but a click still bubbles to the React tree it belongs to, where the card's
             // ancestors act on clicks (opening the file, logging the entry). Opening a menu asked for neither.
             onClick={(event) => event.stopPropagation()}
+            // A right click on the menu itself must not open another one on the card underneath it.
+            onContextMenu={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+            }}
         >
             <Row icon={ArrowDownTrayIcon} onSelect={run(async () => {
                 if (!(await downloadSentFile(file.path, file.name))) toast.error(i18n.t('chat:sentFiles.downloadFailed'));
@@ -71,6 +76,58 @@ export function SentFileMenuItems({file, onDone}: {file: SentFileTarget; onDone:
                 copy(file.path, t('fileLink.copyDone'), t('fileLink.copyFailed')),
             )}>{t('fileLink.copyPath')}</Row>
         </div>
+    );
+}
+
+/** Where a context menu was asked for: the pointer, in the window's own coordinates. */
+export interface MenuPoint {
+    x: number;
+    y: number;
+}
+
+/**
+ * The file's menu opened where the pointer was when the card was right-clicked. It is the same list as the more
+ * button's, drawn at a different place, and closes on a click outside it, on Escape, and when an entry is chosen.
+ */
+export function SentFileContextMenu({file, point, onClose}: {file: SentFileTarget; point: MenuPoint; onClose: () => void}) {
+    useEffect(() => {
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key === "Escape") onClose();
+        };
+        document.addEventListener("keydown", onKey);
+        return () => document.removeEventListener("keydown", onKey);
+    }, [onClose]);
+    return (
+        <Tippy
+            visible
+            interactive
+            placement="bottom-start"
+            offset={[0, 2]}
+            appendTo={() => document.body}
+            onClickOutside={onClose}
+            render={(attrs) => (
+                <div {...attrs}>
+                    <SentFileMenuItems file={file} onDone={onClose}/>
+                </div>
+            )}
+        >
+            {/*
+              The point the menu hangs from: nothing to see, only a place for Tippy to measure. The pointer's position is
+              in screen pixels, and `<html>` carries CSS `zoom` (`--ui-zoom`), which scales a `fixed` length a second
+              time: at 90% the point, and the menu with it, landed a tenth of its distance from the corner up and to the
+              left of the click. Dividing by the zoom puts the point back under the pointer.
+            */}
+            <span
+                aria-hidden
+                style={{
+                    position: "fixed",
+                    left: `calc(${point.x}px / var(--ui-zoom, 1))`,
+                    top: `calc(${point.y}px / var(--ui-zoom, 1))`,
+                    width: 0,
+                    height: 0,
+                }}
+            />
+        </Tippy>
     );
 }
 

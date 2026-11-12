@@ -280,6 +280,31 @@ describe('the download button', () => {
     });
 });
 
+describe('a right click on a card', () => {
+    it('opens the same menu as the more button, for that card', async () => {
+        draw([{path: '/a/page.html', size: 3}, {path: '/a/t.csv', size: 3}]);
+        fireEvent.contextMenu(screen.getByText('t.csv'), {clientX: 40, clientY: 50});
+        const menu = await screen.findByRole('menu');
+        expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+            'Download', 'Show in file manager', 'Attach to chat input', 'Copy file name', 'Copy path',
+        ]);
+        const writeText = vi.fn(() => Promise.resolve());
+        Object.assign(navigator, {clipboard: {writeText}});
+        fireEvent.click(within(menu).getByRole('menuitem', {name: 'Copy path'}));
+        await waitFor(() => expect(writeText).toHaveBeenCalledWith('/a/t.csv'));
+        await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+    });
+
+    it('closes on Escape without doing anything', async () => {
+        draw([{path: '/a/t.csv', size: 3}]);
+        fireEvent.contextMenu(screen.getByText('t.csv'), {clientX: 10, clientY: 10});
+        await screen.findByRole('menu');
+        fireEvent.keyDown(document, {key: 'Escape'});
+        await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+        expect(openChatFile).not.toHaveBeenCalled();
+    });
+});
+
 describe('the more button', () => {
     const open = async (index = 0) => {
         fireEvent.click(screen.getAllByRole('button', {name: 'More options'})[index]);
