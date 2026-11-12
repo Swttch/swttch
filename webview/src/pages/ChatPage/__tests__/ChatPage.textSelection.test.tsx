@@ -72,6 +72,7 @@ vi.mock('../../../contexts/SessionContext', () => ({
 vi.mock('../../../hooks', () => ({ useAwaitingNotifications: () => {}, useDocumentTitle: () => {} }));
 vi.mock('../../../hooks/useReportSessionActivity', () => ({ useReportSessionActivity: () => {} }));
 vi.mock('../../../hooks/useMarkSessionRead', () => ({ useMarkSessionRead: () => {} }));
+vi.mock('../../../hooks/useReportPanelVisibility', () => ({ useReportPanelVisibility: () => {} }));
 vi.mock('../../../hooks/usePendingAskUserQuestion', () => ({
   usePendingAskUserQuestion: () => ({ pending: null, dismiss: () => {} }),
 }));

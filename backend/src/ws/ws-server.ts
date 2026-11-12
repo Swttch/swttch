@@ -21,9 +21,11 @@ import { cancelLogin } from '../core/handlers/login';
 import { releaseDictation } from '../core/handlers/dictation';
 import { releaseReadAloud } from '../core/handlers/readAloud';
 import { unwatchAllForConnection } from '../core/features/backgroundTaskOutputWatcher';
+import { stopIdleSessions } from '../core/features/idleSessions';
 import { reportBackendError, trackActivity } from '../core/features/telemetry';
 import { tunnelPairing, issueLocalPairCode } from '../core/features/tunnel-pairing';
 import { LogWebSocketServer } from '../logging/log-ws';
+import { LongPollRegistry } from './long-poll-transport';
 
 const ALLOWED_WS_ORIGINS = new Set([
   'http://localhost',
@@ -194,20 +196,37 @@ const MIME_TYPES: Record<string, string> = {
 /** Collect a request body into a string, capped to guard against unbounded input. */
 const MAX_REQUEST_BODY_BYTES = 64 * 1024;
 
-function readRequestBody(req: IncomingMessage): Promise<string> {
+/**
+ * Cap for one long-poll send. Matches the `ws` library's default maxPayload,
+ * so a frame the WebSocket transport would accept (a pasted image, say) is not
+ * refused just because it travels over HTTP instead.
+ */
+const LONG_POLL_MAX_BODY_BYTES = 100 * 1024 * 1024;
+
+const LONG_POLL_PREFIX = '/lp/';
+
+function readRequestBody(req: IncomingMessage, maxBytes = MAX_REQUEST_BODY_BYTES): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     const chunks: Buffer[] = [];
     let total = 0;
     req.on('data', (chunk: Buffer) => {
       total += chunk.length;
-      if (total > MAX_REQUEST_BODY_BYTES) {
+      if (total > maxBytes) {
         reject(new Error('Request body too large'));
         req.destroy();
         return;
       }
       chunks.push(chunk);
     });
-    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('end', () => {
+      const joined = Buffer.concat(chunks);
+      // The request object, and with it this closure, can outlive the handler that awaits the
+      // body. Emptying the list lets the pieces be collected as soon as the joined copy exists,
+      // instead of staying alive next to it (and next to the string below) for the rest of the
+      // request. Up to 100 MB per long-poll send, that is the difference of a whole copy.
+      chunks.length = 0;
+      resolve(joined.toString('utf8'));
+    });
     req.on('error', reject);
   });
 }
@@ -308,6 +327,7 @@ export function startWebSocketServer(
     // 토큰이 handshake 응답에 반영되지 않도록 방어한다.
     const wss = new WebSocketServer({ noServer: true, handleProtocols: selectAuthSubprotocol });
     const rpcWss = new WebSocketServer({ noServer: true, handleProtocols: selectAuthSubprotocol });
+    const longPoll = new LongPollRegistry();
 
     /**
      * Liveness for the control channel. A client that vanishes without closing
@@ -330,12 +350,18 @@ export function startWebSocketServer(
       onTick: () => {
         connections.broadcastToAll(MessageType.HEARTBEAT, { intervalMs: heartbeat.interval });
         connections.sweepOrphanSessions();
+        void stopIdleSessions(connections).catch((err) => {
+          console.error('[node-backend]', `Idle session sweep failed: ${String(err)}`);
+        });
       },
     });
     heartbeat.start();
 
     // WebSocket 연결 핸들러 — 한 번만 등록
     wss.on('connection', (ws: WebSocket, request: IncomingMessage) => {
+      // `request` is a real upgrade request for /ws, but a SYNTHETIC one with only `url` and
+      // `headers.origin` for a long-poll client (see POST /lp/open below). Reading any other
+      // field of it here means updating that call too.
       // Parse client environment + optional panelId from query: /ws?env=jetbrains&panelId=...
       const params = new URL(request.url ?? '/ws', 'http://localhost').searchParams;
       const envParam = params.get('env');
@@ -364,7 +390,9 @@ export function startWebSocketServer(
       // 연결 준비 신호 전송
       connections.sendTo(connectionId, MessageType.BRIDGE_READY);
 
-      ws.on('message', (data: Buffer) => {
+      // A string for a long-poll client (LongPollSocket.receive passes the frame as it
+      // arrived), a Buffer for a WebSocket one. Only `toString()` is used, which both answer.
+      ws.on('message', (data: Buffer | string) => {
         let parsed: IPCMessage;
         try {
           parsed = JSON.parse(data.toString()) as IPCMessage;
@@ -462,6 +490,94 @@ export function startWebSocketServer(
             res.writeHead(401, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'Invalid or expired pairing code' }));
           }
+          return;
+        }
+
+        // /lp/* — the long-poll fallback for the /ws control channel, for panels
+        // whose browser cannot open a WebSocket (IntelliJ 2026.3 Remote
+        // Development, #582). Same two gates as the /ws upgrade: Origin (CSWSH
+        // hardening) and the per-launch token, here in the `x-ccg-token` header
+        // because there is no handshake to carry it. A session id alone grants
+        // nothing; every request is gated.
+        if (urlPath.startsWith(LONG_POLL_PREFIX)) {
+          if (!validateOrigin(req.headers.origin, req.headers.host, allowSameOrigin)) {
+            console.error('[node-backend]', `Long-poll request rejected: disallowed origin "${req.headers.origin}"`);
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Forbidden' }));
+            return;
+          }
+          const httpToken = req.headers[HTTP_AUTH_HEADER];
+          const provided = Array.isArray(httpToken) ? httpToken[0] : httpToken;
+          if (!timingSafeTokenEqual(provided, authToken)) {
+            console.error('[node-backend]', 'Long-poll request rejected: missing or invalid auth token');
+            res.writeHead(401, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Unauthorized' }));
+            return;
+          }
+          const params = new URL(req.url ?? '/', 'http://localhost').searchParams;
+
+          if (req.method === 'POST' && urlPath === '/lp/open') {
+            // Rebuild the /ws query (env, panelId) so the shared connection
+            // handler reads this client exactly as it reads a WebSocket one.
+            //
+            // COUPLING: the request below is NOT a real upgrade request. It carries
+            // exactly what `wss.on('connection')` reads from its `request` argument
+            // today: `url` (for the query) and `headers.origin`. If that handler
+            // ever reads anything else from `request` (remoteAddress, other headers,
+            // `socket`), a long-poll client would silently get `undefined` there
+            // while WebSocket clients get the real value. Supply the new field here
+            // in the same change.
+            params.delete('sid');
+            const { sid, socket } = longPoll.open();
+            // The "Client connected" line that follows cannot say which transport the page
+            // ended up on; this one is how a log tells a long-poll panel from a WebSocket one.
+            console.error('[node-backend]', 'Long-poll session opened (the page could not use a WebSocket)');
+            wss.emit('connection', socket, {
+              url: `/ws?${params.toString()}`,
+              headers: { origin: req.headers.origin },
+            } as unknown as IncomingMessage);
+            res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+            res.end(JSON.stringify({ sid }));
+            return;
+          }
+
+          const session = longPoll.get(params.get('sid'));
+          if (!session) {
+            // Unknown or already closed: tell the client to open a new session.
+            res.writeHead(410, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Gone' }));
+            return;
+          }
+
+          if (req.method === 'GET' && urlPath === '/lp/poll') {
+            session.attachPoll(res);
+            return;
+          }
+          if (req.method === 'POST' && urlPath === '/lp/send') {
+            let frames: unknown;
+            try {
+              frames = JSON.parse(await readRequestBody(req, LONG_POLL_MAX_BODY_BYTES));
+            } catch {
+              frames = null;
+            }
+            if (!Array.isArray(frames) || !frames.every((f) => typeof f === 'string')) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Expected a JSON array of frames' }));
+              return;
+            }
+            session.receive(frames);
+            res.writeHead(204);
+            res.end();
+            return;
+          }
+          if (req.method === 'POST' && urlPath === '/lp/close') {
+            session.close();
+            res.writeHead(204);
+            res.end();
+            return;
+          }
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Not found' }));
           return;
         }
 
@@ -679,6 +795,7 @@ export function startWebSocketServer(
         heartbeat,
         close: () => {
           heartbeat.stop();
+          longPoll.closeAll();
           logWs?.close();
           rpcWss.close();
           wss.close();

@@ -12,6 +12,13 @@ vi.mock('../../claude-process', () => ({
   sendToolResultToProcess: (...args: unknown[]) => sendToolResultToProcess(...args),
 }));
 
+// Who else, if anyone, has a live CLI for the session. Never the real registry file.
+const findLiveCliForSession = vi.fn();
+vi.mock('../../cli-registry', () => ({
+  findLiveCliForSession: (...args: unknown[]) => findLiveCliForSession(...args),
+}));
+
+import { MessageType } from '../../../shared';
 import { toolResponseHandler } from '../toolResponse';
 import { rememberPreview, takePreview, clearPreviews } from '../../features/diffPreview';
 import { computeHunks } from '../../features/hunks';
@@ -33,6 +40,8 @@ const closeDiffTab = vi.fn().mockResolvedValue(undefined);
 const bridge = { closeDiff, closeDiffTab } as any;
 
 beforeEach(() => {
+  findLiveCliForSession.mockReset();
+  findLiveCliForSession.mockReturnValue(null);
   sendControlResponseToProcess.mockClear();
   sendToolResultToProcess.mockClear();
   closeDiff.mockClear();
@@ -305,5 +314,61 @@ describe('toolResponseHandler — session permission rules (#393)', () => {
     const [, , sent] = sendControlResponseToProcess.mock.calls[0];
     expect(sent.response.behavior).toBe('deny');
     expect(sent.response).not.toHaveProperty('updatedPermissions');
+  });
+});
+
+/**
+ * A card can be drawn by a screen whose backend does not own the session's CLI (the card is
+ * rebuilt from the transcript, which every backend reads). That backend has no stdin to write
+ * the answer to; the answer must not vanish silently, the screen has to be told.
+ */
+describe('toolResponseHandler: an answer no CLI here can take', () => {
+  const answer = (payload: Record<string, unknown>, connections = makeConnections()) => {
+    toolResponseHandler('conn-1', { requestId: 'r1', payload } as any, connections, bridge);
+    return connections;
+  };
+  const errorsSent = (connections: any) =>
+    connections.sendTo.mock.calls.filter((c: unknown[]) => c[1] === MessageType.SERVICE_ERROR);
+
+  it('says the session runs under another backend when one owns its CLI (restored card, legacy path)', () => {
+    sendToolResultToProcess.mockReturnValue(false);
+    findLiveCliForSession.mockReturnValue({ ownerAlive: true, entry: { pid: 111, owner: { pid: 222 } } });
+
+    const connections = answer({ toolUseId: 't1', approved: true });
+
+    const errors = errorsSent(connections);
+    expect(errors).toHaveLength(1);
+    expect(errors[0][0]).toBe('conn-1');
+    expect(errors[0][2].type).toBe(MessageType.ANSWER_NOT_DELIVERED);
+    expect(errors[0][2].cause).toBe('otherBackend');
+    expect(errors[0][2].reason).toContain('another window');
+    // Written for the user: no process ids in it.
+    expect(errors[0][2].reason).not.toMatch(/\d{3}/);
+  });
+
+  it('says the same on the control_response path', () => {
+    sendControlResponseToProcess.mockReturnValue(false);
+    findLiveCliForSession.mockReturnValue({ ownerAlive: true, entry: { pid: 111, owner: { pid: 222 } } });
+
+    const connections = answer({ toolUseId: 't1', approved: true, controlRequestId: 'ctrl-1' });
+
+    expect(errorsSent(connections)[0][2].reason).toContain('another window');
+  });
+
+  it('says Claude is not running when nobody owns a CLI for the session', () => {
+    sendToolResultToProcess.mockReturnValue(false);
+
+    const connections = answer({ toolUseId: 't1', approved: true });
+
+    expect(errorsSent(connections)[0][2].reason).toContain('not running');
+    expect(errorsSent(connections)[0][2].cause).toBe('notRunning');
+  });
+
+  it('stays quiet when the answer was delivered', () => {
+    sendToolResultToProcess.mockReturnValue(true);
+    sendControlResponseToProcess.mockReturnValue(true);
+
+    expect(errorsSent(answer({ toolUseId: 't1', approved: true }))).toHaveLength(0);
+    expect(errorsSent(answer({ toolUseId: 't1', approved: true, controlRequestId: 'c' }))).toHaveLength(0);
   });
 });

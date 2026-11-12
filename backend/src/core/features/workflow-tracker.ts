@@ -948,6 +948,14 @@ export class WorkflowProgressTracker {
     return this.entries.get(this.key(sessionId, toolUseId))?.task.status === 'running';
   }
 
+  /** Whether any workflow of the session is still running, i.e. the CLI has work going on its own. */
+  hasRunning(sessionId: string): boolean {
+    for (const entry of this.entries.values()) {
+      if (entry.sessionId === sessionId && entry.task.status === 'running') return true;
+    }
+    return false;
+  }
+
   /**
    * Settle every still-running workflow of a session as `stopped` (e.g. the user
    * interrupted generation). Entries are KEPT — the CLI process is still alive,

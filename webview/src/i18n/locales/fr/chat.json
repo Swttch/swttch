@@ -1218,5 +1218,9 @@
     "kitTooOld": "La lecture à voix haute nécessite une version plus récente du module complémentaire de Swttch (@swttch/extend-kit). Mettez-le à jour dans Paramètres → Général → Saisie vocale.",
     "notLoggedIn": "La lecture à voix haute nécessite une connexion à un compte Claude. Connectez-vous d’abord à Claude Code.",
     "codeBlock": "bloc de code"
+  },
+  "answerNotDelivered": {
+    "otherBackend": "Cette session s'exécute dans une autre fenêtre ; il faut donc répondre à la question là-bas. Votre réponse n'a pas été envoyée.",
+    "notRunning": "Claude n'est pas en cours d'exécution pour cette session ; votre réponse n'a donc pas été envoyée. Envoyez un message pour le relancer."
   }
 }

@@ -1191,5 +1191,9 @@
     "kitTooOld": "朗读需要更新版本的 Swttch 配套工具（@swttch/extend-kit）。请在 设置 → 通用 → 语音输入 中更新。",
     "notLoggedIn": "朗读需要登录 Claude 账号。请先登录 Claude Code。",
     "codeBlock": "代码块"
+  },
+  "answerNotDelivered": {
+    "otherBackend": "此会话正在另一个窗口中运行，因此需要在那里回答问题。你的回答未发送。",
+    "notRunning": "此会话中 Claude 未在运行，因此你的回答未发送。请发送一条消息以重新启动。"
   }
 }

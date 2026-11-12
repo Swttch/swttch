@@ -1218,5 +1218,9 @@
     "kitTooOld": "Leer en voz alta necesita un complemento de Swttch más reciente (@swttch/extend-kit). Actualízalo en Configuración → General → Entrada de voz.",
     "notLoggedIn": "Leer en voz alta necesita iniciar sesión con una cuenta de Claude. Inicia sesión primero en Claude Code.",
     "codeBlock": "bloque de código"
+  },
+  "answerNotDelivered": {
+    "otherBackend": "Esta sesión se está ejecutando en otra ventana, así que la pregunta debe responderse allí. Tu respuesta no se envió.",
+    "notRunning": "Claude no se está ejecutando en esta sesión, así que tu respuesta no se envió. Envía un mensaje para iniciarlo de nuevo."
   }
 }

@@ -54,6 +54,29 @@ export function markSessionReadHandler(
 }
 
 /**
+ * REPORT_PANEL_VISIBILITY — a chat screen saying whether it is showing.
+ *
+ * Held per connection; the idle rule (see `stopIdleSessions`) reads it to find sessions that
+ * nobody is looking at. A screen that never reports is never taken for a hidden one.
+ */
+export function reportPanelVisibilityHandler(
+  connectionId: string,
+  message: IPCMessage,
+  connections: ConnectionManager,
+  _bridge: Bridge,
+): void {
+  const visible = (message.payload as { visible?: unknown } | undefined)?.visible;
+  if (typeof visible === 'boolean') {
+    console.error('[node-backend]', `${connectionId} reported its screen ${visible ? 'showing' : 'hidden'}`);
+    connections.setPanelVisibility(connectionId, visible);
+  }
+  connections.sendTo(connectionId, MessageType.ACK, {
+    requestId: message.requestId,
+    status: 'ok',
+  });
+}
+
+/**
  * REPORT_SESSION_ACTIVITY — a chat screen saying what it is doing.
  *
  * This is the only thing that moves a session between idle, running and

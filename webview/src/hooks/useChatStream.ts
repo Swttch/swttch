@@ -7,6 +7,7 @@ import { parsePartialJson } from '../utils/parsePartialJson';
 import { mergeMessageUsage, totalMessageTokens } from '../utils/messageUsage';
 import type { MessageUsage } from '../utils/messageUsage';
 import { MessageType } from '@/shared';
+import { i18n } from '@/i18n';
 import { WorkingDirMissingError } from './WorkingDirMissingError';
 import { parseControlRequestResult } from './controlRequestResult';
 import { SIDE_QUESTION_SUBTYPE } from '../contexts/SideQuestionContext';
@@ -1442,7 +1443,16 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
       const err =
         errorType === MessageType.WORKING_DIR_MISSING
           ? new WorkingDirMissingError(String(payload?.workingDir ?? ''), errorMessage)
-          : new Error(
+          : errorType === MessageType.ANSWER_NOT_DELIVERED
+            // Written for the user, in the user's language: the backend names the cause
+            // and its own English sentence is only the fallback for a cause this build
+            // has no translation for. No "Service error: TYPE -" prefix in front of it.
+            ? new Error(
+                i18n.t(`chat:answerNotDelivered.${String(payload?.cause ?? '')}`, {
+                  defaultValue: errorMessage,
+                }),
+              )
+            : new Error(
               errorType
                 ? `Service error: ${errorType} - ${errorMessage}`
                 : `Service error: ${errorMessage}`

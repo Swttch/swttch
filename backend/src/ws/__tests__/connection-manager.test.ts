@@ -29,6 +29,60 @@ describe('ConnectionManager', () => {
     vi.useFakeTimers();
   });
 
+  describe('open CLI requests', () => {
+    const askEvent = {
+      type: 'control_request',
+      request_id: 'req-1',
+      request: { subtype: 'can_use_tool', tool_name: 'AskUserQuestion', tool_use_id: 'tu-1' },
+    };
+
+    function sentTypes(ws: import('ws').WebSocket): string[] {
+      return (ws.send as unknown as ReturnType<typeof vi.fn>).mock.calls.map(
+        (c) => (JSON.parse(c[0] as string) as { type: string }).type,
+      );
+    }
+
+    it('replays an unanswered request, unchanged, to a screen that attaches later', () => {
+      cm.getOrCreateSession('sess-1');
+      cm.rememberOpenRequest('sess-1', askEvent);
+
+      const ws = createMockWs();
+      const connId = cm.addConnection(ws);
+      cm.subscribe(connId, 'sess-1');
+
+      const sent = (ws.send as unknown as ReturnType<typeof vi.fn>).mock.calls
+        .map((c) => JSON.parse(c[0] as string) as { type: string; payload: unknown })
+        .filter((m) => m.type === MessageType.CLI_EVENT);
+      expect(sent).toHaveLength(1);
+      expect(sent[0].payload).toEqual(askEvent);
+    });
+
+    it('does not replay a request that was answered or cancelled', () => {
+      cm.rememberOpenRequest('sess-1', askEvent);
+      cm.rememberOpenRequest('sess-1', { ...askEvent, request_id: 'req-2' });
+      cm.forgetOpenRequest('sess-1', 'req-1');
+      cm.forgetOpenRequest('sess-1', 'req-2');
+      expect(cm.hasOpenRequests('sess-1')).toBe(false);
+
+      const ws = createMockWs();
+      cm.subscribe(cm.addConnection(ws), 'sess-1');
+      expect(sentTypes(ws)).not.toContain(MessageType.CLI_EVENT);
+    });
+
+    it('reports whether a person is being waited on, and forgets everything with the CLI', () => {
+      expect(cm.hasOpenRequests('sess-1')).toBe(false);
+      cm.rememberOpenRequest('sess-1', askEvent);
+      expect(cm.hasOpenRequests('sess-1')).toBe(true);
+      cm.clearOpenRequests('sess-1');
+      expect(cm.hasOpenRequests('sess-1')).toBe(false);
+    });
+
+    it('ignores an event with no request id', () => {
+      cm.rememberOpenRequest('sess-1', { type: 'control_request' });
+      expect(cm.hasOpenRequests('sess-1')).toBe(false);
+    });
+  });
+
   describe('subscribe / unsubscribe', () => {
     it('should subscribe connection to session', () => {
       const ws = createMockWs();

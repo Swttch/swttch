@@ -1213,5 +1213,9 @@
     "kitTooOld": "Reading aloud needs a newer Swttch companion (@swttch/extend-kit). Update it in Settings → General → Voice input.",
     "notLoggedIn": "Reading aloud needs a Claude account login. Sign in to Claude Code first.",
     "codeBlock": "code block"
+  },
+  "answerNotDelivered": {
+    "otherBackend": "This session is running in another window, so the question has to be answered there. Your answer was not sent.",
+    "notRunning": "Claude is not running for this session, so your answer was not sent. Send a message to start it again."
   }
 }
