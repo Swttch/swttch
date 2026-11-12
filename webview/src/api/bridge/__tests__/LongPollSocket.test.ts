@@ -120,6 +120,56 @@ describe('LongPollSocket', () => {
     expect(socket.readyState).toBe(3);
   });
 
+  it('tells the backend to close the session when a poll fails after open', async () => {
+    const socket = new LongPollSocket(BASE, 'env=jetbrains', TOKEN);
+    const onclose = vi.fn();
+    socket.onclose = onclose;
+
+    await vi.waitFor(() => expect(backend.pollsOutstanding()).toBe(1));
+    backend.answerPoll(500); // the session is still standing on the backend
+    await vi.waitFor(() => expect(onclose).toHaveBeenCalledWith(expect.objectContaining({ code: 1006 })));
+
+    const closeCall = backend.calls.find((c) => c.url === `${BASE}/lp/close?sid=sid-1`);
+    expect(closeCall).toBeDefined();
+    expect((closeCall!.init.headers as Record<string, string>)['x-ccg-token']).toBe(TOKEN);
+  });
+
+  it('tells the backend to close the session when a send fails after open', async () => {
+    const socket = new LongPollSocket(BASE, 'env=jetbrains', TOKEN);
+    const onclose = vi.fn();
+    socket.onclose = onclose;
+    await vi.waitFor(() => expect(socket.readyState).toBe(1));
+    backend.fetchMock.mockImplementationOnce(() => Promise.reject(new TypeError('Failed to fetch')));
+
+    socket.send('x');
+    await vi.waitFor(() => expect(onclose).toHaveBeenCalledWith(expect.objectContaining({ code: 1006 })));
+    expect(backend.calls.some((c) => c.url === `${BASE}/lp/close?sid=sid-1`)).toBe(true);
+  });
+
+  it('does not call /lp/close when the session was never opened', async () => {
+    backend.setOpen(() => json(500, { error: 'boom' }));
+    const socket = new LongPollSocket(BASE, 'env=jetbrains', TOKEN);
+    const onclose = vi.fn();
+    socket.onclose = onclose;
+
+    await vi.waitFor(() => expect(onclose).toHaveBeenCalled());
+    await settle();
+    expect(backend.calls.some((c) => c.url.includes('/lp/close'))).toBe(false);
+  });
+
+  it('survives a lost /lp/close without throwing', async () => {
+    const socket = new LongPollSocket(BASE, 'env=jetbrains', TOKEN);
+    const onclose = vi.fn();
+    socket.onclose = onclose;
+    await vi.waitFor(() => expect(backend.pollsOutstanding()).toBe(1));
+    backend.fetchMock.mockImplementationOnce(() => Promise.reject(new TypeError('Failed to fetch')));
+
+    backend.answerPoll(500);
+    await vi.waitFor(() => expect(onclose).toHaveBeenCalled());
+    await settle();
+    expect(socket.readyState).toBe(3);
+  });
+
   it('reports error then close, without ever opening, when open is refused', async () => {
     backend.setOpen(() => json(401, { error: 'Unauthorized' }));
     const socket = new LongPollSocket(BASE, 'env=jetbrains', TOKEN);

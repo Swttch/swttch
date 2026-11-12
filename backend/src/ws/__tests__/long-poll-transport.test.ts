@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { startWebSocketServer } from '../ws-server';
+import { LongPollSocket } from '../long-poll-transport';
 import { LogWebSocketServer } from '../../logging/log-ws';
 import { authToken } from '../../config/environment';
 import { ClientEnv, MessageType } from '../../shared';
@@ -144,6 +145,27 @@ describe('long-poll control channel', () => {
     expect(handleMessage.mock.calls.map((c) => c[1].type)).toEqual(['FIRST', 'SECOND']);
   });
 
+  it('delivers a large frame (several megabytes, sent in many pieces) to the handler byte for byte', async () => {
+    const sid = await open('env=jetbrains&panelId=panel-big');
+    handleMessage.mockClear();
+
+    // A pasted image is base64 inside one frame: tens of megabytes of ASCII is the realistic worst case.
+    const blob = 'AbCd0123+/'.repeat(600_000); // 6,000,000 characters
+    const frame = JSON.stringify({ type: 'BIG', payload: { blob } });
+    const res = await fetch(`${base}/lp/send?sid=${sid}`, {
+      method: 'POST',
+      headers: auth({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify([frame]),
+    });
+    expect(res.status).toBe(204);
+
+    await vi.waitFor(() => expect(handleMessage).toHaveBeenCalledTimes(1));
+    const delivered = handleMessage.mock.calls[0][1] as { type: string; payload: { blob: string } };
+    expect(delivered.type).toBe('BIG');
+    expect(delivered.payload.blob.length).toBe(blob.length);
+    expect(delivered.payload.blob === blob).toBe(true);
+  });
+
   it('requires the token on poll and send too', async () => {
     const sid = await open('env=jetbrains&panelId=panel-gate');
     const pollRes = await fetch(`${base}/lp/poll?sid=${sid}`, { headers: { Origin: ALLOWED_ORIGIN } });
@@ -169,5 +191,31 @@ describe('long-poll control channel', () => {
 
   it('answers 410 for a session id it never issued, so the client reconnects', async () => {
     expect((await poll('no-such-session')).status).toBe(410);
+  });
+});
+
+describe('LongPollSocket inbound frames', () => {
+  it('hands each frame to its listeners as the very string it received, in order', () => {
+    const socket = new LongPollSocket(25_000);
+    const seen: unknown[] = [];
+    socket.on('message', (data) => seen.push(data));
+
+    const frames = ['{"n":1}', '{"n":2}'];
+    socket.receive(frames);
+
+    // No Buffer wrapper: wrapping copies the frame, and the only consumer calls toString() on it.
+    expect(seen).toEqual(frames);
+    expect(seen.every((item) => typeof item === 'string')).toBe(true);
+    expect(seen.map((item) => String(item))).toEqual(frames);
+  });
+
+  it('ignores frames once closed', () => {
+    const socket = new LongPollSocket(25_000);
+    const listener = vi.fn();
+    socket.on('message', listener);
+    socket.close();
+
+    socket.receive(['{"n":1}']);
+    expect(listener).not.toHaveBeenCalled();
   });
 });

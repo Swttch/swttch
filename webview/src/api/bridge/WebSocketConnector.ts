@@ -35,6 +35,27 @@ const HEARTBEAT_MISSES_BEFORE_STALE = 3;
  */
 const FAILED_ATTEMPTS_BEFORE_REPORT = 5;
 
+/**
+ * How long a WebSocket may stay in CONNECTING before this page counts the attempt as failed.
+ *
+ * Some browsers fail a blocked WebSocket at once; others leave it hanging with neither an `open`
+ * nor a `close` (observed in IntelliJ 2026.3 Remote Development, #582). Without a limit the
+ * second kind never reaches the fallback below, because nothing ever tells the page it failed.
+ */
+const WEBSOCKET_OPEN_TIMEOUT_MS = 6_000;
+
+/**
+ * WebSocket attempts in a row that must never open before the page moves to long-polling.
+ *
+ * One is not enough: a backend that is still booting, or one slow handshake, would move the page
+ * to the slower transport for no reason. Being slow to switch costs a few seconds of "connecting";
+ * switching without cause costs the page its WebSocket.
+ */
+const WEBSOCKET_FAILURES_BEFORE_FALLBACK = 2;
+
+/** How long the HTTP probe that precedes the switch waits for the backend to answer. */
+const HTTP_PROBE_TIMEOUT_MS = 5_000;
+
 export class WebSocketConnector implements Connector {
   private ws: WebSocket | null = null;
   private connected = false;
@@ -60,11 +81,27 @@ export class WebSocketConnector implements Connector {
   /** Connection attempts in a row that ended without the socket ever opening. */
   private failedAttempts = 0;
   /**
-   * How the control channel travels. Starts as a WebSocket and moves to
-   * long-polling, for the rest of this page's life, only when
-   * [detectBlockedWebSocket] proves WebSockets cannot open here.
+   * How the control channel travels. Starts as a WebSocket and moves to long-polling only when
+   * [handleSocketNeverOpened] sees WebSockets fail to open here, and goes back to a WebSocket
+   * as soon as the long-poll connection that was working ends (see [leaveLongPoll]).
    */
   private transport: 'websocket' | 'long-poll' = 'websocket';
+  /**
+   * A real WebSocket has opened on this page. From then on a WebSocket is known to work here, so
+   * a later failure to open is an ordinary outage (backend restarting, network gone) and never a
+   * reason to move to long-polling.
+   */
+  private everOpened = false;
+  /** WebSocket attempts in a row that never opened. Reset whenever one opens. */
+  private webSocketFailuresInARow = 0;
+  /**
+   * The long-poll connection that was working just ended, so the next attempt is a WebSocket
+   * again: the cause that forced long-polling may be gone. If that attempt does not open, the page
+   * goes straight back to long-polling instead of counting failures from scratch.
+   */
+  private returningFromLongPoll = false;
+  /** Gives up on a WebSocket that stays in CONNECTING (see [WEBSOCKET_OPEN_TIMEOUT_MS]). */
+  private openTimer: ReturnType<typeof setTimeout> | null = null;
 
   get isConnected(): boolean {
     return this.connected;
@@ -161,9 +198,28 @@ export class WebSocketConnector implements Connector {
     this.ws = ws;
     let opened = false;
 
+    // A WebSocket that neither opens nor closes would otherwise leave the page "connecting"
+    // for good. Only a real WebSocket can hang like that; the long-poll transport reports its
+    // own failures.
+    if (this.transport === 'websocket') {
+      this.armOpenTimer(ws, () => {
+        // What `onerror` does for a socket that fails loudly: the first `connect()` call hears
+        // about it, later attempts have nobody waiting.
+        onFirstError?.(new Error('WebSocket connection timed out'));
+        onFirstError = undefined;
+        onFirstConnect = undefined;
+      });
+    }
+
     ws.onopen = () => {
       console.log('[WebSocketConnector] Connected');
       opened = true;
+      this.clearOpenTimer();
+      if (this.transport === 'websocket') {
+        this.everOpened = true;
+        this.webSocketFailuresInARow = 0;
+        this.returningFromLongPoll = false;
+      }
       this.failedAttempts = 0;
       this.isConnecting = false;
       this.connected = true;
@@ -228,14 +284,16 @@ export class WebSocketConnector implements Connector {
 
     ws.onclose = () => {
       console.log('[WebSocketConnector] Disconnected');
+      this.clearOpenTimer();
       this.stopLivenessWatch();
       this.isConnecting = false;
       this.ws = null;
       this.connected = false;
       this.notifyConnectionChange(false);
       if (!opened) {
-        this.noteFailedAttempt();
-        this.detectBlockedWebSocket();
+        this.handleSocketNeverOpened();
+      } else {
+        this.leaveLongPoll();
       }
 
       // 자동 재연결 (disposed 되지 않은 경우만)
@@ -253,19 +311,77 @@ export class WebSocketConnector implements Connector {
     };
   }
 
+  private armOpenTimer(ws: WebSocket, onGiveUp: () => void): void {
+    this.clearOpenTimer();
+    this.openTimer = setTimeout(() => {
+      this.openTimer = null;
+      // The socket opened, closed or was replaced in the meantime: nothing to give up on.
+      if (this.ws !== ws || ws.readyState === WebSocket.OPEN) return;
+      console.warn(
+        `[WebSocketConnector] WebSocket still not open after ${WEBSOCKET_OPEN_TIMEOUT_MS / 1000}s — ` +
+          'counting the attempt as failed.'
+      );
+      onGiveUp();
+      // Same detaching as [abandonSocket]: the late `close` of a socket we gave up on must not
+      // land after the next attempt is already up and schedule a second reconnect.
+      ws.onopen = null;
+      ws.onclose = null;
+      ws.onmessage = null;
+      ws.onerror = null;
+      try {
+        ws.close();
+      } catch {
+        // Already unusable; the point was to stop listening to it.
+      }
+      this.ws = null;
+      this.isConnecting = false;
+      this.handleSocketNeverOpened();
+      this.scheduleReconnect();
+    }, WEBSOCKET_OPEN_TIMEOUT_MS);
+  }
+
+  private clearOpenTimer(): void {
+    if (this.openTimer === null) return;
+    clearTimeout(this.openTimer);
+    this.openTimer = null;
+  }
+
   /**
-   * After a WebSocket that never opened, ask the backend over plain HTTP whether
-   * it is there. If it answers, WebSockets are what is broken, not the backend —
-   * IntelliJ 2026.3 Remote Development fails every WebSocket inside the panel's
-   * browser while proxying its HTTP (#582) — so this page switches to
-   * long-polling for good. If it does not answer, the backend is down and the
-   * ordinary WebSocket retry stays in charge.
+   * A connection attempt ended without the socket ever opening (it closed first, or it sat in
+   * CONNECTING until [armOpenTimer] gave up). Count it, and decide whether WebSockets are what
+   * is broken here.
+   *
+   * The page moves to long-polling only when ALL of these hold, because the cost of moving
+   * without cause is the page's WebSocket, and the cost of waiting is a few seconds:
+   *  - no WebSocket has ever opened on this page ([everOpened]): a page that had one is looking
+   *    at an outage, not at a browser that cannot open WebSockets;
+   *  - [WEBSOCKET_FAILURES_BEFORE_FALLBACK] attempts in a row never opened;
+   *  - the backend answers plain HTTP, so the backend is up and WebSockets are what fail
+   *    (IntelliJ 2026.3 Remote Development proxies the panel's HTTP and fails its WebSockets, #582).
+   * A page coming back from a long-poll connection that was working ([returningFromLongPoll])
+   * already knows the answer from last time and goes straight back.
    */
-  private detectBlockedWebSocket(): void {
-    if (this.transport !== 'websocket') return;
-    fetch('/version', { cache: 'no-store' }).then(
+  private handleSocketNeverOpened(): void {
+    this.noteFailedAttempt();
+    if (this.transport !== 'websocket' || this.everOpened) return;
+
+    if (this.returningFromLongPoll) {
+      this.returningFromLongPoll = false;
+      console.warn('[WebSocketConnector] WebSocket still does not open — staying on long-polling.');
+      this.transport = 'long-poll';
+      return;
+    }
+
+    this.webSocketFailuresInARow += 1;
+    if (this.webSocketFailuresInARow < WEBSOCKET_FAILURES_BEFORE_FALLBACK) return;
+
+    const probe = new AbortController();
+    const probeTimer = setTimeout(() => probe.abort(), HTTP_PROBE_TIMEOUT_MS);
+    fetch('/version', { cache: 'no-store', signal: probe.signal }).then(
       (res) => {
-        if (!res.ok || this.transport !== 'websocket') return;
+        clearTimeout(probeTimer);
+        // A WebSocket may have opened while the probe was in flight; then there is nothing to fix.
+        if (!res.ok || this.transport !== 'websocket' || this.everOpened) return;
         console.warn(
           '[WebSocketConnector] WebSocket could not open but the backend answers HTTP — ' +
             'switching this page to long-polling.'
@@ -274,8 +390,24 @@ export class WebSocketConnector implements Connector {
       },
       () => {
         // Backend unreachable: nothing to learn about WebSockets.
+        clearTimeout(probeTimer);
       }
     );
+  }
+
+  /**
+   * The connection that was working has ended. If it was a long-poll one, the next attempt is a
+   * WebSocket again: whatever forced long-polling (a proxy, an IDE version) may have changed, and
+   * a WebSocket is the better transport when it works. If that attempt does not open, see
+   * [handleSocketNeverOpened].
+   *
+   * A long-poll connection that never opened is not a reason to try again with a WebSocket: that
+   * is the backend being down, which the ordinary retry already handles.
+   */
+  private leaveLongPoll(): void {
+    if (this.transport !== 'long-poll') return;
+    this.transport = 'websocket';
+    this.returningFromLongPoll = true;
   }
 
   /**
@@ -321,6 +453,7 @@ export class WebSocketConnector implements Connector {
     const stale = this.ws;
     if (!stale) return;
     this.stopLivenessWatch();
+    this.clearOpenTimer();
     stale.onclose = null;
     stale.onmessage = null;
     stale.onerror = null;
@@ -333,6 +466,9 @@ export class WebSocketConnector implements Connector {
     this.connected = false;
     this.isConnecting = false;
     this.notifyConnectionChange(false);
+    // Detaching `onclose` above also detached the place that would have ended a long-poll
+    // connection, so it is ended here.
+    this.leaveLongPoll();
     this.scheduleReconnect();
   }
 
@@ -396,6 +532,7 @@ export class WebSocketConnector implements Connector {
   disconnect(): void {
     this.disposed = true;
     this.stopLivenessWatch();
+    this.clearOpenTimer();
 
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);

@@ -89,10 +89,18 @@ export class LongPollSocket extends EventEmitter {
     });
   }
 
-  /** Deliver inbound frames exactly as a WebSocket would: one `message` each, in order. */
+  /**
+   * Deliver inbound frames the way a WebSocket would: one `message` each, in order.
+   *
+   * Each frame is handed over as the string it already is. A WebSocket delivers a Buffer, but
+   * the only thing the /ws handler does with it is `data.toString()`, which returns a string
+   * unchanged. Wrapping the frame in a Buffer here would copy it (a frame can be tens of
+   * megabytes: a pasted image) only for the handler to copy it back. The handler's parameter is
+   * typed `Buffer | string` for this reason.
+   */
   receive(frames: string[]): void {
     if (this.readyState !== OPEN) return;
-    for (const frame of frames) this.emit('message', Buffer.from(frame));
+    for (const frame of frames) this.emit('message', frame);
   }
 
   private answerParked(): void {

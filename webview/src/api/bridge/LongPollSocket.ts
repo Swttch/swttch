@@ -63,15 +63,24 @@ export class LongPollSocket {
     if (this.readyState === CLOSED) return;
     const sid = this.sid;
     this.finish(1000);
-    if (sid) {
-      fetch(`${this.base}/lp/close?sid=${encodeURIComponent(sid)}`, {
-        method: 'POST',
-        headers: this.headers(),
-        keepalive: true,
-      }).catch(() => {
-        // The backend's heartbeat reaps a session nobody polls, so a lost close is harmless.
-      });
-    }
+    this.tellBackendClosed(sid);
+  }
+
+  /**
+   * Best-effort `POST /lp/close`: it frees the backend's session (and the session's teardown
+   * chain) at once instead of after the heartbeat's silence window. It is only an optimization:
+   * when it is lost, as it often is when the reason for closing is that the network is gone,
+   * the backend's heartbeat reaps a session nobody polls anyway.
+   */
+  private tellBackendClosed(sid: string | null): void {
+    if (!sid) return;
+    fetch(`${this.base}/lp/close?sid=${encodeURIComponent(sid)}`, {
+      method: 'POST',
+      headers: this.headers(),
+      keepalive: true,
+    }).catch(() => {
+      // See above: a lost close is harmless.
+    });
   }
 
   private async open(query: string): Promise<void> {
@@ -139,11 +148,17 @@ export class LongPollSocket {
     void this.flush();
   }
 
-  /** The channel broke after it opened: report it as a dropped WebSocket would. */
+  /**
+   * The channel broke after it opened: report it as a dropped WebSocket would, and tell the
+   * backend, because a broken poll or send does not mean the backend's session is gone — a
+   * request that failed on the way back, or one answered with an error, leaves it standing.
+   */
   private fail(): void {
     if (this.readyState === CLOSED) return;
+    const sid = this.sid;
     this.onerror?.(new Event('error'));
     this.finish(1006);
+    this.tellBackendClosed(sid);
   }
 
   private finish(code: number): void {
