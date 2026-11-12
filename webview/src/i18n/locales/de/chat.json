@@ -836,6 +836,7 @@
     "copyName": "Dateinamen kopieren",
     "nameCopied": "Dateiname kopiert",
     "copyNameFailed": "Dateiname konnte nicht kopiert werden",
+    "attach": "An Chat-Eingabe anhängen",
     "opened": "{{name}} geöffnet"
   },
   "linkCard": {

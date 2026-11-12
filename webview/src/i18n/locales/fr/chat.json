@@ -836,6 +836,7 @@
     "copyName": "Copier le nom du fichier",
     "nameCopied": "Nom du fichier copié",
     "copyNameFailed": "Impossible de copier le nom du fichier",
+    "attach": "Joindre à la saisie du chat",
     "opened": "{{name}} ouvert"
   },
   "linkCard": {

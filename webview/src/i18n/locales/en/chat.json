@@ -840,6 +840,7 @@
     "copyName": "Copy file name",
     "nameCopied": "File name copied",
     "copyNameFailed": "Could not copy the file name",
+    "attach": "Attach to chat input",
     "opened": "Opened {{name}}"
   },
   "linkCard": {

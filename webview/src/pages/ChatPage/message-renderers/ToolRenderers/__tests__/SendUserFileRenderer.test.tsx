@@ -1,5 +1,6 @@
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
+import {subscribeComposerFiles} from '@/utils/composerElements';
 import {SendUserFileRenderer} from '../SendUserFileRenderer';
 import {_resetSentMediaCache, formatSentSize, sentFilesOf} from '../sendUserFile';
 import {ToolUseBlockDto, ContentBlockType} from '@/dto';
@@ -289,9 +290,18 @@ describe('the more button', () => {
         draw([{path: '/a/page.html', size: 3}, {path: '/a/t.csv', size: 3}]);
         const menu = await open(1);
         expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
-            'Download', 'Show in file manager', 'Copy file name', 'Copy path',
+            'Download', 'Show in file manager', 'Attach to chat input', 'Copy file name', 'Copy path',
         ]);
         expect(openChatFile).not.toHaveBeenCalled();
+    });
+
+    it('attaches the file to the message box by its path', async () => {
+        const attached: unknown[][] = [];
+        const unsubscribe = subscribeComposerFiles((...args) => attached.push(args));
+        draw([{path: '/a/b/t.csv', size: 3}]);
+        fireEvent.click(within(await open()).getByRole('menuitem', {name: 'Attach to chat input'}));
+        expect(attached).toEqual([['/a/b/t.csv', 't.csv', 3]]);
+        unsubscribe();
     });
 
     it('copies the path and says so', async () => {

@@ -2,9 +2,10 @@ import {useRef, useState, type ComponentType, type ReactNode, type SVGProps} fro
 import Tippy from "@tippyjs/react/headless";
 import type {Instance} from "tippy.js";
 import toast from "react-hot-toast";
-import {ArrowDownTrayIcon, DocumentDuplicateIcon, EllipsisHorizontalIcon, FolderOpenIcon, LinkIcon} from "@heroicons/react/24/outline";
+import {ArrowDownTrayIcon, DocumentDuplicateIcon, EllipsisHorizontalIcon, FolderOpenIcon, LinkIcon, PaperClipIcon} from "@heroicons/react/24/outline";
 import {getAdapter} from "@/adapters";
 import {i18n, useTranslation} from "@/i18n";
+import {addFileToComposer} from "@/utils/composerElements";
 import {cn} from "@/utils/cn";
 import {downloadSentFile} from "./sendUserFile";
 
@@ -12,6 +13,7 @@ import {downloadSentFile} from "./sendUserFile";
 export interface SentFileTarget {
     path: string;
     name: string;
+    size?: number;
 }
 
 type Icon = ComponentType<SVGProps<SVGSVGElement>>;
@@ -59,8 +61,11 @@ export function SentFileMenuItems({file, onDone}: {file: SentFileTarget; onDone:
             <Row icon={FolderOpenIcon} onSelect={run(() =>
                 getAdapter().revealFile(file.path).catch(() => toast.error(t('fileOpenFailed', {path: file.path}))),
             )}>{t('fileLink.showInFileManager')}</Row>
+            <Row icon={PaperClipIcon} onSelect={run(() => addFileToComposer(file.path, file.name, file.size))}>
+                {t('sentFiles.attach')}
+            </Row>
             <Row icon={DocumentDuplicateIcon} onSelect={run(() =>
-                copy(file.name, t('sentFiles.nameCopied'), t('sentFiles.copyNameFailed')),
+                copy(file.name,t('sentFiles.nameCopied'), t('sentFiles.copyNameFailed')),
             )}>{t('sentFiles.copyName')}</Row>
             <Row icon={LinkIcon} onSelect={run(() =>
                 copy(file.path, t('fileLink.copyDone'), t('fileLink.copyFailed')),

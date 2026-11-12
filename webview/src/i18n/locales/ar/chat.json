@@ -852,6 +852,7 @@
     "copyName": "نسخ اسم الملف",
     "nameCopied": "تم نسخ اسم الملف",
     "copyNameFailed": "تعذّر نسخ اسم الملف",
+    "attach": "إرفاق بمربع إدخال الدردشة",
     "opened": "تم فتح {{name}}"
   },
   "linkCard": {

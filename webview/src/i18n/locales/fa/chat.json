@@ -836,6 +836,7 @@
     "copyName": "کپی نام فایل",
     "nameCopied": "نام فایل کپی شد",
     "copyNameFailed": "کپی نام فایل ممکن نشد",
+    "attach": "پیوست به ورودی گفتگو",
     "opened": "{{name}} باز شد"
   },
   "linkCard": {

@@ -836,6 +836,7 @@
     "copyName": "ファイル名をコピー",
     "nameCopied": "ファイル名をコピーしました",
     "copyNameFailed": "ファイル名をコピーできませんでした",
+    "attach": "チャット入力に添付",
     "opened": "{{name}}を開きました"
   },
   "linkCard": {

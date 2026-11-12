@@ -836,6 +836,7 @@
     "copyName": "复制文件名",
     "nameCopied": "已复制文件名",
     "copyNameFailed": "无法复制文件名",
+    "attach": "附加到聊天输入",
     "opened": "已打开 {{name}}"
   },
   "linkCard": {

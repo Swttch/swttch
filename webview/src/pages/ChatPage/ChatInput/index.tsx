@@ -1,5 +1,5 @@
 import { getPendingReplies, removePendingReply, subscribePendingReplies, takeSendRequest, updatePendingReply } from '@/utils/composerReplies';
-import { getPendingElements, pngFromBase64, removePendingElement, subscribeComposerElements, subscribeComposerImages, subscribePendingElements } from '@/utils/composerElements';
+import { getPendingElements, pngFromBase64, removePendingElement, subscribeComposerElements, subscribeComposerFiles, subscribeComposerImages, subscribePendingElements } from '@/utils/composerElements';
 import toast from 'react-hot-toast';
 import { useCallback, useEffect, useRef, KeyboardEvent, useState, useSyncExternalStore, type ClipboardEvent as ReactClipboardEvent, type DragEvent as ReactDragEvent } from 'react';
 import { CommandPalettePanel } from '@/commandPalette/ui/CommandPalettePanel';
@@ -814,6 +814,8 @@ export function ChatInput() {
   useEffect(() => subscribeComposerImages((png, name) => {
     void addImageAttachment(new File([png], name, { type: 'image/png' }), ImageAttachSource.Button);
   }), [addImageAttachment]);
+  // A file card's "attach" entry: the file becomes a chip by its path, as if it had been picked.
+  useEffect(() => subscribeComposerFiles((path, name, size) => addFileAttachment(path, name, size)), [addFileAttachment]);
 
   const handleCompact = useCallback(() => {
     const slashSection = palette.sections.find(s => s.id === PanelSectionId.SlashCommands);
