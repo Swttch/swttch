@@ -477,6 +477,25 @@ export enum MessageType {
    */
   SAVE_IMAGE = 'SAVE_IMAGE',
   /**
+   * Save a file Claude sent where the person chooses (the host's own save dialog), `{ path, suggestedName }`. The backend
+   * copies the file itself, so no bytes travel through the webview.
+   * Inbound webview→backend; ACKed with `{ path }` (null when cancelled) or `{ error }`.
+   */
+  SAVE_SENT_FILE = 'SAVE_SENT_FILE',
+  /**
+   * How much of a file being saved by SAVE_SENT_FILE is written, `{ path, loaded, size }`, sent now and then while the copy
+   * runs, so the file card can fill its background as the save goes. `path` is the file's own path, as the request named it.
+   * Outbound backend→webview.
+   */
+  SAVE_SENT_FILE_PROGRESS = 'SAVE_SENT_FILE_PROGRESS',
+  /**
+   * Save several files Claude sent into one folder the person already chose, `{ files: [{ path, name }], folder }`. A name
+   * already taken in the folder gets a number after it; nothing is written over. Progress goes out per file as
+   * SAVE_SENT_FILE_PROGRESS.
+   * Inbound webview→backend; ACKed with `{ saved: [{ path, savedPath }], failed: [path] }` or `{ error }`.
+   */
+  SAVE_SENT_FILES = 'SAVE_SENT_FILES',
+  /**
    * Show a file in the system's file manager with the file selected. Inbound
    * webview→backend, then sent on to the IDE (Node→Kotlin) in JetBrains mode, or
    * done by the backend itself in a browser.
