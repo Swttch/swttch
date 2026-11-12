@@ -836,6 +836,7 @@
     "downloadFailed": "Could not save the file",
     "saved": "Saved: {{path}}",
     "downloaded": "Downloaded {{name}}",
+    "dismiss": "Dismiss",
     "more": "More options",
     "copyName": "Copy file name",
     "nameCopied": "File name copied",

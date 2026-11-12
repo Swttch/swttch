@@ -832,6 +832,7 @@
     "downloadFailed": "No se pudo guardar el archivo",
     "saved": "Guardado: {{path}}",
     "downloaded": "{{name}} descargado",
+    "dismiss": "Cerrar",
     "more": "Más opciones",
     "copyName": "Copiar nombre de archivo",
     "nameCopied": "Nombre de archivo copiado",

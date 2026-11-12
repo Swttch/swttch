@@ -832,6 +832,7 @@
     "downloadFailed": "Impossible d'enregistrer le fichier",
     "saved": "Enregistré : {{path}}",
     "downloaded": "{{name}} téléchargé",
+    "dismiss": "Fermer",
     "more": "Plus d’options",
     "copyName": "Copier le nom du fichier",
     "nameCopied": "Nom du fichier copié",

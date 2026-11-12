@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import {getBridge} from "@/api/bridge/Bridge";
 import {i18n} from "@/i18n";
 import {FINISHED_BAR_MS, setSentFileProgress} from "./sentFileProgress";
+import {showSavedToast} from "./sentFileToast";
 import {MessageType, sentFileExtension, sentFileKind, type SentFileKind} from "@/shared";
 import {loadFileContent} from "@/components/FilePreviewPane/loadFileContent";
 
@@ -150,7 +151,7 @@ export async function downloadSentFile(path: string, name: string): Promise<bool
         try {
             const answer = (await getBridge().request(MessageType.SAVE_SENT_FILE, {path, suggestedName: name}, {timeout: null})) as {path?: string | null; error?: string} | null;
             if (answer?.path) {
-                toast.success(i18n.t('chat:sentFiles.saved', {path: answer.path}));
+                showSavedToast(i18n.t('chat:sentFiles.saved', {path: answer.path}));
                 return true;
             }
             if (answer && answer.path === null && !answer.error) return true; // They closed the dialog.
@@ -159,7 +160,7 @@ export async function downloadSentFile(path: string, name: string): Promise<bool
             // The host could not ask; the browser's own download is next.
         }
         const downloaded = await downloadThroughBrowser(path, name, report);
-        if (downloaded) toast.success(i18n.t('chat:sentFiles.downloaded', {name}));
+        if (downloaded) showSavedToast(i18n.t('chat:sentFiles.downloaded', {name}));
         return downloaded;
     } finally {
         progress.finish();
@@ -224,7 +225,7 @@ export async function downloadSentFiles(files: SentFileToSave[]): Promise<void> 
         }
         const saved = answer.saved?.length ?? 0;
         const failed = answer.failed?.length ?? 0;
-        if (saved > 0) toast.success(i18n.t('chat:sentFiles.savedMany', {count: saved, folder}));
+        if (saved > 0) showSavedToast(i18n.t('chat:sentFiles.savedMany', {count: saved, folder}));
         if (failed > 0) toast.error(i18n.t('chat:sentFiles.saveFailedMany', {count: failed}));
     } finally {
         progress.finish();

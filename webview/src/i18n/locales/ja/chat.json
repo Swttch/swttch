@@ -832,6 +832,7 @@
     "downloadFailed": "ファイルを保存できませんでした",
     "saved": "保存しました: {{path}}",
     "downloaded": "{{name}} をダウンロードしました",
+    "dismiss": "閉じる",
     "more": "その他のオプション",
     "copyName": "ファイル名をコピー",
     "nameCopied": "ファイル名をコピーしました",

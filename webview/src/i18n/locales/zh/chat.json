@@ -832,6 +832,7 @@
     "downloadFailed": "无法保存文件",
     "saved": "已保存：{{path}}",
     "downloaded": "已下载 {{name}}",
+    "dismiss": "关闭",
     "more": "更多选项",
     "copyName": "复制文件名",
     "nameCopied": "已复制文件名",

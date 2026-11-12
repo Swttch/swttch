@@ -848,6 +848,7 @@
     "downloadFailed": "تعذّر حفظ الملف",
     "saved": "تم الحفظ: {{path}}",
     "downloaded": "تم تنزيل {{name}}",
+    "dismiss": "إغلاق",
     "more": "المزيد من الخيارات",
     "copyName": "نسخ اسم الملف",
     "nameCopied": "تم نسخ اسم الملف",

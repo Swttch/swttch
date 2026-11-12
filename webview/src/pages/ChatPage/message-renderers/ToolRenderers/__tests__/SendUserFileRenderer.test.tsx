@@ -7,11 +7,11 @@ import {_resetSentFileProgress} from '../sentFileProgress';
 import {ToolUseBlockDto, ContentBlockType} from '@/dto';
 import type {LoadedMessageDto} from '@/types';
 
-const {request, openChatFile, toastError, toastSuccess, revealFile, handlers, subscribe} = vi.hoisted(() => {
+const {request, openChatFile, toastError, toastSuccess, showSaved, revealFile, handlers, subscribe} = vi.hoisted(() => {
     // What the backend sends without being asked, by message type: the test calls these to play the backend.
     const handlers = new Map<string, (message: {payload: unknown}) => void>();
     return {
-        request: vi.fn(), openChatFile: vi.fn(), toastError: vi.fn(), toastSuccess: vi.fn(), revealFile: vi.fn(() => Promise.resolve()),
+        request: vi.fn(), openChatFile: vi.fn(), toastError: vi.fn(), toastSuccess: vi.fn(), showSaved: vi.fn(), revealFile: vi.fn(() => Promise.resolve()),
         handlers,
         subscribe: vi.fn((type: string, handler: (message: {payload: unknown}) => void) => {
             handlers.set(type, handler);
@@ -27,6 +27,8 @@ vi.mock('@/api/bridge/Bridge', async (importOriginal) => ({
     getBridge: () => ({request, subscribe}),
 }));
 vi.mock('react-hot-toast', () => ({default: {error: toastError, success: toastSuccess}}));
+// The toast that says a file was saved is tested on its own; here only what it is told to say.
+vi.mock('../sentFileToast', () => ({showSavedToast: showSaved}));
 vi.mock('@/utils/openChatFile', () => ({openSentFile: (p: string) => openChatFile(p)}));
 // The tooltip's content is what is under test, not Tippy's popper: expose it.
 vi.mock('@/components/Tooltip', () => ({
@@ -64,6 +66,7 @@ beforeEach(() => {
     openChatFile.mockReset();
     toastError.mockReset();
     toastSuccess.mockReset();
+    showSaved.mockReset();
     _resetSentMediaCache();
     _resetSentFileProgress();
     handlers.clear();
@@ -263,7 +266,7 @@ describe('the download button', () => {
         request.mockResolvedValue({path: '/Users/me/Documents/t.csv'});
         draw([{path: '/a/page.html', size: 3}, {path: '/a/t.csv', size: 3}]);
         fireEvent.click(screen.getAllByRole('button', {name: 'Download'})[1]);
-        await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('Saved: /Users/me/Documents/t.csv'));
+        await waitFor(() => expect(showSaved).toHaveBeenCalledWith('Saved: /Users/me/Documents/t.csv'));
         expect(request).toHaveBeenCalledWith('SAVE_SENT_FILE', {path: '/a/t.csv', suggestedName: 't.csv'}, {timeout: null});
         expect(openChatFile).not.toHaveBeenCalled();
         expect(toastError).not.toHaveBeenCalled();
@@ -275,7 +278,7 @@ describe('the download button', () => {
         fireEvent.click(screen.getByRole('button', {name: 'Download'}));
         await waitFor(() => expect(request).toHaveBeenCalled());
         await new Promise((resolve) => setTimeout(resolve, 20));
-        expect(toastSuccess).not.toHaveBeenCalled();
+        expect(showSaved).not.toHaveBeenCalled();
         expect(toastError).not.toHaveBeenCalled();
     });
 
@@ -284,7 +287,7 @@ describe('the download button', () => {
         draw([{path: '/a/x.zip', size: 6}]);
         fireEvent.click(screen.getByRole('button', {name: 'Download'}));
         await waitFor(() => expect(toastError).toHaveBeenCalled());
-        expect(toastSuccess).not.toHaveBeenCalled();
+        expect(showSaved).not.toHaveBeenCalled();
     });
 
     it('hands the file to the browser when the host cannot ask, and says it was downloaded', async () => {
@@ -294,7 +297,7 @@ describe('the download button', () => {
         fireEvent.click(screen.getAllByRole('button', {name: 'Download'})[1]);
         await waitFor(() => expect(anchors).toHaveLength(1));
         expect(anchors[0].download).toBe('t.csv');
-        await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('Downloaded t.csv'));
+        await waitFor(() => expect(showSaved).toHaveBeenCalledWith('Downloaded t.csv'));
         restore();
     });
 
@@ -452,7 +455,7 @@ describe('picking several files', () => {
         fireEvent.click(card('three.csv'), {shiftKey: true});
         fireEvent.contextMenu(card('two.csv'), {clientX: 5, clientY: 5});
         fireEvent.click(within(await screen.findByRole('menu')).getByRole('menuitem', {name: 'Download 3 files'}));
-        await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('Saved 3 files in /dest'));
+        await waitFor(() => expect(showSaved).toHaveBeenCalledWith('Saved 3 files in /dest'));
         expect(request).toHaveBeenCalledWith('PICK_FILES', {mode: 'folders', multiple: false}, {timeout: null});
         expect(request).toHaveBeenCalledWith('SAVE_SENT_FILES', {
             files: [{path: '/a/one.csv', name: 'one.csv'}, {path: '/a/two.csv', name: 'two.csv'}, {path: '/a/three.csv', name: 'three.csv'}],
@@ -470,7 +473,7 @@ describe('picking several files', () => {
         await waitFor(() => expect(request).toHaveBeenCalled());
         await new Promise((resolve) => setTimeout(resolve, 20));
         expect(request).toHaveBeenCalledTimes(1);
-        expect(toastSuccess).not.toHaveBeenCalled();
+        expect(showSaved).not.toHaveBeenCalled();
         expect(toastError).not.toHaveBeenCalled();
     });
 });
@@ -551,6 +554,6 @@ describe('the more button', () => {
         request.mockResolvedValue({path: '/Users/me/t.csv'});
         draw([{path: '/a/t.csv', size: 3}]);
         fireEvent.click(within(await open()).getByRole('menuitem', {name: 'Download'}));
-        await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('Saved: /Users/me/t.csv'));
+        await waitFor(() => expect(showSaved).toHaveBeenCalledWith('Saved: /Users/me/t.csv'));
     });
 });
