@@ -49,7 +49,7 @@ describe('showSavedToast', () => {
         render(<>{drawn()}</>);
         expect(screen.getByText('Saved: t.csv')).toBeInTheDocument();
         expect(screen.queryByText(/Documents/)).toBeNull();
-        fireEvent.click(screen.getByRole('button', {name: 'Show in file manager'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Open'}));
         expect(revealFile).toHaveBeenCalledWith('/Users/me/Documents/t.csv');
         expect(dismiss).toHaveBeenCalledWith('t1');
     });
@@ -57,7 +57,7 @@ describe('showSavedToast', () => {
     it('draws no such button when it is not known where the file went', () => {
         showSavedToast('Downloaded t.csv');
         render(<>{drawn()}</>);
-        expect(screen.queryByRole('button', {name: 'Show in file manager'})).toBeNull();
+        expect(screen.queryByRole('button', {name: 'Open'})).toBeNull();
         expect(screen.getByRole('button', {name: 'Dismiss'})).toBeInTheDocument();
     });
 });

@@ -833,6 +833,7 @@
     "saved": "已儲存：{{name}}",
     "downloaded": "已下載 {{name}}",
     "dismiss": "關閉",
+    "open": "開啟",
     "more": "更多選項",
     "copyName": "複製檔案名稱",
     "nameCopied": "已複製檔案名稱",

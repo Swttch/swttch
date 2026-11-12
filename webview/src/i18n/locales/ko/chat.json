@@ -833,6 +833,7 @@
     "saved": "저장했습니다: {{name}}",
     "downloaded": "{{name}}을(를) 내려받았습니다",
     "dismiss": "닫기",
+    "open": "열기",
     "more": "더보기",
     "copyName": "파일명 복사",
     "nameCopied": "파일명을 복사했습니다",

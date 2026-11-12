@@ -38,7 +38,7 @@ export function showSavedToast(message: string, revealPath?: string): void {
                         }}
                         className="whitespace-nowrap font-medium text-accent-claude transition-opacity hover:opacity-80"
                     >
-                        {i18n.t("chat:fileLink.showInFileManager")}
+                        {i18n.t("chat:sentFiles.open")}
                     </button>
                 )}
             </span>

@@ -833,6 +833,7 @@
     "saved": "Gespeichert: {{name}}",
     "downloaded": "{{name}} heruntergeladen",
     "dismiss": "Schließen",
+    "open": "Öffnen",
     "more": "Weitere Optionen",
     "copyName": "Dateinamen kopieren",
     "nameCopied": "Dateiname kopiert",
