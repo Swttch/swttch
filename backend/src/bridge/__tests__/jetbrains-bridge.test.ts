@@ -526,12 +526,12 @@ describe('parseClipboardResult', () => {
   it('reads the text and the image the IDE answered with', () => {
     expect(
       parseClipboardResult({ text: 'hello', image: { mimeType: 'image/png', base64: 'AAAA' } }),
-    ).toEqual({ text: 'hello', image: { mimeType: 'image/png', base64: 'AAAA' } });
+    ).toEqual({ text: 'hello', image: { mimeType: 'image/png', base64: 'AAAA' }, files: [] });
   });
 
   it('counts a missing or empty field as "not on the clipboard"', () => {
-    expect(parseClipboardResult({})).toEqual({ text: null, image: null });
-    expect(parseClipboardResult({ text: '', image: null })).toEqual({ text: null, image: null });
+    expect(parseClipboardResult({})).toEqual({ text: null, image: null, files: [] });
+    expect(parseClipboardResult({ text: '', image: null })).toEqual({ text: null, image: null, files: [] });
   });
 
   it('drops an image that lacks a type or its bytes, so the webview never builds a broken attachment', () => {
@@ -540,8 +540,20 @@ describe('parseClipboardResult', () => {
     expect(parseClipboardResult({ image: 'AAAA' }).image).toBeNull();
   });
 
+  it('reads the files copied in a file manager, and drops malformed elements', () => {
+    expect(
+      parseClipboardResult({
+        files: [{ path: 'C:\\a\\b.xlsx', type: 'file' }, { path: '/d', type: 'folder' }, { path: '' }, 'x', null],
+      }).files,
+    ).toEqual([
+      { path: 'C:\\a\\b.xlsx', type: 'file' },
+      { path: '/d', type: 'folder' },
+    ]);
+    expect(parseClipboardResult({ files: 'nope' }).files).toEqual([]);
+  });
+
   it('ignores fields of the wrong type', () => {
-    expect(parseClipboardResult({ text: 42, image: 7 })).toEqual({ text: null, image: null });
+    expect(parseClipboardResult({ text: 42, image: 7 })).toEqual({ text: null, image: null, files: [] });
   });
 });
 

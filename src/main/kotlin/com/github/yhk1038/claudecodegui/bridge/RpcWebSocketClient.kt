@@ -555,6 +555,15 @@ class RpcWebSocketClient(
                     } else {
                         put("image", JsonNull)
                     }
+                    // Files copied in a file manager, shaped like a drop's entries.
+                    putJsonArray("files") {
+                        contents.files.forEach { file ->
+                            add(buildJsonObject {
+                                put("path", file.path)
+                                put("type", if (file.isDirectory) "folder" else "file")
+                            })
+                        }
+                    }
                 }
             }
             "OPEN_SETTINGS" -> {

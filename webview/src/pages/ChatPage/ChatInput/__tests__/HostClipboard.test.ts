@@ -42,6 +42,16 @@ describe('HostClipboard.from', () => {
     expect(host.hasImage).toBe(true);
   });
 
+  it('reads how many files the host sent on, which is an answer by itself', () => {
+    const host = HostClipboard.from({ text: null, image: null, files: 3 });
+
+    expect(host).not.toBe(HostClipboard.NONE);
+    expect(host.fileCount).toBe(3);
+    expect(HostClipboard.from({ text: 'x' }).fileCount).toBe(0);
+    expect(HostClipboard.from({ files: 0 })).toBe(HostClipboard.NONE);
+    expect(HostClipboard.from({ files: -1 })).toBe(HostClipboard.NONE);
+  });
+
   it('counts missing, null and empty parts as "not on the clipboard"', () => {
     expect(HostClipboard.from({})).toBe(HostClipboard.NONE);
     expect(HostClipboard.from({ text: '', image: null })).toBe(HostClipboard.NONE);

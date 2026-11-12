@@ -21,7 +21,7 @@ Attachments used to be easy to lose track of: only pictures could be dropped or 
 |-----|--------------|--------------------|
 | **+ menu → Add files or photos / Add folder** | The system picker opens. There is **no time limit**: choose whenever you like. | Same. |
 | **Drag from the file manager** | Any file and any folder. | Any file and any folder. The IDE hands over the real path. |
-| **Paste** (copy a file in the file manager, press paste) | Any file. | Pictures only. For other files the IDE keeps the paste. |
+| **Paste** (copy a file in the file manager, press paste) | Any file. | Any file and any folder. The IDE reads the real path off the clipboard, the same path a drop carries. |
 
 Pictures of the kinds **png, jpeg, gif and webp** that you drop or paste, up to **10 MB**, are still attached **inline**, as before: Claude receives the picture itself. A picture over 10 MB shows "File too large", and every other kind (svg, heic, bmp and so on) becomes an ordinary file chip.
 
