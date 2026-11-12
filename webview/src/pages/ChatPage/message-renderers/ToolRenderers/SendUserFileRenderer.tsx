@@ -85,7 +85,7 @@ function SaveProgress({path, radius}: {path: string; radius: string}) {
 
 /**
  * Wraps an item so its full path shows on hover, and the buttons have something to sit on. It is also where a file is
- * picked: Shift+click and Shift+Cmd+click pick it instead of opening it, a picked file is ringed, and a right click opens
+ * picked: Shift+click and Cmd+click (Ctrl+click on Windows and Linux) pick it instead of opening it, a picked file is ringed, and a right click opens
  * the file's menu (the pick's, when the file is in a pick of several).
  */
 function Item({file, className, downloadClassName, radius = "rounded-lg", children}: {file: SentFile; className?: string; downloadClassName?: string; radius?: string; children: React.ReactNode}) {
@@ -102,7 +102,7 @@ function Item({file, className, downloadClassName, radius = "rounded-lg", childr
                 onMouseDown={(event) => {
                     if (event.shiftKey) event.preventDefault();
                 }}
-                // Before the card's own button sees the click: with Shift it picks the file and opens nothing; any other
+                // Before the card's own button sees the click: with Shift or Cmd it picks the file and opens nothing; any other
                 // click lets go of the pick and goes on to open the file as usual. The buttons on the card are left alone,
                 // and so is a menu: it is drawn into <body>, but its clicks still travel up through this card in React.
                 onClickCapture={(event) => {

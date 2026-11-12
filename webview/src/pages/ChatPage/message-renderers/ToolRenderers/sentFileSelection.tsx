@@ -3,7 +3,7 @@ import type {SentFileTarget} from "./SentFileMenu";
 
 /**
  * Which of the files in one `SendUserFile` result are picked. Shift+click picks the run of files from the last one picked
- * to the one clicked; Shift+Cmd+click (Shift+Ctrl on Windows and Linux) adds one file to the pick or takes it out. A menu
+ * to the one clicked; Cmd+click (Ctrl+click on Windows and Linux) adds one file to the pick or takes it out. A menu
  * opened on a picked file acts on all the picked files; on any other file it acts on that file alone.
  *
  * The pick belongs to the one result: the files of another message are not in it, since what a range runs over is the
@@ -12,7 +12,7 @@ import type {SentFileTarget} from "./SentFileMenu";
 export interface SentFileSelection {
     /** The paths that are picked. */
     selected: ReadonlySet<string>;
-    /** Pick by range (Shift) or add or take out one (Shift+Cmd). */
+    /** Pick by range (Shift) or add or take out one (Cmd, or Ctrl). */
     pick(file: SentFileTarget, mode: "range" | "toggle"): void;
     /** Let go of the pick. */
     clear(): void;
@@ -31,10 +31,14 @@ const SelectionContext = createContext<SentFileSelection>(none);
 
 export const useSentFileSelection = (): SentFileSelection => useContext(SelectionContext);
 
-/** What a click on a card does to the pick, before it does anything else. */
+/**
+ * What a click on a card does to the pick, before it does anything else: Cmd+click (Ctrl+click on Windows and Linux) adds
+ * the file or takes it out, Shift+click picks the run up to it, and a click with neither is not a pick at all. Holding
+ * Shift as well as Cmd still adds or takes out the one file.
+ */
 export function pickModeOf(event: {shiftKey: boolean; metaKey: boolean; ctrlKey: boolean}): "range" | "toggle" | null {
-    if (!event.shiftKey) return null;
-    return event.metaKey || event.ctrlKey ? "toggle" : "range";
+    if (event.metaKey || event.ctrlKey) return "toggle";
+    return event.shiftKey ? "range" : null;
 }
 
 /**

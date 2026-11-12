@@ -371,14 +371,17 @@ describe('picking several files', () => {
         expect(names).toHaveLength(3);
     });
 
-    it('adds a file to the pick and takes it out with Shift+Cmd', () => {
+    it('adds a file to the pick and takes it out with Cmd, and with Ctrl on Windows and Linux', () => {
         const {container} = draw(three);
-        fireEvent.click(card('one.csv'), {shiftKey: true, metaKey: true});
-        fireEvent.click(card('three.csv'), {shiftKey: true, metaKey: true});
+        fireEvent.click(card('one.csv'), {metaKey: true});
+        fireEvent.click(card('three.csv'), {ctrlKey: true});
         expect(picked(container)).toHaveLength(2);
         expect(card('two.csv').closest('[data-sent-file]')).not.toHaveAttribute('data-picked');
-        fireEvent.click(card('one.csv'), {shiftKey: true, metaKey: true});
+        fireEvent.click(card('one.csv'), {metaKey: true});
         expect(picked(container)).toHaveLength(1);
+        // Shift held as well still adds or takes out the one file, and nothing is opened.
+        fireEvent.click(card('two.csv'), {metaKey: true, shiftKey: true});
+        expect(picked(container)).toHaveLength(2);
         expect(openChatFile).not.toHaveBeenCalled();
     });
 
