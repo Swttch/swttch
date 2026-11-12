@@ -13,7 +13,7 @@ import { resolveSentFilePath } from '../features/sentFileStore';
 const PROGRESS_INTERVAL_MS = 50;
 
 /** Copies `source` to `target`, reporting the bytes written so far at the start, now and then, and at the end. */
-async function copyWithProgress(source: string, target: string, onProgress: (loaded: number) => void): Promise<void> {
+export async function copyWithProgress(source: string, target: string, onProgress: (loaded: number) => void): Promise<void> {
   const input = createReadStream(source);
   let loaded = 0;
   let last = 0;

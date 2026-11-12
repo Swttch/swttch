@@ -837,6 +837,15 @@
     "nameCopied": "파일명을 복사했습니다",
     "copyNameFailed": "파일명을 복사하지 못했습니다",
     "attach": "채팅 입력에 첨부",
+    "selectedHeading_other": "{{count}}개의 파일",
+    "downloadMany_other": "{{count}}개의 파일 다운로드",
+    "attachMany_other": "{{count}}개의 파일 첨부",
+    "copyNamesMany_other": "{{count}}개의 파일명 복사",
+    "copyPathsMany_other": "{{count}}개의 경로 복사",
+    "savedMany_other": "{{count}}개의 파일을 {{folder}}에 저장했습니다",
+    "saveFailedMany_other": "{{count}}개의 파일을 저장하지 못했습니다",
+    "namesCopiedMany_other": "{{count}}개의 파일명을 복사했습니다",
+    "pathsCopiedMany_other": "{{count}}개의 경로를 복사했습니다",
     "opened": "{{name}}을(를) 열었습니다"
   },
   "linkCard": {

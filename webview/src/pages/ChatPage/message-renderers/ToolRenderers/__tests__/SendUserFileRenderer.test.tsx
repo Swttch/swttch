@@ -325,6 +325,126 @@ describe('the card while its file is being saved', () => {
     });
 });
 
+describe('picking several files', () => {
+    const three = [{path: '/a/one.csv', size: 1}, {path: '/a/two.csv', size: 2}, {path: '/a/three.csv', size: 3}];
+    const picked = (container: HTMLElement) => [...container.querySelectorAll('[data-sent-file][data-picked]')].map((el) => el.querySelector('button')?.textContent ?? '');
+    const names = ['one.csv', 'two.csv', 'three.csv'];
+    const card = (name: string) => screen.getByText(name).closest('button') as HTMLElement;
+
+    it('picks the run from the last file picked to the one clicked with Shift, without opening anything', () => {
+        const {container} = draw(three);
+        fireEvent.click(card('one.csv'), {shiftKey: true});
+        expect(picked(container)).toHaveLength(1);
+        fireEvent.click(card('three.csv'), {shiftKey: true});
+        expect(picked(container)).toHaveLength(3);
+        expect(openChatFile).not.toHaveBeenCalled();
+        // A shorter run replaces the pick, from the same first file.
+        fireEvent.click(card('two.csv'), {shiftKey: true});
+        expect(picked(container)).toHaveLength(2);
+        expect(names).toHaveLength(3);
+    });
+
+    it('adds a file to the pick and takes it out with Shift+Cmd', () => {
+        const {container} = draw(three);
+        fireEvent.click(card('one.csv'), {shiftKey: true, metaKey: true});
+        fireEvent.click(card('three.csv'), {shiftKey: true, metaKey: true});
+        expect(picked(container)).toHaveLength(2);
+        expect(card('two.csv').closest('[data-sent-file]')).not.toHaveAttribute('data-picked');
+        fireEvent.click(card('one.csv'), {shiftKey: true, metaKey: true});
+        expect(picked(container)).toHaveLength(1);
+        expect(openChatFile).not.toHaveBeenCalled();
+    });
+
+    it('lets go of the pick on a plain click, which still opens the file, and on Escape', () => {
+        const {container} = draw(three);
+        fireEvent.click(card('one.csv'), {shiftKey: true});
+        fireEvent.click(card('three.csv'), {shiftKey: true});
+        fireEvent.click(card('two.csv'));
+        expect(openChatFile).toHaveBeenCalledWith('/a/two.csv');
+        expect(picked(container)).toHaveLength(0);
+
+        fireEvent.click(card('one.csv'), {shiftKey: true});
+        expect(picked(container)).toHaveLength(1);
+        fireEvent.keyDown(document, {key: 'Escape'});
+        expect(picked(container)).toHaveLength(0);
+    });
+
+    it('opens one menu for the whole pick, with the number in what it says', async () => {
+        const {container} = draw(three);
+        fireEvent.click(card('one.csv'), {shiftKey: true});
+        fireEvent.click(card('three.csv'), {shiftKey: true});
+        fireEvent.contextMenu(card('two.csv'), {clientX: 5, clientY: 5});
+        const menu = await screen.findByRole('menu');
+        expect(within(menu).getByText('3 files')).toBeInTheDocument();
+        expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+            'Download 3 files', 'Attach 3 files', 'Copy 3 file names', 'Copy 3 paths',
+        ]);
+        expect(picked(container)).toHaveLength(3);
+    });
+
+    it('opens the menu of one file alone when that file is not in the pick', async () => {
+        const {container} = draw(three);
+        fireEvent.click(card('one.csv'), {shiftKey: true});
+        fireEvent.click(card('two.csv'), {shiftKey: true});
+        fireEvent.contextMenu(card('three.csv'), {clientX: 5, clientY: 5});
+        const menu = await screen.findByRole('menu');
+        expect(within(menu).getAllByRole('menuitem')[0].textContent).toBe('Download');
+        expect(within(menu).queryByText(/files$/)).toBeNull();
+        expect(picked(container)).toHaveLength(0);
+    });
+
+    it('attaches every picked file and copies their paths, one on each line', async () => {
+        const attached: unknown[][] = [];
+        const unsubscribe = subscribeComposerFiles((...args) => attached.push(args));
+        const writeText = vi.fn(() => Promise.resolve());
+        Object.assign(navigator, {clipboard: {writeText}});
+        draw(three);
+        fireEvent.click(card('one.csv'), {shiftKey: true});
+        fireEvent.click(card('three.csv'), {shiftKey: true});
+        fireEvent.contextMenu(card('two.csv'), {clientX: 5, clientY: 5});
+        fireEvent.click(within(await screen.findByRole('menu')).getByRole('menuitem', {name: 'Attach 3 files'}));
+        expect(attached).toEqual([['/a/one.csv', 'one.csv', 1], ['/a/two.csv', 'two.csv', 2], ['/a/three.csv', 'three.csv', 3]]);
+
+        fireEvent.contextMenu(card('two.csv'), {clientX: 5, clientY: 5});
+        fireEvent.click(within(await screen.findByRole('menu')).getByRole('menuitem', {name: 'Copy 3 paths'}));
+        await waitFor(() => expect(writeText).toHaveBeenCalledWith('/a/one.csv\n/a/two.csv\n/a/three.csv'));
+        await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('3 paths copied'));
+        unsubscribe();
+    });
+
+    it('saves every picked file into the one folder chosen, and says how many and where', async () => {
+        request.mockImplementation((type: string) =>
+            Promise.resolve(type === 'PICK_FILES'
+                ? {paths: ['/dest']}
+                : {saved: [{path: '/a/one.csv'}, {path: '/a/two.csv'}, {path: '/a/three.csv'}], failed: []}));
+        draw(three);
+        fireEvent.click(card('one.csv'), {shiftKey: true});
+        fireEvent.click(card('three.csv'), {shiftKey: true});
+        fireEvent.contextMenu(card('two.csv'), {clientX: 5, clientY: 5});
+        fireEvent.click(within(await screen.findByRole('menu')).getByRole('menuitem', {name: 'Download 3 files'}));
+        await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('Saved 3 files in /dest'));
+        expect(request).toHaveBeenCalledWith('PICK_FILES', {mode: 'folders', multiple: false}, {timeout: null});
+        expect(request).toHaveBeenCalledWith('SAVE_SENT_FILES', {
+            files: [{path: '/a/one.csv', name: 'one.csv'}, {path: '/a/two.csv', name: 'two.csv'}, {path: '/a/three.csv', name: 'three.csv'}],
+            folder: '/dest',
+        }, {timeout: null});
+    });
+
+    it('saves nothing and says nothing when the folder dialog is closed', async () => {
+        request.mockResolvedValue({paths: []});
+        draw(three);
+        fireEvent.click(card('one.csv'), {shiftKey: true});
+        fireEvent.click(card('two.csv'), {shiftKey: true});
+        fireEvent.contextMenu(card('one.csv'), {clientX: 5, clientY: 5});
+        fireEvent.click(within(await screen.findByRole('menu')).getByRole('menuitem', {name: 'Download 2 files'}));
+        await waitFor(() => expect(request).toHaveBeenCalled());
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        expect(request).toHaveBeenCalledTimes(1);
+        expect(toastSuccess).not.toHaveBeenCalled();
+        expect(toastError).not.toHaveBeenCalled();
+    });
+});
+
 describe('a right click on a card', () => {
     it('opens the same menu as the more button, for that card', async () => {
         draw([{path: '/a/page.html', size: 3}, {path: '/a/t.csv', size: 3}]);

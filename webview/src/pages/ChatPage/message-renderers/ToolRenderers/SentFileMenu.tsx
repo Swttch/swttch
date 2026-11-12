@@ -4,10 +4,10 @@ import type {Instance} from "tippy.js";
 import toast from "react-hot-toast";
 import {ArrowDownTrayIcon, DocumentDuplicateIcon, EllipsisHorizontalIcon, FolderOpenIcon, LinkIcon, PaperClipIcon} from "@heroicons/react/24/outline";
 import {getAdapter} from "@/adapters";
-import {i18n, useTranslation} from "@/i18n";
+import {useTranslation} from "@/i18n";
 import {addFileToComposer} from "@/utils/composerElements";
 import {cn} from "@/utils/cn";
-import {downloadSentFile} from "./sendUserFile";
+import {downloadSentFileTargets} from "./sendUserFile";
 
 /** A file a menu acts on: where it is and what it is called. */
 export interface SentFileTarget {
@@ -38,15 +38,20 @@ function copy(text: string, done: string, failed: string): void {
 }
 
 /**
- * What can be done with a file Claude sent. The same list is drawn by the card's "more" button and, later, by the
- * context menu, so the two cannot drift apart.
+ * What can be done with the files a menu stands for: one file, or the pick of several. The same list is drawn by the
+ * card's "more" button and by the context menu, so the two cannot drift apart.
+ *
+ * For several files the entries that make sense for a run of them stay, named for their number, under a heading that says
+ * how many: showing a file in the file manager is for one file, since the files may be in different folders.
  */
-export function SentFileMenuItems({file, onDone}: {file: SentFileTarget; onDone: () => void}) {
+export function SentFileMenuItems({files, onDone}: {files: SentFileTarget[]; onDone: () => void}) {
     const {t} = useTranslation('chat');
     const run = (action: () => void | Promise<unknown>) => () => {
         onDone();
         void action();
     };
+    const count = files.length;
+    const [file] = files;
     return (
         <div
             role="menu"
@@ -60,21 +65,30 @@ export function SentFileMenuItems({file, onDone}: {file: SentFileTarget; onDone:
                 event.stopPropagation();
             }}
         >
-            <Row icon={ArrowDownTrayIcon} onSelect={run(async () => {
-                if (!(await downloadSentFile(file.path, file.name))) toast.error(i18n.t('chat:sentFiles.downloadFailed'));
-            })}>{t('sentFiles.download')}</Row>
-            <Row icon={FolderOpenIcon} onSelect={run(() =>
-                getAdapter().revealFile(file.path).catch(() => toast.error(t('fileOpenFailed', {path: file.path}))),
-            )}>{t('fileLink.showInFileManager')}</Row>
-            <Row icon={PaperClipIcon} onSelect={run(() => addFileToComposer(file.path, file.name, file.size))}>
-                {t('sentFiles.attach')}
+            {count > 1 && (
+                <div className="px-3 pb-1 pt-1.5 text-[0.6875rem] text-text-tertiary">{t('sentFiles.selectedHeading', {count})}</div>
+            )}
+            <Row icon={ArrowDownTrayIcon} onSelect={run(() => downloadSentFileTargets(files))}>
+                {count > 1 ? t('sentFiles.downloadMany', {count}) : t('sentFiles.download')}
+            </Row>
+            {count === 1 && (
+                <Row icon={FolderOpenIcon} onSelect={run(() =>
+                    getAdapter().revealFile(file.path).catch(() => toast.error(t('fileOpenFailed', {path: file.path}))),
+                )}>{t('fileLink.showInFileManager')}</Row>
+            )}
+            <Row icon={PaperClipIcon} onSelect={run(() => files.forEach((target) => addFileToComposer(target.path, target.name, target.size)))}>
+                {count > 1 ? t('sentFiles.attachMany', {count}) : t('sentFiles.attach')}
             </Row>
             <Row icon={DocumentDuplicateIcon} onSelect={run(() =>
-                copy(file.name,t('sentFiles.nameCopied'), t('sentFiles.copyNameFailed')),
-            )}>{t('sentFiles.copyName')}</Row>
+                count > 1
+                    ? copy(files.map((target) => target.name).join('\n'), t('sentFiles.namesCopiedMany', {count}), t('sentFiles.copyNameFailed'))
+                    : copy(file.name, t('sentFiles.nameCopied'), t('sentFiles.copyNameFailed')),
+            )}>{count > 1 ? t('sentFiles.copyNamesMany', {count}) : t('sentFiles.copyName')}</Row>
             <Row icon={LinkIcon} onSelect={run(() =>
-                copy(file.path, t('fileLink.copyDone'), t('fileLink.copyFailed')),
-            )}>{t('fileLink.copyPath')}</Row>
+                count > 1
+                    ? copy(files.map((target) => target.path).join('\n'), t('sentFiles.pathsCopiedMany', {count}), t('fileLink.copyFailed'))
+                    : copy(file.path, t('fileLink.copyDone'), t('fileLink.copyFailed')),
+            )}>{count > 1 ? t('sentFiles.copyPathsMany', {count}) : t('fileLink.copyPath')}</Row>
         </div>
     );
 }
@@ -89,7 +103,7 @@ export interface MenuPoint {
  * The file's menu opened where the pointer was when the card was right-clicked. It is the same list as the more
  * button's, drawn at a different place, and closes on a click outside it, on Escape, and when an entry is chosen.
  */
-export function SentFileContextMenu({file, point, onClose}: {file: SentFileTarget; point: MenuPoint; onClose: () => void}) {
+export function SentFileContextMenu({files, point, onClose}: {files: SentFileTarget[]; point: MenuPoint; onClose: () => void}) {
     useEffect(() => {
         const onKey = (event: KeyboardEvent) => {
             if (event.key === "Escape") onClose();
@@ -107,7 +121,7 @@ export function SentFileContextMenu({file, point, onClose}: {file: SentFileTarge
             onClickOutside={onClose}
             render={(attrs) => (
                 <div {...attrs}>
-                    <SentFileMenuItems file={file} onDone={onClose}/>
+                    <SentFileMenuItems files={files} onDone={onClose}/>
                 </div>
             )}
         >
@@ -138,7 +152,7 @@ export function SentFileContextMenu({file, point, onClose}: {file: SentFileTarge
  * `onOpenChange` lets the card keep its buttons showing while the menu is open, since the pointer has left the card by
  * then.
  */
-export function SentFileMoreButton({file, onOpenChange}: {file: SentFileTarget; onOpenChange?: (open: boolean) => void}) {
+export function SentFileMoreButton({files, onOpenChange}: {files: SentFileTarget[]; onOpenChange?: (open: boolean) => void}) {
     const {t} = useTranslation('chat');
     const instance = useRef<Instance | null>(null);
     const [open, setOpen] = useState(false);
@@ -160,7 +174,7 @@ export function SentFileMoreButton({file, onOpenChange}: {file: SentFileTarget; 
             onHide={() => change(false)}
             render={(attrs) => (
                 <div {...attrs}>
-                    <SentFileMenuItems file={file} onDone={() => instance.current?.hide()}/>
+                    <SentFileMenuItems files={files} onDone={() => instance.current?.hide()}/>
                 </div>
             )}
         >

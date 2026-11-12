@@ -1,15 +1,15 @@
 import {useEffect, useState} from "react";
-import toast from "react-hot-toast";
 import {ArrowDownTrayIcon} from "@heroicons/react/24/outline";
 import {SessionGalleryViewer} from "@/components/SessionGalleryViewer";
 import {Tooltip} from "@/components/Tooltip";
-import {i18n, useTranslation} from "@/i18n";
+import {useTranslation} from "@/i18n";
 import {openSentFile} from "@/utils/openChatFile";
 import {cn} from "@/utils/cn";
 import {RendererProps, ToolWrapper, toolResultBlockIndex} from "./common";
 import {SentFileContextMenu, SentFileMoreButton, type MenuPoint} from "./SentFileMenu";
 import {useSentFileProgress} from "./sentFileProgress";
-import {downloadSentFile, formatSentSize, loadSentMedia, sentFilesOf, type SentFile} from "./sendUserFile";
+import {pickModeOf, SentFileSelectionProvider, useSentFileSelection} from "./sentFileSelection";
+import {downloadSentFileTargets, formatSentSize, loadSentMedia, sentFilesOf, type SentFile} from "./sendUserFile";
 
 /** The `src` of a sent picture, video or sound; null when it cannot be had, undefined while loading. */
 function useSentMedia(path: string): string | null | undefined {
@@ -34,8 +34,11 @@ function useSentMedia(path: string): string | null | undefined {
 function ItemActions({file, className}: {file: SentFile; className?: string}) {
     const {t} = useTranslation('chat');
     const [menuOpen, setMenuOpen] = useState(false);
+    // On a file that is in a pick of several, both buttons act on the whole pick.
+    const files = useSentFileSelection().targetsFor(file);
     return (
         <div
+            data-sent-actions
             className={cn(
                 "absolute end-1.5 top-1.5 z-10 flex items-center gap-1",
                 "opacity-0 transition-opacity duration-200 focus-within:opacity-100 group-hover/sent:opacity-100",
@@ -45,16 +48,16 @@ function ItemActions({file, className}: {file: SentFile; className?: string}) {
         >
             <button
                 type="button"
-                aria-label={t('sentFiles.download')}
+                aria-label={files.length > 1 ? t('sentFiles.downloadMany', {count: files.length}) : t('sentFiles.download')}
                 onClick={async (event) => {
                     event.stopPropagation();
-                    if (!(await downloadSentFile(file.path, file.name))) toast.error(i18n.t('chat:sentFiles.downloadFailed'));
+                    await downloadSentFileTargets(files);
                 }}
                 className="flex h-6 w-6 items-center justify-center rounded-md bg-surface-overlay text-text-primary hover:bg-surface-hover"
             >
                 <ArrowDownTrayIcon className="h-4 w-4"/>
             </button>
-            <SentFileMoreButton file={file} onOpenChange={setMenuOpen}/>
+            <SentFileMoreButton files={files} onOpenChange={setMenuOpen}/>
         </div>
     );
 }
@@ -80,23 +83,52 @@ function SaveProgress({path, radius}: {path: string; radius: string}) {
     );
 }
 
-/** Wraps an item so its full path shows on hover, and the buttons have something to sit on. */
+/**
+ * Wraps an item so its full path shows on hover, and the buttons have something to sit on. It is also where a file is
+ * picked: Shift+click and Shift+Cmd+click pick it instead of opening it, a picked file is ringed, and a right click opens
+ * the file's menu (the pick's, when the file is in a pick of several).
+ */
 function Item({file, className, downloadClassName, radius = "rounded-lg", children}: {file: SentFile; className?: string; downloadClassName?: string; radius?: string; children: React.ReactNode}) {
-    const [menuPoint, setMenuPoint] = useState<MenuPoint | null>(null);
+    const [menu, setMenu] = useState<{point: MenuPoint; files: SentFile[]} | null>(null);
+    const selection = useSentFileSelection();
+    const picked = selection.selected.has(file.path);
     return (
         <Tooltip content={<span dir="ltr">{file.path}</span>} placement="bottom">
             <div
+                data-sent-file
+                data-picked={picked ? "" : undefined}
                 className={cn("group/sent relative", className)}
-                // The file's menu where the pointer is, the same one the more button opens.
+                // A press with Shift held must not start a text selection that the click then extends.
+                onMouseDown={(event) => {
+                    if (event.shiftKey) event.preventDefault();
+                }}
+                // Before the card's own button sees the click: with Shift it picks the file and opens nothing; any other
+                // click lets go of the pick and goes on to open the file as usual. The buttons on the card are left alone,
+                // and so is a menu: it is drawn into <body>, but its clicks still travel up through this card in React.
+                onClickCapture={(event) => {
+                    if ((event.target as HTMLElement).closest("[data-sent-actions], [role=menu]")) return;
+                    const mode = pickModeOf(event);
+                    if (mode === null) {
+                        selection.clear();
+                        return;
+                    }
+                    event.preventDefault();
+                    event.stopPropagation();
+                    selection.pick(file, mode);
+                }}
+                // The file's menu where the pointer is, the same one the more button opens. A file outside the pick is not
+                // part of it, so the pick is let go of first.
                 onContextMenu={(event) => {
                     event.preventDefault();
-                    setMenuPoint({x: event.clientX, y: event.clientY});
+                    if (!picked) selection.clear();
+                    setMenu({point: {x: event.clientX, y: event.clientY}, files: selection.targetsFor(file)});
                 }}
             >
                 {children}
                 <SaveProgress path={file.path} radius={radius}/>
+                {picked && <span aria-hidden className={cn("pointer-events-none absolute inset-0 ring-2 ring-ide-accent", radius)}/>}
                 <ItemActions file={file} className={downloadClassName}/>
-                {menuPoint && <SentFileContextMenu file={file} point={menuPoint} onClose={() => setMenuPoint(null)}/>}
+                {menu && <SentFileContextMenu files={menu.files} point={menu.point} onClose={() => setMenu(null)}/>}
             </div>
         </Tooltip>
     );
@@ -246,14 +278,16 @@ export function SendUserFileRenderer(props: RendererProps) {
             <div className="flex flex-col items-start gap-2">
                 {players.map((file) => (file.kind === 'video' ? <Video key={file.path} file={file} alone={alone}/> : <Audio key={file.path} file={file} alone={alone}/>))}
                 {rest.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                        {rest.map((file) => {
-                            if (file.isImage) {
-                                return <Picture key={file.path} file={file} alone={alone} onOpen={() => setOpened(pictures.indexOf(file))}/>;
-                            }
-                            return alone ? <FileChip key={file.path} file={file}/> : <FileCard key={file.path} file={file}/>;
-                        })}
-                    </div>
+                    <SentFileSelectionProvider files={rest}>
+                        <div className="flex flex-wrap gap-2">
+                            {rest.map((file) => {
+                                if (file.isImage) {
+                                    return <Picture key={file.path} file={file} alone={alone} onOpen={() => setOpened(pictures.indexOf(file))}/>;
+                                }
+                                return alone ? <FileChip key={file.path} file={file}/> : <FileCard key={file.path} file={file}/>;
+                            })}
+                        </div>
+                    </SentFileSelectionProvider>
                 )}
                 {opened !== null && <PictureViewer pictures={pictures} keys={pictureKeys} entryUuid={entryUuid} index={opened} onClose={() => setOpened(null)}/>}
             </div>

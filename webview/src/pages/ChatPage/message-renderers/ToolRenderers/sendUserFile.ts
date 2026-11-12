@@ -144,16 +144,8 @@ function base64ToBytes(base64: string): Uint8Array {
  * that it was downloaded.
  */
 export async function downloadSentFile(path: string, name: string): Promise<boolean> {
-    // The card's background fills as the file is written, from what the backend reports while it copies.
-    let shown = false;
-    const report = (fraction: number) => {
-        shown = true;
-        setSentFileProgress(path, fraction);
-    };
-    const stopListening = getBridge().subscribe(MessageType.SAVE_SENT_FILE_PROGRESS, (message) => {
-        const progress = message.payload as {path?: string; loaded?: number; size?: number} | undefined;
-        if (progress?.path === path && progress.loaded !== undefined && progress.size) report(progress.loaded / progress.size);
-    });
+    const progress = trackSaveProgress([path]);
+    const report = (fraction: number) => progress.report(path, fraction);
     try {
         try {
             const answer = (await getBridge().request(MessageType.SAVE_SENT_FILE, {path, suggestedName: name}, {timeout: null})) as {path?: string | null; error?: string} | null;
@@ -170,13 +162,82 @@ export async function downloadSentFile(path: string, name: string): Promise<bool
         if (downloaded) toast.success(i18n.t('chat:sentFiles.downloaded', {name}));
         return downloaded;
     } finally {
-        stopListening();
-        if (shown) {
-            // Left full for a moment so a file that took no time is still seen to have been saved, then taken away.
-            setSentFileProgress(path, 1);
-            setTimeout(() => setSentFileProgress(path, null), FINISHED_BAR_MS);
-        }
+        progress.finish();
     }
+}
+
+/**
+ * What the cards of `paths` fill their backgrounds with while those files are saved: `report` sets a card's fraction
+ * itself, and what the backend sends while it copies is taken in until `finish`, which leaves each bar that was drawn
+ * full for a moment (so a file that took no time is still seen to have been saved) and then takes it away.
+ */
+function trackSaveProgress(paths: string[]) {
+    const shown = new Set<string>();
+    const report = (path: string, fraction: number) => {
+        shown.add(path);
+        setSentFileProgress(path, fraction);
+    };
+    const stopListening = getBridge().subscribe(MessageType.SAVE_SENT_FILE_PROGRESS, (message) => {
+        const progress = message.payload as {path?: string; loaded?: number; size?: number} | undefined;
+        if (progress?.path !== undefined && paths.includes(progress.path) && progress.loaded !== undefined && progress.size) {
+            report(progress.path, progress.loaded / progress.size);
+        }
+    });
+    return {
+        report,
+        finish() {
+            stopListening();
+            for (const path of shown) {
+                setSentFileProgress(path, 1);
+                setTimeout(() => setSentFileProgress(path, null), FINISHED_BAR_MS);
+            }
+        },
+    };
+}
+
+/** A file to save: where it is and the name it is saved under. */
+export interface SentFileToSave {
+    path: string;
+    name: string;
+}
+
+/**
+ * Save several files into one folder, and say so. The host's folder dialog asks where (closing it saves nothing and
+ * says nothing), the backend copies each file there under its own name (a name already taken gets a number, nothing is
+ * written over), each card fills its background as its own file is written, and a toast names the folder.
+ */
+export async function downloadSentFiles(files: SentFileToSave[]): Promise<void> {
+    const picked = (await getBridge().request(MessageType.PICK_FILES, {mode: 'folders', multiple: false}, {timeout: null})) as {paths?: string[]; error?: string} | null;
+    const folder = picked?.paths?.[0];
+    if (!folder) {
+        if (picked?.error) toast.error(i18n.t('chat:sentFiles.downloadFailed'));
+        return;
+    }
+    const progress = trackSaveProgress(files.map((file) => file.path));
+    try {
+        // Only what the backend needs: a card's own object carries more than a path and a name.
+        const wanted = files.map(({path, name}) => ({path, name}));
+        const answer = (await getBridge().request(MessageType.SAVE_SENT_FILES, {files: wanted, folder}, {timeout: null})) as {saved?: unknown[]; failed?: string[]; error?: string} | null;
+        if (!answer || answer.error) {
+            toast.error(i18n.t('chat:sentFiles.downloadFailed'));
+            return;
+        }
+        const saved = answer.saved?.length ?? 0;
+        const failed = answer.failed?.length ?? 0;
+        if (saved > 0) toast.success(i18n.t('chat:sentFiles.savedMany', {count: saved, folder}));
+        if (failed > 0) toast.error(i18n.t('chat:sentFiles.saveFailedMany', {count: failed}));
+    } finally {
+        progress.finish();
+    }
+}
+
+/** What the download button and the menu's download entry do with the files they stand for: one file or a pick of several. */
+export async function downloadSentFileTargets(files: SentFileToSave[]): Promise<void> {
+    if (files.length === 1) {
+        if (!(await downloadSentFile(files[0].path, files[0].name))) toast.error(i18n.t('chat:sentFiles.downloadFailed'));
+        return;
+    }
+    if (files.length > 1) await downloadSentFiles(files);
 }
 
 /** The file read in pieces through the backend, then handed to the browser as a download. */

@@ -837,6 +837,15 @@
     "nameCopied": "已复制文件名",
     "copyNameFailed": "无法复制文件名",
     "attach": "附加到聊天输入",
+    "selectedHeading_other": "{{count}} 个文件",
+    "downloadMany_other": "下载 {{count}} 个文件",
+    "attachMany_other": "附加 {{count}} 个文件",
+    "copyNamesMany_other": "复制 {{count}} 个文件名",
+    "copyPathsMany_other": "复制 {{count}} 个路径",
+    "savedMany_other": "已将 {{count}} 个文件保存到 {{folder}}",
+    "saveFailedMany_other": "无法保存 {{count}} 个文件",
+    "namesCopiedMany_other": "已复制 {{count}} 个文件名",
+    "pathsCopiedMany_other": "已复制 {{count}} 个路径",
     "opened": "已打开 {{name}}"
   },
   "linkCard": {
