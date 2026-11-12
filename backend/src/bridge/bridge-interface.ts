@@ -1,3 +1,4 @@
+import type { HostClipboardContents } from '../core/types';
 export interface Bridge {
   /**
    * [workingDir] is the project the request came from, so the "open files with"
@@ -285,9 +286,7 @@ export interface Bridge {
    * Best-effort by contract: a host that cannot reach the clipboard answers with
    * nothing, which costs the user one paste.
    */
-  getClipboard(params: {
-    workingDir?: string;
-  }): Promise<{ text: string | null; image: { mimeType: string; base64: string } | null }>;
+  getClipboard(params: { workingDir?: string }): Promise<HostClipboardContents>;
 
   /**
    * Put text copied inside JCEF into the IDE's system clipboard.

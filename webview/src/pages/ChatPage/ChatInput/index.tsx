@@ -28,7 +28,7 @@ import { EscapeStreak } from './hooks/escapeStreak';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { ImageAttachSource, SessionState } from '@/types';
 import { ImageAttachment } from '@/types/attachment';
-import { dropNeedsIdePath, useAttachments } from './hooks/useAttachments';
+import { dropNeedsIdePath, isInlineImageType, useAttachments } from './hooks/useAttachments';
 import { readDroppedEntries } from './hooks/droppedFiles';
 import { isJetBrains } from '@/config/environment';
 
@@ -39,7 +39,7 @@ import { isJetBrains } from '@/config/environment';
  */
 const NATIVE_ENTRIES_FRESH_MS = 1500;
 import { useHostClipboardPaste } from './hooks/useHostClipboardPaste';
-import { clipboardCarriesFile } from './clipboardCarriesFile';
+import { clipboardCarriesFile, clipboardCarriesFileForHost } from './clipboardCarriesFile';
 import { clipboardIsEmpty } from './clipboardIsEmpty';
 import { AttachmentPreview } from './AttachmentPreview';
 import { ContextWindowTag } from './ContextWindowTag';
@@ -1219,6 +1219,15 @@ export function ChatInput() {
   // nothing on formatting and restores undo. The resulting `input` event feeds
   // handleRichChange, which keeps `value` in sync and runs both detectors.
   const handleRichPaste = useCallback((e: ReactClipboardEvent<HTMLDivElement>) => {
+    // Files copied in a file manager (a spreadsheet, a document, a folder) give the page
+    // no path to attach. In the IDE the host reads the paths off the system clipboard
+    // and sends them the way a drop does, so the paste is cancelled and the host asked.
+    if (isJetBrains() && clipboardCarriesFileForHost(e.clipboardData, isInlineImageType)) {
+      e.preventDefault();
+      void pasteFromHost(e.currentTarget);
+      return;
+    }
+
     if (clipboardCarriesFile(e.clipboardData)) {
       // Delegate file handling (it calls preventDefault itself when it takes the paste).
       handlePaste(e);
@@ -1234,6 +1243,15 @@ export function ChatInput() {
       e.preventDefault();
       void pasteFromHost(e.currentTarget);
       return;
+    }
+
+    // In the IDE, a copy made in the project tree can leave only the file names as text on the
+    // system clipboard, so text alone cannot tell "copied files" from "copied words". The host
+    // knows. The text still goes in the way it always did (below); the host is asked beside it,
+    // and when it holds files their chips replace the names that went in.
+    if (isJetBrains()) {
+      const text = e.clipboardData.getData('text/plain');
+      if (text.length > 0) void pasteFromHost(e.currentTarget, { pastedText: text });
     }
 
     // Text falls through untouched: the default paste inserts it, records the

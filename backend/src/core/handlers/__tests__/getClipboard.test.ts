@@ -20,7 +20,7 @@ function message(payload: Record<string, unknown>): IPCMessage {
 
 describe('getClipboardHandler', () => {
   it('answers the request with the text the host read, on the ACK of that request', async () => {
-    const bridge = createMockBridge(vi.fn().mockResolvedValue({ text: 'copied elsewhere', image: null }));
+    const bridge = createMockBridge(vi.fn().mockResolvedValue({ text: 'copied elsewhere', image: null, files: [] }));
     const connections = createMockConnections();
 
     await getClipboardHandler('conn-1', message({ workingDir: '/proj' }), connections, bridge);
@@ -35,7 +35,7 @@ describe('getClipboardHandler', () => {
 
   it('passes an image through untouched', async () => {
     const image = { mimeType: 'image/png', base64: 'iVBORw0KGgo=' };
-    const bridge = createMockBridge(vi.fn().mockResolvedValue({ text: null, image }));
+    const bridge = createMockBridge(vi.fn().mockResolvedValue({ text: null, image, files: [] }));
     const connections = createMockConnections();
 
     await getClipboardHandler('conn-1', message({}), connections, bridge);
@@ -47,8 +47,27 @@ describe('getClipboardHandler', () => {
     });
   });
 
+  it('sends files copied in a file manager the way a drop of them goes, and pastes nothing beside them', async () => {
+    const files = [
+      { path: 'C:\\Users\\a\\report.xlsx', type: 'file' },
+      { path: 'C:\\Users\\a\\docs', type: 'folder' },
+    ];
+    const bridge = createMockBridge(vi.fn().mockResolvedValue({ text: 'report.xlsx', image: null, files }));
+    const connections = createMockConnections();
+
+    await getClipboardHandler('conn-1', message({ workingDir: '/proj' }), connections, bridge);
+
+    expect(connections.sendTo).toHaveBeenCalledWith('conn-1', MessageType.NATIVE_DROP_ENTRIES, { entries: files });
+    expect(connections.sendTo).toHaveBeenCalledWith('conn-1', MessageType.ACK, {
+      requestId: 'req-9',
+      text: null,
+      image: null,
+      files: 2,
+    });
+  });
+
   it('asks without a project when the webview names none, and when it names an empty one', async () => {
-    const bridge = createMockBridge(vi.fn().mockResolvedValue({ text: null, image: null }));
+    const bridge = createMockBridge(vi.fn().mockResolvedValue({ text: null, image: null, files: [] }));
 
     await getClipboardHandler('conn-1', message({}), createMockConnections(), bridge);
     await getClipboardHandler('conn-1', message({ workingDir: '' }), createMockConnections(), bridge);

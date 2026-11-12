@@ -179,4 +179,38 @@ class SystemClipboardReaderTest {
 
         assertEquals(ClipboardContents.EMPTY, SystemClipboardReader { refusing }.read())
     }
+
+    /** A clipboard entry offering a file list, as a file manager hands over copied files (#672). */
+    private class FileList(private val files: List<java.io.File>) : Transferable {
+        override fun getTransferDataFlavors(): Array<DataFlavor> = arrayOf(DataFlavor.javaFileListFlavor)
+        override fun isDataFlavorSupported(flavor: DataFlavor): Boolean = DataFlavor.javaFileListFlavor.equals(flavor)
+        override fun getTransferData(flavor: DataFlavor): Any =
+            if (isDataFlavorSupported(flavor)) files else throw UnsupportedFlavorException(flavor)
+    }
+
+    @Test
+    fun `reads the files and folders copied in a file manager`() {
+        val dir = java.nio.file.Files.createTempDirectory("clip-folder").toFile()
+        val file = java.nio.file.Files.createTempFile("clip-file", ".xlsx").toFile()
+        try {
+            val clipboard = clipboardWith(FileList(listOf(file, dir)))
+
+            val read = SystemClipboardReader { clipboard }.read()
+
+            assertEquals(
+                listOf(ClipboardFile(file.absolutePath, false), ClipboardFile(dir.absolutePath, true)),
+                read.files,
+            )
+        } finally {
+            file.delete()
+            dir.delete()
+        }
+    }
+
+    @Test
+    fun `answers no files for a clipboard that holds only text`() {
+        val clipboard = clipboardWith(StringSelection("just text"))
+
+        assertEquals(emptyList<ClipboardFile>(), SystemClipboardReader { clipboard }.read().files)
+    }
 }

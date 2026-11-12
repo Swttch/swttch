@@ -8,6 +8,7 @@ import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.UnsupportedFlavorException
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.util.Base64
@@ -16,12 +17,20 @@ import javax.imageio.ImageIO
 /** An image read off the clipboard, already encoded as the webview attaches it. */
 data class ClipboardImage(val mimeType: String, val base64: String)
 
+/** A file or folder copied in a file manager: the absolute OS path a drop would hand over. */
+data class ClipboardFile(val path: String, val isDirectory: Boolean)
+
 /**
  * What the system clipboard held when it was read. Each part is null when the
  * clipboard has none of it, so "nothing there" and "could not read it" look the
  * same to the user: one paste that did nothing.
  */
-data class ClipboardContents(val text: String?, val image: ClipboardImage?) {
+data class ClipboardContents(
+    val text: String?,
+    val image: ClipboardImage?,
+    /** Files and folders copied in a file manager, as absolute OS paths. Empty when there are none. */
+    val files: List<ClipboardFile> = emptyList(),
+) {
     companion object {
         val EMPTY = ClipboardContents(text = null, image = null)
     }
@@ -59,8 +68,23 @@ class SystemClipboardReader(
         } catch (_: HeadlessException) {
             null
         } ?: return ClipboardContents.EMPTY
-        return ClipboardContents(text = readText(source), image = readImage(source))
+        return ClipboardContents(text = readText(source), image = readImage(source), files = readFiles(source))
     }
+
+    /**
+     * The files and folders copied in a file manager (Explorer's CF_HDROP on Windows, the
+     * file list the AWT builds elsewhere). A page cannot see their paths, which is why the
+     * host reads them: they are the same OS paths a drop hands over.
+     */
+    private fun readFiles(source: Clipboard): List<ClipboardFile> = unlessUnreadable {
+        if (!source.isDataFlavorAvailable(DataFlavor.javaFileListFlavor)) {
+            null
+        } else {
+            (source.getData(DataFlavor.javaFileListFlavor) as? List<*>)
+                ?.filterIsInstance<File>()
+                ?.map { ClipboardFile(path = it.absolutePath, isDirectory = it.isDirectory) }
+        }
+    } ?: emptyList()
 
     private fun readText(source: Clipboard): String? = unlessUnreadable {
         if (source.isDataFlavorAvailable(DataFlavor.stringFlavor)) {

@@ -2,6 +2,8 @@
 export type HostClipboardResponse = {
   text?: string | null;
   image?: { mimeType?: string | null; base64?: string | null } | null;
+  /** How many files the host handed to the chat the way a drop does (their chips arrive separately). */
+  files?: number | null;
 };
 
 /**
@@ -13,12 +15,14 @@ export type HostClipboardResponse = {
  * oddly costs the user one paste instead of raising a fault.
  */
 export class HostClipboard {
-  static readonly NONE = new HostClipboard(null, null, null);
+  static readonly NONE = new HostClipboard(null, null, null, 0);
 
   private constructor(
     readonly text: string | null,
     readonly imageMimeType: string | null,
     readonly imageBase64: string | null,
+    /** Files the host sent on to the chat as a drop would; the paste is already answered by their chips. */
+    readonly fileCount: number,
   ) {}
 
   /** Whether the host found an image, which the composer attaches like any pasted image. */
@@ -50,8 +54,12 @@ export class HostClipboard {
         ? response.image.base64
         : null;
     const hasImage = mimeType !== null && base64 !== null;
-    if (text === null && !hasImage) return HostClipboard.NONE;
+    const fileCount =
+      typeof response.files === 'number' && Number.isFinite(response.files) && response.files > 0
+        ? Math.floor(response.files)
+        : 0;
+    if (text === null && !hasImage && fileCount === 0) return HostClipboard.NONE;
 
-    return new HostClipboard(text, hasImage ? mimeType : null, hasImage ? base64 : null);
+    return new HostClipboard(text, hasImage ? mimeType : null, hasImage ? base64 : null, fileCount);
   }
 }

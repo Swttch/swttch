@@ -15,6 +15,7 @@ describe('BrowserBridge.getClipboard', () => {
     await expect(bridge.getClipboard({ workingDir: '/proj' })).resolves.toEqual({
       text: null,
       image: null,
+      files: [],
     });
 
     expect(execFile).not.toHaveBeenCalled();
