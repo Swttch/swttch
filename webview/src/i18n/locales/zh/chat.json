@@ -830,7 +830,7 @@
     "sharing": "正在共享文件…",
     "download": "下载",
     "downloadFailed": "无法保存文件",
-    "saved": "已保存：{{path}}",
+    "saved": "已保存：{{name}}",
     "downloaded": "已下载 {{name}}",
     "dismiss": "关闭",
     "more": "更多选项",

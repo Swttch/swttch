@@ -3,13 +3,18 @@ import {fireEvent, render, screen} from '@testing-library/react';
 import type {ReactNode} from 'react';
 import {SAVED_TOAST_MS, showSavedToast} from '../sentFileToast';
 
-const {success, dismiss} = vi.hoisted(() => ({success: vi.fn(), dismiss: vi.fn()}));
+const {success, dismiss, error, revealFile} = vi.hoisted(() => ({
+    success: vi.fn(), dismiss: vi.fn(), error: vi.fn(), revealFile: vi.fn(() => Promise.resolve()),
+}));
 
-vi.mock('react-hot-toast', () => ({default: {success, dismiss}}));
+vi.mock('react-hot-toast', () => ({default: {success, dismiss, error}}));
+vi.mock('@/adapters', () => ({getAdapter: () => ({revealFile})}));
 
 beforeEach(() => {
     success.mockReset();
     dismiss.mockReset();
+    error.mockReset();
+    revealFile.mockClear();
 });
 
 /** What the toast draws, taken from the render function it hands to react-hot-toast. */
@@ -37,5 +42,22 @@ describe('showSavedToast', () => {
         render(<>{drawn()}</>);
         fireEvent.click(screen.getByRole('button', {name: 'Dismiss'}));
         expect(dismiss).toHaveBeenCalledWith('t1');
+    });
+
+    it('names the file and shows where it went on a button, instead of printing the whole path', () => {
+        showSavedToast('Saved: t.csv', '/Users/me/Documents/t.csv');
+        render(<>{drawn()}</>);
+        expect(screen.getByText('Saved: t.csv')).toBeInTheDocument();
+        expect(screen.queryByText(/Documents/)).toBeNull();
+        fireEvent.click(screen.getByRole('button', {name: 'Show in file manager'}));
+        expect(revealFile).toHaveBeenCalledWith('/Users/me/Documents/t.csv');
+        expect(dismiss).toHaveBeenCalledWith('t1');
+    });
+
+    it('draws no such button when it is not known where the file went', () => {
+        showSavedToast('Downloaded t.csv');
+        render(<>{drawn()}</>);
+        expect(screen.queryByRole('button', {name: 'Show in file manager'})).toBeNull();
+        expect(screen.getByRole('button', {name: 'Dismiss'})).toBeInTheDocument();
     });
 });

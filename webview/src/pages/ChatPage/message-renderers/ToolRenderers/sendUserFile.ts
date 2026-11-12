@@ -4,6 +4,7 @@ import {getBridge} from "@/api/bridge/Bridge";
 import {i18n} from "@/i18n";
 import {FINISHED_BAR_MS, setSentFileProgress} from "./sentFileProgress";
 import {showSavedToast} from "./sentFileToast";
+import {basename} from "../../ChatInput/basename";
 import {MessageType, sentFileExtension, sentFileKind, type SentFileKind} from "@/shared";
 import {loadFileContent} from "@/components/FilePreviewPane/loadFileContent";
 
@@ -151,7 +152,7 @@ export async function downloadSentFile(path: string, name: string): Promise<bool
         try {
             const answer = (await getBridge().request(MessageType.SAVE_SENT_FILE, {path, suggestedName: name}, {timeout: null})) as {path?: string | null; error?: string} | null;
             if (answer?.path) {
-                showSavedToast(i18n.t('chat:sentFiles.saved', {path: answer.path}));
+                showSavedToast(i18n.t('chat:sentFiles.saved', {name: basename(answer.path)}), answer.path);
                 return true;
             }
             if (answer && answer.path === null && !answer.error) return true; // They closed the dialog.
@@ -218,14 +219,15 @@ export async function downloadSentFiles(files: SentFileToSave[]): Promise<void> 
     try {
         // Only what the backend needs: a card's own object carries more than a path and a name.
         const wanted = files.map(({path, name}) => ({path, name}));
-        const answer = (await getBridge().request(MessageType.SAVE_SENT_FILES, {files: wanted, folder}, {timeout: null})) as {saved?: unknown[]; failed?: string[]; error?: string} | null;
+        const answer = (await getBridge().request(MessageType.SAVE_SENT_FILES, {files: wanted, folder}, {timeout: null})) as {saved?: {savedPath?: string}[]; failed?: string[]; error?: string} | null;
         if (!answer || answer.error) {
             toast.error(i18n.t('chat:sentFiles.downloadFailed'));
             return;
         }
         const saved = answer.saved?.length ?? 0;
         const failed = answer.failed?.length ?? 0;
-        if (saved > 0) showSavedToast(i18n.t('chat:sentFiles.savedMany', {count: saved, folder}));
+        // The first file saved is the one the button shows in the file manager, which opens the folder they are all in.
+        if (saved > 0) showSavedToast(i18n.t('chat:sentFiles.savedMany', {count: saved, folder: basename(folder)}), answer.saved?.[0]?.savedPath);
         if (failed > 0) toast.error(i18n.t('chat:sentFiles.saveFailedMany', {count: failed}));
     } finally {
         progress.finish();

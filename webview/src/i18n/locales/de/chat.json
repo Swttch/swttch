@@ -830,7 +830,7 @@
     "sharing": "Dateien werden geteilt…",
     "download": "Herunterladen",
     "downloadFailed": "Die Datei konnte nicht gespeichert werden",
-    "saved": "Gespeichert: {{path}}",
+    "saved": "Gespeichert: {{name}}",
     "downloaded": "{{name}} heruntergeladen",
     "dismiss": "Schließen",
     "more": "Weitere Optionen",

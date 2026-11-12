@@ -830,7 +830,7 @@
     "sharing": "Compartilhando arquivos…",
     "download": "Baixar",
     "downloadFailed": "Não foi possível salvar o arquivo",
-    "saved": "Salvo: {{path}}",
+    "saved": "Salvo: {{name}}",
     "downloaded": "{{name}} baixado",
     "dismiss": "Fechar",
     "more": "Mais opções",

@@ -830,7 +830,7 @@
     "sharing": "파일 공유 중…",
     "download": "다운로드",
     "downloadFailed": "파일을 저장하지 못했습니다",
-    "saved": "저장했습니다: {{path}}",
+    "saved": "저장했습니다: {{name}}",
     "downloaded": "{{name}}을(를) 내려받았습니다",
     "dismiss": "닫기",
     "more": "더보기",

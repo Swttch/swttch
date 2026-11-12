@@ -834,7 +834,7 @@
     "sharing": "Sharing files…",
     "download": "Download",
     "downloadFailed": "Could not save the file",
-    "saved": "Saved: {{path}}",
+    "saved": "Saved: {{name}}",
     "downloaded": "Downloaded {{name}}",
     "dismiss": "Dismiss",
     "more": "More options",

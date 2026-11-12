@@ -830,7 +830,7 @@
     "sharing": "Partage des fichiers…",
     "download": "Télécharger",
     "downloadFailed": "Impossible d'enregistrer le fichier",
-    "saved": "Enregistré : {{path}}",
+    "saved": "Enregistré : {{name}}",
     "downloaded": "{{name}} téléchargé",
     "dismiss": "Fermer",
     "more": "Plus d’options",

@@ -846,7 +846,7 @@
     "sharing": "Sharing files…",
     "download": "تنزيل",
     "downloadFailed": "تعذّر حفظ الملف",
-    "saved": "تم الحفظ: {{path}}",
+    "saved": "تم الحفظ: {{name}}",
     "downloaded": "تم تنزيل {{name}}",
     "dismiss": "إغلاق",
     "more": "المزيد من الخيارات",

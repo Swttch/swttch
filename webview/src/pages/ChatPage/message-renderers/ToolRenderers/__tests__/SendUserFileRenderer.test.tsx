@@ -266,7 +266,7 @@ describe('the download button', () => {
         request.mockResolvedValue({path: '/Users/me/Documents/t.csv'});
         draw([{path: '/a/page.html', size: 3}, {path: '/a/t.csv', size: 3}]);
         fireEvent.click(screen.getAllByRole('button', {name: 'Download'})[1]);
-        await waitFor(() => expect(showSaved).toHaveBeenCalledWith('Saved: /Users/me/Documents/t.csv'));
+        await waitFor(() => expect(showSaved).toHaveBeenCalledWith('Saved: t.csv', '/Users/me/Documents/t.csv'));
         expect(request).toHaveBeenCalledWith('SAVE_SENT_FILE', {path: '/a/t.csv', suggestedName: 't.csv'}, {timeout: null});
         expect(openChatFile).not.toHaveBeenCalled();
         expect(toastError).not.toHaveBeenCalled();
@@ -449,13 +449,13 @@ describe('picking several files', () => {
         request.mockImplementation((type: string) =>
             Promise.resolve(type === 'PICK_FILES'
                 ? {paths: ['/dest']}
-                : {saved: [{path: '/a/one.csv'}, {path: '/a/two.csv'}, {path: '/a/three.csv'}], failed: []}));
+                : {saved: [{path: '/a/one.csv', savedPath: '/dest/one.csv'}, {path: '/a/two.csv', savedPath: '/dest/two.csv'}, {path: '/a/three.csv', savedPath: '/dest/three.csv'}], failed: []}));
         draw(three);
         fireEvent.click(card('one.csv'), {shiftKey: true});
         fireEvent.click(card('three.csv'), {shiftKey: true});
         fireEvent.contextMenu(card('two.csv'), {clientX: 5, clientY: 5});
         fireEvent.click(within(await screen.findByRole('menu')).getByRole('menuitem', {name: 'Download 3 files'}));
-        await waitFor(() => expect(showSaved).toHaveBeenCalledWith('Saved 3 files in /dest'));
+        await waitFor(() => expect(showSaved).toHaveBeenCalledWith('Saved 3 files in dest', '/dest/one.csv'));
         expect(request).toHaveBeenCalledWith('PICK_FILES', {mode: 'folders', multiple: false}, {timeout: null});
         expect(request).toHaveBeenCalledWith('SAVE_SENT_FILES', {
             files: [{path: '/a/one.csv', name: 'one.csv'}, {path: '/a/two.csv', name: 'two.csv'}, {path: '/a/three.csv', name: 'three.csv'}],
@@ -554,6 +554,6 @@ describe('the more button', () => {
         request.mockResolvedValue({path: '/Users/me/t.csv'});
         draw([{path: '/a/t.csv', size: 3}]);
         fireEvent.click(within(await open()).getByRole('menuitem', {name: 'Download'}));
-        await waitFor(() => expect(showSaved).toHaveBeenCalledWith('Saved: /Users/me/t.csv'));
+        await waitFor(() => expect(showSaved).toHaveBeenCalledWith('Saved: t.csv', '/Users/me/t.csv'));
     });
 });

@@ -830,7 +830,7 @@
     "sharing": "Sharing files…",
     "download": "دانلود",
     "downloadFailed": "ذخیره فایل ممکن نشد",
-    "saved": "ذخیره شد: {{path}}",
+    "saved": "ذخیره شد: {{name}}",
     "downloaded": "{{name}} دانلود شد",
     "dismiss": "بستن",
     "more": "گزینه‌های بیشتر",

@@ -830,7 +830,7 @@
     "sharing": "ファイルを共有中…",
     "download": "ダウンロード",
     "downloadFailed": "ファイルを保存できませんでした",
-    "saved": "保存しました: {{path}}",
+    "saved": "保存しました: {{name}}",
     "downloaded": "{{name}} をダウンロードしました",
     "dismiss": "閉じる",
     "more": "その他のオプション",
