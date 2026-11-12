@@ -830,6 +830,8 @@
     "sharing": "Dateien werden geteilt…",
     "download": "Herunterladen",
     "downloadFailed": "Die Datei konnte nicht gespeichert werden",
+    "saved": "Gespeichert: {{path}}",
+    "downloaded": "{{name}} heruntergeladen",
     "opened": "{{name}} geöffnet"
   },
   "linkCard": {

@@ -830,6 +830,8 @@
     "sharing": "ファイルを共有中…",
     "download": "ダウンロード",
     "downloadFailed": "ファイルを保存できませんでした",
+    "saved": "保存しました: {{path}}",
+    "downloaded": "{{name}} をダウンロードしました",
     "opened": "{{name}}を開きました"
   },
   "linkCard": {

@@ -830,6 +830,8 @@
     "sharing": "Partage des fichiers…",
     "download": "Télécharger",
     "downloadFailed": "Impossible d'enregistrer le fichier",
+    "saved": "Enregistré : {{path}}",
+    "downloaded": "{{name}} téléchargé",
     "opened": "{{name}} ouvert"
   },
   "linkCard": {

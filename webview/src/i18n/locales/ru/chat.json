@@ -838,6 +838,8 @@
     "sharing": "Отправка файлов…",
     "download": "Скачать",
     "downloadFailed": "Не удалось сохранить файл",
+    "saved": "Сохранено: {{path}}",
+    "downloaded": "Файл {{name}} скачан",
     "opened": "Открыт файл {{name}}"
   },
   "linkCard": {

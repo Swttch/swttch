@@ -830,6 +830,8 @@
     "sharing": "正在分享檔案…",
     "download": "下載",
     "downloadFailed": "無法儲存檔案",
+    "saved": "已儲存：{{path}}",
+    "downloaded": "已下載 {{name}}",
     "opened": "已開啟 {{name}}"
   },
   "linkCard": {

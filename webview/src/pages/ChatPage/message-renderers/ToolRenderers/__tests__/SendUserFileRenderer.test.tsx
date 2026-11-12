@@ -5,13 +5,13 @@ import {_resetSentMediaCache, formatSentSize, sentFilesOf} from '../sendUserFile
 import {ToolUseBlockDto, ContentBlockType} from '@/dto';
 import type {LoadedMessageDto} from '@/types';
 
-const {request, openChatFile, toastError} = vi.hoisted(() => ({request: vi.fn(), openChatFile: vi.fn(), toastError: vi.fn()}));
+const {request, openChatFile, toastError, toastSuccess} = vi.hoisted(() => ({request: vi.fn(), openChatFile: vi.fn(), toastError: vi.fn(), toastSuccess: vi.fn()}));
 
 vi.mock('@/api/bridge/Bridge', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@/api/bridge/Bridge')>()),
     getBridge: () => ({request}),
 }));
-vi.mock('react-hot-toast', () => ({default: {error: toastError}}));
+vi.mock('react-hot-toast', () => ({default: {error: toastError, success: toastSuccess}}));
 vi.mock('@/utils/openChatFile', () => ({openSentFile: (p: string) => openChatFile(p)}));
 // The tooltip's content is what is under test, not Tippy's popper: expose it.
 vi.mock('@/components/Tooltip', () => ({
@@ -48,6 +48,7 @@ beforeEach(() => {
     request.mockReset();
     openChatFile.mockReset();
     toastError.mockReset();
+    toastSuccess.mockReset();
     _resetSentMediaCache();
     URL.createObjectURL = vi.fn(() => 'blob:x');
     URL.revokeObjectURL = vi.fn();
@@ -196,38 +197,72 @@ describe('the download button', () => {
         return {anchors, restore: () => { HTMLAnchorElement.prototype.click = click; }};
     }
 
-    it('is there for every item, fades in on hover, and saves the file under its own name', async () => {
-        request.mockResolvedValue({ok: true, size: 3, offset: 0, base64: 'QUJD'});
-        const {anchors, restore} = clickDownload();
-        draw([{path: '/a/page.html', size: 3}, {path: '/a/t.csv', size: 3}]);
+    /** A host that cannot show its save dialog (an older plugin that does not know the request): the file goes through the browser. */
+    function hostCannotSave(bytes: (payload: {offset?: number}) => unknown) {
+        request.mockImplementation((type: string, payload: {offset?: number}) =>
+            type === 'SAVE_SENT_FILE' ? Promise.reject(new Error('unknown request')) : Promise.resolve(bytes(payload)));
+    }
 
+    it('is there for every item and fades in on hover', () => {
+        draw([{path: '/a/page.html', size: 3}, {path: '/a/t.csv', size: 3}]);
         const buttons = screen.getAllByRole('button', {name: 'Download'});
         expect(buttons).toHaveLength(2);
         expect(buttons[0].className).toContain('opacity-0');
         expect(buttons[0].className).toContain('group-hover/sent:opacity-100');
         expect(buttons[0].className).toContain('transition-opacity');
+    });
 
-        fireEvent.click(buttons[1]);
+    it('asks the host where to save the file, saves it under its own name and says where it went', async () => {
+        request.mockResolvedValue({path: '/Users/me/Documents/t.csv'});
+        draw([{path: '/a/page.html', size: 3}, {path: '/a/t.csv', size: 3}]);
+        fireEvent.click(screen.getAllByRole('button', {name: 'Download'})[1]);
+        await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('Saved: /Users/me/Documents/t.csv'));
+        expect(request).toHaveBeenCalledWith('SAVE_SENT_FILE', {path: '/a/t.csv', suggestedName: 't.csv'}, {timeout: null});
+        expect(openChatFile).not.toHaveBeenCalled();
+        expect(toastError).not.toHaveBeenCalled();
+    });
+
+    it('says nothing when the save dialog is closed', async () => {
+        request.mockResolvedValue({path: null});
+        draw([{path: '/a/t.csv', size: 3}]);
+        fireEvent.click(screen.getByRole('button', {name: 'Download'}));
+        await waitFor(() => expect(request).toHaveBeenCalled());
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        expect(toastSuccess).not.toHaveBeenCalled();
+        expect(toastError).not.toHaveBeenCalled();
+    });
+
+    it('says so when the host cannot read the file', async () => {
+        request.mockResolvedValue({error: 'unreadable'});
+        draw([{path: '/a/x.zip', size: 6}]);
+        fireEvent.click(screen.getByRole('button', {name: 'Download'}));
+        await waitFor(() => expect(toastError).toHaveBeenCalled());
+        expect(toastSuccess).not.toHaveBeenCalled();
+    });
+
+    it('hands the file to the browser when the host cannot ask, and says it was downloaded', async () => {
+        hostCannotSave(() => ({ok: true, size: 3, offset: 0, base64: 'QUJD'}));
+        const {anchors, restore} = clickDownload();
+        draw([{path: '/a/page.html', size: 3}, {path: '/a/t.csv', size: 3}]);
+        fireEvent.click(screen.getAllByRole('button', {name: 'Download'})[1]);
         await waitFor(() => expect(anchors).toHaveLength(1));
         expect(anchors[0].download).toBe('t.csv');
-        expect(openChatFile).not.toHaveBeenCalled();
+        await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('Downloaded t.csv'));
         restore();
     });
 
-    it('reads a big file in pieces until it has all of it', async () => {
-        request
-            .mockResolvedValueOnce({ok: true, size: 6, offset: 0, base64: 'QUJD'})
-            .mockResolvedValueOnce({ok: true, size: 6, offset: 3, base64: 'REVG'});
+    it('reads a big file in pieces until it has all of it, when the browser does the saving', async () => {
+        hostCannotSave(({offset}) => (offset ? {ok: true, size: 6, offset: 3, base64: 'REVG'} : {ok: true, size: 6, offset: 0, base64: 'QUJD'}));
         const {anchors, restore} = clickDownload();
         draw([{path: '/a/x.zip', size: 6}]);
         fireEvent.click(screen.getByRole('button', {name: 'Download'}));
         await waitFor(() => expect(anchors).toHaveLength(1));
-        expect(request).toHaveBeenNthCalledWith(2, expect.anything(), {path: '/a/x.zip', offset: 3});
+        expect(request).toHaveBeenCalledWith(expect.anything(), {path: '/a/x.zip', offset: 3});
         restore();
     });
 
-    it('says so when the file cannot be read', async () => {
-        request.mockResolvedValue({ok: false, reason: 'unreadable'});
+    it('says so when the browser path cannot read the file either', async () => {
+        hostCannotSave(() => ({ok: false, reason: 'unreadable'}));
         const {anchors, restore} = clickDownload();
         draw([{path: '/a/x.zip', size: 6}]);
         fireEvent.click(screen.getByRole('button', {name: 'Download'}));

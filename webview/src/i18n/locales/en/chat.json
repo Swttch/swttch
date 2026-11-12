@@ -834,6 +834,8 @@
     "sharing": "Sharing files…",
     "download": "Download",
     "downloadFailed": "Could not save the file",
+    "saved": "Saved: {{path}}",
+    "downloaded": "Downloaded {{name}}",
     "opened": "Opened {{name}}"
   },
   "linkCard": {

@@ -1,5 +1,7 @@
 import type {LoadedMessageDto} from "@/types";
+import toast from "react-hot-toast";
 import {getBridge} from "@/api/bridge/Bridge";
+import {i18n} from "@/i18n";
 import {MessageType, sentFileExtension, sentFileKind, type SentFileKind} from "@/shared";
 import {loadFileContent} from "@/components/FilePreviewPane/loadFileContent";
 
@@ -129,11 +131,36 @@ function base64ToBytes(base64: string): Uint8Array {
 }
 
 /**
- * Save the file at `path` to disk, under `name`: read in pieces through the
- * backend, then handed to the browser as a download (the way the viewer saves a
- * picture). Resolves false when the file could not be read.
+ * Save the file at `path` to disk, under `name`, and say so: the host's own save
+ * dialog asks where (the IDE's in JetBrains mode, the platform's in standalone),
+ * the backend copies the file there, and a toast names the place it went.
+ * Closing the dialog saves nothing and says nothing. Resolves false when the
+ * file could not be read, which is for the caller to report.
+ *
+ * Only when the host cannot ask at all (an older IDE plugin that does not know
+ * the request) does the file go through the browser's own download instead,
+ * which saves it where the browser keeps downloads, so the toast then says only
+ * that it was downloaded.
  */
 export async function downloadSentFile(path: string, name: string): Promise<boolean> {
+    try {
+        const answer = (await getBridge().request(MessageType.SAVE_SENT_FILE, {path, suggestedName: name}, {timeout: null})) as {path?: string | null; error?: string} | null;
+        if (answer?.path) {
+            toast.success(i18n.t('chat:sentFiles.saved', {path: answer.path}));
+            return true;
+        }
+        if (answer && answer.path === null && !answer.error) return true; // They closed the dialog.
+        if (answer?.error === 'unreadable' || answer?.error === 'tooLarge') return false;
+    } catch {
+        // The host could not ask; the browser's own download is next.
+    }
+    const downloaded = await downloadThroughBrowser(path, name);
+    if (downloaded) toast.success(i18n.t('chat:sentFiles.downloaded', {name}));
+    return downloaded;
+}
+
+/** The file read in pieces through the backend, then handed to the browser as a download. */
+async function downloadThroughBrowser(path: string, name: string): Promise<boolean> {
     const pieces: Uint8Array[] = [];
     let loaded = 0;
     for (;;) {

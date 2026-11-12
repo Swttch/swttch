@@ -477,6 +477,12 @@ export enum MessageType {
    */
   SAVE_IMAGE = 'SAVE_IMAGE',
   /**
+   * Save a file Claude sent where the person chooses (the host's own save dialog), `{ path, suggestedName }`. The backend
+   * copies the file itself, so no bytes travel through the webview.
+   * Inbound webview→backend; ACKed with `{ path }` (null when cancelled) or `{ error }`.
+   */
+  SAVE_SENT_FILE = 'SAVE_SENT_FILE',
+  /**
    * Show a file in the system's file manager with the file selected. Inbound
    * webview→backend, then sent on to the IDE (Node→Kotlin) in JetBrains mode, or
    * done by the backend itself in a browser.

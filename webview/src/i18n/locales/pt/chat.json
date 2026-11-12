@@ -830,6 +830,8 @@
     "sharing": "Compartilhando arquivos…",
     "download": "Baixar",
     "downloadFailed": "Não foi possível salvar o arquivo",
+    "saved": "Salvo: {{path}}",
+    "downloaded": "{{name}} baixado",
     "opened": "{{name}} aberto"
   },
   "linkCard": {

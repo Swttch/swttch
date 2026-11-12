@@ -846,6 +846,8 @@
     "sharing": "Sharing files…",
     "download": "تنزيل",
     "downloadFailed": "تعذّر حفظ الملف",
+    "saved": "تم الحفظ: {{path}}",
+    "downloaded": "تم تنزيل {{name}}",
     "opened": "تم فتح {{name}}"
   },
   "linkCard": {
