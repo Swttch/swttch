@@ -188,25 +188,14 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
-            <h3>0.36.2 - Slash command initials search, character input fix, and Transcript fixes</h3>
+            <h3>0.37.0 - Now the model can manage sessions!</h3>
             <ul>
-                <li>Fix some characters such as ě, Л, ț, and ป not being typed in the chat input (#660, reported by @BohuslavChlubna)</li>
-                <li>Add finding a slash command by the first letters of its words (#666, reported by @deniskrizanovic)</li>
-                <li>Fix Transcript thumbnail click and column width behavior</li>
-            </ul>
-            <h3>0.36.1 -Chat view modes, read aloud, and send index and imported session title improvements</h3>
-            <ul>
-                <li>Add chat view modes (Normal, Thinking, Verbose) with a shortcut to cycle them (#608)</li>
-                <li>Add reading replies aloud (#608)</li>
-                <li>Fix the send index so it stays above the input, lists every prompt, and offers a full list (#657, reported by @tianguanlong)</li>
-                <li>Fix sessions imported into Claude Desktop being titled with the IDE context sentence instead of the title shown in the plugin (#647, reported by @josueaponte7)</li>
-            </ul>
-            <h3>0.36.0 - Chat freeze fix, formatted copy, and Claude Desktop session compatibility</h3>
-            <ul>
-                <li>Fix the chat panel freezing when you select text (#645, reported by @Zach0126)</li>
-                <li>Show code blocks and quotes in your own messages the same way as in replies (#646, reported by @Pochwar)</li>
-                <li>Make sessions created in the plugin compatible with the Claude Desktop Code tab (#647, reported by @josueaponte7)</li>
-                <li>Fix copied chat text sometimes losing its formatting in the IDE (#648, reported by @simonruep-bosch)</li>
+                <li>Add Claude Desktop-style session management and session tree support (#674)</li>
+                <li>Add a Transcript summary line and progress display improvements (#677)</li>
+                <li>Add choosing where to save files Claude sends, a menu, and multi-select (#675, reported by @Zbajnek)</li>
+                <li>Fix files and folders copied in the IDE not pasting into the chat input (#672, reported by @tianguanlong)</li>
+                <li>Fix sessions that end inside a worktree missing from the session list (#658, reported by @Wo-ogie)</li>
+                <li>Fix some characters such as Thai "จ" and Korean "갈" not being typed in the chat input (#676)</li>
             </ul>
         """.trimIndent()
     }

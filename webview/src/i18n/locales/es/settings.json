@@ -263,6 +263,33 @@
           "needs": "Necesita el paquete del administrador de sesiones y Claude Desktop en este ordenador. Solo para patrocinadores.",
           "close": "Cerrar"
         }
+      },
+      "announcement": {
+        "title": "¡Ahora el modelo puede crear y gestionar sesiones!",
+        "description": "Solo pídeselo al modelo dentro de una sesión. Puede crear una sesión, cambiarle el título, archivarla, eliminarla o cambiar su sesión superior.",
+        "more": "Más información",
+        "details": {
+          "title": "El modelo gestiona tus sesiones",
+          "intro": "Pídeselo al modelo en lenguaje natural, dentro de una sesión, y él gestionará las sesiones por ti. Funciona como en Claude Desktop. Esto es lo que puede hacer:",
+          "items": {
+            "create": "Crear una sesión nueva",
+            "rename": "Cambiar el título de una sesión",
+            "archive": "Archivar una sesión",
+            "delete": "Eliminar una sesión",
+            "parent": "Cambiar la sesión superior"
+          },
+          "close": "Cerrar",
+          "archiveNote": "Archivar solo oculta la sesión en la lista. El trabajo en curso y los worktrees no se tocan.",
+          "treeTitle": "Y también llega el árbol de sesiones",
+          "treeLevels": "En la lista de sesiones, las sesiones hijas aparecen como un árbol, con sangría en cada nivel. A diferencia de Claude Desktop, no hay límite de profundidad.",
+          "treeRail": "En las sesiones vinculadas del riel de sesiones puedes ver y cambiar las sesiones superior e hijas.",
+          "sponsorTitle": "Un pequeño agradecimiento para nuestros patrocinadores",
+          "sponsorThanks": "Para agradecer a quienes nos apoyan, hemos añadido algunas funciones pequeñas.",
+          "sponsorDrag": "Arrastra y suelta una sesión en la lista de sesiones para convertirla en sesión hija.",
+          "sponsorWhere": "Ambas se activan en {{settings}} > {{general}} > {{manager}}.",
+          "sponsorSyncBody": "Cuando cambia el estado de una sesión en Claude Desktop, aquí se ve igual. Por motivos de seguridad, la sincronización es unidireccional. Detecta los cambios de Claude Desktop y los refleja aquí, pero lo que cambies aquí nunca se escribe en Claude Desktop.",
+          "mcp": "Está hecho con el MCP de gestión de sesiones de Swttch. Instálalo en {{settings}} > {{about}} > {{dependencies}}. Una vez instalado, se mantiene en la última versión automáticamente."
+        }
       }
     },
     "readAloud": {

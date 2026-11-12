@@ -263,6 +263,33 @@
           "needs": "需要這台電腦上安裝工作階段管理套件與 Claude Desktop。僅限贊助者。",
           "close": "關閉"
         }
+      },
+      "announcement": {
+        "title": "現在模型可以建立與管理工作階段了！",
+        "description": "在工作階段中直接對模型說即可。它可以新增工作階段、修改標題、封存、刪除，還能變更上層工作階段。",
+        "more": "了解更多",
+        "details": {
+          "title": "模型幫你管理工作階段",
+          "intro": "在工作階段中用自然語言拜託模型，模型就會替你管理工作階段。方式與 Claude Desktop 相同。它可以做這些事：",
+          "items": {
+            "create": "新增工作階段",
+            "rename": "修改工作階段標題",
+            "archive": "封存工作階段",
+            "delete": "刪除工作階段",
+            "parent": "變更上層工作階段"
+          },
+          "close": "關閉",
+          "archiveNote": "封存只會在清單中隱藏工作階段，不會影響執行中的工作和工作樹。",
+          "treeTitle": "此外，還新增了工作階段樹功能",
+          "treeLevels": "在工作階段清單中，子工作階段會依層級縮排顯示為樹狀。與 Claude Desktop 不同，層級深度沒有限制。",
+          "treeRail": "在工作階段列的「已連結的工作階段」中，可以查看並變更上層與下層工作階段。",
+          "sponsorTitle": "給贊助者的一點小回饋",
+          "sponsorThanks": "為感謝贊助我們的各位，我們加入了一些小功能。",
+          "sponsorDrag": "在工作階段清單中可以透過拖放把工作階段變成子工作階段。",
+          "sponsorWhere": "這兩項功能都在{{settings}} > {{general}} > {{manager}}中開啟。",
+          "sponsorSyncBody": "在 Claude Desktop 中工作階段的狀態發生變化時，這裡也會同樣顯示。但出於安全考量，同步是單向的。它會偵測 Claude Desktop 中的變更並反映到這裡，但不會把你在這裡所做的變更寫入 Claude Desktop。",
+          "mcp": "此功能透過 Swttch 工作階段管理 MCP 實現。請在{{settings}} > {{about}} > {{dependencies}}中安裝。安裝後會自動保持最新版本。"
+        }
       }
     },
     "readAloud": {

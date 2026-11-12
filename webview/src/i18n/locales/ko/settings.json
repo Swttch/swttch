@@ -263,6 +263,33 @@
           "needs": "이 컴퓨터에 세션 매니저 패키지와 Claude Desktop이 있어야 합니다. 후원자 전용 기능입니다.",
           "close": "닫기"
         }
+      },
+      "announcement": {
+        "title": "이제 모델이 세션을 만들고 관리할 수 있어요!",
+        "description": "세션 안에서 모델에게 말로 부탁하면 돼요. 새 세션 만들기, 제목 바꾸기, 보관, 삭제, 상위 세션 바꾸기까지요.",
+        "more": "자세히",
+        "details": {
+          "title": "모델이 세션을 관리해요",
+          "intro": "세션 안에서 모델에게 자연어로 부탁하면 모델이 세션을 대신 관리해 줘요. Claude Desktop과 같은 방식이에요. 할 수 있는 일은 다음과 같아요.",
+          "items": {
+            "create": "새 세션 만들기",
+            "rename": "세션 제목 바꾸기",
+            "archive": "세션 보관하기",
+            "delete": "세션 삭제하기",
+            "parent": "상위 세션 바꾸기"
+          },
+          "close": "닫기",
+          "archiveNote": "보관은 목록에서만 숨겨요. 실행 중인 작업과 워크트리는 건드리지 않아요.",
+          "treeTitle": "그리고, 세션 트리 기능도 추가되었어요",
+          "treeLevels": "세션 목록에서 하위 세션이 단계마다 들여쓴 트리로 보여요. Claude Desktop과는 달리 뎁스 제한은 없어요.",
+          "treeRail": "세션 레일의 ‘연결된 세션’에서 상위·하위 세션을 보고 바꿀 수 있어요.",
+          "sponsorTitle": "후원자 분들을 위한 작은 기능 보답",
+          "sponsorThanks": "후원해주신 분들에게 감사의 의미로 작은 기능을 추가했습니다.",
+          "sponsorDrag": "세션 목록에서 드래그 앤 드롭으로 하위 세션으로 넣을 수 있어요.",
+          "sponsorWhere": "두 기능 모두 {{settings}} > {{general}} > {{manager}}에서 켜요.",
+          "sponsorSyncBody": "Claude Desktop에서 세션의 상태가 바뀌면 여기에도 그렇게 보여요. 다만 보안상의 이유로 단방향 동기화예요. Claude Desktop의 변경을 감지해 이곳에 반영하되, 여기서 변경한 것을 Claude Desktop에 쓰지는 않아요.",
+          "mcp": "Swttch 세션 관리 MCP를 통해 구현했어요. {{settings}} > {{about}} > {{dependencies}}에서 설치해 주세요. 설치한 뒤에는 자동으로 최신 버전을 유지합니다."
+        }
       }
     },
     "readAloud": {

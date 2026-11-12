@@ -1,5 +1,6 @@
 import { accountPoolNudge } from './accountPoolNudge';
 import { newChatUiNotice } from './newChatUiNotice';
+import { sessionManagerNotice } from './sessionManagerNotice';
 import type { InlineAnnouncement } from './types';
 
 /**
@@ -9,6 +10,7 @@ import type { InlineAnnouncement } from './types';
  * must not change shape between renders. Adding one means adding a line here.
  */
 export const INLINE_ANNOUNCEMENTS: readonly InlineAnnouncement[] = [
+  sessionManagerNotice,
   newChatUiNotice,
   accountPoolNudge,
 ];

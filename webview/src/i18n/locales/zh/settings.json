@@ -263,6 +263,33 @@
           "needs": "需要这台电脑上安装会话管理软件包和 Claude Desktop。仅限赞助者。",
           "close": "关闭"
         }
+      },
+      "announcement": {
+        "title": "现在模型可以创建和管理会话了！",
+        "description": "在会话中直接对模型说即可。它可以新建会话、修改标题、归档、删除，还能更改上级会话。",
+        "more": "了解更多",
+        "details": {
+          "title": "模型帮你管理会话",
+          "intro": "在会话中用自然语言拜托模型，模型就会替你管理会话。方式与 Claude Desktop 相同。它可以做这些事：",
+          "items": {
+            "create": "新建会话",
+            "rename": "修改会话标题",
+            "archive": "归档会话",
+            "delete": "删除会话",
+            "parent": "更改上级会话"
+          },
+          "close": "关闭",
+          "archiveNote": "归档只会在列表中隐藏会话，不会影响正在运行的任务和工作树。",
+          "treeTitle": "此外，还新增了会话树功能",
+          "treeLevels": "在会话列表中，子会话会按层级缩进显示为树。与 Claude Desktop 不同，层级深度没有限制。",
+          "treeRail": "在会话栏的“关联会话”中，可以查看并更改上级和下级会话。",
+          "sponsorTitle": "给赞助者的一点小回报",
+          "sponsorThanks": "为感谢赞助我们的各位，我们添加了一些小功能。",
+          "sponsorDrag": "在会话列表中可以通过拖放把会话变成子会话。",
+          "sponsorWhere": "这两项功能都在{{settings}} > {{general}} > {{manager}}中开启。",
+          "sponsorSyncBody": "在 Claude Desktop 中会话的状态发生变化时，这里也会同样显示。但出于安全原因，同步是单向的。它会检测 Claude Desktop 中的更改并反映到这里，但不会把你在这里所做的更改写入 Claude Desktop。",
+          "mcp": "该功能通过 Swttch 会话管理 MCP 实现。请在{{settings}} > {{about}} > {{dependencies}}中安装。安装后会自动保持最新版本。"
+        }
       }
     },
     "readAloud": {

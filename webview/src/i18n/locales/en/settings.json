@@ -263,6 +263,33 @@
           "needs": "Needs the session manager package and Claude Desktop on this computer. Sponsors only.",
           "close": "Close"
         }
+      },
+      "announcement": {
+        "title": "Now the model can create and manage sessions!",
+        "description": "Just ask the model inside a session. It can create a session, rename it, archive it, delete it, or change its parent session.",
+        "more": "Learn more",
+        "details": {
+          "title": "The model manages your sessions",
+          "intro": "Ask the model in plain language, inside a session, and it manages sessions for you. It works the way Claude Desktop does. Here is what it can do.",
+          "items": {
+            "create": "Create a new session",
+            "rename": "Rename a session",
+            "archive": "Archive a session",
+            "delete": "Delete a session",
+            "parent": "Change a session’s parent session"
+          },
+          "close": "Close",
+          "archiveNote": "Archiving only hides a session from the list. Running work and worktrees are left alone.",
+          "treeTitle": "And the session tree feature is added also.",
+          "treeLevels": "In the session list, child sessions appear as a tree, indented at every level. Unlike Claude Desktop, there is no depth limit.",
+          "treeRail": "In the session rail’s linked sessions, you can see and change the parent and child sessions.",
+          "sponsorTitle": "A small thank-you for our sponsors",
+          "sponsorThanks": "To thank everyone who has sponsored us, we added a few small features.",
+          "sponsorDrag": "Drag and drop a session in the session list to make it a child session.",
+          "sponsorWhere": "Both are turned on in {{settings}} > {{general}} > {{manager}}.",
+          "sponsorSyncBody": "When a session’s state changes in Claude Desktop, it looks the same here. For security reasons, the sync goes one way only. It detects changes in Claude Desktop and reflects them here, but never writes what you change here to Claude Desktop.",
+          "mcp": "It is built on the Swttch session management MCP. Please install it in {{settings}} > {{about}} > {{dependencies}}. Once installed, it keeps itself on the latest version automatically."
+        }
       }
     },
     "readAloud": {

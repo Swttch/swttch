@@ -263,6 +263,33 @@
           "needs": "Benötigt das Sitzungsmanager-Paket und Claude Desktop auf diesem Computer. Nur für Sponsoren.",
           "close": "Schließen"
         }
+      },
+      "announcement": {
+        "title": "Das Modell kann jetzt Sitzungen anlegen und verwalten!",
+        "description": "Bitten Sie einfach das Modell in einer Sitzung. Es kann Sitzungen anlegen, umbenennen, archivieren, löschen oder die übergeordnete Sitzung ändern.",
+        "more": "Mehr erfahren",
+        "details": {
+          "title": "Das Modell verwaltet Ihre Sitzungen",
+          "intro": "Bitten Sie das Modell in einer Sitzung in normaler Sprache, dann verwaltet es Sitzungen für Sie. Es funktioniert wie in Claude Desktop. Das kann es tun:",
+          "items": {
+            "create": "Eine neue Sitzung anlegen",
+            "rename": "Eine Sitzung umbenennen",
+            "archive": "Eine Sitzung archivieren",
+            "delete": "Eine Sitzung löschen",
+            "parent": "Die übergeordnete Sitzung ändern"
+          },
+          "close": "Schließen",
+          "archiveNote": "Archivieren blendet eine Sitzung nur in der Liste aus. Laufende Arbeit und Worktrees bleiben unberührt.",
+          "treeTitle": "Und der Sitzungsbaum ist auch da",
+          "treeLevels": "In der Sitzungsliste erscheinen untergeordnete Sitzungen als Baum, auf jeder Ebene eingerückt. Anders als in Claude Desktop gibt es keine Tiefenbegrenzung.",
+          "treeRail": "In den verknüpften Sitzungen der Sitzungsleiste sehen und ändern Sie die über- und untergeordneten Sitzungen.",
+          "sponsorTitle": "Ein kleines Dankeschön an unsere Sponsoren",
+          "sponsorThanks": "Als Dank an alle, die uns unterstützen, haben wir ein paar kleine Funktionen hinzugefügt.",
+          "sponsorDrag": "Ziehen Sie in der Sitzungsliste eine Sitzung per Drag and Drop, um sie zur untergeordneten Sitzung zu machen.",
+          "sponsorWhere": "Beides aktivieren Sie unter {{settings}} > {{general}} > {{manager}}.",
+          "sponsorSyncBody": "Ändert sich der Zustand einer Sitzung in Claude Desktop, sehen Sie das auch hier. Aus Sicherheitsgründen läuft der Abgleich nur in eine Richtung. Änderungen in Claude Desktop werden erkannt und hier übernommen, aber was Sie hier ändern, wird nie in Claude Desktop geschrieben.",
+          "mcp": "Umgesetzt ist das über das Swttch-MCP für die Sitzungsverwaltung. Bitte installieren Sie es unter {{settings}} > {{about}} > {{dependencies}}. Nach der Installation hält es sich automatisch auf dem neuesten Stand."
+        }
       }
     },
     "readAloud": {
