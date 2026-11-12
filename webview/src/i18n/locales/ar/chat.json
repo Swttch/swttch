@@ -848,6 +848,10 @@
     "downloadFailed": "تعذّر حفظ الملف",
     "saved": "تم الحفظ: {{path}}",
     "downloaded": "تم تنزيل {{name}}",
+    "more": "المزيد من الخيارات",
+    "copyName": "نسخ اسم الملف",
+    "nameCopied": "تم نسخ اسم الملف",
+    "copyNameFailed": "تعذّر نسخ اسم الملف",
     "opened": "تم فتح {{name}}"
   },
   "linkCard": {

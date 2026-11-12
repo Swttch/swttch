@@ -836,6 +836,10 @@
     "downloadFailed": "Could not save the file",
     "saved": "Saved: {{path}}",
     "downloaded": "Downloaded {{name}}",
+    "more": "More options",
+    "copyName": "Copy file name",
+    "nameCopied": "File name copied",
+    "copyNameFailed": "Could not copy the file name",
     "opened": "Opened {{name}}"
   },
   "linkCard": {

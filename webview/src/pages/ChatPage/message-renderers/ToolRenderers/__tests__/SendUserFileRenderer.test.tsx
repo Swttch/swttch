@@ -1,11 +1,15 @@
 import {beforeEach, describe, expect, it, vi} from 'vitest';
-import {fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import {SendUserFileRenderer} from '../SendUserFileRenderer';
 import {_resetSentMediaCache, formatSentSize, sentFilesOf} from '../sendUserFile';
 import {ToolUseBlockDto, ContentBlockType} from '@/dto';
 import type {LoadedMessageDto} from '@/types';
 
-const {request, openChatFile, toastError, toastSuccess} = vi.hoisted(() => ({request: vi.fn(), openChatFile: vi.fn(), toastError: vi.fn(), toastSuccess: vi.fn()}));
+const {request, openChatFile, toastError, toastSuccess, revealFile} = vi.hoisted(() => ({
+    request: vi.fn(), openChatFile: vi.fn(), toastError: vi.fn(), toastSuccess: vi.fn(), revealFile: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock('@/adapters', () => ({getAdapter: () => ({revealFile})}));
 
 vi.mock('@/api/bridge/Bridge', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@/api/bridge/Bridge')>()),
@@ -207,9 +211,12 @@ describe('the download button', () => {
         draw([{path: '/a/page.html', size: 3}, {path: '/a/t.csv', size: 3}]);
         const buttons = screen.getAllByRole('button', {name: 'Download'});
         expect(buttons).toHaveLength(2);
-        expect(buttons[0].className).toContain('opacity-0');
-        expect(buttons[0].className).toContain('group-hover/sent:opacity-100');
-        expect(buttons[0].className).toContain('transition-opacity');
+        // The buttons fade in together, as one group, beside the other.
+        const group = buttons[0].parentElement as HTMLElement;
+        expect(group.className).toContain('opacity-0');
+        expect(group.className).toContain('group-hover/sent:opacity-100');
+        expect(group.className).toContain('transition-opacity');
+        expect(screen.getAllByRole('button', {name: 'More options'})[0].parentElement).toBe(group);
     });
 
     it('asks the host where to save the file, saves it under its own name and says where it went', async () => {
@@ -269,5 +276,51 @@ describe('the download button', () => {
         await waitFor(() => expect(toastError).toHaveBeenCalled());
         expect(anchors).toHaveLength(0);
         restore();
+    });
+});
+
+describe('the more button', () => {
+    const open = async (index = 0) => {
+        fireEvent.click(screen.getAllByRole('button', {name: 'More options'})[index]);
+        return screen.findByRole('menu');
+    };
+
+    it('opens a menu of what can be done with that file', async () => {
+        draw([{path: '/a/page.html', size: 3}, {path: '/a/t.csv', size: 3}]);
+        const menu = await open(1);
+        expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+            'Download', 'Show in file manager', 'Copy file name', 'Copy path',
+        ]);
+        expect(openChatFile).not.toHaveBeenCalled();
+    });
+
+    it('copies the path and says so', async () => {
+        const writeText = vi.fn(() => Promise.resolve());
+        Object.assign(navigator, {clipboard: {writeText}});
+        draw([{path: '/a/t.csv', size: 3}]);
+        fireEvent.click(within(await open()).getByRole('menuitem', {name: 'Copy path'}));
+        await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('Path copied'));
+        expect(writeText).toHaveBeenCalledWith('/a/t.csv');
+    });
+
+    it('copies just the file name', async () => {
+        const writeText = vi.fn(() => Promise.resolve());
+        Object.assign(navigator, {clipboard: {writeText}});
+        draw([{path: '/a/b/t.csv', size: 3}]);
+        fireEvent.click(within(await open()).getByRole('menuitem', {name: 'Copy file name'}));
+        await waitFor(() => expect(writeText).toHaveBeenCalledWith('t.csv'));
+    });
+
+    it('shows the file in the file manager', async () => {
+        draw([{path: '/a/t.csv', size: 3}]);
+        fireEvent.click(within(await open()).getByRole('menuitem', {name: 'Show in file manager'}));
+        await waitFor(() => expect(revealFile).toHaveBeenCalledWith('/a/t.csv'));
+    });
+
+    it('saves the file from the menu the way the download button does', async () => {
+        request.mockResolvedValue({path: '/Users/me/t.csv'});
+        draw([{path: '/a/t.csv', size: 3}]);
+        fireEvent.click(within(await open()).getByRole('menuitem', {name: 'Download'}));
+        await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('Saved: /Users/me/t.csv'));
     });
 });

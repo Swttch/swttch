@@ -7,6 +7,7 @@ import {i18n, useTranslation} from "@/i18n";
 import {openSentFile} from "@/utils/openChatFile";
 import {cn} from "@/utils/cn";
 import {RendererProps, ToolWrapper, toolResultBlockIndex} from "./common";
+import {SentFileMoreButton} from "./SentFileMenu";
 import {downloadSentFile, formatSentSize, loadSentMedia, sentFilesOf, type SentFile} from "./sendUserFile";
 
 /** The `src` of a sent picture, video or sound; null when it cannot be had, undefined while loading. */
@@ -25,37 +26,45 @@ function useSentMedia(path: string): string | null | undefined {
 }
 
 /**
- * The button that saves the file, fading in when the pointer is over what it
- * belongs to (the parent has to be `group relative`), as Claude Desktop's does.
+ * The buttons on a file, fading in when the pointer is over what they belong to (the parent has to be
+ * `group relative`), as Claude Desktop's download button does: the download button, and beside it the one that opens
+ * the file's menu. They stay while that menu is open, since the pointer has moved onto the menu by then.
  */
-function DownloadButton({file, className}: {file: SentFile; className?: string}) {
+function ItemActions({file, className}: {file: SentFile; className?: string}) {
     const {t} = useTranslation('chat');
+    const [menuOpen, setMenuOpen] = useState(false);
     return (
-        <button
-            type="button"
-            aria-label={t('sentFiles.download')}
-            onClick={async (event) => {
-                event.stopPropagation();
-                if (!(await downloadSentFile(file.path, file.name))) toast.error(i18n.t('chat:sentFiles.downloadFailed'));
-            }}
+        <div
             className={cn(
-                "absolute end-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-md bg-surface-overlay text-text-primary",
-                "opacity-0 transition-opacity duration-200 hover:bg-surface-hover focus-visible:opacity-100 group-hover/sent:opacity-100",
+                "absolute end-1.5 top-1.5 z-10 flex items-center gap-1",
+                "opacity-0 transition-opacity duration-200 focus-within:opacity-100 group-hover/sent:opacity-100",
+                menuOpen && "opacity-100",
                 className,
             )}
         >
-            <ArrowDownTrayIcon className="h-4 w-4"/>
-        </button>
+            <button
+                type="button"
+                aria-label={t('sentFiles.download')}
+                onClick={async (event) => {
+                    event.stopPropagation();
+                    if (!(await downloadSentFile(file.path, file.name))) toast.error(i18n.t('chat:sentFiles.downloadFailed'));
+                }}
+                className="flex h-6 w-6 items-center justify-center rounded-md bg-surface-overlay text-text-primary hover:bg-surface-hover"
+            >
+                <ArrowDownTrayIcon className="h-4 w-4"/>
+            </button>
+            <SentFileMoreButton file={file} onOpenChange={setMenuOpen}/>
+        </div>
     );
 }
 
-/** Wraps an item so its full path shows on hover, and the download button has something to sit on. */
+/** Wraps an item so its full path shows on hover, and the buttons have something to sit on. */
 function Item({file, className, downloadClassName, children}: {file: SentFile; className?: string; downloadClassName?: string; children: React.ReactNode}) {
     return (
         <Tooltip content={<span dir="ltr">{file.path}</span>} placement="bottom">
             <div className={cn("group/sent relative", className)}>
                 {children}
-                <DownloadButton file={file} className={downloadClassName}/>
+                <ItemActions file={file} className={downloadClassName}/>
             </div>
         </Tooltip>
     );

@@ -832,6 +832,10 @@
     "downloadFailed": "ذخیره فایل ممکن نشد",
     "saved": "ذخیره شد: {{path}}",
     "downloaded": "{{name}} دانلود شد",
+    "more": "گزینه‌های بیشتر",
+    "copyName": "کپی نام فایل",
+    "nameCopied": "نام فایل کپی شد",
+    "copyNameFailed": "کپی نام فایل ممکن نشد",
     "opened": "{{name}} باز شد"
   },
   "linkCard": {

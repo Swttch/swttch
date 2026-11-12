@@ -832,6 +832,10 @@
     "downloadFailed": "파일을 저장하지 못했습니다",
     "saved": "저장했습니다: {{path}}",
     "downloaded": "{{name}}을(를) 내려받았습니다",
+    "more": "더보기",
+    "copyName": "파일명 복사",
+    "nameCopied": "파일명을 복사했습니다",
+    "copyNameFailed": "파일명을 복사하지 못했습니다",
     "opened": "{{name}}을(를) 열었습니다"
   },
   "linkCard": {

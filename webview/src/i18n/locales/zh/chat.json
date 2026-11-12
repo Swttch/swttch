@@ -832,6 +832,10 @@
     "downloadFailed": "无法保存文件",
     "saved": "已保存：{{path}}",
     "downloaded": "已下载 {{name}}",
+    "more": "更多选项",
+    "copyName": "复制文件名",
+    "nameCopied": "已复制文件名",
+    "copyNameFailed": "无法复制文件名",
     "opened": "已打开 {{name}}"
   },
   "linkCard": {

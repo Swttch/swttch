@@ -832,6 +832,10 @@
     "downloadFailed": "No se pudo guardar el archivo",
     "saved": "Guardado: {{path}}",
     "downloaded": "{{name}} descargado",
+    "more": "Más opciones",
+    "copyName": "Copiar nombre de archivo",
+    "nameCopied": "Nombre de archivo copiado",
+    "copyNameFailed": "No se pudo copiar el nombre del archivo",
     "opened": "{{name}} abierto"
   },
   "linkCard": {
