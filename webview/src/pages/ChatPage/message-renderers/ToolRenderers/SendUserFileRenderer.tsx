@@ -157,7 +157,7 @@ function FileCard({file}: {file: SentFile}) {
     );
 }
 
-/** A file sent alone: one line, the kind, the name and the size. */
+/** A file as a chip: one line, the kind, the name and the size. */
 function FileChip({file}: {file: SentFile}) {
     return (
         <Item file={file} className="inline-flex max-w-full" downloadClassName="end-2.5 top-1/2 -translate-y-1/2" radius="rounded-xl">
@@ -181,10 +181,19 @@ function FileChip({file}: {file: SentFile}) {
     );
 }
 
+/**
+ * A file that is not drawn as a picture or a player. Claude Desktop draws these as one-line chips, side by side, and
+ * changes all of them into square cards as soon as a picture is among the files, so that they line up with the picture's
+ * thumbnail. A file sent alone is always the chip.
+ */
+function FileBox({file, card}: {file: SentFile; card: boolean}) {
+    return card ? <FileCard file={file}/> : <FileChip file={file}/>;
+}
+
 /** A picture: a 120px thumbnail inside its card, or the picture itself at its own size when it is sent alone. */
-function Picture({file, alone, onOpen}: {file: SentFile; alone: boolean; onOpen: () => void}) {
+function Picture({file, alone, card, onOpen}: {file: SentFile; alone: boolean; card: boolean; onOpen: () => void}) {
     const src = useSentMedia(file.path);
-    if (src === null) return alone ? <FileChip file={file}/> : <FileCard file={file}/>;
+    if (src === null) return <FileBox file={file} card={card}/>;
     if (src === undefined) {
         return <div className={cn("rounded-lg bg-surface-hover/40", alone ? "h-40 w-40" : "h-[120px] w-[120px]")}/>;
     }
@@ -206,10 +215,10 @@ function Picture({file, alone, onOpen}: {file: SentFile; alone: boolean; onOpen:
     );
 }
 
-function Video({file, alone}: {file: SentFile; alone: boolean}) {
+function Video({file, card}: {file: SentFile; card: boolean}) {
     const src = useSentMedia(file.path);
     const [broken, setBroken] = useState(false);
-    if (src === null || broken) return alone ? <FileChip file={file}/> : <FileCard file={file}/>;
+    if (src === null || broken) return <FileBox file={file} card={card}/>;
     if (src === undefined) return <div className="aspect-video w-full max-w-[320px] rounded-xl bg-surface-hover/40"/>;
     return (
         <video
@@ -224,9 +233,9 @@ function Video({file, alone}: {file: SentFile; alone: boolean}) {
 }
 
 /** A sound in a player with its name above it, as Claude Desktop draws it. */
-function Audio({file, alone}: {file: SentFile; alone: boolean}) {
+function Audio({file, card}: {file: SentFile; card: boolean}) {
     const src = useSentMedia(file.path);
-    if (src === null) return alone ? <FileChip file={file}/> : <FileCard file={file}/>;
+    if (src === null) return <FileBox file={file} card={card}/>;
     return (
         <div className="flex flex-col gap-1">
             <span dir="auto" className="text-[0.6875rem] text-text-tertiary">{file.name}</span>
@@ -243,7 +252,8 @@ function Audio({file, alone}: {file: SentFile; alone: boolean}) {
  *
  * - video (mp4, mov, webm) and sound (mp3, wav) in players, above everything else;
  * - everything left side by side in one block that wraps where the line ends:
- *   pictures (png, jpg, gif, webp, bmp, avif) as thumbnails, other files as cards;
+ *   pictures (png, jpg, gif, webp, bmp, avif) as thumbnails, other files as one-line chips, or as square cards
+ *   when a picture is among them;
  * - a call that sends exactly one file draws it alone: a picture at its own size,
  *   anything else as a one-line chip.
  *
@@ -258,6 +268,8 @@ export function SendUserFileRenderer(props: RendererProps) {
     const rest = files.filter((f) => f.kind !== 'video' && f.kind !== 'audio');
     const pictures = files.filter((f) => f.isImage);
     const alone = files.length === 1;
+    // The files that are not pictures or players become cards when a picture is among the files, and are chips otherwise.
+    const asCards = !alone && pictures.length > 0;
 
     // Where each sent picture sits in the session, so the viewer can step on to the others.
     const blockIndex = toolResultBlockIndex(props.toolResult, props.toolUse.id);
@@ -276,15 +288,15 @@ export function SendUserFileRenderer(props: RendererProps) {
     return (
         <ToolWrapper message={props.message}>
             <div className="flex flex-col items-start gap-2">
-                {players.map((file) => (file.kind === 'video' ? <Video key={file.path} file={file} alone={alone}/> : <Audio key={file.path} file={file} alone={alone}/>))}
+                {players.map((file) => (file.kind === 'video' ? <Video key={file.path} file={file} card={asCards}/> : <Audio key={file.path} file={file} card={asCards}/>))}
                 {rest.length > 0 && (
                     <SentFileSelectionProvider files={rest}>
                         <div className="flex flex-wrap gap-2">
                             {rest.map((file) => {
                                 if (file.isImage) {
-                                    return <Picture key={file.path} file={file} alone={alone} onOpen={() => setOpened(pictures.indexOf(file))}/>;
+                                    return <Picture key={file.path} file={file} alone={alone} card={asCards} onOpen={() => setOpened(pictures.indexOf(file))}/>;
                                 }
-                                return alone ? <FileChip key={file.path} file={file}/> : <FileCard key={file.path} file={file}/>;
+                                return <FileBox key={file.path} file={file} card={asCards}/>;
                             })}
                         </div>
                     </SentFileSelectionProvider>

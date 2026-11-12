@@ -172,7 +172,28 @@ describe('SendUserFileRenderer', () => {
         expect(screen.getByText('M4V')).toBeInTheDocument();
     });
 
-    it('draws a video too big to play as a chip when it is sent alone, and as a card among others', async () => {
+    it('draws any number of files that are not pictures as one-line chips, side by side', () => {
+        const files = Array.from({length: 18}, (_, i) => ({path: `/a/f${i}.md`, size: 7}));
+        draw(files);
+        for (const {path} of files) {
+            const chip = screen.getByText(path.split('/').pop()!).closest('button');
+            expect(chip?.className).not.toContain('h-full');
+            expect(chip?.className).toContain('rounded-xl');
+        }
+    });
+
+    it('draws the other files as square cards as soon as a picture is among them, as Claude Desktop does', async () => {
+        request.mockResolvedValue(PNG);
+        draw([{path: '/a/one.md', size: 7}, {path: '/a/two.csv', size: 7}, {path: '/a/chart.png', size: 7}]);
+        await screen.findByRole('img');
+        for (const name of ['one.md', 'two.csv']) {
+            const card = screen.getByText(name).closest('button');
+            expect(card?.className).toContain('h-full');
+            expect(card?.parentElement?.className).toContain('h-[120px]');
+        }
+    });
+
+    it('draws a video too big to play as a one-line chip, alone or among others, as Claude Desktop does', async () => {
         request.mockResolvedValue({kind: 'none'});
         const alone = draw([{path: '/a/big40mb.mp4', size: 41322937}]);
         await waitFor(() => expect(screen.getByText('41.3MB')).toBeInTheDocument());
@@ -180,7 +201,13 @@ describe('SendUserFileRenderer', () => {
         alone.unmount();
 
         draw([{path: '/a/big40mb.mp4', size: 41322937}, {path: '/a/t.csv', size: 5}]);
-        await waitFor(() => expect(screen.getByText('big40mb.mp4').closest('button')?.className).toContain('h-full'));
+        await waitFor(() => expect(screen.getByText('big40mb.mp4')).toBeInTheDocument());
+        // Never the 120px square card: every file that is not a picture is a chip.
+        for (const name of ['big40mb.mp4', 't.csv']) {
+            const chip = screen.getByText(name).closest('button');
+            expect(chip?.className).not.toContain('h-full');
+            expect(chip?.className).toContain('rounded-xl');
+        }
     });
 
     it('plays sound in a player with the file name above it', async () => {
