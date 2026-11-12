@@ -849,7 +849,7 @@
     "saved": "تم الحفظ: {{name}}",
     "downloaded": "تم تنزيل {{name}}",
     "dismiss": "إغلاق",
-    "open": "فتح",
+    "openFolder": "فتح المجلد",
     "more": "المزيد من الخيارات",
     "copyName": "نسخ اسم الملف",
     "nameCopied": "تم نسخ اسم الملف",

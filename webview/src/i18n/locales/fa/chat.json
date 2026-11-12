@@ -833,7 +833,7 @@
     "saved": "ذخیره شد: {{name}}",
     "downloaded": "{{name}} دانلود شد",
     "dismiss": "بستن",
-    "open": "باز کردن",
+    "openFolder": "باز کردن پوشه",
     "more": "گزینه‌های بیشتر",
     "copyName": "کپی نام فایل",
     "nameCopied": "نام فایل کپی شد",

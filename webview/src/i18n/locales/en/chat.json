@@ -837,7 +837,7 @@
     "saved": "Saved: {{name}}",
     "downloaded": "Downloaded {{name}}",
     "dismiss": "Dismiss",
-    "open": "Open",
+    "openFolder": "Open folder",
     "more": "More options",
     "copyName": "Copy file name",
     "nameCopied": "File name copied",

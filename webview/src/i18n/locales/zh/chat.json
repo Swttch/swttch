@@ -833,7 +833,7 @@
     "saved": "已保存：{{name}}",
     "downloaded": "已下载 {{name}}",
     "dismiss": "关闭",
-    "open": "打开",
+    "openFolder": "打开文件夹",
     "more": "更多选项",
     "copyName": "复制文件名",
     "nameCopied": "已复制文件名",

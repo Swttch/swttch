@@ -833,7 +833,7 @@
     "saved": "Salvo: {{name}}",
     "downloaded": "{{name}} baixado",
     "dismiss": "Fechar",
-    "open": "Abrir",
+    "openFolder": "Abrir pasta",
     "more": "Mais opções",
     "copyName": "Copiar nome do arquivo",
     "nameCopied": "Nome do arquivo copiado",

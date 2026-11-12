@@ -833,7 +833,7 @@
     "saved": "保存しました: {{name}}",
     "downloaded": "{{name}} をダウンロードしました",
     "dismiss": "閉じる",
-    "open": "開く",
+    "openFolder": "フォルダを開く",
     "more": "その他のオプション",
     "copyName": "ファイル名をコピー",
     "nameCopied": "ファイル名をコピーしました",
