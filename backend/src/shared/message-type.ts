@@ -620,6 +620,13 @@ export enum MessageType {
    * something a chat screen knows about itself. inbound webview→backend
    */
   REPORT_SESSION_ACTIVITY = 'REPORT_SESSION_ACTIVITY',
+  /**
+   * A chat screen saying whether it is showing: `{ visible: boolean }`. Sent when the screen
+   * becomes hidden (another editor tab in front, a collapsed tool window) and when it shows
+   * again. The backend stops the CLI of a session whose every screen has been hidden for a
+   * minute, once the last turn is over and nothing waits on a person. inbound webview→backend
+   */
+  REPORT_PANEL_VISIBILITY = 'REPORT_PANEL_VISIBILITY',
 
   // -- Plugin updates --
   /** Check for available plugin updates. */
@@ -860,6 +867,8 @@ export enum MessageType {
   SPAWN_ERROR = 'SPAWN_ERROR',
   /** The CLI process exited with an error. */
   CLI_EXIT_ERROR = 'CLI_EXIT_ERROR',
+  /** An answer to a permission or question card reached no CLI (the session runs under another backend, or not at all). SERVICE_ERROR payload type, outbound backend→webview; the reason is plain text for the user. */
+  ANSWER_NOT_DELIVERED = 'ANSWER_NOT_DELIVERED',
   /** WSL host/path mismatch detected (Windows + WSL). */
   WSL_HOST_MISMATCH = 'WSL_HOST_MISMATCH',
   /** The project's working directory is no longer on disk, so the CLI cannot be started in it. */

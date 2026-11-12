@@ -1153,5 +1153,9 @@
     "kitTooOld": "Vorlesen braucht ein neueres Swttch-Zusatzpaket (@swttch/extend-kit). Aktualisieren Sie es unter Einstellungen → Allgemein → Spracheingabe.",
     "notLoggedIn": "Vorlesen braucht eine Anmeldung mit einem Claude-Konto. Melden Sie sich zuerst bei Claude Code an.",
     "codeBlock": "Codeblock"
+  },
+  "answerNotDelivered": {
+    "otherBackend": "Diese Sitzung läuft in einem anderen Fenster, daher muss die Frage dort beantwortet werden. Deine Antwort wurde nicht gesendet.",
+    "notRunning": "Für diese Sitzung läuft Claude nicht, daher wurde deine Antwort nicht gesendet. Sende eine Nachricht, um Claude neu zu starten."
   }
 }

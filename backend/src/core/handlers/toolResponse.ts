@@ -4,6 +4,7 @@ import type { IPCMessage } from '../types';
 import { sendToolResultToProcess, sendControlResponseToProcess } from '../claude-process';
 import { MessageType, buildUserDeclinedContent } from '../../shared';
 import type { PermissionUpdate } from '../../shared';
+import { findLiveCliForSession } from '../cli-registry';
 import { takePreview, peekPreview } from '../features/diffPreview';
 import { holdApprovalIfBaseMoved } from '../features/reviewBase';
 
@@ -118,7 +119,8 @@ export async function toolResponseHandler(
           }
         : { behavior: 'deny', message: buildUserDeclinedContent(payload?.reason) },
     };
-    sendControlResponseToProcess(connections, sessionId, response);
+    const delivered = sendControlResponseToProcess(connections, sessionId, response);
+    if (!delivered) reportUndeliverableAnswer(connectionId, sessionId, connections);
     // The session's activity is NOT set here, though it used to be. Answering a
     // prompt does put the session back to work, but the screen that answered
     // says so itself the moment its prompt comes down — and having two places
@@ -139,9 +141,49 @@ export async function toolResponseHandler(
       content: resultContent,
       is_error: !approved,
     };
-    sendToolResultToProcess(connections, sessionId, toolResult);
-    console.error('[node-backend]', `TOOL_RESPONSE sent for tool ${toolUseId} (approved: ${approved})`);
+    const delivered = sendToolResultToProcess(connections, sessionId, toolResult);
+    if (!delivered) reportUndeliverableAnswer(connectionId, sessionId, connections);
+    console.error(
+      '[node-backend]',
+      `TOOL_RESPONSE ${delivered ? 'sent' : 'NOT delivered'} for tool ${toolUseId} (approved: ${approved})`,
+    );
   }
 
   connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId });
+}
+
+/**
+ * An answer that reached no CLI must not vanish without a word.
+ *
+ * The card can be drawn by a screen whose backend does not own the session's CLI: the card is
+ * rebuilt from the transcript on disk, which every backend can read, while the CLI that asked
+ * is a child of ONE backend, the one that started it (a browser on the standalone backend and
+ * an IDE panel on its own backend can both show the same session). The other backend has no
+ * stdin to write the answer to, so until now it dropped it, logged "sent" and left the card
+ * standing with nothing happening. Say where the answer has to be given instead.
+ */
+function reportUndeliverableAnswer(
+  connectionId: string,
+  sessionId: string,
+  connections: ConnectionManager,
+): void {
+  const conflict = findLiveCliForSession(sessionId);
+  // What the user reads: no process ids, no jargon. The ids go to the log.
+  const reason = conflict?.ownerAlive
+    ? 'This session is running in another window, so the question has to be answered there. Your answer was not sent.'
+    : 'Claude is not running for this session, so your answer was not sent. Send a message to start it again.';
+  console.error(
+    '[node-backend]',
+    conflict?.ownerAlive
+      ? `Answer not delivered: session ${sessionId} is running under another backend (CLI PID ${conflict.entry.pid}, backend PID ${conflict.entry.owner.pid})`
+      : `Answer not delivered: no CLI is running for session ${sessionId}`,
+  );
+  connections.sendTo(connectionId, MessageType.SERVICE_ERROR, {
+    type: MessageType.ANSWER_NOT_DELIVERED,
+    // The webview words this in the user's language by `cause` (chat:answerNotDelivered.*);
+    // `reason` is the English fallback.
+    cause: conflict?.ownerAlive ? 'otherBackend' : 'notRunning',
+    reason,
+    error: reason,
+  });
 }

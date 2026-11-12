@@ -122,6 +122,20 @@ interface SessionRecord {
    * when no account is saved.
    */
   accountId: string | null;
+  /**
+   * Requests the CLI has sent and not yet had an answer to or a cancellation for,
+   * by `request_id`: permission prompts, plan approvals and AskUserQuestion. Each
+   * entry is the `control_request` event exactly as the CLI wrote it.
+   *
+   * The CLI sends a request once and then waits. A screen that attaches later (a
+   * reloaded page, a tab opened again, a panel that comes back after the session
+   * was left alone) never saw that event, so without this list its card either
+   * does not exist or has no request id and answers down the legacy `tool_result`
+   * path, which a CLI blocked on its own request does not consume. Replayed on
+   * subscribe, the card is the same one that was live. Also the answer to "may
+   * this session's CLI be stopped": a CLI with an open request is waiting on a person.
+   */
+  openRequests: Map<string, Record<string, unknown>>;
 }
 
 interface ClientRecord {
@@ -155,6 +169,13 @@ interface ClientRecord {
    * ws-server's validateOrigin), local browsers with a localhost one.
    */
   origin: string | null;
+  /**
+   * When this connection's screen last reported itself hidden (not showing: another editor
+   * tab in front, a collapsed tool window, a minimised window), or null while it is showing.
+   * Null as well for a screen that has never reported, so an older webview, or one whose
+   * host cannot say, is never taken for an unwatched one.
+   */
+  hiddenSince: number | null;
 }
 
 /** Connection-count breakdown for the status endpoint / status-bar card. */
@@ -235,7 +256,7 @@ export class ConnectionManager {
   ): string {
     const connectionId = `conn-${++this.nextId}-${Date.now()}`;
     this.connectionMap.set(connectionId, ws);
-    this.clientMap.set(connectionId, { subscribedSessionId: null, env, panelId, nativeDropStash: null, origin });
+    this.clientMap.set(connectionId, { subscribedSessionId: null, env, panelId, nativeDropStash: null, origin, hiddenSince: null });
     if (panelId) this.panelIdIndex.set(panelId, connectionId);
     this.cancelIdleShutdown('new connection received');
     console.error(
@@ -712,6 +733,34 @@ export class ConnectionManager {
       '[node-backend]',
       `${connectionId} subscribed to session ${sessionId} (subscribers: ${session.subscribers.size})`,
     );
+
+    // A screen that was not there when the CLI asked still has to be able to answer.
+    for (const request of session.openRequests.values()) {
+      this.sendTo(connectionId, MessageType.CLI_EVENT, request);
+    }
+  }
+
+  /** Remember a `control_request` the CLI sent, until it is answered or cancelled. */
+  rememberOpenRequest(sessionId: string, event: Record<string, unknown>): void {
+    const requestId = event.request_id;
+    if (typeof requestId !== 'string' || !requestId) return;
+    this.getOrCreateSession(sessionId).openRequests.set(requestId, event);
+  }
+
+  /** The request was answered or cancelled; it no longer needs a card. */
+  forgetOpenRequest(sessionId: string, requestId: unknown): void {
+    if (typeof requestId !== 'string') return;
+    this.sessionRegistry.get(sessionId)?.openRequests.delete(requestId);
+  }
+
+  /** Whether the CLI of [sessionId] is waiting for a person to answer something. */
+  hasOpenRequests(sessionId: string): boolean {
+    return (this.sessionRegistry.get(sessionId)?.openRequests.size ?? 0) > 0;
+  }
+
+  /** Every request dies with the CLI that asked it. */
+  clearOpenRequests(sessionId: string): void {
+    this.sessionRegistry.get(sessionId)?.openRequests.clear();
   }
 
   unsubscribe(connectionId: string): void {
@@ -775,6 +824,45 @@ export class ConnectionManager {
       }
     }, SESSION_CLEANUP_GRACE_MS);
     this.cleanupTimers.set(sessionId, timer);
+  }
+
+  /**
+   * A screen reporting whether it is showing. Only the first report of a hidden stretch is
+   * kept, so the clock of "hidden for how long" is not restarted by a repeated report.
+   */
+  setPanelVisibility(connectionId: string, visible: boolean, now: number = Date.now()): void {
+    const client = this.clientMap.get(connectionId);
+    if (!client) return;
+    if (visible) client.hiddenSince = null;
+    else if (client.hiddenSince === null) client.hiddenSince = now;
+  }
+
+  /**
+   * Sessions whose CLI is running for nobody: every screen attached to it has been hidden for
+   * at least [hiddenMs], the last turn ended and the CLI has said nothing for at least
+   * [quietMs], and it is not waiting on a person (an open request). A session no screen is
+   * attached to is not here: [scheduleSessionCleanup] owns that case.
+   *
+   * Only what this manager knows is judged; queued messages and background work live
+   * elsewhere and are checked by the caller before it stops anything.
+   */
+  idleSessionIds(hiddenMs: number, quietMs: number, now: number = Date.now()): string[] {
+    const ids: string[] = [];
+    for (const session of this.sessionRegistry.values()) {
+      if (!session.process || session.subscribers.size === 0) continue;
+      if (session.cliTurnOpen || now - session.lastCliEventAt < quietMs) continue;
+      if (session.openRequests.size > 0) continue;
+      let everyScreenHidden = true;
+      for (const connectionId of session.subscribers) {
+        const since = this.clientMap.get(connectionId)?.hiddenSince ?? null;
+        if (since === null || now - since < hiddenMs) {
+          everyScreenHidden = false;
+          break;
+        }
+      }
+      if (everyScreenHidden) ids.push(session.sessionId);
+    }
+    return ids;
   }
 
   /** A live CLI that is part-way through a turn and has not gone quiet for too long. */
@@ -1062,6 +1150,7 @@ export class ConnectionManager {
         effortPick: null,
         thinkingDisplay: null,
         accountId: null,
+        openRequests: new Map(),
       };
       this.sessionRegistry.set(sessionId, session);
     }

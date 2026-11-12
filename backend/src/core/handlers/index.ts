@@ -215,6 +215,7 @@ import {
   getSessionActivityHandler,
   markSessionReadHandler,
   reportSessionActivityHandler,
+  reportPanelVisibilityHandler,
 } from './sessionActivity';
 import { getMcpServerToolsHandler } from './getMcpServerToolsHandler';
 import {
@@ -861,6 +862,9 @@ export async function handleMessage(
       break;
     case MessageType.REPORT_SESSION_ACTIVITY:
       reportSessionActivityHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.REPORT_PANEL_VISIBILITY:
+      reportPanelVisibilityHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.RECONNECT_MCP_SERVER:
       await reconnectMcpServerHandler(connectionId, message, connections, bridge);

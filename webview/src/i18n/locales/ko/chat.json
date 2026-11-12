@@ -1144,5 +1144,9 @@
     "kitTooOld": "소리 내어 읽으려면 더 새로운 확장킷(@swttch/extend-kit)이 필요해요. 설정 → 일반 → 음성 입력에서 업데이트하세요.",
     "notLoggedIn": "소리 내어 읽으려면 Claude 계정 로그인이 필요해요. 먼저 Claude Code에 로그인하세요.",
     "codeBlock": "코드 블록"
+  },
+  "answerNotDelivered": {
+    "otherBackend": "이 세션은 다른 창에서 실행 중이라 질문에는 그 창에서 답해야 해요. 답변은 전송되지 않았어요.",
+    "notRunning": "이 세션에서는 Claude가 실행 중이 아니라서 답변이 전송되지 않았어요. 메시지를 보내 다시 시작하세요."
   }
 }

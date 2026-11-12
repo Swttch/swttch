@@ -584,6 +584,53 @@ describe('채팅 스트리밍 통합 테스트', () => {
     expect(screen.getByTestId('is-streaming')).toHaveTextContent('false');
   });
 
+  it('SERVICE_ERROR(ANSWER_NOT_DELIVERED): 사용자용 문장이 접두어 없이 그대로 표시된다', async () => {
+    mockSession.currentSessionId = 'test-session';
+
+    render(
+      <TestWrapper>
+        <TestChatComponent />
+      </TestWrapper>
+    );
+
+    await act(async () => {
+      emitBridgeEvent(MessageType.SERVICE_ERROR, {
+        type: MessageType.ANSWER_NOT_DELIVERED,
+        cause: 'otherBackend',
+        reason: 'backend English fallback, not shown when the cause is known',
+      });
+    });
+
+    // Worded from the catalog by `cause`, so it follows the user's language.
+    await waitFor(() => {
+      expect(screen.getByTestId('error')).toHaveTextContent(i18n.t('chat:answerNotDelivered.otherBackend'));
+    });
+    expect(screen.getByTestId('error')).not.toHaveTextContent('Service error');
+    expect(screen.getByTestId('error')).not.toHaveTextContent('backend English fallback');
+  });
+
+  it('SERVICE_ERROR(ANSWER_NOT_DELIVERED): 모르는 cause는 백엔드가 보낸 영어 문장으로 대체된다', async () => {
+    mockSession.currentSessionId = 'test-session';
+
+    render(
+      <TestWrapper>
+        <TestChatComponent />
+      </TestWrapper>
+    );
+
+    await act(async () => {
+      emitBridgeEvent(MessageType.SERVICE_ERROR, {
+        type: MessageType.ANSWER_NOT_DELIVERED,
+        cause: 'somethingNewer',
+        reason: 'English sentence from a newer backend',
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('error')).toHaveTextContent('English sentence from a newer backend');
+    });
+  });
+
   it('SERVICE_ERROR 수신: error 상태가 설정된다', async () => {
     mockSession.currentSessionId = 'test-session';
 

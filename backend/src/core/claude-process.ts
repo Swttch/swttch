@@ -996,6 +996,7 @@ export async function ensureClaudeProcess(
       // turn left to end. Dropped rather than kept, so it cannot surface in
       // whatever session reuses the id.
       clearMessagesForSession(targetSessionId);
+      connections.clearOpenRequests(targetSessionId);
       if (getQueuedMessages(targetSessionId).length > 0) {
         clearQueuedMessages(targetSessionId);
         connections.broadcastToSession(targetSessionId, MessageType.QUEUED_MESSAGES_CHANGED, {
@@ -1360,6 +1361,7 @@ export function sendControlResponseToProcess(
     : stdinMessage.trimEnd();
   console.error('[node-backend]', `Sending control_response to stdin: ${logPreview}`);
   session.process.stdin.write(stdinMessage);
+  connections.forgetOpenRequest(sessionId, response.request_id);
   return true;
 }
 
@@ -1726,6 +1728,14 @@ function handleStreamEvent(
     void ingestRateLimitWindows(info?.unifiedWindows).catch((err) => {
       console.error('[node-backend]', `Failed to absorb rate_limit_event: ${String(err)}`);
     });
+  }
+
+  // Keep the CLI's open questions so a screen that attaches later can answer them
+  // (see SessionRecord.openRequests). Read-only: the event is still forwarded below.
+  if (event.type === 'control_request') {
+    connections.rememberOpenRequest(targetSessionId, event);
+  } else if (event.type === 'control_cancel_request') {
+    connections.forgetOpenRequest(targetSessionId, event.request_id);
   }
 
   // 모든 CLI 이벤트를 있는 그대로 전달 — 타입별 분기/가공 없음

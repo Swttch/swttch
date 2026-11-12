@@ -44,6 +44,7 @@ import { useScheduledDelivery } from '../../hooks/useScheduledDelivery/useSchedu
 import { useSessionContext } from '../../contexts/SessionContext';
 import { useAwaitingNotifications, useDocumentTitle } from '../../hooks';
 import { useMarkSessionRead } from '../../hooks/useMarkSessionRead';
+import { useReportPanelVisibility } from '../../hooks/useReportPanelVisibility';
 import { useReportSessionActivity } from '../../hooks/useReportSessionActivity';
 import { useTopBar } from '../../contexts/TopBarContext';
 import { usePendingAskUserQuestion } from '../../hooks/usePendingAskUserQuestion';
@@ -191,6 +192,8 @@ function ChatPageContent() {
   // The session lists draw the same answer the favicon and the IDE tab draw
   // (issue #456).
   useReportSessionActivity(currentSessionId, isStreaming, isAwaitingUser);
+  // A session nobody is looking at can have its CLI stopped until the next message.
+  useReportPanelVisibility();
   // Looking at a session is what marks it read (issue #449).
   useMarkSessionRead(currentSessionId, isStreaming);
 

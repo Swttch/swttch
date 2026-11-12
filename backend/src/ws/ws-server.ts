@@ -19,6 +19,7 @@ import { cancelLogin } from '../core/handlers/login';
 import { releaseDictation } from '../core/handlers/dictation';
 import { releaseReadAloud } from '../core/handlers/readAloud';
 import { unwatchAllForConnection } from '../core/features/backgroundTaskOutputWatcher';
+import { stopIdleSessions } from '../core/features/idleSessions';
 import { reportBackendError, trackActivity } from '../core/features/telemetry';
 import { tunnelPairing, issueLocalPairCode } from '../core/features/tunnel-pairing';
 import { LogWebSocketServer } from '../logging/log-ws';
@@ -215,7 +216,15 @@ function readRequestBody(req: IncomingMessage, maxBytes = MAX_REQUEST_BODY_BYTES
       }
       chunks.push(chunk);
     });
-    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('end', () => {
+      const joined = Buffer.concat(chunks);
+      // The request object, and with it this closure, can outlive the handler that awaits the
+      // body. Emptying the list lets the pieces be collected as soon as the joined copy exists,
+      // instead of staying alive next to it (and next to the string below) for the rest of the
+      // request. Up to 100 MB per long-poll send, that is the difference of a whole copy.
+      chunks.length = 0;
+      resolve(joined.toString('utf8'));
+    });
     req.on('error', reject);
   });
 }
@@ -339,12 +348,18 @@ export function startWebSocketServer(
       onTick: () => {
         connections.broadcastToAll(MessageType.HEARTBEAT, { intervalMs: heartbeat.interval });
         connections.sweepOrphanSessions();
+        void stopIdleSessions(connections).catch((err) => {
+          console.error('[node-backend]', `Idle session sweep failed: ${String(err)}`);
+        });
       },
     });
     heartbeat.start();
 
     // WebSocket 연결 핸들러 — 한 번만 등록
     wss.on('connection', (ws: WebSocket, request: IncomingMessage) => {
+      // `request` is a real upgrade request for /ws, but a SYNTHETIC one with only `url` and
+      // `headers.origin` for a long-poll client (see POST /lp/open below). Reading any other
+      // field of it here means updating that call too.
       // Parse client environment + optional panelId from query: /ws?env=jetbrains&panelId=...
       const params = new URL(request.url ?? '/ws', 'http://localhost').searchParams;
       const envParam = params.get('env');
@@ -373,7 +388,9 @@ export function startWebSocketServer(
       // 연결 준비 신호 전송
       connections.sendTo(connectionId, MessageType.BRIDGE_READY);
 
-      ws.on('message', (data: Buffer) => {
+      // A string for a long-poll client (LongPollSocket.receive passes the frame as it
+      // arrived), a Buffer for a WebSocket one. Only `toString()` is used, which both answer.
+      ws.on('message', (data: Buffer | string) => {
         let parsed: IPCMessage;
         try {
           parsed = JSON.parse(data.toString()) as IPCMessage;
@@ -500,8 +517,19 @@ export function startWebSocketServer(
           if (req.method === 'POST' && urlPath === '/lp/open') {
             // Rebuild the /ws query (env, panelId) so the shared connection
             // handler reads this client exactly as it reads a WebSocket one.
+            //
+            // COUPLING: the request below is NOT a real upgrade request. It carries
+            // exactly what `wss.on('connection')` reads from its `request` argument
+            // today: `url` (for the query) and `headers.origin`. If that handler
+            // ever reads anything else from `request` (remoteAddress, other headers,
+            // `socket`), a long-poll client would silently get `undefined` there
+            // while WebSocket clients get the real value. Supply the new field here
+            // in the same change.
             params.delete('sid');
             const { sid, socket } = longPoll.open();
+            // The "Client connected" line that follows cannot say which transport the page
+            // ended up on; this one is how a log tells a long-poll panel from a WebSocket one.
+            console.error('[node-backend]', 'Long-poll session opened (the page could not use a WebSocket)');
             wss.emit('connection', socket, {
               url: `/ws?${params.toString()}`,
               headers: { origin: req.headers.origin },
