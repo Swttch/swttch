@@ -210,6 +210,15 @@
     "refreshSessions": "Refresh sessions",
     "renameSession": "Rename session",
     "deleteSession": "Delete session",
+    "dragLinks": {
+      "topLevel": "Drop here to make it a top-level session"
+    },
+    "archiveSession": "Archive session",
+    "unarchiveSession": "Unarchive session",
+    "startedSessions": {
+      "show": "Show the sessions it started",
+      "hide": "Hide the sessions it started"
+    },
     "groups": {
       "today": "Today",
       "yesterday": "Yesterday",
@@ -240,6 +249,7 @@
       "active": "Active",
       "countsTitle": "Session counts by state",
       "activeTitle": "Show only sessions that need input, are working, or are unread",
+      "showArchived": "Show archived sessions",
       "noneActive": "No session is waiting on you"
     }
   },

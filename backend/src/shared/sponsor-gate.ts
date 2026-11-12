@@ -20,6 +20,10 @@ export enum SponsorGate {
   AutoResume = 'autoresume',
   /** Keeping "Allow all command in this session" on beyond one session. */
   AllowAllCommands = 'allowallcommands',
+  /** Reflecting what the Claude desktop app records about its sessions in the session lists. */
+  DesktopSessionSync = 'desktopsessionsync',
+  /** Dragging a session in the session list onto another to change which session it is under. */
+  SessionListDragDrop = 'sessionlistdragdrop',
 }
 
 /**

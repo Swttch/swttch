@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import { copyFile, mkdir, stat } from 'fs/promises';
-import { homedir } from 'os';
 import { basename, join } from 'path';
+import { ccgHomeDir } from '../../config/ccg-home';
 
 /**
  * A copy of every file Claude sends with `SendUserFile`, kept so the file can
@@ -18,7 +18,7 @@ import { basename, join } from 'path';
 export const SENT_FILE_MAX_BYTES = 30 * 1024 * 1024;
 
 function storeRoot(): string {
-  return join(process.env.CCG_HOME?.trim() || join(homedir(), '.claude-code-gui'), 'sent-files');
+  return join(ccgHomeDir(), 'sent-files');
 }
 
 /** Where the copy of the file once at `originalPath` lives. One copy per path: sending it again replaces it. */

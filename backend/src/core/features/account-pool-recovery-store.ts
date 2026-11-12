@@ -1,11 +1,11 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { readFile, writeFile, mkdir, rename, rm } from 'node:fs/promises';
-import { homedir } from 'node:os';
 import { join, dirname } from 'node:path';
 import type { AccountPoolRecovery } from '../../shared';
+import { ccgHomeDir } from '../../config/ccg-home';
 
 function pathFor(sessionId: string): string {
-  return join(homedir(), '.claude-code-gui', 'account-pool-recovery',
+  return join(ccgHomeDir(), 'account-pool-recovery',
     createHash('sha256').update(sessionId).digest('hex') + '.json');
 }
 export async function readAccountPoolRecovery(sessionId: string): Promise<AccountPoolRecovery | null> {

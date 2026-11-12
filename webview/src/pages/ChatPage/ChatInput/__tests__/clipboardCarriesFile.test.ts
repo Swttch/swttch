@@ -14,7 +14,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { clipboardCarriesFile } from '../clipboardCarriesFile';
+import { clipboardCarriesFile, clipboardCarriesFileForHost } from '../clipboardCarriesFile';
 
 /** Build a DataTransfer-shaped stub carrying the given items. */
 function clipboardWith(items: Array<{ kind: string; type: string }>): DataTransfer {
@@ -67,5 +67,26 @@ describe('clipboardCarriesFile', () => {
 
   it('reports false when the clipboard exposes no items', () => {
     expect(clipboardCarriesFile({} as unknown as DataTransfer)).toBe(false);
+  });
+});
+
+describe('clipboardCarriesFileForHost', () => {
+  const isImage = (mime: string) => mime.startsWith('image/');
+
+  it('is true for a spreadsheet or document copied in a file manager (#672)', () => {
+    const xlsx = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    expect(clipboardCarriesFileForHost(clipboardWith([{ kind: 'file', type: xlsx }]), isImage)).toBe(true);
+    expect(clipboardCarriesFileForHost(clipboardWith([{ kind: 'file', type: '' }]), isImage)).toBe(true);
+  });
+
+  it('is false when a picture is among the files, which the composer attaches inline', () => {
+    const clipboard = clipboardWith([{ kind: 'file', type: 'image/png' }]);
+    expect(clipboardCarriesFileForHost(clipboard, isImage)).toBe(false);
+  });
+
+  it('is false for text, so the browser pastes it and undo works', () => {
+    const clipboard = clipboardWith([{ kind: 'string', type: 'text/plain' }]);
+    expect(clipboardCarriesFileForHost(clipboard, isImage)).toBe(false);
+    expect(clipboardCarriesFileForHost(null, isImage)).toBe(false);
   });
 });

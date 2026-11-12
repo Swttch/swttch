@@ -38,6 +38,8 @@ import { PromptLibraryModal } from '@/components/PromptLibraryModal';
 import { useMcpServers, MCP_SERVERS_QUERY_KEY } from '@/hooks/useMcpServers';
 import { useQueryClient } from '@tanstack/react-query';
 import { MissingFolderBar } from './MissingFolderBar';
+import { ArchivedSessionBar } from './ArchivedSessionBar';
+import { isArchivedMark } from '@/components/SessionList/archive';
 import { useWorkingDirGone } from '@/hooks/useWorkingDirGone';
 import { useChatStreamContext } from '../../contexts/ChatStreamContext';
 import { useScheduledDelivery } from '../../hooks/useScheduledDelivery/useScheduledDelivery';
@@ -546,6 +548,8 @@ function ChatPageContent() {
               />
           ) : folderGone ? (
               <MissingFolderBar />
+          ) : currentSessionId && isArchivedMark(currentSession?.sessionMark) ? (
+              <ArchivedSessionBar sessionId={currentSessionId} />
           ) : (
               /* The setup card is up, so there is nothing useful to type yet —
                  a prompt sent now would reach a CLI that is missing or signed

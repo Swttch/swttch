@@ -7,6 +7,12 @@ import { SessionActivity, type SessionActivityMap } from '@/shared';
 
 const ROOT = '/repo';
 
+// Whether the session-management MCP is installed decides if the list offers to archive; these tests are about
+// something else, so it is not installed.
+vi.mock('@/hooks/queries/useSessionMcp', () => ({
+  useSessionMcp: () => ({ info: { installed: null } }),
+}));
+
 let mockRootDir: string | null = ROOT;
 vi.mock('@/contexts/WorkingDirContext', () => ({
   useWorkingDirOrNull: () => ({ rootDir: mockRootDir }),
@@ -246,16 +252,26 @@ describe('SessionList — closed sessions', () => {
   });
 
   it('marks a session the moment a tab opens it', () => {
-    mockActivity = { b: SessionActivity.Running };
+    mockActivity = { b: SessionActivity.Awaiting };
     mockOpen = new Set();
-    const { rerender } = renderListReturning([session('b', 'working one')]);
+    const { rerender } = renderListReturning([session('b', 'waiting one')]);
 
     expect(screen.queryByTestId('session-activity')).not.toBeInTheDocument();
 
     mockOpen = new Set(['b']);
-    rerender(listElement([session('b', 'working one')]));
+    rerender(listElement([session('b', 'waiting one')]));
 
-    expect(screen.getByTestId('session-activity').dataset.activity).toBe(SessionActivity.Running);
+    expect(screen.getByTestId('session-activity').dataset.activity).toBe(SessionActivity.Awaiting);
+  });
+
+  it('still marks a running session no tab here has open, which is one running in the Claude desktop app', () => {
+    mockActivity = { b: SessionActivity.Running };
+    mockOpen = new Set();
+    renderList([session('a', 'idle one'), session('b', 'running one')]);
+
+    const markers = screen.getAllByTestId('session-activity');
+    expect(markers).toHaveLength(1);
+    expect(markers[0].dataset.activity).toBe(SessionActivity.Running);
   });
 });
 

@@ -1,0 +1,27 @@
+/*
+ * The check mark of a plan step that has just been ticked off: it is drawn from its start to its end, as a pen would,
+ * and the circle of the step's mark does not change size. `pathLength="1"` on the path makes the dash length 1
+ * whatever the path's real length is. A step that was already done when it first appeared has no `plan-check-draw`
+ * class and shows the finished mark at once.
+ */
+@keyframes plan-check-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.plan-check-draw path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: plan-check-draw 0.45s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plan-check-draw path {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}

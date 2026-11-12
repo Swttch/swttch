@@ -6,7 +6,7 @@ import { logDebug } from '../../logging/log-level';
 
 /**
  * Answer a webview that pasted into the chat input and found nothing on its own
- * clipboard (#278) with what the host can read from the system clipboard.
+ * clipboard (#278) with what the host can read from the system clipboard: text, an image, or files.
  *
  * The answer rides on the ACK, like pickFiles: the webview is waiting on that
  * one request and acts on `text` or `image` the moment they arrive.
@@ -26,7 +26,22 @@ export async function getClipboardHandler(
     typeof workingDirValue === 'string' && workingDirValue.length > 0 ? workingDirValue : undefined;
 
   try {
-    const { text, image } = await bridge.getClipboard({ workingDir });
+    const { text, image, files } = await bridge.getClipboard({ workingDir });
+    if (files.length > 0) {
+      // Files copied in a file manager take the way a drop of them takes: the chat already
+      // turns NATIVE_DROP_ENTRIES into chips, with the same paths a drop carries. What else
+      // the clipboard holds (a file manager may add the names as text) is not pasted
+      // beside them.
+      connections.sendTo(connectionId, MessageType.NATIVE_DROP_ENTRIES, { entries: files });
+      // The count lets the composer tell "files were handed over" from "nothing there".
+      connections.sendTo(connectionId, MessageType.ACK, {
+        requestId: message.requestId,
+        text: null,
+        image: null,
+        files: files.length,
+      });
+      return;
+    }
     connections.sendTo(connectionId, MessageType.ACK, {
       requestId: message.requestId,
       text,

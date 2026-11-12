@@ -2,10 +2,10 @@ import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { MessageType } from '../../shared';
-import { findDesktopSession } from '../features/findDesktopParentSessionTitle';
+import { findDesktopSession } from '../features/desktopSessions';
 
 /**
- * GET_DESKTOP_SESSION: what Claude Desktop's own file says about a session named by its Desktop id (`local_…`):
+ * GET_DESKTOP_SESSION: what the session-management MCP reads from Claude Desktop's own record of a session named by its Desktop id (`local_…`):
  * its title, the CLI session it runs and the folder it works in. For the chat text that links to a session and
  * the card for a message sent to one. Always answers `ok`; `session` is absent when there is no such file.
  */

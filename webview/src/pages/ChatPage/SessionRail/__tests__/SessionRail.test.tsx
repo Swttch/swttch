@@ -16,8 +16,22 @@ vi.mock('@/adapters', () => ({getAdapter: () => ({openUrl})}));
 vi.mock('@/utils/openChatFile', () => ({openChatFile}));
 vi.mock('react-hot-toast', () => ({default: {error: vi.fn()}}));
 vi.mock('@/contexts/ChatStreamContext', () => ({useChatStreamContext: () => ({messages, isStreaming: false})}));
+const sessionCtx = vi.hoisted(() => ({
+    sessions: [] as unknown[],
+    switchSession: undefined as unknown as (sessionId: string) => void,
+}));
 vi.mock('@/contexts/SessionContext', () => ({
-    useSessionContext: () => ({workingDirectory: '/Users/me/Projects/swttch', currentSessionId: 's1'}),
+    useSessionContext: () => ({
+        workingDirectory: '/Users/me/Projects/swttch',
+        currentSessionId: 's1',
+        sessions: sessionCtx.sessions,
+        switchSession: sessionCtx.switchSession,
+    }),
+}));
+// Whether the session-management MCP is installed: what decides if the rail draws the linked sessions.
+let mcpInstalled: string | null = null;
+vi.mock('@/hooks/queries/useSessionMcp', () => ({
+    useSessionMcp: () => ({info: {packageName: '@swttch/session-manager-mcp', installed: mcpInstalled, latest: null, updatable: false, updating: false}}),
 }));
 // One object for every render: a fresh one would change the effect's dependencies each time and loop it.
 const bridge = vi.hoisted(() => ({isConnected: true, send: undefined as unknown}));
@@ -31,7 +45,21 @@ vi.mock('@/hooks/useSessionOutputs', async (importOriginal) => ({
     useSessionOutputs: () => outputsIndex,
     useSessionOutputImages: () => ({loaded: {}, ensure: vi.fn()}),
 }));
-vi.mock('@/hooks/queries/useSponsorStatus', () => ({useSponsorStatus: () => ({isSponsor: false})}));
+let mockSponsor = false;
+vi.mock('@/hooks/queries/useSponsorStatus', () => ({useSponsorStatus: () => ({isSponsor: mockSponsor})}));
+// The switch "Reflect changes from Claude Desktop": the desktop app's records are shown only while it is on.
+let mockSync = false;
+vi.mock('@/contexts/SettingsContext', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@/contexts/SettingsContext')>()),
+    useSettingsOrNull: () => ({settings: {desktopSessionSync: mockSync}}),
+}));
+const openSettingsAt = vi.fn();
+vi.mock('@/utils/openSettingsAt', () => ({openSettingsAt: (route: string) => openSettingsAt(route)}));
+let mockActivity: Record<string, string> = {};
+vi.mock('@/hooks/useSessionActivity', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@/hooks/useSessionActivity')>()),
+    useSessionActivity: () => ({activity: mockActivity, open: new Set<string>(), markRead: vi.fn()}),
+}));
 vi.mock('@/hooks/useSessionPictures', async () => {
     const actual = await vi.importActual<typeof import('@/hooks/useSessionPictures')>('@/hooks/useSessionPictures');
     const {isPictureOutput} = await vi.importActual<typeof import('@/hooks/useSessionOutputs')>('@/hooks/useSessionOutputs');
@@ -76,6 +104,10 @@ function openRail() {
 }
 
 beforeEach(() => {
+    mockActivity = {};
+    mockSponsor = false;
+    mockSync = false;
+    openSettingsAt.mockClear();
     openUrl.mockClear();
     openChatFile.mockClear();
     bridge.send = send;
@@ -83,6 +115,9 @@ beforeEach(() => {
     send.mockResolvedValue({status: 'ok', markdown: REPORT});
     messages = [];
     outputsIndex = [];
+    mcpInstalled = null;
+    sessionCtx.sessions = [];
+    sessionCtx.switchSession = vi.fn();
 });
 
 describe('SessionRail', () => {
@@ -158,5 +193,335 @@ describe('SessionRail', () => {
         render(<SessionRail/>);
         openRail();
         expect(screen.getAllByText('sessionRail.contextLoading').length).toBeGreaterThan(0);
+    });
+});
+
+function linked(id: string, title: string, startedBy: string | null, startedAt = 0, desktopStarter?: string) {
+    return {
+        id,
+        title,
+        createdAt: new Date(startedAt || 0),
+        updatedAt: new Date(startedAt || 0),
+        sessionMark: {id, parentSessionUid: startedBy, startedAt, ...(desktopStarter ? {desktopParentSessionId: desktopStarter} : {})},
+    };
+}
+
+describe('SessionRail - linked sessions', () => {
+    it('is left out while the session-management MCP is not installed', () => {
+        mcpInstalled = null;
+        sessionCtx.sessions = [linked('s1', 'This one', null)];
+        render(<SessionRail/>);
+        openRail();
+        expect(screen.queryByText('sessionRail.linked.title')).toBeNull();
+    });
+
+    it('says none for a session no other session started and that started none', () => {
+        mcpInstalled = '0.2.0';
+        sessionCtx.sessions = [linked('s1', 'This one', null)];
+        render(<SessionRail/>);
+        openRail();
+        expect(screen.getByText('sessionRail.linked.parent')).toBeInTheDocument();
+        expect(screen.getByText('sessionRail.linked.children')).toBeInTheDocument();
+        expect(screen.getAllByText('sessionRail.linked.none')).toHaveLength(2);
+    });
+
+    it('names the parent and lists the children in the order they were started, and opens one on a click', () => {
+        mcpInstalled = '0.2.0';
+        sessionCtx.sessions = [
+            linked('s1', 'This one', 'p1'),
+            linked('p1', 'The manager', null),
+            linked('c2', 'Second child', 's1', 20),
+            linked('c1', 'First child', 's1', 10),
+            linked('x', 'Somebody else child', 'p1', 5),
+        ];
+        render(<SessionRail/>);
+        openRail();
+        expect(screen.getByRole("button", {name: "The manager"})).toBeInTheDocument();
+        const rows = screen.getAllByRole('button', {name: /^(First|Second) child$/}).map((b) => b.textContent);
+        expect(rows).toEqual(['First child', 'Second child']);
+        expect(screen.queryByRole("button", {name: "Somebody else child"})).toBeNull();
+        fireEvent.click(screen.getByRole("button", {name: "The manager"}));
+        expect(sessionCtx.switchSession).toHaveBeenCalledWith('p1');
+        fireEvent.click(screen.getByRole("button", {name: "Second child"}));
+        expect(sessionCtx.switchSession).toHaveBeenCalledWith('c2');
+    });
+
+    it('marks a child that is running, as the Claude desktop app does, and leaves the idle ones bare', () => {
+        mcpInstalled = '0.2.0';
+        mockActivity = {c1: 'running'};
+        sessionCtx.sessions = [
+            linked('s1', 'This one', null),
+            linked('c1', 'First child', 's1', 10),
+            linked('c2', 'Second child', 's1', 20),
+        ];
+        render(<SessionRail/>);
+        openRail();
+        const first = screen.getByRole('button', {name: 'First child'});
+        const second = screen.getByRole('button', {name: 'Second child'});
+        expect(first.querySelector('[data-testid="session-activity"][data-activity="running"]')).not.toBeNull();
+        expect(second.querySelector('[data-testid="session-activity"]')).toBeNull();
+    });
+
+    it('says the parent is not in the list when it runs in a folder the list does not cover', () => {
+        mcpInstalled = '0.2.0';
+        sessionCtx.sessions = [linked('s1', 'This one', 'a-session-in-another-folder')];
+        render(<SessionRail/>);
+        openRail();
+        expect(screen.getByText('sessionRail.linked.notInList')).toBeInTheDocument();
+    });
+});
+
+describe('SessionRail - archived sessions', () => {
+    beforeEach(() => {
+        mcpInstalled = '0.4.0';
+    });
+
+    it('leads the title of an archived session with a pill, and leaves a live one bare', () => {
+        sessionCtx.sessions = [
+            linked('s1', 'This one', 'p1'),
+            {...linked('p1', 'The manager', null), sessionMark: {id: 'p1', parentSessionUid: null, archivedAt: 1794301002844}},
+            linked('c1', 'A live child', 's1', 10),
+        ];
+        render(<SessionRail/>);
+        openRail();
+        const pills = screen.getAllByTestId('archived-pill');
+        expect(pills).toHaveLength(1);
+        expect(pills[0]).toHaveTextContent('sessionRail.linked.archived');
+        expect(pills[0].nextElementSibling).toHaveTextContent('The manager');
+    });
+});
+
+describe('SessionRail - the links the Claude desktop app records', () => {
+    beforeEach(() => {
+        mcpInstalled = '0.4.0';
+        mockSponsor = true;
+        mockSync = true;
+        send.mockResolvedValue({status: 'ok'});
+    });
+
+    const resetButton = () => screen.getByRole('button', {name: 'sessionRail.linked.resetToDesktop'});
+
+    it('shows the parent the desktop app records where the package chose nothing', () => {
+        sessionCtx.sessions = [linked('s1', 'This one', null, 0, 'p1'), linked('p1', 'The manager', null)];
+        render(<SessionRail/>);
+        openRail();
+        expect(screen.getByRole('button', {name: 'The manager'})).toBeInTheDocument();
+    });
+
+    it('does not bring the desktop parent back under a session that was taken to the top level on purpose', () => {
+        sessionCtx.sessions = [linked('s1', 'This one', '', 0, 'p1'), linked('p1', 'The manager', null)];
+        render(<SessionRail/>);
+        openRail();
+        expect(screen.queryByRole('button', {name: 'The manager'})).toBeNull();
+    });
+
+    it('has nothing to reset while every link is the one the desktop app records', () => {
+        sessionCtx.sessions = [linked('s1', 'This one', null, 0, 'p1'), linked('p1', 'The manager', null)];
+        render(<SessionRail/>);
+        openRail();
+        expect(resetButton()).toHaveAttribute('aria-disabled', 'true');
+        fireEvent.click(resetButton());
+        expect(send).not.toHaveBeenCalled();
+    });
+
+    it('forgets what was chosen by hand for this session and for the sessions the desktop app says it started', async () => {
+        sessionCtx.sessions = [
+            linked('s1', 'This one', '', 0, 'p1'),
+            linked('p1', 'The manager', null),
+            linked('c1', 'A child', 'other', 10, 's1'),
+            linked('c2', 'Started only through the package', 's1', 20),
+        ];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(resetButton());
+        // The links are reset one after another.
+        await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+        expect(send).toHaveBeenCalledWith('SET_SESSION_PARENT', {sessionId: 's1', parentSessionId: null, inherit: true});
+        expect(send).toHaveBeenCalledWith('SET_SESSION_PARENT', {sessionId: 'c1', parentSessionId: null, inherit: true});
+        expect(send).not.toHaveBeenCalledWith('SET_SESSION_PARENT', expect.objectContaining({sessionId: 'c2'}));
+    });
+});
+
+describe('SessionRail - the Claude logo button while the desktop sync is off', () => {
+    beforeEach(() => {
+        mcpInstalled = '0.4.0';
+        send.mockResolvedValue({status: 'ok'});
+    });
+
+    const logoButton = () => screen.getByRole('button', {name: 'sessionRail.linked.resetToDesktop'});
+
+    it.each([
+        ['the switch is off', false, true],
+        ['the person is not a sponsor', true, false],
+    ])('stays, worded as when it works, and opens the settings when %s', (_why, sync, sponsor) => {
+        mockSync = sync;
+        mockSponsor = sponsor;
+        sessionCtx.sessions = [linked('s1', 'This one', null), linked('c1', 'A child', 's1', 10)];
+        render(<SessionRail/>);
+        openRail();
+        expect(logoButton()).toHaveAttribute('aria-disabled', 'false');
+        fireEvent.click(logoButton());
+        expect(openSettingsAt).toHaveBeenCalledWith('settings/general');
+        expect(send).not.toHaveBeenCalled();
+    });
+
+    it('does not open the settings once the sync is on', () => {
+        mockSync = true;
+        mockSponsor = true;
+        sessionCtx.sessions = [linked('s1', 'This one', null)];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(logoButton());
+        expect(openSettingsAt).not.toHaveBeenCalled();
+    });
+});
+
+describe('SessionRail - changing the links by hand', () => {
+    beforeEach(() => {
+        mcpInstalled = '0.3.0';
+        send.mockResolvedValue({status: 'ok'});
+    });
+
+    /** The button after the title of the parent relation (Change) or of the children relation (Add). */
+    const addButton = (which: 'parent' | 'children') =>
+        screen.getByRole('button', {name: which === 'parent' ? 'sessionRail.linked.change' : 'sessionRail.linked.addChild'});
+    const optionTitles = () => screen.getAllByRole('option').map((o) => o.querySelector('span.truncate')?.textContent);
+
+    it('puts the session under the session picked from the search list', () => {
+        sessionCtx.sessions = [linked('s1', 'This one', null), linked('p1', 'The manager', null)];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(addButton('parent'));
+        fireEvent.click(screen.getByRole('option', {name: /The manager/}));
+        expect(send).toHaveBeenCalledWith('SET_SESSION_PARENT', {sessionId: 's1', parentSessionId: 'p1'});
+    });
+
+    it('keeps a click inside the search list from closing the rail', () => {
+        sessionCtx.sessions = [linked('s1', 'This one', null), linked('p1', 'The manager', null)];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(addButton('parent'));
+        fireEvent.mouseDown(screen.getByRole('option', {name: /The manager/}));
+        expect(screen.getByRole('dialog', {name: 'sessionRail.title'})).toBeInTheDocument();
+    });
+
+    it('filters the list by what is typed', () => {
+        sessionCtx.sessions = [linked('s1', 'This one', null), linked('p1', 'The manager', null), linked('o1', 'Unrelated', null)];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(addButton('parent'));
+        fireEvent.change(screen.getByPlaceholderText('sessionRail.linked.searchPlaceholder'), {target: {value: 'unrel'}});
+        expect(optionTitles()).toEqual(['Unrelated']);
+        fireEvent.change(screen.getByPlaceholderText('sessionRail.linked.searchPlaceholder'), {target: {value: 'zzz'}});
+        expect(screen.getByText('sessionRail.linked.noMatch')).toBeInTheDocument();
+    });
+
+    it('unlinks the parent, which makes the session top-level', () => {
+        sessionCtx.sessions = [linked('s1', 'This one', 'p1'), linked('p1', 'The manager', null)];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(screen.getByRole('button', {name: 'sessionRail.linked.removeParent'}));
+        expect(send).toHaveBeenCalledWith('SET_SESSION_PARENT', {sessionId: 's1', parentSessionId: null});
+    });
+
+    it('unlinks a parent that is not in the list, whose transcript may be gone', () => {
+        sessionCtx.sessions = [linked('s1', 'This one', 'a-session-that-is-gone')];
+        render(<SessionRail/>);
+        openRail();
+        expect(screen.getByText('sessionRail.linked.notInList')).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', {name: 'sessionRail.linked.removeParent'}));
+        expect(send).toHaveBeenCalledWith('SET_SESSION_PARENT', {sessionId: 's1', parentSessionId: null});
+    });
+
+    it('offers no session below this one as a parent, nor the parent it already has', () => {
+        sessionCtx.sessions = [
+            linked('s1', 'This one', 'p1'),
+            linked('p1', 'The manager', null),
+            linked('c1', 'A child', 's1', 10),
+            linked('g1', 'A grandchild', 'c1', 20),
+            linked('o1', 'Unrelated', null),
+        ];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(addButton('parent'));
+        expect(optionTitles()).toEqual(['Unrelated']);
+    });
+
+    it('adds a session below this one, offering neither this one, its parent, nor a child it already has', () => {
+        sessionCtx.sessions = [
+            linked('s1', 'This one', 'p1'),
+            linked('p1', 'The manager', null),
+            linked('c1', 'A child', 's1', 10),
+            linked('o1', 'Unrelated', null),
+        ];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(addButton('children'));
+        expect(optionTitles()).toEqual(['Unrelated']);
+        fireEvent.click(screen.getByRole('option', {name: /Unrelated/}));
+        expect(send).toHaveBeenCalledWith('SET_SESSION_PARENT', {sessionId: 'o1', parentSessionId: 's1'});
+    });
+
+    it('takes a child out of the group, without deleting it', () => {
+        sessionCtx.sessions = [linked('s1', 'This one', null), linked('c1', 'A child', 's1', 10)];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(screen.getByRole('button', {name: 'sessionRail.linked.removeChild'}));
+        expect(send).toHaveBeenCalledWith('SET_SESSION_PARENT', {sessionId: 'c1', parentSessionId: null});
+    });
+
+    it('closes the search list on a press outside it, the rail staying open, and on the next one the rail closes', () => {
+        sessionCtx.sessions = [linked('s1', 'This one', null), linked('p1', 'The manager', null)];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(addButton('parent'));
+        fireEvent.mouseDown(document.body);
+        expect(screen.queryByRole('listbox')).toBeNull();
+        expect(screen.getByRole('dialog', {name: 'sessionRail.title'})).toBeInTheDocument();
+        fireEvent.mouseDown(document.body);
+        expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    it('closes the search list on a press on the field itself, blank space beside its title included', () => {
+        sessionCtx.sessions = [linked('s1', 'This one', 'p1'), linked('p1', 'The manager', null)];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(addButton('parent'));
+        fireEvent.mouseDown(screen.getByRole('heading', {name: 'sessionRail.linked.parent'}));
+        expect(screen.queryByRole('listbox')).toBeNull();
+    });
+
+    it('closes the search list when the button that opened it is pressed again', () => {
+        sessionCtx.sessions = [linked('s1', 'This one', null), linked('p1', 'The manager', null)];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(addButton('parent'));
+        expect(screen.getByRole('listbox')).toBeInTheDocument();
+        fireEvent.mouseDown(addButton('parent'));
+        fireEvent.click(addButton('parent'));
+        expect(screen.queryByRole('listbox')).toBeNull();
+    });
+
+    it('closes only the search list on Escape, and the rail on the next one', () => {
+        sessionCtx.sessions = [linked('s1', 'This one', null), linked('p1', 'The manager', null)];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(addButton('parent'));
+        fireEvent.keyDown(document, {key: 'Escape'});
+        expect(screen.queryByRole('listbox')).toBeNull();
+        expect(screen.getByRole('dialog', {name: 'sessionRail.title'})).toBeInTheDocument();
+        fireEvent.keyDown(document, {key: 'Escape'});
+        expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    it('shows the refusal of the package instead of failing silently', async () => {
+        const toast = (await import('react-hot-toast')).default;
+        send.mockResolvedValue({status: 'error', error: 'A session cannot be its own parent.'});
+        sessionCtx.sessions = [linked('s1', 'This one', null), linked('p1', 'The manager', null)];
+        render(<SessionRail/>);
+        openRail();
+        fireEvent.click(addButton('parent'));
+        fireEvent.click(screen.getByRole('option', {name: /The manager/}));
+        await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('A session cannot be its own parent.'));
     });
 });

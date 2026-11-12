@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { homedir } from 'os';
+import { join } from 'path';
 
 // We need to mock fs modules to test readSettingsFile and saveSettingToFile
 vi.mock('fs/promises', () => ({
@@ -61,6 +63,26 @@ describe('settings', () => {
       const result = await saveSettingToFile('theme', 'invalid');
       expect(result.status).toBe('error');
       expect(result.error).toContain('theme must be one of');
+    });
+
+    it('keeps settings.js in the default folder even when CCG_HOME is set', async () => {
+      // The IDE plugin (SettingsManager.kt) reads and writes this same file and does not know
+      // CCG_HOME. If the backend moved its copy the two would work on different files.
+      const saved = process.env.CCG_HOME;
+      process.env.CCG_HOME = '/tmp/custom-ccg-home';
+      try {
+        const result = await saveSettingToFile('theme', 'dark');
+        expect(result.status).toBe('ok');
+        const defaultDir = join(homedir(), '.claude-code-gui');
+        expect(mockMkdir).toHaveBeenCalledWith(defaultDir, { recursive: true });
+        // The temp file sits next to settings.js and is renamed over it.
+        const written = mockWriteFile.mock.calls.map((c) => String(c[0]));
+        expect(written.length).toBeGreaterThan(0);
+        expect(written.every((p) => p.startsWith(defaultDir))).toBe(true);
+      } finally {
+        if (saved === undefined) delete process.env.CCG_HOME;
+        else process.env.CCG_HOME = saved;
+      }
     });
 
     it('should accept valid theme values', async () => {
@@ -332,6 +354,20 @@ describe('settings', () => {
       expect((await saveSettingToFile('voice', {})).status).toBe('ok');
       expect((await saveSettingToFile('voice', { speechLanguage: 'ko' })).status).toBe('ok');
       expect((await saveSettingToFile('voice', { speechLanguage: null })).status).toBe('ok');
+    });
+
+    it('should accept a sessionMcp object with a boolean enabled and area names', async () => {
+      expect((await saveSettingToFile('sessionMcp', {})).status).toBe('ok');
+      expect((await saveSettingToFile('sessionMcp', { enabled: true, areas: ['session_mgmt', 'pr'] })).status).toBe('ok');
+      expect((await saveSettingToFile('sessionMcp', { enabled: false, areas: [] })).status).toBe('ok');
+    });
+
+    it('should reject a sessionMcp that is not an object, has a non-boolean enabled, or bad area names', async () => {
+      for (const bad of ['on', null, [], { enabled: 'yes' }, { areas: 'pr' }, { areas: ['../evil'] }, { areas: [1] }]) {
+        const result = await saveSettingToFile('sessionMcp', bad);
+        expect(result.status).toBe('error');
+        expect(result.error).toContain('sessionMcp');
+      }
     });
 
     it('should reject a non-object voice', async () => {
@@ -734,6 +770,7 @@ describe('settings', () => {
         uiDirection: 'ltr',
         uiLanguage: null,
         voice: {},
+        sessionMcp: { enabled: true, areas: ['session_mgmt', 'session'] },
         useCtrlEnterToSend: false,
         composerSendShortcut: null,
         composerSendShortcutCustom: null,
@@ -746,6 +783,8 @@ describe('settings', () => {
         notificationSoundVolume: 5,
         focusInputOnEditorContext: true,
         autoResumeOnLimit: false,
+        desktopSessionSync: false,
+        sessionListDragDrop: false,
         allowAllCommandsByDefault: false,
         attachEditorContext: true,
         autoOpenDiffOnPermission: true,
@@ -879,6 +918,7 @@ export default {
         uiDirection: 'ltr',
         uiLanguage: null,
         voice: {},
+        sessionMcp: { enabled: true, areas: ['session_mgmt', 'session'] },
         useCtrlEnterToSend: false,
         composerSendShortcut: null,
         composerSendShortcutCustom: null,
@@ -891,6 +931,8 @@ export default {
         notificationSoundVolume: 5,
         focusInputOnEditorContext: true,
         autoResumeOnLimit: false,
+        desktopSessionSync: false,
+        sessionListDragDrop: false,
         allowAllCommandsByDefault: false,
         attachEditorContext: true,
         autoOpenDiffOnPermission: true,

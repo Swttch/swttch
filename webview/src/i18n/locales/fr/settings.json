@@ -229,6 +229,42 @@
       "failed": "Sessions qui n'ont pas pu être préparées : {{count}}",
       "error": "Impossible de préparer les sessions : {{message}}"
     },
+    "sessionManager": {
+      "title": "Gestionnaire de sessions",
+      "required": "Nécessite le paquet de gestion des sessions. Installez-le en haut à droite.",
+      "dragDrop": {
+        "label": "Faire glisser une session sur une autre pour la rendre enfant",
+        "description": "Dans la liste des sessions, faites glisser une ligne de session sur une autre ligne de session : la session déplacée devient une session enfant de celle-ci. Déposée sur la bande qui apparaît en haut de la liste, elle passe au niveau supérieur. Cela fait la même chose que le bouton « Modifier » du panneau latéral, mais par glisser-déposer."
+      },
+      "package": {
+        "install": "Installer",
+        "installing": "Installation…",
+        "update": "Mettre à jour",
+        "updating": "Mise à jour…",
+        "upToDate": "À jour",
+        "refresh": "Revérifier",
+        "refreshing": "Vérification…",
+        "remove": "Supprimer"
+      },
+      "desktopSync": {
+        "label": "Refléter les changements de Claude Desktop",
+        "description": "Affiche dans les listes de sessions et dans le panneau latéral ce que Claude Desktop enregistre sur vos sessions.",
+        "learnMore": "En savoir plus",
+        "details": {
+          "title": "Refléter les changements de Claude Desktop",
+          "intro": "Tant que cette option est activée, cette application lit les enregistrements de sessions que Claude Desktop conserve sur cet ordinateur. Elle les lit seulement et n’écrit jamais rien dans Claude Desktop.",
+          "items": {
+            "relations": "Sessions parentes et enfants : une session démarrée par une autre session dans Claude Desktop s’affiche sous cette session, et une session que vous y placez au niveau supérieur s’affiche ici au niveau supérieur.",
+            "archived": "Sessions archivées : une session que vous archivez ou désarchivez dans Claude Desktop est aussi masquée ou affichée ici.",
+            "titles": "Titres : une session que vous renommez dans Claude Desktop est aussi renommée ici, sans rechargement.",
+            "running": "Sessions en cours : une session qui travaille dans Claude Desktop affiche l’indicateur d’exécution dans la liste des sessions et dans le panneau latéral."
+          },
+          "yours": "Un lien ou un état d’archivage défini ici reste votre choix et n’est pas écrasé par Claude Desktop. Le bouton Claude à côté de « Sessions liées » dans le panneau latéral rend une session à ce qu’enregistre Claude Desktop.",
+          "needs": "Nécessite le paquet du gestionnaire de sessions et Claude Desktop sur cet ordinateur. Réservé aux sponsors.",
+          "close": "Fermer"
+        }
+      }
+    },
     "readAloud": {
       "title": "Lire à voix haute",
       "description": "Réglages de la voix qui lit une réponse quand vous appuyez sur le bouton haut-parleur placé dessous. Tant que vous ne les changez pas, la voix et la vitesse sont celles enregistrées dans votre compte Claude.",
@@ -457,6 +493,38 @@
       "notDetected": "non détecté",
       "refreshVersion": "Actualiser la version",
       "refresh": "Actualiser"
+    },
+    "dependencies": {
+      "title": "Dépendances",
+      "description": "Programmes utilisés par cette application et installés séparément sur cet ordinateur.",
+      "install": "Installer",
+      "installing": "Installation…",
+      "notInstalled": "Non installé",
+      "extendKit": {
+        "description": "Fait fonctionner la saisie vocale, la lecture à voix haute et le panneau d'utilisation."
+      },
+      "sessionMcp": {
+        "description": "Outils MCP qui permettent à Claude de démarrer de nouvelles sessions Claude Code et de retrouver, contacter, arrêter et archiver vos autres sessions. Tant qu'il est installé, il est rattaché à chaque session Claude Code démarrée par cette application et se met à jour tout seul dès qu'une nouvelle version sort.",
+        "package": {
+          "installed": "Installé",
+          "updated": "Mis à jour",
+          "failed": "Installation impossible",
+          "dismiss": "Fermer",
+          "remove": "Supprimer",
+          "removed": "Supprimé",
+          "removeFailed": "Suppression impossible",
+          "installConfirmTitle": "Installer le MCP de gestion des sessions ?",
+          "installConfirmMessage": "Cela installe {{packageName}} globalement sur cet ordinateur. Une fois installé, il est rattaché à chaque session Claude Code démarrée par cette application, et ses outils occupent une partie du contexte de Claude. Il est tenu à jour automatiquement.",
+          "removeConfirmTitle": "Supprimer le MCP de gestion des sessions ?",
+          "removeConfirmMessage": "Il est supprimé de cet ordinateur et n'est plus rattaché aux nouveaux processus Claude. Vous pouvez le réinstaller à tout moment."
+        }
+      },
+      "node": {
+        "description": "L'environnement d'exécution sur lequel tourne le backend de cette application."
+      },
+      "cloudflared": {
+        "description": "Ouvre le tunnel distant. Son installation vous est proposée la première fois que vous activez le tunnel."
+      }
     },
     "links": {
       "title": "Liens",

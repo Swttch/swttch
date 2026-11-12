@@ -32,6 +32,21 @@ class WebViewKeyPolicyDiscardedCharacterTest {
     }
 
     @Test
+    fun `letters arriving as Backspace are typed by us`() {
+        // Thai jo jan U+0E08, Hangul U+AC08, ideograph U+4E08, fullwidth paren U+FF08: key code 0x08
+        assertEquals(0x0E08, WebViewKeyPolicy.discardedCharacter(true, 0x08, 0x0E08))
+        assertEquals(0xAC08, WebViewKeyPolicy.discardedCharacter(true, 0x08, 0xAC08))
+        assertEquals(0x4E08, WebViewKeyPolicy.discardedCharacter(true, 0x08, 0x4E08))
+        assertEquals(0xFF08, WebViewKeyPolicy.discardedCharacter(true, 0x08, 0xFF08))
+    }
+
+    @Test
+    fun `a real Backspace carries no printable character`() {
+        assertNull(WebViewKeyPolicy.discardedCharacter(true, 0x08, 0x08))
+        assertNull(WebViewKeyPolicy.discardedCharacter(true, 0x08, 0))
+    }
+
+    @Test
     fun `only character events are repaired`() {
         assertNull(WebViewKeyPolicy.discardedCharacter(false, 0x1B, 0x011B))
     }

@@ -64,11 +64,28 @@ function pool(id: string, accountIds: string[]): AccountPool {
 }
 
 describe('account-store', () => {
+  const savedCcgHome = process.env.CCG_HOME;
   beforeEach(async () => {
     tempHome = await mkdtemp(join(tmpdir(), 'acc-store-'));
+    delete process.env.CCG_HOME;
   });
   afterEach(async () => {
+    if (savedCcgHome === undefined) delete process.env.CCG_HOME;
+    else process.env.CCG_HOME = savedCcgHome;
     await rm(tempHome, { recursive: true, force: true });
+  });
+
+  it('keeps the registry under CCG_HOME when it is set, not under the home directory', async () => {
+    const ccgHome = join(tempHome, 'custom-ccg-home');
+    process.env.CCG_HOME = ccgHome;
+
+    const id = newAccountId();
+    await upsertAccount(meta(id, 'a@x.com'));
+    await writeSnapshot(id, { credentials: '{"claudeAiOauth":{}}', oauthAccount: { emailAddress: 'a@x.com' } });
+
+    expect((await stat(join(ccgHome, 'accounts.json'))).isFile()).toBe(true);
+    expect((await stat(join(ccgHome, 'accounts', `${id}.json`))).isFile()).toBe(true);
+    await expect(stat(join(tempHome, '.claude-code-gui'))).rejects.toThrow();
   });
 
   it('returns an empty registry when nothing is saved', async () => {

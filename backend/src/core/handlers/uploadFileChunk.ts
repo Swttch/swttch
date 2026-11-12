@@ -1,10 +1,10 @@
 import { mkdir, readdir, rm, stat, writeFile, appendFile } from 'fs/promises';
-import { homedir } from 'os';
 import { basename, dirname, join } from 'path';
 import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { MessageType } from '../../shared';
+import { ccgHomeDir } from '../../config/ccg-home';
 
 /**
  * A browser never tells the page where a dropped file lives on disk, so the
@@ -29,8 +29,7 @@ const UPLOAD_ID_PATTERN = /^[A-Za-z0-9-]{8,64}$/;
  * the user-data directory, so a test can point `CCG_HOME` at a temp directory.
  */
 export function uploadsBaseDir(): string {
-  const home = process.env.CCG_HOME?.trim();
-  return home ? join(home, 'uploads') : join(homedir(), '.claude-code-gui', 'uploads');
+  return join(ccgHomeDir(), 'uploads');
 }
 
 /**

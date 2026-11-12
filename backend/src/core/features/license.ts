@@ -1,11 +1,11 @@
 import { readFile, mkdir, rm } from 'fs/promises';
 import { join } from 'path';
-import { homedir } from 'os';
 import { proxiedRequest } from './outbound-proxy';
 import { readProfile } from './profile';
 import { readLiveOauthAccount } from './live-credentials';
 import { buildDeviceName } from './deviceName';
 import { atomicWriteFile } from './atomic-json';
+import { ccgHomeDir } from '../../config/ccg-home';
 
 // Sponsor license storage + remote verification.
 //
@@ -17,8 +17,8 @@ import { atomicWriteFile } from './atomic-json';
 // account/login here — just the key and its last-known status.
 
 // Same install-scoped config dir as profile.json.
-const LICENSE_DIR = join(homedir(), '.claude-code-gui');
-const LICENSE_FILE = join(LICENSE_DIR, 'license.json');
+const licenseDir = (): string => ccgHomeDir();
+const licenseFile = (): string => join(licenseDir(), 'license.json');
 
 /**
  * The one status that grants sponsor features. www mirrors its own
@@ -238,7 +238,7 @@ export async function reportActivation(sponsorKey: string): Promise<void> {
 /** Read the stored license, or null if none/corrupt. */
 export async function readLicense(): Promise<StoredLicense | null> {
   try {
-    const raw = await readFile(LICENSE_FILE, 'utf-8');
+    const raw = await readFile(licenseFile(), 'utf-8');
     const parsed = JSON.parse(raw) as Partial<StoredLicense>;
     if (typeof parsed.licenseKey !== 'string' || parsed.licenseKey === '') return null;
     return {
@@ -257,8 +257,8 @@ export async function readLicense(): Promise<StoredLicense | null> {
 
 /** Persist a verified license. */
 export async function saveLicense(license: StoredLicense): Promise<void> {
-  await mkdir(LICENSE_DIR, { recursive: true });
-  await atomicWriteFile(LICENSE_FILE, JSON.stringify(license, null, 2) + '\n');
+  await mkdir(licenseDir(), { recursive: true });
+  await atomicWriteFile(licenseFile(), JSON.stringify(license, null, 2) + '\n');
 }
 
 /**
@@ -275,14 +275,14 @@ export async function saveLicense(license: StoredLicense): Promise<void> {
  * really be gone, but the answer to "did the user turn this off here?" must not.
  */
 export async function deactivateLicense(): Promise<void> {
-  await mkdir(LICENSE_DIR, { recursive: true });
+  await mkdir(licenseDir(), { recursive: true });
   // A timestamp rather than a flag: the same cost to check (the field is either
   // there or not), the same shape as `verifiedAt` beside it, and it answers
   // "when did this install stop?" for support without another lookup. Note this
   // is when the key was turned off HERE, which is not when a subscription was
   // cancelled — that is a separate action, and www stamps its own `ended_at`.
   const record = { deactivatedAt: new Date().toISOString() };
-  await atomicWriteFile(LICENSE_FILE, JSON.stringify(record, null, 2) + '\n');
+  await atomicWriteFile(licenseFile(), JSON.stringify(record, null, 2) + '\n');
 }
 
 /**
@@ -319,7 +319,7 @@ export async function wasDeactivatedHere(): Promise<boolean> {
  */
 export async function readDeactivatedAt(): Promise<string | null> {
   try {
-    const raw = await readFile(LICENSE_FILE, 'utf-8');
+    const raw = await readFile(licenseFile(), 'utf-8');
     const parsed = JSON.parse(raw) as { deactivatedAt?: unknown };
     return typeof parsed.deactivatedAt === 'string' && parsed.deactivatedAt !== ''
       ? parsed.deactivatedAt
@@ -344,11 +344,11 @@ export async function readDeactivatedAt(): Promise<string | null> {
  */
 export async function clearDeactivation(): Promise<void> {
   try {
-    const raw = await readFile(LICENSE_FILE, 'utf-8');
+    const raw = await readFile(licenseFile(), 'utf-8');
     const parsed = JSON.parse(raw) as { deactivatedAt?: unknown; licenseKey?: unknown };
     if (typeof parsed.licenseKey === 'string' && parsed.licenseKey !== '') return;
     if (typeof parsed.deactivatedAt !== 'string' || parsed.deactivatedAt === '') return;
-    await rm(LICENSE_FILE, { force: true });
+    await rm(licenseFile(), { force: true });
   } catch {
     // Missing (nothing to lift) or unreadable (not ours to delete on a guess).
   }

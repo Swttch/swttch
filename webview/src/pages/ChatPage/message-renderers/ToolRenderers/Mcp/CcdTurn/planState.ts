@@ -82,3 +82,41 @@ export function planAfterCall(
   }
   return applyPlanCall(plan, input);
 }
+
+/**
+ * The plan a turn leaves: every `update_plan` call among the turn's messages applied in order. Empty when the turn
+ * made none. The Transcript view draws this one plan at the end of the turn and updates it in place, instead of a
+ * box at every call.
+ */
+export function planOfTurn(messages: ReadonlyArray<LoadedMessageDto>): PlanItem[] {
+  let plan: PlanItem[] = [];
+  for (const message of messages) {
+    const content = message.message?.content;
+    if (!Array.isArray(content)) continue;
+    for (const block of content) {
+      if (block.type !== 'tool_use') continue;
+      const call = block as unknown as { name?: string; input?: Record<string, unknown> };
+      if (call.name === UPDATE_PLAN_TOOL) plan = applyPlanCall(plan, call.input);
+    }
+  }
+  return plan;
+}
+
+/**
+ * Whether the call `toolUseId` is the last `update_plan` call among the messages. A plan's box is drawn at every
+ * call and shows the plan as that call left it, so only the last box can say what is being worked on now; the
+ * step that was in progress in an earlier box has been ticked off or put aside since, and its spinner stops.
+ */
+export function isLastPlanCall(messages: LoadedMessageDto[] | undefined, toolUseId: string): boolean {
+  let last: string | undefined;
+  for (const message of messages ?? []) {
+    const content = message.message?.content;
+    if (!Array.isArray(content)) continue;
+    for (const block of content) {
+      if (block.type !== 'tool_use') continue;
+      const call = block as unknown as { id?: string; name?: string };
+      if (call.name === UPDATE_PLAN_TOOL) last = call.id;
+    }
+  }
+  return last === undefined || last === toolUseId;
+}

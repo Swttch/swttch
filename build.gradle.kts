@@ -188,7 +188,13 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
-            <h3>0.36.1 - Chat view modes, read aloud, and send index and imported session title improvements</h3>
+            <h3>0.36.2 - Slash command initials search, character input fix, and Transcript fixes</h3>
+            <ul>
+                <li>Fix some characters such as ě, Л, ț, and ป not being typed in the chat input (#660, reported by @BohuslavChlubna)</li>
+                <li>Add finding a slash command by the first letters of its words (#666, reported by @deniskrizanovic)</li>
+                <li>Fix Transcript thumbnail click and column width behavior</li>
+            </ul>
+            <h3>0.36.1 -Chat view modes, read aloud, and send index and imported session title improvements</h3>
             <ul>
                 <li>Add chat view modes (Normal, Thinking, Verbose) with a shortcut to cycle them (#608)</li>
                 <li>Add reading replies aloud (#608)</li>
@@ -213,14 +219,16 @@ intellijPlatform {
             // Deprecations accumulate, so the upper-bound IU EAP below subsumes
             // intermediate release lines (e.g. 2024.3) for forward-compat checks.
             ide("IC", "2024.2.6")
-            // Upper bound: 2026.3 EAP (263.6800.24), forward-compat before we drop untilBuild (#50).
+            // Upper bound: 2026.3 (the 263 line), forward-compat before we drop untilBuild (#50).
             // 262 was the upper bound until the Marketplace's own verifier flagged
             // FileEditorManager.requestOpenFile(VirtualFile) as missing on 263 — a line this
             // gate never ran. The upper-bound IDE must therefore track the newest line.
-            // An EAP build can be withdrawn by JetBrains: the earlier pin
-            // "262.8117.19-EAP-SNAPSHOT" went 404 and made verifyPlugin unresolvable during the
-            // v0.33.1 release. When 2026.3 is released, replace this with ide("IU", "2026.3").
-            ide("IU", "263.6800.24")
+            // Pinned to the release now that 2026.3 is out. The EAP builds it replaced
+            // ("263.6800.24", and "262.8117.19-EAP-SNAPSHOT" before it) could not stay: an EAP
+            // build can be withdrawn by JetBrains (the 262 pin went 404 during the v0.33.1
+            // release), and it expires, after which the IDE refuses to start and the sandbox
+            // check on that build cannot be run.
+            ide("IU", "2026.3")
         }
     }
 }

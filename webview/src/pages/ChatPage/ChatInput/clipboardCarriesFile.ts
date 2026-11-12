@@ -16,3 +16,21 @@ export function clipboardCarriesFile(clipboardData: DataTransfer | null): boolea
   if (!items) return false;
   return Array.from(items).some(item => item.kind === 'file');
 }
+
+/**
+ * Whether a paste carries files and none of them is a picture the composer attaches
+ * inline: a spreadsheet, a document or a folder copied in a file manager.
+ *
+ * In the IDE the page cannot learn such a file's path from the paste, so the composer
+ * asks the IDE host for it, which reads the paths off the system clipboard and sends
+ * them the way a drop of the same files does. Pictures keep the paste's own bytes.
+ *
+ * `isInlineImage` is a parameter so this stays a plain function of the event data.
+ */
+export function clipboardCarriesFileForHost(
+  clipboardData: DataTransfer | null,
+  isInlineImage: (mimeType: string) => boolean,
+): boolean {
+  const files = Array.from(clipboardData?.items ?? []).filter(item => item.kind === 'file');
+  return files.length > 0 && !files.some(item => isInlineImage(item.type));
+}

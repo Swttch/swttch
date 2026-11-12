@@ -210,6 +210,15 @@
     "refreshSessions": "Atualizar sessões",
     "renameSession": "Renomear sessão",
     "deleteSession": "Excluir sessão",
+    "dragLinks": {
+      "topLevel": "Solte aqui para passá-la ao nível superior"
+    },
+    "archiveSession": "Arquivar sessão",
+    "unarchiveSession": "Desarquivar sessão",
+    "startedSessions": {
+      "show": "Mostrar as sessões que ela iniciou",
+      "hide": "Ocultar as sessões que ela iniciou"
+    },
     "groups": {
       "today": "Hoje",
       "yesterday": "Ontem",
@@ -240,6 +249,7 @@
       "active": "Ativas",
       "countsTitle": "Sessões por estado",
       "activeTitle": "Mostrar apenas sessões que aguardam resposta, estão trabalhando ou não lidas",
+      "showArchived": "Mostrar sessões arquivadas",
       "noneActive": "Nenhuma sessão está esperando por você"
     }
   },

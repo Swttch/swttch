@@ -75,6 +75,22 @@ export function subscribeComposerImages(listener: ImageListener): () => void {
   return () => imageListeners.delete(listener);
 }
 
+type FileListener = (path: string, name: string, size: number | undefined) => void;
+const fileListeners = new Set<FileListener>();
+
+/**
+ * Attaches a file that is already on disk to the message, by its path: the chip in the attachment row is the same one the
+ * file picker makes, so the CLI reads the file from where it is, as it does for a file dropped on the message box.
+ */
+export function addFileToComposer(path: string, name: string, size?: number): void {
+  fileListeners.forEach((listener) => listener(path, name, size));
+}
+
+export function subscribeComposerFiles(listener: FileListener): () => void {
+  fileListeners.add(listener);
+  return () => fileListeners.delete(listener);
+}
+
 /** A base64 PNG as a Blob. */
 export function pngFromBase64(base64: string): Blob {
   const bytes = atob(base64);

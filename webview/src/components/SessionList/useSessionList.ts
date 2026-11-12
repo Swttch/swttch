@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, ReactNode } from 'react';
 import { groupSessionsByDate, GroupedSessions } from './utils';
+import { SessionFamilies, SessionNesting } from './families';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { useConfirmDialog } from '@/components/ConfirmDialog/useConfirmDialog';
 import { SessionMetaDto } from '@/dto';
@@ -11,6 +12,13 @@ interface UseSessionListResult {
   setSearchQuery: (value: string) => void;
   filteredSessions: SessionMetaDto[];
   groupedSessions: GroupedSessions;
+  /**
+   * Which sessions are drawn under the ones that started them, and which of
+   * those are folded away. `groupedSessions` is already arranged by it (a folded
+   * session is not in there), so keyboard navigation walks exactly the rows on
+   * screen. Pass it to SessionList so the rows are drawn to match.
+   */
+  sessionNesting: SessionNesting;
   handleDeleteSession: (sessionId: string) => Promise<void>;
   renameSession: (sessionId: string, title: string) => Promise<void>;
   confirmDialog: ReactNode;
@@ -70,9 +78,33 @@ export function useSessionList(): UseSessionListResult {
     }
   }, [sessions, searchQuery]);
 
+  // Worked out from the rows that survived the search, not from every session
+  // held: a session is drawn under its starter only while the starter is itself
+  // a row, so a search that matches the started session alone shows it as an
+  // ordinary row instead of hanging it under nothing.
+  const families = useMemo(() => SessionFamilies.of(filteredSessions), [filteredSessions]);
+
+  // Which sessions have the ones they started folded away. Kept here, not in the
+  // list component, because the keyboard walks `groupedSessions` and must not
+  // land on a row that is folded. Not saved anywhere: a list opened again shows
+  // every family open.
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
+  const toggleCollapsed = useCallback((sessionId: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(sessionId)) next.add(sessionId);
+      return next;
+    });
+  }, []);
+
+  const sessionNesting = useMemo(
+    () => new SessionNesting(families, collapsed, toggleCollapsed),
+    [families, collapsed, toggleCollapsed],
+  );
+
   const groupedSessions = useMemo(() => {
-    return groupSessionsByDate(filteredSessions);
-  }, [filteredSessions]);
+    return groupSessionsByDate(filteredSessions, new Date(), families, collapsed);
+  }, [filteredSessions, families, collapsed]);
 
   const handleDeleteSession = useCallback(async (sessionId: string) => {
     const session = sessions.find(s => s.id === sessionId);
@@ -95,6 +127,7 @@ export function useSessionList(): UseSessionListResult {
     setSearchQuery,
     filteredSessions,
     groupedSessions,
+    sessionNesting,
     handleDeleteSession,
     renameSession,
     confirmDialog,

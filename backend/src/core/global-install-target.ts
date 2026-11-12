@@ -11,6 +11,8 @@ import {
 
 /** The npm package the voice input and the usage panel both load. */
 export const EXTEND_KIT_PACKAGE = '@swttch/extend-kit';
+/** The session-management MCP server, installed the same way as the extend kit. */
+export const SESSION_MCP_PACKAGE = '@swttch/session-manager-mcp';
 
 /**
  * WHERE a global npm package must be installed so THIS backend can load it.
@@ -212,14 +214,15 @@ export function buildInstalledKitUpdateSpec(
   home: string,
   platform: NodeJS.Platform = process.platform,
   exists: (path: string) => boolean = existsSync,
+  packageId: string = EXTEND_KIT_PACKAGE,
 ): (InstallSpec & { env?: NodeJS.ProcessEnv }) | null {
   if (!['darwin', 'linux', 'win32'].includes(platform) || !/^\d+\.\d+\.\d+$/.test(version)) return null;
   const path = platform === 'win32' ? win32 : posix;
   if (!path.isAbsolute(root) || !path.isAbsolute(nodeExecPath)) return null;
   const normalized = root.replace(/\\/g, '/').replace(/\/$/, '');
-  const packageName = `${EXTEND_KIT_PACKAGE}@${version}`;
+  const packageName = `${packageId}@${version}`;
   // VOLTA_HOME can be outside ~/.volta. Pin it to the loaded package's store.
-  const voltaSuffix = `/tools/image/packages/${EXTEND_KIT_PACKAGE}/lib/node_modules`;
+  const voltaSuffix = `/tools/image/packages/${packageId}/lib/node_modules`;
   if (normalized.endsWith(voltaSuffix)) {
     const voltaHome = normalized.slice(0, -voltaSuffix.length);
     const binary = platform === 'win32' ? 'volta.exe' : 'volta';
@@ -227,7 +230,7 @@ export function buildInstalledKitUpdateSpec(
     const command = exists(localBinary) ? localBinary : binary;
     return { command, args: buildPackageInstallCommand(LibraryManager.VOLTA, packageName).args, env: { VOLTA_HOME: voltaHome } };
   }
-  const coord = detectInstallCoordinate([`${normalized}/${EXTEND_KIT_PACKAGE}`], home, platform);
+  const coord = detectInstallCoordinate([`${normalized}/${packageId}`], home, platform);
   if (coord.library === LibraryManager.UNKNOWN || coord.library === LibraryManager.VOLTA) return null;
   const spec = buildInstallSpec(coord, nodeExecPath, packageName, platform, exists);
   if (coord.library === LibraryManager.BUN) {

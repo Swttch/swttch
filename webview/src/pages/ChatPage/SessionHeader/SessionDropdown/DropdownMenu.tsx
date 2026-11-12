@@ -1,5 +1,6 @@
 import { KeyboardEvent } from 'react';
 import { GroupedSessions } from '@/components/SessionList/utils';
+import { SessionNesting } from '@/components/SessionList/families';
 import { SearchInput } from '@/components/SessionList/SearchInput';
 import { SessionList } from '@/components/SessionList';
 import { isMobile } from '@/config/environment';
@@ -30,6 +31,8 @@ interface Props {
   onLoadMore?: () => void;
   /** Sessions exist past the ones loaded. */
   hasMore?: boolean;
+  /** Which sessions are drawn under the ones that started them; passed on to the list. */
+  nesting?: SessionNesting;
 }
 
 export function DropdownMenu(props: Props) {
@@ -49,6 +52,7 @@ export function DropdownMenu(props: Props) {
     isLoading = false,
     onLoadMore,
     hasMore = false,
+    nesting,
   } = props;
 
   return (
@@ -65,6 +69,7 @@ export function DropdownMenu(props: Props) {
           onRenameSession={onRenameSession}
           onLoadMore={onLoadMore}
           hasMore={hasMore}
+          nesting={nesting}
         />
       ) : (
         <div className="px-2.5 py-3 text-xs text-text-tertiary text-center">

@@ -7,6 +7,7 @@ import {
   type ToolUseBlockDto,
 } from '../../../dto/message/ContentBlockDto';
 import { parseCrossSessionMessage } from '../message-renderers/CrossSessionMessageRenderer';
+import { isStartSessionTool } from '../message-renderers/utils/startedSessions';
 import { mergeAdjacentTextBlocks } from '../message-renderers/mergeAdjacentTextBlocks';
 import { mergeAdjacentThinkingBlocks } from '../message-renderers/mergeAdjacentThinkingBlocks';
 import { isAlwaysVisibleTool } from '../message-renderers/hideToolCalls';
@@ -164,7 +165,6 @@ function peerCall(message: LoadedMessageDto, id: string): ToolCall {
 }
 
 const CHAPTER_TOOL = 'mcp__ccd_session__mark_chapter';
-const START_SESSION_TOOL = 'mcp__ccd_session__start_session';
 
 /** File changes are gathered into the run like any other call; the desktop app counts them in its summary line. */
 const FILE_CHANGE_TOOLS = new Set(['Edit', 'Write', 'NotebookEdit']);
@@ -292,6 +292,8 @@ export function buildSegments(body: LoadedMessageDto[]): Segment[] {
       // The turn's wrap-up is not drawn where its call sits, which is ahead of the closing message: it is drawn
       // after the turn's last message (`TurnWrapUp`). Here it is neither a line of a run nor a break in one.
       if (toolUse.name === WRAP_UP_TOOL) return;
+      // The checklist is one box for the whole turn, drawn at the turn's end and changed in place (`TranscriptPlan`), not a box at every call.
+      if (toolUse.name === UPDATE_PLAN_TOOL) return;
       flushBlocks(false);
       const call: ToolCall = { toolUse, message };
       if (toolUse.name === CHAPTER_TOOL) {
@@ -300,7 +302,7 @@ export function buildSegments(body: LoadedMessageDto[]): Segment[] {
         if (title) segments.push({ kind: 'chapter', key: `chapter-${toolUse.id}`, message, title });
         return;
       }
-      if (toolUse.name === START_SESSION_TOOL) {
+      if (isStartSessionTool(toolUse.name)) {
         // A session started (a card with its title) or refused (a line saying so) is not one of the calls around it: each is its own.
         closeRun();
         segments.push({ kind: 'tools', key: `tools-${toolUse.id}`, calls: [call] });

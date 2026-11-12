@@ -210,6 +210,15 @@
     "refreshSessions": "Sitzungen aktualisieren",
     "renameSession": "Sitzung umbenennen",
     "deleteSession": "Sitzung löschen",
+    "dragLinks": {
+      "topLevel": "Hier ablegen, um sie zur Sitzung der obersten Ebene zu machen"
+    },
+    "archiveSession": "Sitzung archivieren",
+    "unarchiveSession": "Archivierung der Sitzung aufheben",
+    "startedSessions": {
+      "show": "Von dieser Sitzung gestartete Sitzungen anzeigen",
+      "hide": "Von dieser Sitzung gestartete Sitzungen ausblenden"
+    },
     "groups": {
       "today": "Heute",
       "yesterday": "Gestern",
@@ -240,6 +249,7 @@
       "active": "Aktiv",
       "countsTitle": "Sitzungen nach Status",
       "activeTitle": "Nur Sitzungen zeigen, die eine Antwort brauchen, arbeiten oder ungelesen sind",
+      "showArchived": "Archivierte Sitzungen anzeigen",
       "noneActive": "Keine Sitzung wartet auf dich"
     }
   },

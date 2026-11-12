@@ -26,6 +26,7 @@ vi.mock('../BridgeContext', () => ({
 const mockSessionsIndex = vi.fn();
 const mockSessionsLoad = vi.fn();
 const mockSessionsDestroy = vi.fn();
+const mockSessionsRename = vi.fn();
 const mockSessionsCreate = vi.fn();
 const mockSetWorkingDir = vi.fn();
 
@@ -34,6 +35,7 @@ const mockApi = {
     index: mockSessionsIndex,
     load: mockSessionsLoad,
     destroy: mockSessionsDestroy,
+    rename: mockSessionsRename,
     create: mockSessionsCreate,
   },
   setWorkingDir: mockSetWorkingDir,
@@ -750,6 +752,60 @@ describe('SessionContext', () => {
     });
   });
 
+  // A row the list holds can belong to another directory than the one the list was asked for:
+  // a nested listing, or the listing of the directory a session was opened in before it moved
+  // into a worktree (#658). The transcript is filed under the row's own directory, so that is
+  // where delete and rename have to look.
+  it('deleteSession - 목록이 다른 디렉터리의 행이면 그 행의 sessionDir로 지운다', async () => {
+    const worktree = '/test/workspace/.claude/worktrees/demo';
+    mockSessionsIndex.mockResolvedValue({
+      sessions: [{ ...mockSessionDtos[0], sessionDir: worktree }, mockSessionDtos[1]],
+    });
+
+    let capturedCtx: ReturnType<typeof useSessionContext> | null = null;
+
+    render(
+      <SessionProvider>
+        <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+      </SessionProvider>
+    );
+
+    await act(async () => {
+      await capturedCtx?.loadSessions();
+    });
+
+    await act(async () => {
+      await capturedCtx?.deleteSession('session-1');
+    });
+
+    expect(mockSessionsDestroy).toHaveBeenCalledWith('session-1', worktree);
+  });
+
+  it('renameSession - 목록이 다른 디렉터리의 행이면 그 행의 sessionDir로 이름을 바꾼다', async () => {
+    const worktree = '/test/workspace/.claude/worktrees/demo';
+    mockSessionsIndex.mockResolvedValue({
+      sessions: [{ ...mockSessionDtos[0], sessionDir: worktree }, mockSessionDtos[1]],
+    });
+
+    let capturedCtx: ReturnType<typeof useSessionContext> | null = null;
+
+    render(
+      <SessionProvider>
+        <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+      </SessionProvider>
+    );
+
+    await act(async () => {
+      await capturedCtx?.loadSessions();
+    });
+
+    await act(async () => {
+      await capturedCtx?.renameSession('session-1', 'New name');
+    });
+
+    expect(mockSessionsRename).toHaveBeenCalledWith('session-1', 'New name', worktree);
+  });
+
   it('deleteSession - 현재 세션 삭제 시 currentSessionId null로 초기화', async () => {
     // Start with current session already set via URL (SSOT)
     mockPathname = '/sessions/session-1';
@@ -1233,6 +1289,34 @@ describe('SessionContext', () => {
       });
 
       expect(mockSessionsIndex).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('session list refresh after a session tool changed it', () => {
+    async function renderAndGetSessionsUpdatedHandler(): Promise<SubscribedHandler> {
+      render(
+        <SessionProvider>
+          <TestConsumer onMount={() => {}} />
+        </SessionProvider>
+      );
+      await waitFor(() => {
+        expect(mockSubscribe.mock.calls.some(([type]) => type === MessageType.SESSIONS_UPDATED)).toBe(true);
+      });
+      const calls = mockSubscribe.mock.calls.filter(([type]) => type === MessageType.SESSIONS_UPDATED);
+      return calls[calls.length - 1][1];
+    }
+
+    it('reads the list again when the backend says the rows changed', async () => {
+      // What the backend sends after a session was moved under or out from under
+      // another, archived or renamed through the session-management MCP.
+      const handler = await renderAndGetSessionsUpdatedHandler();
+      mockSessionsIndex.mockClear();
+
+      await act(async () => {
+        handler({ payload: { action: 'refresh' } });
+      });
+
+      await waitFor(() => expect(mockSessionsIndex).toHaveBeenCalledTimes(1));
     });
   });
 

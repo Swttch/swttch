@@ -17,6 +17,11 @@ interface ScaleTokens {
   listPad: string;
   groupHeader: string;
   itemPad: string;
+  /**
+   * The start padding of `itemPad`, in rem. The tree lines of a nested row are
+   * placed from the row's edge, so they need the same number the class holds.
+   */
+  itemInsetRem: number;
   itemText: string;
   itemTime: string;
   searchPad: string;
@@ -28,6 +33,7 @@ const SCALE_TOKENS: Record<SessionListScale, ScaleTokens> = {
     listPad: 'p-1.5 pt-0',
     groupHeader: 'px-2 py-1.5 text-[0.8461rem]',
     itemPad: 'px-2 py-1.5',
+    itemInsetRem: 0.5,
     itemText: 'text-xs',
     itemTime: 'text-[0.8461rem]',
     searchPad: 'p-1.5',
@@ -37,6 +43,7 @@ const SCALE_TOKENS: Record<SessionListScale, ScaleTokens> = {
     listPad: 'p-2 pt-0',
     groupHeader: 'px-2.5 py-1.5 text-sm',
     itemPad: 'px-2.5 py-2',
+    itemInsetRem: 0.625,
     itemText: 'text-sm',
     itemTime: 'text-xs',
     searchPad: 'p-2',

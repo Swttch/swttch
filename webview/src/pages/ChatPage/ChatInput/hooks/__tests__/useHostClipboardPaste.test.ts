@@ -147,6 +147,72 @@ describe('useHostClipboardPaste', () => {
     expect(insertText).not.toHaveBeenCalled();
   });
 
+  describe('a paste that carried text, which the browser pastes itself', () => {
+    /** The composer as the browser leaves it right after its own paste. */
+    function editorWithPastedText(text: string): HTMLElement {
+      const editor = focusedEditor();
+      editor.textContent = text;
+      return editor;
+    }
+
+    it('takes the pasted names back out when the host handed files to the chat, since their chips are the paste', async () => {
+      sendMock.mockResolvedValue({ text: null, image: null, files: 2 });
+      const { paste } = renderPaste();
+
+      await paste(editorWithPastedText('report.xlsx'), { pastedText: 'report.xlsx' });
+
+      expect(insertText).toHaveBeenCalledTimes(1);
+      expect(insertText).toHaveBeenCalledWith('undo');
+    });
+
+    it('leaves the browser paste alone when the host holds no files', async () => {
+      sendMock.mockResolvedValue({ text: 'from the host', image: null });
+      const { paste, addImageAttachment } = renderPaste();
+
+      await paste(editorWithPastedText('what the user copied'), { pastedText: 'what the user copied' });
+
+      expect(insertText).not.toHaveBeenCalled();
+      expect(addImageAttachment).not.toHaveBeenCalled();
+    });
+
+    it('leaves the paste alone when the host cannot be asked, so a paste is never lost', async () => {
+      sendMock.mockRejectedValue(new Error('No IDE host connected'));
+      const { paste } = renderPaste();
+
+      await paste(editorWithPastedText('what the user copied'), { pastedText: 'what the user copied' });
+
+      expect(insertText).not.toHaveBeenCalled();
+    });
+
+    it('does not undo anything once the user has gone on typing before the host answered', async () => {
+      let answer: (value: unknown) => void = () => {};
+      sendMock.mockReturnValue(new Promise(resolve => { answer = resolve; }));
+      const { paste } = renderPaste();
+      const editor = editorWithPastedText('report.xlsx');
+
+      const pasting = paste(editor, { pastedText: 'report.xlsx' });
+      await new Promise(resolve => setTimeout(resolve, 5));
+      editor.textContent = 'report.xlsx and more typing';
+      answer({ text: null, image: null, files: 1 });
+      await pasting;
+
+      expect(insertText).not.toHaveBeenCalled();
+    });
+
+    it('waits for the host only briefly', async () => {
+      sendMock.mockResolvedValue({ text: null, image: null });
+      const { paste } = renderPaste('/proj');
+
+      await paste(editorWithPastedText('x'), { pastedText: 'x' });
+
+      expect(sendMock).toHaveBeenCalledWith(
+        MessageType.GET_CLIPBOARD,
+        { workingDir: '/proj' },
+        { timeout: 1_500 },
+      );
+    });
+  });
+
   it('asks without a project while none is chosen yet', async () => {
     sendMock.mockResolvedValue({ text: null, image: null });
     const { paste } = renderPaste(null);

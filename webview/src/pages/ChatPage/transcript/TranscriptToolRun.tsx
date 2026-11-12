@@ -1,8 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { ChevronRightIcon, ClipboardDocumentIcon } from '@heroicons/react/20/solid';
-import { getAdapter } from '@/adapters';
-import { ClientEnv } from '@/shared';
 import { useTranslation } from '@/i18n';
 import { openChatFile } from '@/utils/openChatFile';
 import type { LoadedMessageDto } from '../../../types';
@@ -13,10 +11,14 @@ import { useTranscriptViewMode } from '../message-renderers/transcriptViewMode';
 import { APP_EVENT_TOOL, type ToolCall } from './buildSegments';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { ActivityGlyph, useActivityLabel, useFormatElapsed, useTurnSeconds } from './TranscriptActivity';
+import type { WorkingActivity } from './WorkingMark';
 import { runningActivity } from './streamingActivity';
 import { FileChangeDetail } from './FileChangeDetail';
 import { useDesktopSession } from '@/hooks/useDesktopSession';
 import { DesktopSessionLink } from '../message-renderers/components/DesktopSessionLink';
+import { StartedSessionLink, sessionLinkProps } from '../message-renderers/components/StartedSessionLink';
+import { isCliSessionId, startedSessionOf } from '../message-renderers/utils/startedSessions';
+import { useWorkingDirOrNull } from '@/contexts/WorkingDirContext';
 import { StreamingMessage } from '../StreamingMessage';
 import { parseSessionDelivery } from '../message-renderers/ToolRenderers/SendMessageRenderer';
 import './prose.css';
@@ -26,7 +28,8 @@ import { toolResultPictureKeys } from '../message-renderers/ToolRenderers/common
 import {
   browserToolOf,
   groupIntoRows,
-  groupLabel,
+  groupLabelParts,
+  type GroupLabelParts,
   hasFailed,
   wasStopped,
   imagesOfResult,
@@ -138,35 +141,100 @@ function CodeBox({ title, code, language, output }: { title: string; code: strin
   );
 }
 
+/** The most thumbnails a line shows; the rest of its pictures are counted ("+3"). The desktop app shows three. */
+const MAX_THUMBNAILS = 3;
+
+/** What a strip does at its end when what it holds is wider than it is: the last 1.5rem fades out instead of being cut or ended with dots. */
+const FADE_END =
+  '[mask-image:linear-gradient(to_right,black_calc(100%_-_1.5rem),transparent)] rtl:[mask-image:linear-gradient(to_left,black_calc(100%_-_1.5rem),transparent)]';
+
+/**
+ * The line over a group of calls: one line whose phrases fade out at its end when they do not fit. "Other actions" and the
+ * count of failed calls are the tail, kept in view after the faded part. A file that was read is a link that opens it.
+ */
+function GroupSummaryText({ pieces, tail, tailIsParen }: GroupLabelParts) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [overflowing, setOverflowing] = useState(false);
+  const hasMain = pieces.length > 0;
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => setOverflowing(el.scrollWidth > el.clientWidth + 1);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  });
+  return (
+    <span className="flex min-w-0 items-baseline whitespace-nowrap">
+      {hasMain && (
+        <span ref={ref} className={`min-w-0 overflow-hidden ${overflowing ? FADE_END : ''}`}>
+          {pieces.map((piece, index) => (
+            <span key={index}>
+              {index > 0 && ', '}
+              {typeof piece === 'string' ? (
+                piece
+              ) : (
+                <>
+                  {piece.before}
+                  <span
+                    role="link"
+                    tabIndex={0}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      if (piece.path) void openChatFile(piece.path);
+                    }}
+                    className={`${LINK_TEXT} cursor-pointer hover:underline`}
+                  >
+                    {piece.fileName}
+                  </span>
+                  {piece.after}
+                </>
+              )}
+            </span>
+          ))}
+        </span>
+      )}
+      {tail && <span className="flex-shrink-0">{hasMain ? (tailIsParen ? ' ' : ', ') : ''}{tail}</span>}
+    </span>
+  );
+}
+
 /**
  * The pictures behind a line, as small thumbnails at its end, one for each. They are shown only while the line is
  * shut: once it is open the pictures themselves are under it.
  */
 function Thumbnails({ pictures, onOpen }: { pictures: PictureRef[]; onOpen: (picture: PictureRef) => void }) {
   if (pictures.length === 0) return null;
+  const shown = pictures.slice(0, MAX_THUMBNAILS);
+  const more = pictures.length - shown.length;
   return (
-    <span className="ms-auto flex flex-shrink-0 items-center gap-1.5">
-      {pictures.map((picture) => (
-        // The line these sit in opens and shuts on a click; a click on a thumbnail opens the picture in the viewer instead and goes no further.
-        <span
-          key={`${picture.call.toolUse.id}:${picture.index}`}
-          role="button"
-          tabIndex={0}
-          onClick={(event) => {
-            event.stopPropagation();
-            onOpen(picture);
-          }}
-          onKeyDown={(event) => {
-            if (event.key !== 'Enter' && event.key !== ' ') return;
-            event.preventDefault();
-            event.stopPropagation();
-            onOpen(picture);
-          }}
-          className="flex cursor-zoom-in"
-        >
-          <img src={picture.src} alt="" className="h-7 w-auto max-w-[56px] rounded-[3px] border border-border-default/70 object-contain" />
-        </span>
-      ))}
+    <span className="ms-auto flex flex-shrink-0 items-center gap-2">
+      {/* The pictures that are not shown are counted before the ones that are, as the desktop app does. */}
+      {more > 0 && <span className="whitespace-nowrap">+{more}</span>}
+      <span data-transcript-thumbnails className="flex items-center gap-1.5">
+        {shown.map((picture) => (
+          // The line these sit in opens and shuts on a click; a click on a thumbnail opens the picture in the viewer instead and goes no further.
+          <span
+            key={`${picture.call.toolUse.id}:${picture.index}`}
+            role="button"
+            tabIndex={0}
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpen(picture);
+            }}
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter' && event.key !== ' ') return;
+              event.preventDefault();
+              event.stopPropagation();
+              onOpen(picture);
+            }}
+            className="flex flex-shrink-0 cursor-zoom-in"
+          >
+            <img src={picture.src} alt="" className="h-7 w-auto max-w-[56px] rounded-[3px] border border-border-default/70 object-contain" />
+          </span>
+        ))}
+      </span>
     </span>
   );
 }
@@ -423,8 +491,8 @@ function ToolDetail({ calls, withPictures = true }: { calls: ToolCall[]; withPic
     // A start the app refused shows what it said, in the quiet grey (the classic card paints it red), and not what was asked for.
     return <div className="whitespace-pre-wrap break-words px-1 pb-3 text-[0.9375rem] leading-[1.5] text-[var(--tr-muted)]">{output}</div>;
   }
-  if (kind === 'sessionArchive' &&typeof call.toolUse.input?.reason === 'string' && call.toolUse.input.reason) {
-    // What archiving a session shows is the reason it was archived for, in the quiet grey, and nothing of what the call returned.
+  if ((kind === 'sessionArchive' || kind === 'sessionDelete') && typeof call.toolUse.input?.reason === 'string' && call.toolUse.input.reason) {
+    // What archiving or deleting a session shows is the reason it was archived for, in the quiet grey, and nothing of what the call returned.
     return <div className="whitespace-pre-wrap break-words px-1 pb-3 text-[0.9375rem] leading-[1.5] text-[var(--tr-muted)]">{call.toolUse.input.reason as string}</div>;
   }
   if (kind === 'sessionLookup') return <SessionFactsDetail call={call} />;
@@ -453,6 +521,14 @@ function RowMeta({ call, meta }: { call: ToolCall; meta?: string }) {
   // The session a message came from is a way into that session, named by the title it has now.
   const fromInput = call.toolUse.input?.from;
   const from = toolKindOf(call) === 'receivedMessage' && typeof fromInput === 'string' ? fromInput : '';
+  // The session-management MCP names the sender by its CLI session: a way in when this conversation started it.
+  if (isCliSessionId(from)) {
+    return (
+      <span className={`ms-2 ${LINK_TEXT}`}>
+        <StartedSessionLink id={from} plain>{shown}</StartedSessionLink>
+      </span>
+    );
+  }
   if (from.startsWith('local_')) {
     return (
       <span className={`ms-2 ${LINK_TEXT}`}>
@@ -468,19 +544,18 @@ function StartedSessionCard({ call }: { call: ToolCall }) {
   const { t } = useTranslation('chat');
   const title = typeof call.toolUse.input?.title === 'string' ? (call.toolUse.input.title as string) : '';
   // The answer names the session it started; Desktop's own file for it says whether it is waiting for the person.
-  const startedId = /session_id:\s*(local_[\w-]+)/.exec(toolResultText(call.toolUse.tool_result as LoadedMessageDto | undefined))?.[1] ?? '';
+  const answer = toolResultText(call.toolUse.tool_result as LoadedMessageDto | undefined);
+  const startedId = /session_id:\s*(local_[\w-]+)/.exec(answer)?.[1] ?? '';
   const session = useDesktopSession(startedId, startedId !== '');
+  // The session-management MCP answers with the CLI session itself and the folder it runs in, so there is
+  // nothing to look up. A session started without a folder of its own runs in this conversation's folder.
+  const workingDirectory = useWorkingDirOrNull()?.workingDirectory ?? undefined;
+  const own = startedId === '' ? startedSessionOf(answer, call.toolUse.input as Record<string, unknown> | undefined) : undefined;
   const awaiting = session?.awaitingPerson === true;
-  const sessionId = session?.cliSessionId;
-  const href = sessionId ? `${window.location.origin}/sessions/${sessionId}${session?.cwd ? `?workingDir=${encodeURIComponent(session.cwd)}` : ''}` : undefined;
+  const sessionId = session?.cliSessionId ?? own?.sessionId;
+  const cwd = session?.cwd ?? own?.cwd ?? (own ? workingDirectory : undefined);
   // The card is a way into the session it names: in a browser a link that opens it in a new tab, in the IDE the adapter opens it.
-  const goTo = (event: React.MouseEvent) => {
-    if (!sessionId) return;
-    const adapter = getAdapter();
-    if (adapter.type === ClientEnv.BROWSER) return;
-    event.preventDefault();
-    adapter.openSession(sessionId, session?.cwd).catch(() => toast.error(t('transcript.tools.openSessionFailed')));
-  };
+  const { href, onClick: goTo } = sessionLinkProps(sessionId ? { sessionId, cwd } : undefined);
   return (
     <div className="px-4 py-[11px]" data-transcript-started-session>
       <a
@@ -505,7 +580,7 @@ function NestedRequestRow({ call }: { call: ToolCall }) {
 }
 
 /** One call: a line that opens to its details. */
-function TranscriptToolRow({ calls, defaultOpen, inBox, live }: { calls: ToolCall[]; defaultOpen: boolean; inBox: boolean; live?: { label: string; elapsed: string } }) {
+function TranscriptToolRow({ calls, defaultOpen, inBox, live }: { calls: ToolCall[]; defaultOpen: boolean; inBox: boolean; live?: { label: string; elapsed: string; mark: WorkingActivity } }) {
   const { t } = useTranslation('chat');
   const call = calls[0];
   const [open, setOpen] = useState(defaultOpen);
@@ -528,13 +603,13 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live }: { calls: ToolCal
       >
         {live ? (
           <>
-            <ActivityGlyph />
+            <ActivityGlyph activity={live.mark} />
             <span className="min-w-0 truncate transcript-shimmer">{live.label}</span>
             <span className="flex-shrink-0">{live.elapsed}</span>
           </>
         ) : (
-        <span className="min-w-0 truncate">
-          {label.before}
+        <span className={label.fileName ? 'flex min-w-0 items-baseline whitespace-nowrap' : 'min-w-0 truncate'}>
+          <span className={label.fileName ? 'me-2 flex-shrink-0' : undefined}>{label.before}</span>
           {label.fileName && (
             <span
               role="link"
@@ -543,7 +618,7 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live }: { calls: ToolCal
                 event.stopPropagation();
                 if (path) void openChatFile(path);
               }}
-              className={`${LINK_TEXT} cursor-pointer hover:underline`}
+              className={`${LINK_TEXT} min-w-0 cursor-pointer truncate hover:underline`}
             >
               {label.fileName}
             </span>
@@ -615,7 +690,7 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
           calls={[calls[0]]}
           defaultOpen={verbose}
           inBox={false}
-          live={active && live ? { label: label(live), elapsed: formatElapsed(seconds) } : undefined}
+          live={active && live ? { label: label(live), elapsed: formatElapsed(seconds), mark: live.mark } : undefined}
         />
       </div>
     );
@@ -631,13 +706,13 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
       >
         {active && live ? (
           <>
-            <span className="me-2 flex"><ActivityGlyph /></span>
+            <span className="me-2 flex"><ActivityGlyph activity={live.mark} /></span>
             <span className="min-w-0 truncate transcript-shimmer">{label(live)}</span>
             <span className="ms-2 me-1 flex-shrink-0">{formatElapsed(seconds)}</span>
           </>
         ) : (
           <>
-            <span>{groupLabel(calls, t)}</span>
+            <GroupSummaryText {...groupLabelParts(calls, t)} />
             <LineStatsView stats={sumLineStats(calls)} />
           </>
         )}

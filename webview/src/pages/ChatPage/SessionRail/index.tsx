@@ -5,6 +5,8 @@ import {Section} from "./Section";
 import {EnvironmentSection} from "./EnvironmentSection";
 import {ContextSection} from "./ContextSection";
 import {OutputsSection} from "./OutputsSection";
+import {LinkedSessionsSection} from "./LinkedSessionsSection";
+import {useSessionMcp} from "@/hooks/queries/useSessionMcp";
 
 /**
  * The session rail: a panel of the session's environment, context usage and
@@ -17,6 +19,9 @@ import {OutputsSection} from "./OutputsSection";
  */
 export function SessionRail() {
     const {t} = useTranslation('chat');
+    // Who started whom is the session-management MCP's record: without the package there is
+    // nothing to show, and the section is left out rather than drawn empty.
+    const {info: sessionMcp} = useSessionMcp();
     const [open, setOpen] = useState(false);
     const [contextOpen, setContextOpen] = useState(false);
     const rootRef = useRef<HTMLDivElement>(null);
@@ -32,7 +37,7 @@ export function SessionRail() {
         const onPointerDown = (e: MouseEvent) => {
             const target = e.target as Element | null;
             // The dock icon toggles on its own click; closing here too would reopen it at once.
-            if (rootRef.current?.contains(target as Node) || target?.closest('[data-session-rail-toggle]')) return;
+            if (rootRef.current?.contains(target as Node) || target?.closest('[data-session-rail-toggle], [data-session-rail-popover]')) return;
             setOpen(false);
         };
         const onKeyDown = (e: KeyboardEvent) => {
@@ -59,6 +64,9 @@ export function SessionRail() {
             <Section title={t('sessionRail.environment')} defaultOpen>
                 <EnvironmentSection/>
             </Section>
+            {sessionMcp?.installed && (
+                <LinkedSessionsSection/>
+            )}
             <Section title={t('sessionRail.context')} defaultOpen={false} onToggle={setContextOpen}>
                 <ContextSection open={contextOpen}/>
             </Section>

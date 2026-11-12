@@ -28,6 +28,8 @@ export type ToolKind =
   | 'backgroundDone'
   | 'toolLoad'
   | 'sessionArchive'
+  | 'sessionDetach'
+  | 'sessionDelete'
   | 'appRequest'
   | 'skill'
   | 'webFetch'
@@ -67,8 +69,12 @@ function computerKind(action: unknown): ToolKind {
   }
 }
 
-/** The sessions' own tools of the desktop app (`mcp__ccd_session__…`, `mcp__ccd_session_mgmt__…`), by their short name. */
-const SESSION_TOOL = /^mcp__ccd_session(?:_mgmt)?__(.+)$/;
+/**
+ * The sessions' own tools, by their short name: the desktop app's (`mcp__ccd_session__…`, `mcp__ccd_session_mgmt__…`)
+ * and the session-management MCP's (`mcp__swttch_session__…`, `mcp__swttch_session_mgmt__…`), which are the same
+ * tools with the same arguments under another server name, so they read the same way.
+ */
+const SESSION_TOOL = /^mcp__(?:ccd|swttch)_session(?:_mgmt)?__(.+)$/;
 
 export function toolKindOf(call: ToolCall): ToolKind {
   switch (SESSION_TOOL.exec(call.toolUse.name)?.[1]) {
@@ -82,6 +88,10 @@ export function toolKindOf(call: ToolCall): ToolKind {
       return 'sessionMessage';
     case 'archive_session':
       return 'sessionArchive';
+    case 'detach_session':
+      return 'sessionDetach';
+    case 'delete_session':
+      return 'sessionDelete';
     case 'get_session':
       return 'sessionLookup';
     case 'list_events':
@@ -301,6 +311,17 @@ function archivedTitle(call: ToolCall): string {
   return /\("([\s\S]*)"\)\.?$/.exec(text)?.[1] ?? '';
 }
 
+/**
+ * The titles of the sessions a `delete_session` call deleted, from its answer
+ * ("Deleted 1 session: local_x ("Title")." or, for several, "Deleted 2 sessions: local_x ("A"), local_y ("B").").
+ * Nothing while the call runs, and nothing for the answer of a call that deleted nothing.
+ */
+function deletedTitles(call: ToolCall): string {
+  const text = toolResultText(call.toolUse.tool_result as LoadedMessageDto | undefined);
+  if (!/^\s*Deleted \d+ sessions?:/.test(text)) return '';
+  return [...text.matchAll(/\("([\s\S]*?)"\)/g)].map((match) => match[1]).join(', ');
+}
+
 /** The title of the session a `SendMessage` went to, when the answer names it. */
 export function sentTo(call: ToolCall): string {
   return parseSessionDelivery(toolResultText(call.toolUse.tool_result as LoadedMessageDto | undefined)).title ?? '';
@@ -419,6 +440,18 @@ export function rowLabel(call: ToolCall, t: TFunction): RowLabel {
       return { ...plain(t('transcript.tools.receivedMessageFrom', { ns: 'chat' })), meta: inputString(call, 'name') };
     case 'sessionArchive':
       return { ...plain(t('transcript.tools.archivedSession', { ns: 'chat' })), meta: archivedTitle(call) };
+    case 'sessionDelete':
+      // As the desktop app words it: a delete that is still running, or was refused, stays at its running wording.
+      return {
+        ...plain(t(isRunning(call) || hasFailed(call) ? 'transcript.tools.sessionDeleting' : 'transcript.tools.sessionDeleted', { ns: 'chat' })),
+        meta: deletedTitles(call),
+      };
+    case 'sessionDetach':
+      // A move that failed, or is still under way, stays at its running wording: it is not reported as done.
+      return {
+        ...plain(t(isRunning(call) || hasFailed(call) ? 'transcript.tools.sessionDetaching' : 'transcript.tools.sessionDetached', { ns: 'chat' })),
+        meta: resultField(call, /"title":\s*"((?:[^"\\]|\\.)*)"/),
+      };
     case 'appRequest':
       return plain(t('transcript.tools.appAskedReport', { ns: 'chat' }));
     case 'toolLoad':
@@ -488,6 +521,31 @@ const PAGE_KINDS = new Set<ToolKind>(['pageScript', 'click', 'doubleClick', 'hov
  * together as other actions.
  */
 export function groupLabel(calls: ToolCall[], t: TFunction): string {
+  const { pieces, tail, tailIsParen } = groupLabelParts(calls, t);
+  const main = pieces.map((piece) => (typeof piece === 'string' ? piece : piece.before + piece.fileName + piece.after)).join(', ');
+  if (!tail) return main;
+  return main ? (tailIsParen ? `${main} ${tail}` : `${main}, ${tail}`) : tail;
+}
+
+/** One file the line over a group names, in pieces, so the screen can draw its name as a link. */
+export interface GroupFilePiece {
+  before: string;
+  fileName: string;
+  after: string;
+  path: string;
+}
+
+/** What `groupLabelParts` hands the screen: the phrases that may be cut off, and the end of the line that never is. */
+export interface GroupLabelParts {
+  /** The phrases in order; a phrase that names one file read is a `GroupFilePiece`. */
+  pieces: Array<string | GroupFilePiece>;
+  /** "Other actions" and the count of failed calls, which stay in view at the end of the line. Empty when there is neither. */
+  tail: string;
+  /** True when the tail is the failed count alone, written in parentheses after a line of one phrase ("Ran 6 commands (2 failed)"). */
+  tailIsParen: boolean;
+}
+
+export function groupLabelParts(calls: ToolCall[], t: TFunction): GroupLabelParts {
   const order: ToolKind[] = [];
   const keys = new Map<ToolKind, Set<string>>();
   const first = new Map<ToolKind, ToolCall>();
@@ -532,6 +590,8 @@ export function groupLabel(calls: ToolCall[], t: TFunction): string {
         return 5;
       case 'sessionRename':
       case 'sessionArchive':
+      case 'sessionDelete':
+      case 'sessionDetach':
       case 'sessionStart':
       case 'sessionList':
       case 'sessionMessage':
@@ -557,7 +617,11 @@ export function groupLabel(calls: ToolCall[], t: TFunction): string {
           return t('transcript.tools.ranCommands', { ns: 'chat', count });
         case 'read':
           if (readAndEdited) return t('transcript.tools.readAndEditedFile', { ns: 'chat', name: baseName(readPath) });
-          return count === 1 ? oneRow(kind) : t('transcript.tools.readFiles', { ns: 'chat', count });
+          if (count === 1) {
+            const label = rowLabel(first.get(kind) as ToolCall, t);
+            return label.fileName ? { before: label.before, fileName: label.fileName, after: label.after, path: readPath } : oneRow(kind);
+          }
+          return t('transcript.tools.readFiles', { ns: 'chat', count });
         case 'searchCode':
           return t('transcript.tools.searchedCode', { ns: 'chat' });
         case 'searchFiles':
@@ -590,6 +654,8 @@ export function groupLabel(calls: ToolCall[], t: TFunction): string {
         case 'sessionRead':
         case 'sessionRename':
         case 'sessionArchive':
+        case 'sessionDelete':
+        case 'sessionDetach':
         case 'sessionStart':
         case 'sessionList':
         case 'sessionMessage': {
@@ -608,10 +674,14 @@ export function groupLabel(calls: ToolCall[], t: TFunction): string {
       }
     });
 
-  const line = parts.filter(Boolean).join(', ');
-  // How many failed goes after the line in parentheses, as the desktop app writes it ("Ran 2 commands (1 failed)").
+  const otherText = order.includes('other') ? t('transcript.tools.otherActions', { ns: 'chat', count: countOf('other') }) : '';
+  const pieces = parts.filter((part, index) => part !== '' && !(otherText !== '' && index === parts.length - 1 && part === otherText));
+  // How many failed is said after the line, as the desktop app writes it: "Ran 6 commands (2 failed)" when the line is one phrase, and a phrase of its own ("..., 2 failed") when it is more.
   const failed = calls.filter(hasFailed).length;
-  return failed > 0 ? `${line} (${t('transcript.tools.failed', { ns: 'chat', count: failed })})` : line;
+  const failedText = failed > 0 ? t('transcript.tools.failed', { ns: 'chat', count: failed }) : '';
+  const phrases = pieces.length + (otherText ? 1 : 0);
+  if (failedText && phrases <= 1 && !otherText) return { pieces, tail: `(${failedText})`, tailIsParen: true };
+  return { pieces, tail: [otherText, failedText].filter(Boolean).join(', '), tailIsParen: false };
 }
 
 function pageGroupPhrase(kind: ToolKind, t: TFunction, unfinished: boolean): string {

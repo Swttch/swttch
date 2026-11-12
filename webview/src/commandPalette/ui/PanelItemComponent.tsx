@@ -87,7 +87,7 @@ export const PanelItemComponent = React.forwardRef<HTMLDivElement, Props>((props
           )}
           style={{ fontSize: 'var(--item-size, 13px)' }}
         >
-          <HighlightedText text={item.label} query={query} />
+          <HighlightedText text={item.label} query={query} initials={isCommand} />
         </span>
         {item.labelSuffix && (
           <span

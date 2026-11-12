@@ -76,6 +76,8 @@ import { openFileWithSystemAppHandler, revealFileHandler } from './fileActions';
 import { getDefaultBrowserHandler } from './defaultBrowser';
 import { getFaviconHandler, getPageUrlHandler } from './pageUrl';
 import { saveImageHandler } from './saveImage';
+import { saveSentFileHandler } from './saveSentFile';
+import { saveSentFilesHandler } from './saveSentFiles';
 import { openDiffHandler } from './openDiff';
 import { openDiffTabHandler } from './openDiffTab';
 import { getDiffPreviewHandler } from './getDiffPreview';
@@ -112,6 +114,7 @@ import {
   getDictationAvailabilityHandler,
   getExtendKitInfoHandler,
 } from './dictation';
+import { getSessionMcpInfoHandler, installSessionMcpHandler, setSessionArchivedHandler, setSessionParentHandler, uninstallSessionMcpHandler } from './sessionMcp';
 import { startReadAloudHandler, stopReadAloudHandler, getReadAloudAvailabilityHandler, getReadAloudVoiceSettingsHandler } from './readAloud';
 import { getCcbInstallHintHandler } from './getCcbInstallHint';
 import { getAccountHandler } from './getAccount';
@@ -428,6 +431,12 @@ export async function handleMessage(
     case MessageType.SAVE_IMAGE:
       await saveImageHandler(connectionId, message, connections, bridge);
       break;
+    case MessageType.SAVE_SENT_FILE:
+      await saveSentFileHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.SAVE_SENT_FILES:
+      await saveSentFilesHandler(connectionId, message, connections);
+      break;
     case MessageType.GET_FAVICON:
       await getFaviconHandler(connectionId, message, connections);
       break;
@@ -549,6 +558,21 @@ export async function handleMessage(
       break;
     case MessageType.GET_READ_ALOUD_AVAILABILITY:
       await getReadAloudAvailabilityHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_SESSION_MCP_INFO:
+      await getSessionMcpInfoHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.INSTALL_SESSION_MCP:
+      await installSessionMcpHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.SET_SESSION_ARCHIVED:
+      await setSessionArchivedHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.SET_SESSION_PARENT:
+      await setSessionParentHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.UNINSTALL_SESSION_MCP:
+      await uninstallSessionMcpHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_EXTEND_KIT_INFO:
       await getExtendKitInfoHandler(connectionId, message, connections, bridge);

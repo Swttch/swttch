@@ -17,6 +17,7 @@ import { Route, routeToPath, sessionToPath, parseSessionIdFromPath, withWorkingD
 import { InputMode, getAvailableModes, resolveConfiguredInputMode, FALLBACK_INPUT_MODE } from '../types/chatInput';
 import {isJetBrains} from "@/config/environment.ts";
 import { MessageType } from '@/shared';
+import toast from 'react-hot-toast';
 import type { GeneratedSessionTitle } from './generatedTitle';
 
 
@@ -62,6 +63,16 @@ interface SessionContextValue {
   navigateToNewSession: () => void;
   loadSessions: () => Promise<void>;
   /**
+   * Archive a session or bring it back, in the record the session-management MCP keeps. The lists read again once
+   * the backend says it is done; a refusal is shown as a toast.
+   */
+  setSessionArchived: (sessionId: string, archived: boolean) => Promise<void>;
+  /**
+   * Put a session under another one, or at the top level when [parentSessionId] is null. The package records the
+   * link and the backend tells the lists to read again; a refusal is shown as a toast.
+   */
+  setSessionParent: (sessionId: string, parentSessionId: string | null) => Promise<void>;
+  /**
    * Append the next page of sessions. No-op while one is already in flight or
    * when the list is complete, so a scroll handler can call it freely.
    */
@@ -101,12 +112,17 @@ interface SessionContextValue {
 }
 
 /**
- * Sessions fetched per request.
+ * Top-level sessions fetched per request.
  *
- * Settling a title means reading a transcript, so this is the number of files
- * opened to draw a screen. Comfortably more than the dropdown shows at once, so
- * scrolling has somewhere to go before the next request lands, and far short of
- * the hundreds a project accumulates.
+ * Settling a title means reading a transcript, so this is roughly the number of
+ * files opened to draw a screen. Comfortably more than the dropdown shows at
+ * once, so scrolling has somewhere to go before the next request lands, and far
+ * short of the hundreds a project accumulates.
+ *
+ * Counted in top-level sessions, not rows: each arrives with every session
+ * under it (the ones it started through the session-management MCP), so a
+ * family is never left half drawn at the end of a page. A page therefore holds
+ * at least this many rows and more when a session started others.
  */
 export const SESSION_PAGE_SIZE = 30;
 
@@ -202,6 +218,17 @@ export function SessionProvider({ children }: SessionProviderProps) {
   // render: putting a title back when a rename fails.
   const sessionsRef = useRef(sessions);
   sessionsRef.current = sessions;
+
+  // The directory a session's transcript is filed under. A row of the list says it
+  // itself: a nested listing, or the listing of a directory a session was opened in
+  // before it moved into a worktree (#658), holds rows from other directories than
+  // the one the list was asked for. A session the list does not hold has no better
+  // answer than the working directory.
+  const directoryOfSession = useCallback(
+    (sessionId: string): string | undefined =>
+      sessionsRef.current.find((s) => s.id === sessionId)?.sessionDir ?? workingDirectory ?? undefined,
+    [workingDirectory],
+  );
   const [generatedTitle, setGeneratedTitle] = useState<GeneratedSessionTitle | null>(null);
   /**
    * The open session's id, for the list refresh to read without depending on it.
@@ -517,6 +544,13 @@ export function SessionProvider({ children }: SessionProviderProps) {
         mergeSession(session);
         return;
       }
+      if (action === 'refresh') {
+        // Something about the rows changed that no single row names: a session
+        // was moved under or out from under another, archived, or renamed by a
+        // tool of the session-management MCP. The list is read again.
+        void loadSessions();
+        return;
+      }
       if (action === 'rename' && session?.sessionId && session.title) {
         // A title Claude Code just generated arrives with the flag; one a user typed does not.
         if (session.generated === true) {
@@ -596,7 +630,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
 
   const deleteSession = useCallback(async (sessionId: string) => {
     try {
-      await api.sessions.destroy(sessionId, workingDirectory ?? undefined);
+      await api.sessions.destroy(sessionId, directoryOfSession(sessionId));
       setSessions(prev => prev.filter(s => s.id !== sessionId));
       if (currentSessionId === sessionId) {
         setSessionState(SessionState.Idle);
@@ -605,7 +639,26 @@ export function SessionProvider({ children }: SessionProviderProps) {
     } catch (error) {
       console.error('[SessionContext] Failed to delete session:', error);
     }
-  }, [currentSessionId, api.sessions, navigateToNewSession, workingDirectory]);
+  }, [currentSessionId, api.sessions, navigateToNewSession, directoryOfSession]);
+
+  const setSessionArchived = useCallback(async (sessionId: string, archived: boolean) => {
+    try {
+      const answer = (await send(MessageType.SET_SESSION_ARCHIVED, { sessionId, archived })) as { status?: string; error?: string };
+      if (answer?.status !== 'ok') throw new Error(answer?.error ?? 'Could not change whether the session is archived.');
+      // The lists are told to read again by the backend (SESSIONS_UPDATED refresh).
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not change whether the session is archived.');
+    }
+  }, [send]);
+
+  const setSessionParent = useCallback(async (sessionId: string, parentSessionId: string | null) => {
+    try {
+      const answer = (await send(MessageType.SET_SESSION_PARENT, { sessionId, parentSessionId })) as { status?: string; error?: string };
+      if (answer?.status !== 'ok') throw new Error(answer?.error ?? 'Could not change which session this one is under.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not change which session this one is under.');
+    }
+  }, [send]);
 
   const renameSession = useCallback(async (sessionId: string, title: string) => {
     const trimmed = title.trim();
@@ -622,7 +675,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
     ));
 
     try {
-      await api.sessions.rename(sessionId, trimmed, workingDirectory ?? undefined);
+      await api.sessions.rename(sessionId, trimmed, directoryOfSession(sessionId));
     } catch (error) {
       console.error('[SessionContext] Failed to rename session:', error);
       // The name was not recorded, so showing it would be telling the user
@@ -637,7 +690,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
         ));
       }
     }
-  }, [api.sessions, workingDirectory]);
+  }, [api.sessions, directoryOfSession]);
 
   const addNewSession = useCallback((
     sessionId: string,
@@ -732,6 +785,8 @@ export function SessionProvider({ children }: SessionProviderProps) {
     navigateToSession,
     navigateToNewSession,
     loadSessions,
+    setSessionArchived,
+    setSessionParent,
     loadMoreSessions,
     loadAllSessions,
     mergeSession,

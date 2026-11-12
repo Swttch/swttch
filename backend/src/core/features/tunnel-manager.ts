@@ -1,12 +1,13 @@
 import { spawn, execFileSync, type ChildProcess } from 'child_process';
 import { existsSync, mkdirSync, chmodSync, openSync, readFileSync, writeFileSync, unlinkSync } from 'fs';
 import { resolve } from 'path';
-import { exec as execCallback } from 'child_process';
+import { exec as execCallback, execFile as execFileCallback } from 'child_process';
 import { promisify } from 'util';
 import { arch, platform, tmpdir, homedir } from 'os';
 import { augmentedEnv } from '../augmented-path';
 import { downloadToFile } from './download-file';
 import { consoleSafeExecOptions } from '../console-safe';
+import { ccgHomeDir } from '../../config/ccg-home';
 
 const execAsync = promisify(execCallback);
 
@@ -38,7 +39,7 @@ function getLocalBinPath(): string {
   // A stable, writable, per-user location (NOT process.cwd(), which for an
   // IDE-spawned backend is unpredictable and may be read-only). This dir is
   // also registered in candidateBinDirs so an installed binary is found later.
-  return resolve(homedir(), '.claude-code-gui', 'bin', getLocalBinName());
+  return resolve(ccgHomeDir(), 'bin', getLocalBinName());
 }
 
 function getDownloadUrl(): string | null {
@@ -329,6 +330,28 @@ export function stopTunnel(): void {
  */
 export async function isCloudflaredAvailable(): Promise<boolean> {
   return (await findCloudflared()) !== null;
+}
+
+/**
+ * The version of the cloudflared this backend would run, for the Dependencies list.
+ * `installed` is false when none can be located; `version` is null when one is there but
+ * `--version` did not answer with something readable.
+ */
+export async function getCloudflaredVersion(): Promise<{ installed: boolean; version: string | null }> {
+  const binaryPath = await findCloudflared();
+  if (!binaryPath) return { installed: false, version: null };
+  try {
+    // Wrapped here, not at module level: tests that mock part of child_process load this file too.
+    const { stdout } = await promisify(execFileCallback)(
+      binaryPath,
+      ['--version'],
+      consoleSafeExecOptions({ env: augmentedEnv(), timeout: 5000 }),
+    );
+    // "cloudflared version 2025.8.1 (built 2025-08-21-1534 UTC)"
+    return { installed: true, version: /\d+\.\d+\.\d+/.exec(String(stdout))?.[0] ?? null };
+  } catch {
+    return { installed: true, version: null };
+  }
 }
 
 /**

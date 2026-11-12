@@ -1,4 +1,5 @@
-import { updateInstalledExtendKit } from './core/extend-kit-update';
+import { updateInstalledExtendKit, updateInstalledSessionMcp } from './core/extend-kit-update';
+import { syncDesktopWatch } from './core/features/desktopSync';
 import { startCliAutoUpdate } from './core/cli-auto-update';
 import { createLoopbackRequest } from './ws/loopback-request';
 import { execFileSync, execSync } from 'child_process';
@@ -689,6 +690,14 @@ async function main() {
   // Do not delay readiness for the optional companion's update.
   void updateInstalledExtendKit().then(updated => {
     if (updated) connections.broadcastToAll(MessageType.EXTEND_KIT_UPDATED, {});
+  });
+  // What the Claude desktop app records (who is under whom, what is archived, titles, what is running) is read and
+  // watched by the session-management MCP, never by this backend. The package's watching command is run only while
+  // the sync switch is on (a sponsor-only setting) and the package is installed, and only after the package's own
+  // start-up update below, so that a package that gains the commands by it is the one asked.
+  void updateInstalledSessionMcp().then(updated => {
+    if (updated) connections.broadcastToAll(MessageType.SESSION_MCP_UPDATED, {});
+    void syncDesktopWatch(connections, true);
   });
   startCliAutoUpdate(
     createLoopbackRequest(connections, bridges, handleMessage),

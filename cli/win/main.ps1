@@ -21,7 +21,7 @@ $script:CcgPort = if ($env:CCG_PORT) { [int]$env:CCG_PORT } else { 19836 }
 foreach ($m in 'i18n', 'version', 'node', 'port', 'runtime', 'browser', 'spawn', 'proc', 'backend-tree') {
     . (Join-Path $script:WinRoot "lib\$m.ps1")
 }
-foreach ($m in 'help', 'version', 'doctor', 'run', 'list', 'stop', 'update', 'self-update', 'uninstall') {
+foreach ($m in 'help', 'version', 'doctor', 'run', 'list', 'stop', 'account', 'update', 'self-update', 'uninstall') {
     . (Join-Path $script:WinRoot "commands\$m.ps1")
 }
 
@@ -74,8 +74,8 @@ function Invoke-Ccg {
             exit ([int]($code | Select-Object -Last 1))
         }
         { $_ -in 'account', 'acct' } {
-            [Console]::Error.WriteLine((T 'cmd_not_yet' $cmd))
-            exit 1
+            $code = Invoke-CcgAccount $rest
+            exit ([int]($code | Select-Object -Last 1))
         }
         default {
             [Console]::Error.WriteLine((T 'unknown_command' ($CcgArgs[0])))

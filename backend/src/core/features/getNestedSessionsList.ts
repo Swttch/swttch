@@ -45,7 +45,15 @@ export async function getNestedSessionsList(
   }
 
   const perDir = await Promise.all(uniqueDirs.map((dir) => collectSortKeys(dir, dir)));
-  const allKeys = perDir.flat();
+  // A session opened in one directory that stopped inside a worktree is listed by
+  // both: by the directory it was opened in and by the worktree it is in. It is one
+  // transcript, so it is one row.
+  const seenTranscripts = new Set<string>();
+  const allKeys = perDir.flat().filter((key) => {
+    if (seenTranscripts.has(key.fullPath)) return false;
+    seenTranscripts.add(key.fullPath);
+    return true;
+  });
   allKeys.sort((a, b) => b.sortedAt - a.sortedAt);
 
   // Every row already states the directory it belongs to: resolvePage carries

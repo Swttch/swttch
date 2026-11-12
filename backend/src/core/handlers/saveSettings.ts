@@ -3,6 +3,7 @@ import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { saveSettingToScope, readMergedSettings } from '../features/settings';
 import { Claude } from '../claude';
+import { desktopSyncSettingChanged } from '../features/desktopSync';
 import { MessageType } from '../../shared';
 
 export async function saveSettingsHandler(
@@ -36,6 +37,11 @@ export async function saveSettingsHandler(
       pushHostModeForProject?: (hostMode: string, projectPath?: string) => void;
     };
     pushable.pushHostModeForProject?.(value, scope === 'project' ? workingDir : undefined);
+  }
+
+  // The switch that shows the Claude desktop app's records in the lists changes what the lists draw.
+  if (result.status === 'ok' && key === 'desktopSessionSync') {
+    await desktopSyncSettingChanged(connections);
   }
 
   // Broadcast merged settings after save

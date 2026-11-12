@@ -2,7 +2,7 @@
 
 🌐 [English](../en/README.md) | [한국어](../ko/README.md) | [日本語](../ja/README.md) | [中文](../zh/README.md) | [Español](../es/README.md) | [Deutsch](../de/README.md) | **Français**
 
-_Dernière mise à jour : 2026-11-07_
+_Dernière mise à jour : 2026-11-10_
 
 Vous trouverez ici des problèmes fréquents que nous n'avons pas encore pu corriger de notre côté, mais pour lesquels une solution connue existe.
 
@@ -17,6 +17,7 @@ Chaque document présente les symptômes, la cause, la solution et des liens ver
 | [JCEF dans Android Studio](android-studio-jcef.md) | Android Studio affiche un panneau d'information ou une exception au lieu du chat, ou une fenêtre vide |
 | [Couleurs de l'écran de revue](diff-colors-old-ide.md) | L'écran de revue s'affiche sans couleur sur les IDE 2025.2 et antérieurs |
 | [Sessions absentes de Claude Desktop](desktop-session-import.md) | Les sessions créées dans le plugin n'apparaissent pas dans l'onglet Code de Claude Desktop |
+| [Comptes et licence réinitialisés avec CCG_HOME](ccg-home-data-location.md) | Vous avez défini `CCG_HOME` et, après la mise à jour, les comptes enregistrés, la licence, la réponse sur les données d'utilisation ou les messages programmés ont disparu |
 
 ## Si votre problème ne figure pas ici
 

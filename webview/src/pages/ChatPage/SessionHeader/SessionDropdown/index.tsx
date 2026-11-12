@@ -39,6 +39,7 @@ export function SessionDropdown() {
     setSearchQuery,
     filteredSessions,
     groupedSessions,
+    sessionNesting,
     handleDeleteSession,
     renameSession,
     confirmDialog,
@@ -120,6 +121,7 @@ export function SessionDropdown() {
           isLoading={isLoading}
           onLoadMore={loadMoreSessions}
           hasMore={hasMoreSessions}
+          nesting={sessionNesting}
         />
       )}
 

@@ -12,14 +12,16 @@ import { i18n } from '@/i18n';
  *
  * @param install the mutation from `useExtendKit()`, which throws on failure
  * @param successKey which of the two success lines to show
+ * @param keyPrefix where the lines live in the settings namespace; another installable companion points this at its own
  */
 export async function runKitInstall(
   install: () => Promise<void>,
   successKey: 'installed' | 'updated',
+  keyPrefix = 'general.voice.kit',
 ): Promise<void> {
   try {
     await install();
-    toast.success(i18n.t(`settings:general.voice.kit.${successKey}`));
+    toast.success(i18n.t(`settings:${keyPrefix}.${successKey}`));
   } catch (err) {
     // The backend hands back a runnable command when a global install needs
     // elevation, so the message is worth showing verbatim.
@@ -31,7 +33,7 @@ export async function runKitInstall(
     // instead. Errors here wait to be dismissed, which means they need a way
     // to BE dismissed; `whiteSpace` keeps the command on its own line rather
     // than reflowing it into the prose.
-    const text = err instanceof Error ? err.message : i18n.t('settings:general.voice.kit.failed');
+    const text = err instanceof Error ? err.message : i18n.t(`settings:${keyPrefix}.failed`);
     toast.error(
       (instance) => (
         <span className="flex items-start gap-3">
@@ -40,8 +42,8 @@ export async function runKitInstall(
             type="button"
             onClick={() => toast.dismiss(instance.id)}
             className="shrink-0 text-text-tertiary transition-colors hover:text-text-primary"
-            aria-label={i18n.t('settings:general.voice.kit.dismiss')}
-            title={i18n.t('settings:general.voice.kit.dismiss')}
+            aria-label={i18n.t(`settings:${keyPrefix}.dismiss`)}
+            title={i18n.t(`settings:${keyPrefix}.dismiss`)}
           >
             <XMarkIcon className="h-4 w-4" />
           </button>

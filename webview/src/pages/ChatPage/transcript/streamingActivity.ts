@@ -3,6 +3,7 @@ import { isContentBlockArray } from '../../../types';
 import { ContentBlockType, type ToolUseBlockDto } from '../../../dto/message/ContentBlockDto';
 import { toolKindOf, type ToolKind } from './toolSummary';
 import { isCardTool, type ToolCall } from './buildSegments';
+import type { WorkingActivity } from './WorkingMark';
 
 /** What the model is doing while a turn runs and a call has not come back yet: the call, and what it is doing in words. */
 export interface StreamingActivity {
@@ -12,6 +13,8 @@ export interface StreamingActivity {
   description: string | null;
   /** Which of the desktop app's progress phrases says it when the call has no description. */
   phrase: 'command' | 'pageScript' | 'editing' | 'reading' | 'searching' | 'fetching' | 'agent' | 'working';
+  /** Which mark says it: a command runs with the square of four dots, a file is read with the circling dots, and any other call with the row of three. */
+  mark: WorkingActivity;
 }
 
 const PHRASE_OF: Partial<Record<ToolKind, StreamingActivity['phrase']>> = {
@@ -25,6 +28,11 @@ const PHRASE_OF: Partial<Record<ToolKind, StreamingActivity['phrase']>> = {
   webSearch: 'searching',
   webFetch: 'fetching',
   agent: 'agent',
+};
+
+const MARK_OF: Partial<Record<ToolKind, WorkingActivity>> = {
+  command: 'code',
+  read: 'read',
 };
 
 /** How many of the newest entries are looked through: the call that is running is in the last of them. */
@@ -49,7 +57,8 @@ export function runningActivity(messages: LoadedMessageDto[]): StreamingActivity
       if (isCardTool(toolUse.name)) return null;
       const call: ToolCall = { toolUse, message };
       const description = typeof toolUse.input?.description === 'string' ? (toolUse.input.description as string).trim() : '';
-      return { toolUseId: toolUse.id, description: description || null, phrase: PHRASE_OF[toolKindOf(call)] ?? 'working' };
+      const kind = toolKindOf(call);
+      return { toolUseId: toolUse.id, description: description || null, phrase: PHRASE_OF[kind] ?? 'working', mark: MARK_OF[kind] ?? 'default' };
     }
   }
   return null;

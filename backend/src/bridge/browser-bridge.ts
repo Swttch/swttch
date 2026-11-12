@@ -1,3 +1,4 @@
+import type { HostClipboardContents } from '../core/types';
 import { execFile, spawn } from 'child_process';
 import { writeFile } from 'fs/promises';
 import { dirname } from 'path';
@@ -613,9 +614,7 @@ if ($dialog.ShowDialog() -eq 'OK') {
     // separates this no-op from a feature that was merely left out here.
   }
 
-  async getClipboard(_params: {
-    workingDir?: string;
-  }): Promise<{ text: string | null; image: { mimeType: string; base64: string } | null }> {
+  async getClipboard(_params: { workingDir?: string }): Promise<HostClipboardContents> {
     // Nothing to read on the webview's behalf: a real browser reads its own
     // clipboard, and the paste event it fires carries what the user copied. The
     // IDE needs this call only because its embedded browser, a separate X11
@@ -623,7 +622,7 @@ if ($dialog.ShowDialog() -eq 'OK') {
     //
     // Not a gap: a standalone user loses nothing without it, which is what
     // separates this no-op from a feature that was merely left out here.
-    return { text: null, image: null };
+    return { text: null, image: null, files: [] };
   }
 
   async setClipboard(_params: { text: string; html?: string; workingDir?: string }): Promise<void> {

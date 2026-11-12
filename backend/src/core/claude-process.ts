@@ -28,9 +28,11 @@ import { getProjectSessionsPath } from './features/getProjectSessionsPath';
 import { isFolderGone } from './project-folder';
 import { removeSessionTitleOverride } from './features/sessionTitleOverrides';
 import { renamedSessionTitle } from './features/sessionRenamedReply';
+import { announceSessionToolChanges } from './features/sessionToolAnnouncer';
 import { swttchEntrypointName } from './features/sessionEntrypoint';
 import { MessageType, SessionActivity } from '../shared';
 import { ingestRateLimitWindows } from './handlers/getUsage';
+import { SESSION_MCP_AREAS, resolveInstalledSessionMcp, type InstalledSessionMcp } from './session-mcp';
 
 // Tracks files Claude edits so the IDE can be told to reload them once the
 // edit completes on disk. Shared across sessions — tool_use ids are unique.
@@ -486,6 +488,59 @@ export function buildEntrypointEnv(
   return { CLAUDE_CODE_ENTRYPOINT: swttchEntrypointName(isOn(env.JETBRAINS_MODE)) };
 }
 
+/**
+ * The session-management MCP, handed to the CLI the documented way: `--mcp-config` with stdio
+ * servers. A host that ships the MCP (Swttch Desktop) names the program in
+ * `SWTTCH_SESSION_MCP_BIN`; everyone else leaves it unset and gets no extra argument.
+ *
+ * One server per area, named `swttch_<area>`, so the model sees `mcp__swttch_<area>__<tool>`.
+ * Each is told which session is calling (`SWTTCH_SESSION_ID`) because the server cannot learn
+ * that from the CLI, and gets the data and config folders this backend runs with, so both sides
+ * read and write the same files. `--strict-mcp-config` is deliberately not passed: the user's
+ * own servers keep loading.
+ *
+ * Optional: `SWTTCH_SESSION_MCP_NODE` (the node to run it with, default `node`) and
+ * `SWTTCH_SESSION_MCP_AREAS` (comma-separated area names, default all). Area names that are not
+ * plain identifiers are dropped.
+ */
+/**
+ * The other way in: the user installed `@swttch/session-manager-mcp` from Settings > About >
+ * Dependencies, which is what turns it on. The host variable wins when both exist, so Swttch Desktop's own copy is never
+ * replaced by a global install. The server is run under THIS backend's Node, like the extend kit.
+ */
+export function buildSessionMcpArgs(
+  inherited: NodeJS.ProcessEnv,
+  sessionId: string,
+  installed?: InstalledSessionMcp | null,
+): string[] {
+  const bin = inherited.SWTTCH_SESSION_MCP_BIN || installed?.entry;
+  if (!bin) return [];
+  const nodeCommand = inherited.SWTTCH_SESSION_MCP_BIN
+    ? inherited.SWTTCH_SESSION_MCP_NODE || 'node'
+    : process.execPath;
+  const requested = inherited.SWTTCH_SESSION_MCP_BIN
+    ? inherited.SWTTCH_SESSION_MCP_AREAS
+      ? inherited.SWTTCH_SESSION_MCP_AREAS.split(',').map((a) => a.trim())
+      : [...SESSION_MCP_AREAS]
+    : installed!.areas;
+  const areas = requested.filter((a) => /^[a-z][a-z0-9_]*$/.test(a));
+  if (areas.length === 0) return [];
+  const env: Record<string, string> = { SWTTCH_SESSION_ID: sessionId };
+  if (inherited.CCG_HOME) env.CCG_HOME = inherited.CCG_HOME;
+  if (inherited.CLAUDE_CONFIG_DIR) env.CLAUDE_CONFIG_DIR = inherited.CLAUDE_CONFIG_DIR;
+  // A host that runs this backend with Electron as node needs the server to run the same way.
+  if (inherited.ELECTRON_RUN_AS_NODE) env.ELECTRON_RUN_AS_NODE = inherited.ELECTRON_RUN_AS_NODE;
+  const mcpServers: Record<string, unknown> = {};
+  for (const area of areas) {
+    mcpServers[`swttch_${area}`] = {
+      command: nodeCommand,
+      args: [bin, '--area', area],
+      env,
+    };
+  }
+  return ['--mcp-config', JSON.stringify({ mcpServers })];
+}
+
 // result 이벤트 수신 여부 추적 (비정상 종료 시 에러 전파 판단용)
 const sessionsWithResult = new Set<string>();
 
@@ -824,6 +879,12 @@ export async function ensureClaudeProcess(
   console.error('[node-backend]', `Session: ${targetSessionId} (${sessionFlag})`);
 
   const args = buildClaudeArgs(sessionFlag, targetSessionId, inputMode, model, effortLevel, thinkingDisplay);
+  // An installed-and-enabled session MCP is looked up per spawn: the setting is the user's, and a
+  // change must apply to the next CLI that starts without restarting this backend.
+  const installedSessionMcp = process.env.SWTTCH_SESSION_MCP_BIN
+    ? null
+    : await resolveInstalledSessionMcp(workingDir).catch(() => null);
+  args.push(...buildSessionMcpArgs(process.env, targetSessionId, installedSessionMcp));
 
   console.error('[node-backend]', `Command: ${Claude.command} ${args.join(' ')}`);
 
@@ -1573,6 +1634,10 @@ function handleStreamEvent(
         console.error('[node-backend]', 'Failed to apply CLI session rename:', err);
       });
   }
+
+  // A session started, moved or archived through the session-management MCP:
+  // the session lists are told, because nothing else passes through here.
+  announceSessionToolChanges(event, connections);
 
   if (eventType === 'result') {
     sessionsWithResult.add(targetSessionId);

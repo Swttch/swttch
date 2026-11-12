@@ -9,6 +9,8 @@ import { linkMenuStore } from '@/utils/linkMenuStore';
 import { resolveMarkdownFileLink } from '../utils/markdownFileLink';
 import { ArtifactChip } from './ArtifactChip';
 import { DesktopSessionLink, desktopSessionIdOf } from './DesktopSessionLink';
+import { StartedSessionLink } from './StartedSessionLink';
+import { sessionLinkIdOf } from '../utils/startedSessions';
 import { artifactUrlFrom } from '../ToolRenderers/ArtifactRenderer';
 
 // Streamdown's default link classes, re-applied because a custom component fully
@@ -33,6 +35,10 @@ export const MarkdownFileLink: React.FC<{ href?: string; children?: ReactNode }>
   // A session of Claude Desktop, linked by its Desktop id: its name on a blue background, a click opens it.
   const desktopSessionId = desktopSessionIdOf(href);
   if (desktopSessionId) return <DesktopSessionLink id={desktopSessionId}>{children}</DesktopSessionLink>;
+
+  // A session started through the session-management MCP, linked by its own id: the same chip.
+  const startedSessionId = sessionLinkIdOf(href);
+  if (startedSessionId) return <StartedSessionLink id={startedSessionId}>{children}</StartedSessionLink>;
 
   if (link) {
     const open = (event: React.SyntheticEvent) => {

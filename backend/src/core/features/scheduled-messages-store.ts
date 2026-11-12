@@ -1,10 +1,10 @@
 import { readFile, writeFile, rename, unlink, mkdir, chmod } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join, dirname } from 'path';
-import { homedir } from 'os';
 import { randomUUID } from 'crypto';
 import type { ScheduledMessage } from '../../shared';
 import { refusedWriteMessage } from './atomic-json';
+import { ccgHomeDir } from '../../config/ccg-home';
 
 /**
  * Persistence for scheduled-message reservations (the "send later" engine).
@@ -26,7 +26,7 @@ import { refusedWriteMessage } from './atomic-json';
 export type ScheduledMessagesFile = Record<string, ScheduledMessage[]>;
 
 function baseDir(): string {
-  return join(homedir(), '.claude-code-gui');
+  return ccgHomeDir();
 }
 function storePath(): string {
   return join(baseDir(), 'scheduled-messages.json');

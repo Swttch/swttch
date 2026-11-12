@@ -1,7 +1,6 @@
 import { readFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
-import { homedir } from 'os';
 import { atomicWriteFile, updateJsonFile, refusedWriteMessage } from './atomic-json';
 import { normalizeSettingValue } from './path-settings';
 import {
@@ -15,10 +14,13 @@ import {
   ContextBadgeDisplay,
   CONTEXT_BADGE_DISPLAYS,
 } from '../../shared';
+import { ideSharedDir } from '../../config/ccg-home';
 
 // ─── Settings helpers ────────────────────────────────────────────────────────
 
-const SETTINGS_FILE = join(homedir(), '.claude-code-gui', 'settings.js');
+function settingsFile(): string {
+  return join(ideSharedDir(), 'settings.js');
+}
 
 // ─── Scope policy: project-local by default ──────────────────────────────────
 //
@@ -86,6 +88,7 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   // Claude Code's official settings schema). See settings-migration.ts.
   uiLanguage: null,
   voice: {},
+  sessionMcp: { enabled: true, areas: ['session_mgmt', 'session'] },
   useCtrlEnterToSend: false,
   composerSendShortcut: null,
   composerSendShortcutCustom: null,
@@ -98,6 +101,12 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   notificationSoundVolume: 5,
   focusInputOnEditorContext: true,
   autoResumeOnLimit: false,
+  // Sponsor-only. Whether what the Claude desktop app records about its sessions (who is under whom, what is archived,
+  // titles, which are running) is reflected in the session lists. Read-only: nothing is written to the desktop app.
+  desktopSessionSync: false,
+  // Sponsor-only. Whether a session in the session list can be dragged onto another to put it under that one, or onto
+  // the strip at the top to take it to the top level. The same change the session rail's links make, by dragging.
+  sessionListDragDrop: false,
   allowAllCommandsByDefault: false,
   attachEditorContext: true,
   autoOpenDiffOnPermission: true,
@@ -167,6 +176,7 @@ const COMMENT_MAP: Record<string, string> = {
   uiDirection: 'UI 미러링(레이아웃 방향): "ltr" | "rtl"',
   uiLanguage: 'GUI 인터페이스 표시 언어(예: "korean"). null이면 영어. Claude 응답 언어(language)와 무관',
   voice: '음성 입력 설정 중 공식 스키마에 없는 것들. speechLanguage: 말하는 언어의 BCP-47 코드(예: "ko"), 공식 language가 비었을 때만 쓰인다(VS Code 확장의 accessibility.voice.speechLanguage와 같은 자리). silenceTimeout: 말이 없을 때 녹음이 기다리는 초(1~15, 기본 15). 서비스가 15초 침묵이면 스스로 끊으므로 그 이상은 의미가 없다. enabled/mode/autoSubmit은 공식 키라 네이티브 settings.json에 있다. readAloudLanguage/readAloudVoice/readAloudSpeed: 답변을 소리로 읽을 때의 언어(예: "ko"), 목소리(예: "buttery"), 속도(0.7~1.5). null이면 각각 답변 글의 언어, Claude 계정(데스크탑)에 저장된 목소리, 계정에 저장된 속도를 따른다',
+  sessionMcp: '세션 관리 MCP(@swttch/session-manager-mcp)를 Claude CLI에 붙이는 방식. 패키지가 설치돼 있으면 CLI를 띄울 때 --mcp-config로 붙는다(설치와 버전은 설정 > 정보 > 의존성에서 다룬다). enabled: false로 두면 설치돼 있어도 붙이지 않는다. areas: 붙일 영역 이름 목록(session_mgmt, session, sidebar, window, view, host, pr, settings, directory, connectors, turn), 기본은 session_mgmt(있는 세션 다루기)와 session(새 세션 시작) 둘. 영역마다 서버가 하나이고 붙인 영역의 도구는 컨텍스트를 차지한다',
   useCtrlEnterToSend: '[레거시] true면 Ctrl/Cmd+Enter로 전송하고 Enter는 줄바꿈. false면 Enter로 전송. composerSendShortcut/composerNewlineShortcut이 비었을 때만 쓰인다',
   composerSendShortcut: '프롬프트를 보내는 키: "enter" | "modEnter"(Ctrl/Cmd+Enter) | "custom". null이면 useCtrlEnterToSend를 따른다',
   composerSendShortcutCustom: 'composerSendShortcut이 "custom"일 때 쓰는 조합(저장형, 예: "Meta+Enter")',
@@ -178,6 +188,8 @@ const COMMENT_MAP: Record<string, string> = {
   notificationSoundVolume: '알림음의 음량(1~10, 미설정 시 5). 한 눈금의 절대 크기는 운영체제마다 다르다 — 맥은 1이 원음이고 10이 원음의 10배(afplay 게인), 윈도우와 리눅스는 증폭이 안 되므로 10이 원음이고 1이 그 10분의 1이다',
   focusInputOnEditorContext: 'true면 Alt+K로 파일 경로 삽입 후 채팅 입력창으로 포커스 이동',
   autoResumeOnLimit: '사용량 리밋 리셋 시 자동 재개(후원자 전용). 기본 off. 리밋 배너의 기본 동작을 seed',
+  desktopSessionSync: '후원자 전용. 클로드 데스크탑 앱이 자기 세션에 대해 기록한 것(상하위 관계, 보관, 제목, 진행 중 여부)을 세션 목록과 세션 레일에 반영할지. 기본 off. 읽기만 하며 데스크탑 앱의 파일은 건드리지 않는다. 세션 매니저 패키지가 설치돼 있어야 동작',
+  sessionListDragDrop: '후원자 전용. 세션 목록에서 세션을 다른 세션 위로 끌어다 놓으면 그 세션의 하위로 두고, 목록 맨 위 띠에 놓으면 최상위로 뺀다. 세션 레일의 연결 편집과 같은 변경을 끌어다 놓기로 하는 것. 기본 off. 세션 매니저 패키지가 설치돼 있어야 동작',
   allowAllCommandsByDefault: 'Sponsor-only. Whether every session starts with "Allow all command in this session" already on, so the GUI answers the CLI safety prompts itself. Off by default; a session can still turn it off for itself',
   attachEditorContext: '세션 시작 시 에디터 컨텍스트 칩을 활성 상태로 둘지. false면 칩은 뜨되 비활성으로 시작(세션 중 클릭 변경은 저장되지 않음)',
   autoOpenDiffOnPermission: '파일 편집 권한을 물을 때 diff를 저절로 열지. false면 승인 패널만 뜨고, 프롬프트의 파일명을 눌렀을 때만 diff가 열린다(변경 내용은 어느 쪽이든 보관되므로 나중에 눌러도 볼 수 있다)',
@@ -285,14 +297,14 @@ type SettingsReadForUpdate =
  */
 async function readSettingsFileForUpdate(): Promise<SettingsReadForUpdate> {
   try {
-    if (!existsSync(SETTINGS_FILE)) {
+    if (!existsSync(settingsFile())) {
       // Create with defaults
-      await mkdir(join(homedir(), '.claude-code-gui'), { recursive: true });
-      await atomicWriteFile(SETTINGS_FILE, generateSettingsContent(DEFAULT_SETTINGS));
+      await mkdir(ideSharedDir(), { recursive: true });
+      await atomicWriteFile(settingsFile(), generateSettingsContent(DEFAULT_SETTINGS));
       return { status: 'ok', settings: { ...DEFAULT_SETTINGS } };
     }
 
-    const raw = await readFile(SETTINGS_FILE, 'utf-8');
+    const raw = await readFile(settingsFile(), 'utf-8');
 
     // Strip comments in a string-literal-aware way so a value like
     // "//wsl.localhost/..." (WSL UNC path) is never mistaken for a comment (#7).
@@ -541,6 +553,21 @@ function validateSetting(key: string, value: unknown): string | null {
         return 'notificationSoundVolume must be an integer between 1 and 10';
       }
       break;
+    case 'sessionMcp': {
+      if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+        return 'sessionMcp must be an object';
+      }
+      const mcp = value as Record<string, unknown>;
+      if ('enabled' in mcp && typeof mcp.enabled !== 'boolean') {
+        return 'sessionMcp.enabled must be a boolean';
+      }
+      if ('areas' in mcp) {
+        if (!Array.isArray(mcp.areas) || !mcp.areas.every((a) => typeof a === 'string' && /^[a-z][a-z0-9_]*$/.test(a))) {
+          return 'sessionMcp.areas must be a list of area names';
+        }
+      }
+      break;
+    }
     case 'voice': {
       if (value === null || typeof value !== 'object' || Array.isArray(value)) {
         return 'voice must be an object';
@@ -606,6 +633,8 @@ function validateSetting(key: string, value: unknown): string | null {
     case 'useCtrlEnterToSend':
     case 'focusInputOnEditorContext':
     case 'autoResumeOnLimit':
+    case 'desktopSessionSync':
+    case 'sessionListDragDrop':
     case 'allowAllCommandsByDefault':
     case 'attachEditorContext':
     case 'syncModelToDefault':
@@ -842,14 +871,14 @@ async function doSaveSettingToFile(key: string, value: unknown): Promise<SaveRes
     // able to clear the rest (issue #386).
     const read = await readSettingsFileForUpdate();
     if (read.status === 'unreadable') {
-      const error = refusedWriteMessage(SETTINGS_FILE, read.reason);
+      const error = refusedWriteMessage(settingsFile(), read.reason);
       console.error('[node-backend]', `${error} — ${key} was not saved`);
       return { status: 'error', error };
     }
     const current = read.settings;
     current[key] = normalized;
-    await mkdir(join(homedir(), '.claude-code-gui'), { recursive: true });
-    await atomicWriteFile(SETTINGS_FILE, generateSettingsContent(current));
+    await mkdir(ideSharedDir(), { recursive: true });
+    await atomicWriteFile(settingsFile(), generateSettingsContent(current));
     return { status: 'ok' };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
