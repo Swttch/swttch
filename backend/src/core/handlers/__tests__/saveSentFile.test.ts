@@ -4,10 +4,14 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { saveSentFileHandler } from '../saveSentFile';
 
+const sentLog: Array<{ type: string; body: Record<string, unknown> }> = [];
+
+/** The handler's answer to the request: the ACK among everything it sent. */
 function run(payload: Record<string, unknown>, saveFile: (o: { suggestedName: string; contents: string }) => Promise<{ path: string | null }>) {
-  const sent: Array<Record<string, unknown>> = [];
-  const connections = { sendTo: (_id: string, _type: string, body: Record<string, unknown>) => sent.push(body) };
-  return saveSentFileHandler('c', { type: 'SAVE_SENT_FILE', requestId: 'r', payload } as never, connections as never, { saveFile } as never).then(() => sent[0]);
+  sentLog.length = 0;
+  const connections = { sendTo: (_id: string, type: string, body: Record<string, unknown>) => sentLog.push({ type, body }) };
+  return saveSentFileHandler('c', { type: 'SAVE_SENT_FILE', requestId: 'r', payload } as never, connections as never, { saveFile } as never)
+    .then(() => sentLog.find((entry) => entry.type === 'ACK')?.body);
 }
 
 function sourceFile(name: string, contents: string): { dir: string; path: string } {
@@ -26,6 +30,22 @@ describe('saveSentFileHandler', () => {
     expect(saveFile).toHaveBeenCalledWith({ suggestedName: 'plan.md', contents: '' });
     expect(answer).toMatchObject({ requestId: 'r', path: target });
     expect(readFileSync(target, 'utf-8')).toBe('# plan');
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('reports how much is written, from nothing to all of it, while the file is copied', async () => {
+    const { dir, path } = sourceFile('plan.md', '# plan');
+    await run({ path, suggestedName: 'plan.md' }, async () => ({ path: join(dir, 'saved.md') }));
+    const progress = sentLog.filter((entry) => entry.type === 'SAVE_SENT_FILE_PROGRESS').map((entry) => entry.body);
+    expect(progress[0]).toEqual({ path, loaded: 0, size: 6 });
+    expect(progress[progress.length - 1]).toEqual({ path, loaded: 6, size: 6 });
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('reports nothing when the dialog is cancelled', async () => {
+    const { dir, path } = sourceFile('plan.md', '# plan');
+    await run({ path, suggestedName: 'plan.md' }, async () => ({ path: null }));
+    expect(sentLog.filter((entry) => entry.type === 'SAVE_SENT_FILE_PROGRESS')).toEqual([]);
     rmSync(dir, { recursive: true, force: true });
   });
 

@@ -8,6 +8,7 @@ import {openSentFile} from "@/utils/openChatFile";
 import {cn} from "@/utils/cn";
 import {RendererProps, ToolWrapper, toolResultBlockIndex} from "./common";
 import {SentFileContextMenu, SentFileMoreButton, type MenuPoint} from "./SentFileMenu";
+import {useSentFileProgress} from "./sentFileProgress";
 import {downloadSentFile, formatSentSize, loadSentMedia, sentFilesOf, type SentFile} from "./sendUserFile";
 
 /** The `src` of a sent picture, video or sound; null when it cannot be had, undefined while loading. */
@@ -58,8 +59,29 @@ function ItemActions({file, className}: {file: SentFile; className?: string}) {
     );
 }
 
+/**
+ * The card's background, filled from the start edge as far as the file has been written while it is being saved. It
+ * is drawn over the card without catching the pointer, in the card's own corner radius.
+ */
+function SaveProgress({path, radius}: {path: string; radius: string}) {
+    const fraction = useSentFileProgress(path);
+    if (fraction === null) return null;
+    const percent = Math.round(fraction * 100);
+    return (
+        <span
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={percent}
+            className={cn("pointer-events-none absolute inset-0 overflow-hidden", radius)}
+        >
+            <span className="block h-full bg-ide-accent opacity-20 transition-[width] duration-150 ease-out" style={{width: `${percent}%`}}/>
+        </span>
+    );
+}
+
 /** Wraps an item so its full path shows on hover, and the buttons have something to sit on. */
-function Item({file, className, downloadClassName, children}: {file: SentFile; className?: string; downloadClassName?: string; children: React.ReactNode}) {
+function Item({file, className, downloadClassName, radius = "rounded-lg", children}: {file: SentFile; className?: string; downloadClassName?: string; radius?: string; children: React.ReactNode}) {
     const [menuPoint, setMenuPoint] = useState<MenuPoint | null>(null);
     return (
         <Tooltip content={<span dir="ltr">{file.path}</span>} placement="bottom">
@@ -72,6 +94,7 @@ function Item({file, className, downloadClassName, children}: {file: SentFile; c
                 }}
             >
                 {children}
+                <SaveProgress path={file.path} radius={radius}/>
                 <ItemActions file={file} className={downloadClassName}/>
                 {menuPoint && <SentFileContextMenu file={file} point={menuPoint} onClose={() => setMenuPoint(null)}/>}
             </div>
@@ -105,7 +128,7 @@ function FileCard({file}: {file: SentFile}) {
 /** A file sent alone: one line, the kind, the name and the size. */
 function FileChip({file}: {file: SentFile}) {
     return (
-        <Item file={file} className="inline-flex max-w-full" downloadClassName="end-2.5 top-1/2 -translate-y-1/2">
+        <Item file={file} className="inline-flex max-w-full" downloadClassName="end-2.5 top-1/2 -translate-y-1/2" radius="rounded-xl">
             <button
                 type="button"
                 onClick={() => openSentFile(file.path)}

@@ -483,6 +483,12 @@ export enum MessageType {
    */
   SAVE_SENT_FILE = 'SAVE_SENT_FILE',
   /**
+   * How much of a file being saved by SAVE_SENT_FILE is written, `{ path, loaded, size }`, sent now and then while the copy
+   * runs, so the file card can fill its background as the save goes. `path` is the file's own path, as the request named it.
+   * Outbound backend→webview.
+   */
+  SAVE_SENT_FILE_PROGRESS = 'SAVE_SENT_FILE_PROGRESS',
+  /**
    * Show a file in the system's file manager with the file selected. Inbound
    * webview→backend, then sent on to the IDE (Node→Kotlin) in JetBrains mode, or
    * done by the backend itself in a browser.

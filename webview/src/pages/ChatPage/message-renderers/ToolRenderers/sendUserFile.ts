@@ -2,6 +2,7 @@ import type {LoadedMessageDto} from "@/types";
 import toast from "react-hot-toast";
 import {getBridge} from "@/api/bridge/Bridge";
 import {i18n} from "@/i18n";
+import {FINISHED_BAR_MS, setSentFileProgress} from "./sentFileProgress";
 import {MessageType, sentFileExtension, sentFileKind, type SentFileKind} from "@/shared";
 import {loadFileContent} from "@/components/FilePreviewPane/loadFileContent";
 
@@ -143,24 +144,43 @@ function base64ToBytes(base64: string): Uint8Array {
  * that it was downloaded.
  */
 export async function downloadSentFile(path: string, name: string): Promise<boolean> {
+    // The card's background fills as the file is written, from what the backend reports while it copies.
+    let shown = false;
+    const report = (fraction: number) => {
+        shown = true;
+        setSentFileProgress(path, fraction);
+    };
+    const stopListening = getBridge().subscribe(MessageType.SAVE_SENT_FILE_PROGRESS, (message) => {
+        const progress = message.payload as {path?: string; loaded?: number; size?: number} | undefined;
+        if (progress?.path === path && progress.loaded !== undefined && progress.size) report(progress.loaded / progress.size);
+    });
     try {
-        const answer = (await getBridge().request(MessageType.SAVE_SENT_FILE, {path, suggestedName: name}, {timeout: null})) as {path?: string | null; error?: string} | null;
-        if (answer?.path) {
-            toast.success(i18n.t('chat:sentFiles.saved', {path: answer.path}));
-            return true;
+        try {
+            const answer = (await getBridge().request(MessageType.SAVE_SENT_FILE, {path, suggestedName: name}, {timeout: null})) as {path?: string | null; error?: string} | null;
+            if (answer?.path) {
+                toast.success(i18n.t('chat:sentFiles.saved', {path: answer.path}));
+                return true;
+            }
+            if (answer && answer.path === null && !answer.error) return true; // They closed the dialog.
+            if (answer?.error === 'unreadable' || answer?.error === 'tooLarge') return false;
+        } catch {
+            // The host could not ask; the browser's own download is next.
         }
-        if (answer && answer.path === null && !answer.error) return true; // They closed the dialog.
-        if (answer?.error === 'unreadable' || answer?.error === 'tooLarge') return false;
-    } catch {
-        // The host could not ask; the browser's own download is next.
+        const downloaded = await downloadThroughBrowser(path, name, report);
+        if (downloaded) toast.success(i18n.t('chat:sentFiles.downloaded', {name}));
+        return downloaded;
+    } finally {
+        stopListening();
+        if (shown) {
+            // Left full for a moment so a file that took no time is still seen to have been saved, then taken away.
+            setSentFileProgress(path, 1);
+            setTimeout(() => setSentFileProgress(path, null), FINISHED_BAR_MS);
+        }
     }
-    const downloaded = await downloadThroughBrowser(path, name);
-    if (downloaded) toast.success(i18n.t('chat:sentFiles.downloaded', {name}));
-    return downloaded;
 }
 
 /** The file read in pieces through the backend, then handed to the browser as a download. */
-async function downloadThroughBrowser(path: string, name: string): Promise<boolean> {
+async function downloadThroughBrowser(path: string, name: string, report: (fraction: number) => void): Promise<boolean> {
     const pieces: Uint8Array[] = [];
     let loaded = 0;
     for (;;) {
@@ -169,6 +189,7 @@ async function downloadThroughBrowser(path: string, name: string): Promise<boole
         const bytes = base64ToBytes(answer.base64);
         pieces.push(bytes);
         loaded += bytes.length;
+        if (answer.size > 0) report(loaded / answer.size);
         if (loaded >= answer.size || bytes.length === 0) break;
     }
 

@@ -1,20 +1,30 @@
 import {beforeEach, describe, expect, it, vi} from 'vitest';
-import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import {subscribeComposerFiles} from '@/utils/composerElements';
 import {SendUserFileRenderer} from '../SendUserFileRenderer';
 import {_resetSentMediaCache, formatSentSize, sentFilesOf} from '../sendUserFile';
+import {_resetSentFileProgress} from '../sentFileProgress';
 import {ToolUseBlockDto, ContentBlockType} from '@/dto';
 import type {LoadedMessageDto} from '@/types';
 
-const {request, openChatFile, toastError, toastSuccess, revealFile} = vi.hoisted(() => ({
-    request: vi.fn(), openChatFile: vi.fn(), toastError: vi.fn(), toastSuccess: vi.fn(), revealFile: vi.fn(() => Promise.resolve()),
-}));
+const {request, openChatFile, toastError, toastSuccess, revealFile, handlers, subscribe} = vi.hoisted(() => {
+    // What the backend sends without being asked, by message type: the test calls these to play the backend.
+    const handlers = new Map<string, (message: {payload: unknown}) => void>();
+    return {
+        request: vi.fn(), openChatFile: vi.fn(), toastError: vi.fn(), toastSuccess: vi.fn(), revealFile: vi.fn(() => Promise.resolve()),
+        handlers,
+        subscribe: vi.fn((type: string, handler: (message: {payload: unknown}) => void) => {
+            handlers.set(type, handler);
+            return () => { handlers.delete(type); };
+        }),
+    };
+});
 
 vi.mock('@/adapters', () => ({getAdapter: () => ({revealFile})}));
 
 vi.mock('@/api/bridge/Bridge', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@/api/bridge/Bridge')>()),
-    getBridge: () => ({request}),
+    getBridge: () => ({request, subscribe}),
 }));
 vi.mock('react-hot-toast', () => ({default: {error: toastError, success: toastSuccess}}));
 vi.mock('@/utils/openChatFile', () => ({openSentFile: (p: string) => openChatFile(p)}));
@@ -55,6 +65,8 @@ beforeEach(() => {
     toastError.mockReset();
     toastSuccess.mockReset();
     _resetSentMediaCache();
+    _resetSentFileProgress();
+    handlers.clear();
     URL.createObjectURL = vi.fn(() => 'blob:x');
     URL.revokeObjectURL = vi.fn();
 });
@@ -277,6 +289,39 @@ describe('the download button', () => {
         await waitFor(() => expect(toastError).toHaveBeenCalled());
         expect(anchors).toHaveLength(0);
         restore();
+    });
+});
+
+describe('the card while its file is being saved', () => {
+    it('fills its background as far as the backend says the file is written, then lets go of it', async () => {
+        let finishSave: (answer: unknown) => void = () => {};
+        request.mockImplementation(() => new Promise((resolve) => { finishSave = resolve; }));
+        draw([{path: '/a/t.csv', size: 10}, {path: '/a/other.csv', size: 10}]);
+        expect(screen.queryByRole('progressbar')).toBeNull();
+
+        fireEvent.click(screen.getAllByRole('button', {name: 'Download'})[0]);
+        await waitFor(() => expect(handlers.has('SAVE_SENT_FILE_PROGRESS')).toBe(true));
+        act(() => handlers.get('SAVE_SENT_FILE_PROGRESS')!({payload: {path: '/a/t.csv', loaded: 5, size: 10}}));
+        expect(screen.getAllByRole('progressbar')).toHaveLength(1);
+        expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '50');
+
+        // Another file's progress is not this card's.
+        act(() => handlers.get('SAVE_SENT_FILE_PROGRESS')!({payload: {path: '/a/other.csv', loaded: 9, size: 10}}));
+        expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '50');
+
+        await act(async () => finishSave({path: '/Users/me/t.csv'}));
+        await waitFor(() => expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100'));
+        await waitFor(() => expect(screen.queryByRole('progressbar')).toBeNull(), {timeout: 2000});
+        expect(handlers.has('SAVE_SENT_FILE_PROGRESS')).toBe(false);
+    });
+
+    it('draws no bar when the save is closed before a byte is written', async () => {
+        request.mockResolvedValue({path: null});
+        draw([{path: '/a/t.csv', size: 10}]);
+        fireEvent.click(screen.getByRole('button', {name: 'Download'}));
+        await waitFor(() => expect(request).toHaveBeenCalled());
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        expect(screen.queryByRole('progressbar')).toBeNull();
     });
 });
 
