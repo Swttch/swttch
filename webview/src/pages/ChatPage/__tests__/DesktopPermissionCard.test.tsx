@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor, cleanup } from '@testing-library/react';
 import { DesktopPermissionCard, usesDesktopPermissionCard } from '../PermissionBanner/DesktopPermissionCard';
+import { setLastAllowChoice } from '../PermissionBanner/lastAllowChoice';
 import type { PendingPermission } from '../../../hooks/usePendingPermissions';
 
 // #673: the Bash request drawn as the desktop app draws it.
@@ -54,6 +55,7 @@ function setup(p: PendingPermission = permission()) {
 }
 
 beforeEach(() => {
+  setLastAllowChoice('always');
   session.inputMode = 'ask_before_edit';
   session.availableModes = ['ask_before_edit', 'auto_edit', 'auto', 'plan'];
   session.setInputMode.mockClear();
@@ -202,5 +204,20 @@ describe('DesktopPermissionCard — keys', () => {
     expect(h.onApprove).not.toHaveBeenCalled();
     expect(h.onDeny).not.toHaveBeenCalled();
     box.remove();
+  });
+
+  it('leads the next card with the allow answer picked last, the other one moves into the menu', () => {
+    const first = setup();
+    fireEvent.click(screen.getByTestId('permission-more'));
+    fireEvent.click(screen.getByTestId('permission-menu-once'));
+    expect(first.onApprove).toHaveBeenCalledTimes(1);
+    cleanup();
+
+    const second = setup();
+    expect(screen.getByTestId('permission-primary')).toHaveTextContent('Allow once');
+    fireEvent.click(screen.getByTestId('permission-more'));
+    expect(screen.getByTestId('permission-menu-always')).toHaveTextContent('Always allow');
+    fireEvent.click(screen.getByTestId('permission-menu-always'));
+    expect(second.onApproveAlways).toHaveBeenCalledTimes(1);
   });
 });

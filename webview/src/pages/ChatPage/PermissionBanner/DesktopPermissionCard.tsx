@@ -8,6 +8,7 @@ import { InputModeValues } from '@/types/chatInput';
 import { alwaysAllowFromSuggestions, alwaysAllowScope } from '@/shared';
 import type { TranscriptViewMode } from '@/types/settings';
 import type { PendingPermission } from '../../../hooks/usePendingPermissions';
+import { getLastAllowChoice, setLastAllowChoice } from './lastAllowChoice';
 
 /**
  * The tools whose permission prompt is drawn as the desktop app draws it, in the views that follow the
@@ -72,9 +73,33 @@ export function DesktopPermissionCard(props: Props) {
     void Promise.resolve(onApprove()).then(() => setInputMode(InputModeValues.AUTO));
   }, [setInputMode, onApprove]);
 
+  const alwaysLeads = alwaysAvailable && getLastAllowChoice() === 'always';
+  const scope = alwaysAllowScope(permission.toolName, permission.suggestions);
+  const scopeLine = scope ? t(`permissionBanner.card.scope.${scope}`) : t('permissionBanner.card.alwaysAllowHint');
+
   const menuItems: Array<{ key: string; label: string; description?: string; onSelect: () => void }> = [];
   if (alwaysAvailable) {
-    menuItems.push({ key: 'once', label: t('permissionBanner.card.allowOnce'), onSelect: onApprove });
+    // The one that does not lead is in the menu, with where the rule is kept under "Always allow".
+    menuItems.push(
+      alwaysLeads
+        ? {
+            key: 'once',
+            label: t('permissionBanner.card.allowOnce'),
+            onSelect: () => {
+              setLastAllowChoice('once');
+              onApprove();
+            },
+          }
+        : {
+            key: 'always',
+            label: t('permissionBanner.card.alwaysAllow'),
+            description: scopeLine,
+            onSelect: () => {
+              setLastAllowChoice('always');
+              onApproveAlways();
+            },
+          },
+    );
   }
   if (canSwitchToAuto) {
     menuItems.push({
@@ -85,15 +110,18 @@ export function DesktopPermissionCard(props: Props) {
     });
   }
 
-  const primaryLabel = alwaysAvailable ? t('permissionBanner.card.alwaysAllow') : t('permissionBanner.card.allowOnce');
+  const primaryLabel = alwaysLeads ? t('permissionBanner.card.alwaysAllow') : t('permissionBanner.card.allowOnce');
   // The hover line says where the rule is kept, as the desktop app's does ("Saves to local project settings").
-  const scope = alwaysAllowScope(permission.toolName, permission.suggestions);
-  const primaryTitle = alwaysAvailable
-    ? scope
-      ? t(`permissionBanner.card.scope.${scope}`)
-      : t('permissionBanner.card.alwaysAllowHint')
-    : undefined;
-  const primaryAction = alwaysAvailable ? onApproveAlways : onApprove;
+  const primaryTitle = alwaysLeads ? scopeLine : undefined;
+  const primaryAction = alwaysLeads
+    ? () => {
+        setLastAllowChoice('always');
+        onApproveAlways();
+      }
+    : () => {
+        setLastAllowChoice('once');
+        onApprove();
+      };
 
   // Keys, as the desktop app binds them: Esc denies, Cmd/Ctrl+Enter allows once, and with Shift allows
   // always. Never while the person is typing: Cmd+Enter there is "queue this message".
