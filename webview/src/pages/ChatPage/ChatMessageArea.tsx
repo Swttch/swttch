@@ -7,6 +7,7 @@ import { ProjectSelectorPage } from '@/pages/ProjectSelectorPage';
 import { useSessionContext } from '../../contexts/SessionContext';
 import { useChatStreamContext } from '../../contexts/ChatStreamContext';
 import { StreamErrorBanner } from './StreamErrorBanner';
+import { PendingSentMessages } from './PendingSentMessages';
 import './streaming.css';
 import {StreamingIndicator} from "./StreamingIndicator/index.tsx";
 import { EmptyState } from './EmptyState';
@@ -257,6 +258,7 @@ export function ChatMessageArea(props: Props) {
       </LastEntryContext.Provider>
       </SendActionsContext.Provider>
       </SectionFoldContext.Provider>
+      <PendingSentMessages />
       {isStreaming && <StreamingIndicator countdownSeconds={disconnectCountdown} apiRetry={apiRetry} />}
       <StreamErrorBanner />
     </div>
