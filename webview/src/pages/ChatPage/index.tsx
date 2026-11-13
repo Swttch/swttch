@@ -9,7 +9,6 @@ import { TranscriptArea } from './transcript/TranscriptArea';
 import { useTranscriptViewMode } from './message-renderers/transcriptViewMode';
 import type { ChatSearchSource } from './chatSearch/useChatSearch';
 import { PermissionBanner } from './PermissionBanner';
-import { useReleaseHeldMessages } from '../../hooks/useReleaseHeldMessages';
 import { usesDesktopPermissionCard } from './PermissionBanner/DesktopPermissionCard';
 import { AskUserQuestionInputPanel } from './AskUserQuestionInputPanel';
 import { AcceptPlanPanel } from './AcceptPlanPanel';
@@ -168,11 +167,12 @@ function ChatPageContent() {
   const isAwaitingUser = Boolean(pendingUserAnswer || pendingPlan || pendingPermission);
   const cardWaiting = Boolean(pendingPermission && usesDesktopPermissionCard(pendingPermission.toolName, transcriptViewMode));
   // What was written under the card goes out the moment the card is answered.
-  useReleaseHeldMessages(cardWaiting, releaseHeldMessages);
   // What was written under the card reaches the CLI before the card is answered, so the turn that goes on after
   // the answer already has it and answers it with the rest (the desktop app's order), not in a turn of its own.
-  const answerAfterHeld = (answer: () => void) => {
-    void releaseHeldMessages().finally(() => {
+  // Only a denial does it at the click: the turn ends there, and the messages go with the answer. An allow leaves them
+  // held while the command runs; they are handed over when it has finished (see TranscriptArea).
+  const answerAfterHeld = (answer: () => void, releaseNow = false) => {
+    void (releaseNow ? releaseHeldMessages() : Promise.resolve()).finally(() => {
       answer();
       // What follows the answer is a new stretch of work: its time and tokens are counted from here, as the
       // desktop app does ("Thinking", then "3.8s · 46 tokens"), not on top of the stretch that ended at the card.
@@ -505,7 +505,7 @@ function ChatPageContent() {
                   onApprove={() => answerAfterHeld(() => approvePermission(pendingPermission.controlRequestId))}
                   onApproveForSession={() => answerAfterHeld(() => approveForSession(pendingPermission.controlRequestId))}
                   onApproveAlways={() => answerAfterHeld(() => approveAlways(pendingPermission.controlRequestId))}
-                  onDeny={(reason) => answerAfterHeld(() => denyPermission(pendingPermission.controlRequestId, reason))}
+                  onDeny={(reason) => answerAfterHeld(() => denyPermission(pendingPermission.controlRequestId, reason), true)}
                   onOpenDiffOverlay={setDiffOverlayToolUseId}
                 />
               ) : null

@@ -161,8 +161,8 @@ export function DesktopPermissionCard(props: Props) {
             {t('permissionBanner.card.deny')}
           </button>
 
+          <Tooltip content={primaryTitle} desktop="large">
           <div className="relative flex h-[30.5px] items-stretch rounded-[9px] bg-text-primary/[0.92] text-text-inverse">
-            <Tooltip content={primaryTitle}>
               <button
                 type="button"
                 data-testid="permission-primary"
@@ -173,7 +173,6 @@ export function DesktopPermissionCard(props: Props) {
               >
                 {primaryLabel}
               </button>
-            </Tooltip>
             {menuItems.length > 0 && (
               <Tippy
                 visible={menuOpen}
@@ -226,6 +225,7 @@ export function DesktopPermissionCard(props: Props) {
               </Tippy>
             )}
           </div>
+          </Tooltip>
         </div>
       </div>
     </div>

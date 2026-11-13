@@ -10,6 +10,7 @@ import { StreamErrorBanner } from '../StreamErrorBanner';
 import { TranscriptStreamingIndicator } from './TranscriptStreamingIndicator';
 import { TranscriptAwaitingInput } from './TranscriptAwaitingInput';
 import { TranscriptHeldMessages } from './TranscriptHeldMessages';
+import { useReleaseHeldMessages } from '../../../hooks/useReleaseHeldMessages';
 import { TranscriptBackgroundWorking, useBackgroundTaskStart } from './TranscriptBackgroundWorking';
 import { PendingSentMessages } from '../PendingSentMessages';
 import { runningActivity } from './streamingActivity';
@@ -82,6 +83,12 @@ export function TranscriptArea(props: TranscriptAreaProps) {
   const { workingDirectory } = useSessionContext();
   const { retry: onRetry, messages: streamMessages, isStreaming: turnRunning } = useChatStreamContext();
   const waitedCall = useMemo(() => (isStreaming ? runningActivity(streamMessages) : null), [isStreaming, streamMessages]);
+  // Held under a card, they are handed over once the card is answered AND the call it held has finished (a denial
+  // hands them over with the answer, in ChatPage): the desktop app keeps them held, with "Send now", while the
+  // allowed command runs.
+  const { releaseHeldMessages } = useChatStreamContext();
+  const callRunning = useMemo(() => runningActivity(streamMessages) !== null, [streamMessages]);
+  useReleaseHeldMessages(awaitingInput || callRunning, releaseHeldMessages);
   const heldCall = useMemo(() => (awaitingInput && turnRunning ? runningActivity(streamMessages) : null), [awaitingInput, turnRunning, streamMessages]);
   const backgroundWorking = !isStreaming && !awaitingInput && useBackgroundTaskStart() !== null;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -174,6 +181,7 @@ export function TranscriptArea(props: TranscriptAreaProps) {
           </LastEntryContext.Provider>
         </SendActionsContext.Provider>
       </SectionFoldContext.Provider>
+      {!awaitingInput && <TranscriptHeldMessages atEnd />}
       <PendingSentMessages />
       {!isStreaming && <TranscriptBackgroundWorking hidden={awaitingInput} />}
       {/* While a call is being waited on, the run of calls that holds it is the working indicator (see TranscriptToolRun); this line is for the rest of the turn, when the model thinks or writes. A dropped connection and the CLI's retries still say so here. */}
