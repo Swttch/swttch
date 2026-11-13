@@ -9,6 +9,7 @@ import { TranscriptArea } from './transcript/TranscriptArea';
 import { useTranscriptViewMode } from './message-renderers/transcriptViewMode';
 import type { ChatSearchSource } from './chatSearch/useChatSearch';
 import { PermissionBanner } from './PermissionBanner';
+import { useReleaseHeldMessages } from '../../hooks/useReleaseHeldMessages';
 import { usesDesktopPermissionCard } from './PermissionBanner/DesktopPermissionCard';
 import { AskUserQuestionInputPanel } from './AskUserQuestionInputPanel';
 import { AcceptPlanPanel } from './AcceptPlanPanel';
@@ -138,7 +139,7 @@ function ChatPageContent() {
   const api = useApi();
   const onboarding = useOnboarding();
   const { currentSessionId, currentSession } = useSessionContext();
-  const { messages, isStreaming, error, disconnectCountdown, apiRetry, hasMoreOlder, oldestLoadedUuid } = useChatStreamContext();
+  const { messages, isStreaming, error, disconnectCountdown, apiRetry, hasMoreOlder, oldestLoadedUuid, releaseHeldMessages } = useChatStreamContext();
   // null is the chat released so far; a named view mode draws the transcript with its own code.
   const transcriptViewMode = useTranscriptViewMode();
   // The send index sits on the start edge in the transcript view modes, where user messages are on the end side,
@@ -166,6 +167,8 @@ function ChatPageContent() {
    */
   const isAwaitingUser = Boolean(pendingUserAnswer || pendingPlan || pendingPermission);
   const cardWaiting = Boolean(pendingPermission && usesDesktopPermissionCard(pendingPermission.toolName, transcriptViewMode));
+  // What was written under the card goes out the moment the card is answered.
+  useReleaseHeldMessages(cardWaiting, releaseHeldMessages);
   /**
    * An approval prompt is standing in the composer's slot at the foot of the
    * chat, so the composer is unmounted right now.

@@ -60,6 +60,14 @@ interface SendMessagePayload {
   accountId?: string;
 }
 
+/** A message written while a permission card holds the turn, not yet sent (see ChatStreamContextType.heldMessages). */
+export interface HeldMessage {
+  id: string;
+  content: string;
+  inputMode: InputMode;
+  attachments?: Attachment[];
+}
+
 interface ChatStreamContextType {
   // From useChatStream
   messages: LoadedMessageDto[];
@@ -99,6 +107,16 @@ interface ChatStreamContextType {
   moveQueuedMessage: (id: string, toIndex: number) => void;
   /** Take one held message out of the queue and send it to the CLI now. */
   steerQueuedMessage: (id: string) => void;
+  /**
+   * Messages written while a permission card holds the running turn (#673). They are kept here, in this view only,
+   * never in the backend queue: the CLI cannot read them before the card is answered, and they go out as ordinary
+   * messages the moment it is.
+   */
+  heldMessages: HeldMessage[];
+  /** Send every held message now, in the order they were written. */
+  releaseHeldMessages: () => void;
+  /** Send one held message now, ahead of the card's answer. */
+  sendHeldMessage: (id: string) => void;
 
   resetStreamState: () => void;
   // From useChatStream (message manipulation)
@@ -830,6 +848,27 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     [addCommandEcho, adoptAllowAllDraft, adoptPendingView, dispatchControlRequestCommand, runSideQuestion, sendMessage, session, sessionModel]
   );
 
+  const [heldMessages, setHeldMessages] = useState<HeldMessage[]>([]);
+  const heldMessagesRef = useRef<HeldMessage[]>([]);
+  heldMessagesRef.current = heldMessages;
+
+  const sendHeldMessage = useCallback(
+    (id: string) => {
+      const held = heldMessagesRef.current.find((message) => message.id === id);
+      if (!held) return;
+      setHeldMessages((all) => all.filter((message) => message.id !== id));
+      sendMessage(held.content, held.inputMode, undefined, held.attachments);
+    },
+    [sendMessage]
+  );
+
+  const releaseHeldMessages = useCallback(() => {
+    const all = heldMessagesRef.current;
+    if (all.length === 0) return;
+    setHeldMessages([]);
+    all.forEach((held) => sendMessage(held.content, held.inputMode, undefined, held.attachments));
+  }, [sendMessage]);
+
   // handleSubmit: convenience wrapper for form submission.
   // Reads input via inputRef so this callback stays stable across keystrokes
   // — otherwise every key press would invalidate contextValue.
@@ -870,7 +909,16 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
       // message goes back to whichever behavior is configured.
       const chosen = resolveFollowUpBehavior(appSettings);
       const behavior = invertFollowUp ? invertFollowUpBehavior(chosen) : chosen;
-      if (chatStream.isStreaming && (forceQueue || behavior === FollowUpBehavior.Queue)) {
+      // A permission card holds the turn: keep the message in this view until the card is answered (#673).
+      if (chatStream.isStreaming && forceQueue) {
+        setHeldMessages((all) => [
+          ...all,
+          { id: crypto.randomUUID(), content: trimmedInput, inputMode, attachments },
+        ]);
+        setInput('');
+        return;
+      }
+      if (chatStream.isStreaming && behavior === FollowUpBehavior.Queue) {
         queueMessage(trimmedInput, attachments);
         setInput('');
         return;
@@ -935,6 +983,9 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     mergeQueuedMessages,
     moveQueuedMessage,
     steerQueuedMessage,
+    heldMessages,
+    releaseHeldMessages,
+    sendHeldMessage,
 
     resetStreamState: chatStreamResetStreamState,
 
@@ -1012,6 +1063,9 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     mergeQueuedMessages,
     moveQueuedMessage,
     steerQueuedMessage,
+    heldMessages,
+    releaseHeldMessages,
+    sendHeldMessage,
     tools,
     diffs,
     isThinkingExpanded,

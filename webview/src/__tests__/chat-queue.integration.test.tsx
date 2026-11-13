@@ -133,6 +133,10 @@ function TestChatComponent() {
       >
         Send held
       </button>
+      <div data-testid="held-count">{ctx.heldMessages.length}</div>
+      <button data-testid="release-held" onClick={() => ctx.releaseHeldMessages()}>
+        Release held
+      </button>
       {ctx.queuedMessages.map(m => (
         <button key={m.id} data-testid={`cancel-${m.id}`} onClick={() => ctx.cancelQueuedMessage(m.id)}>
           Cancel {m.content}
@@ -232,9 +236,10 @@ describe('queued follow-up message integration', () => {
     expect(screen.getByTestId('queue-count')).toHaveTextContent('0');
   });
 
-  // #673: while a permission card holds the running turn, the CLI cannot read what is sent, so even in the
-  // default (steer) behavior the message is kept in the queue, as the desktop app does.
-  it('queues a mid-turn message in steer mode when a permission card holds the turn', async () => {
+  // #673: while a permission card holds the running turn, the CLI cannot read what is sent, so the message is held in
+  // the view (never in the backend queue, so it never shows in the stack above the composer) and goes out as an
+  // ordinary message when the card is answered.
+  it('holds a mid-turn message in the view while a permission card holds the turn, and sends it on release', async () => {
     composerFollowUpBehavior = null;
     render(<TestWrapper><TestChatComponent /></TestWrapper>);
     await startStreaming();
@@ -244,13 +249,23 @@ describe('queued follow-up message integration', () => {
       fireEvent.click(screen.getByTestId('submit-held'));
     });
 
+    expect(screen.getByTestId('held-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('queue-count')).toHaveTextContent('0');
+    expect(mockBridge.send.mock.calls.some(call => call[0] === MessageType.QUEUE_MESSAGE)).toBe(false);
+    expect(mockBridge.send.mock.calls.some(call => call[0] === MessageType.SEND_MESSAGE && call[1]?.content === 'while waiting')).toBe(false);
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('release-held'));
+    });
+
     await waitFor(() => {
-      expect(mockBridge.send).toHaveBeenCalledWith(MessageType.QUEUE_MESSAGE, expect.objectContaining({
+      expect(mockBridge.send).toHaveBeenCalledWith(MessageType.SEND_MESSAGE, expect.objectContaining({
         sessionId: 'queue-session',
         content: 'while waiting',
       }));
     });
-    expect(mockBridge.send.mock.calls.some(call => call[0] === MessageType.SEND_MESSAGE && call[1]?.content === 'while waiting')).toBe(false);
+    expect(screen.getByTestId('held-count')).toHaveTextContent('0');
+    expect(mockBridge.send.mock.calls.some(call => call[0] === MessageType.QUEUE_MESSAGE)).toBe(false);
   });
 
   // The setting's description promises a key that does the opposite for one

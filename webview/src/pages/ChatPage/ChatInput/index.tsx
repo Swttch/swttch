@@ -137,8 +137,8 @@ interface NativeDropEntry {
 interface ChatInputProps {
   /**
    * A permission card waits under the conversation. When a call of the running turn is the one it holds, a message
-   * sent now could not be picked up before the card is answered: it is kept in the queue, as the desktop app does,
-   * and drawn in the conversation under the card instead of stacked above the composer.
+   * sent now could not be picked up before the card is answered: it is held in the view, as the desktop app does,
+   * drawn in the conversation under the card and sent when the card is answered. It never goes into the queue above the composer.
    */
   cardWaiting?: boolean;
 }
@@ -154,7 +154,6 @@ export function ChatInput({ cardWaiting = false }: ChatInputProps = {}) {
   const onboarding = useOnboarding();
   const { handleSubmit: onSubmit, isStreaming, stop: onStop, queuedMessages, cancelQueuedMessage, mergeQueuedMessages, moveQueuedMessage, steerQueuedMessage } = chatStream;
   const queueWhileWaiting = cardWaiting && runningActivity(chatStream.messages) !== null;
-  const queueInChat = cardWaiting;
   const { input: value, setInput: onChange, setComposerHasContent } = useChatInputState();
   const inputHistory = useInputHistory({ workingDirectory, sessionId: currentSessionId });
   const { pushToHistory, navigateUp, navigateDown, resetHistory } = inputHistory;
@@ -1417,7 +1416,7 @@ export function ChatInput({ cardWaiting = false }: ChatInputProps = {}) {
           setting). Drawn exactly as ChatStreamContext.queuedMessages reports
           it — this component holds nothing of its own. */}
       <QueuedMessagesStack
-        messages={queueInChat ? [] : queuedMessages}
+        messages={queuedMessages}
         onCancel={cancelQueuedMessage}
         onSteer={steerQueuedMessage}
         onMerge={mergeQueuedMessages}
