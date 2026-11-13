@@ -34,10 +34,24 @@ export function WorkflowTaskSummary(props: Props) {
     const isRunning = task.status === 'running';
     const statusColor = WORKFLOW_STATUS_COLOR[task.status] || 'text-text-primary/60';
     const agentCount = task.agents.length || workflowAgentCount(task.usage);
-    // The CLI's own figure first. Failing that: the clock while running, and
-    // for a task settled from its output log — which gets no usage at all —
-    // the span between the two timestamps we do have.
+    // While it runs, the clock: the CLI's `duration_ms` is the figure at its last
+    // progress event, which stops moving once the agent goes quiet (waiting on a
+    // permission answer, say), so it read "2s" next to a row that said 21s (#673).
+    // The exception is a start time we never learned (a task rebuilt without a
+    // timestamp has 0), where the clock would count from 1970.
+    // Once it has ended: the CLI's own figure, when its closing notification
+    // carried one. A cancelled task's notification carries none (it says only
+    // "stopped"), so its usage is still the last progress figure: a cancelled
+    // agent that ran 15s read "1s". The span between the two timestamps we do
+    // have is truer then, and it is also all a task settled from its output log
+    // has to go on.
+    const clockMs = isRunning && task.startedAt > 0 ? now - task.startedAt : undefined;
+    const spanMs =
+        task.endedAt && task.startedAt > 0 && task.endedAt > task.startedAt ? task.endedAt - task.startedAt : undefined;
+    const closedByCli = !!task.events?.task_notification?.['usage'];
     const durationMs =
+        clockMs ??
+        (closedByCli ? undefined : spanMs) ??
         workflowDurationMs(task.usage) ??
         (isRunning ? now - task.startedAt : task.endedAt ? task.endedAt - task.startedAt : undefined);
     const duration = formatDuration(durationMs);

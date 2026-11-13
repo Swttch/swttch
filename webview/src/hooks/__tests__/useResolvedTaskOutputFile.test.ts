@@ -12,7 +12,7 @@ vi.mock('@/contexts/WorkingDirContext', () => ({
   useWorkingDirOrNull: () => (workingDirectory === null ? null : { workingDirectory }),
 }));
 
-import { useResolvedTaskOutputFile } from '../useResolvedTaskOutputFile';
+import { useResolvedTaskOutputFile, useTaskOutputFileLookup } from '../useResolvedTaskOutputFile';
 import { MessageType } from '@/shared';
 import { createTestQueryClient, makeQueryWrapper } from '@/hooks/queries/__tests__/testQueryClient';
 
@@ -80,5 +80,39 @@ describe('useResolvedTaskOutputFile', () => {
 
     expect(sendMock).not.toHaveBeenCalled();
     expect(result.current).toBeUndefined();
+  });
+
+  // #673: whether the lookup has come to nothing, so a finished task with no file
+  // is not shown as one whose file is still on the way.
+  describe('useTaskOutputFileLookup', () => {
+    const lookup = (task: WorkflowTask) =>
+      renderHook(() => useTaskOutputFileLookup(task), { wrapper: makeQueryWrapper(createTestQueryClient()) });
+
+    it('is unavailable for a finished task with no id to look it up by', () => {
+      const { result } = lookup(makeTask({ status: 'failed', taskId: undefined, outputFile: undefined }));
+      expect(result.current).toEqual({ path: undefined, unavailable: true });
+    });
+
+    it('is unavailable for a finished task whose file was asked for and not found', async () => {
+      sendMock.mockResolvedValue({ path: null });
+      const { result } = lookup(makeTask({ status: 'completed', taskId: 'gone1', outputFile: undefined }));
+      await waitFor(() => expect(result.current.unavailable).toBe(true));
+    });
+
+    it('is not unavailable while the file is still being asked for', () => {
+      sendMock.mockReturnValue(new Promise(() => {}));
+      const { result } = lookup(makeTask({ status: 'completed', taskId: 'pending1', outputFile: undefined }));
+      expect(result.current.unavailable).toBe(false);
+    });
+
+    it('is never unavailable for a task that is still running', () => {
+      const { result } = lookup(makeTask({ status: 'running', taskId: undefined, outputFile: undefined }));
+      expect(result.current.unavailable).toBe(false);
+    });
+
+    it('is not unavailable when the path is known', () => {
+      const { result } = lookup(makeTask({ status: 'completed', outputFile: '/tmp/tasks/a1.output' }));
+      expect(result.current).toEqual({ path: '/tmp/tasks/a1.output', unavailable: false });
+    });
   });
 });

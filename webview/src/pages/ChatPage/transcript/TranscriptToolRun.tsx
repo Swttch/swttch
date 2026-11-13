@@ -4,12 +4,14 @@ import { ChevronRightIcon, ClipboardDocumentIcon } from '@heroicons/react/20/sol
 import { useTranslation } from '@/i18n';
 import { openChatFile } from '@/utils/openChatFile';
 import type { LoadedMessageDto } from '../../../types';
+import type { WorkflowTask } from '@/shared';
 import { ToolRenderer } from '../message-renderers/ToolRenderer';
 import { toolResultText } from '../message-renderers/ToolRenderers/common/toolStatus';
 import { HighlightedCode } from '../message-renderers/ToolRenderers/Mcp/Generic/HighlightedCode';
 import { useTranscriptViewMode } from '../message-renderers/transcriptViewMode';
 import { APP_EVENT_TOOL, type ToolCall } from './buildSegments';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
+import { useOptionalWorkflowState } from '@/contexts/WorkflowStateContext';
 import { ActivityGlyph, useActivityLabel, useFormatElapsed, useTurnSeconds } from './TranscriptActivity';
 import type { WorkingActivity } from './WorkingMark';
 import { runningActivity } from './streamingActivity';
@@ -442,6 +444,59 @@ function SessionFactsDetail({ call }: { call: ToolCall }) {
   );
 }
 
+/**
+ * The task behind an agent call whose run window can be opened: one the app tracks that has an id to look its
+ * transcript up by, or the transcript's file itself. A cancelled agent's result names no agent id, so a reload
+ * rebuilds it with neither, and there is nothing for a window to show (#673).
+ */
+function openableAgentTask(
+  workflow: ReturnType<typeof useOptionalWorkflowState>,
+  call: ToolCall,
+): WorkflowTask | undefined {
+  const task = workflow?.getByToolUseId(call.toolUse.id);
+  return task && (task.taskId || task.outputFile) ? task : undefined;
+}
+
+/**
+ * The way into a subagent's own run window, as a line over the call's detail: what the agent is doing, and a click
+ * opens the window where everything it did inside, the commands it ran included, can be read (#673). Drawn only
+ * when the call is a task the app is tracking and the window can be opened here; otherwise nothing.
+ */
+export function AgentRunLink({ call }: { call: ToolCall }) {
+  const { t } = useTranslation('chat');
+  const workflow = useOptionalWorkflowState();
+  const task = openableAgentTask(workflow, call);
+  if (!workflow || !task) return null;
+  const given = call.toolUse.input?.description;
+  const text = (typeof given === 'string' && given.trim()) || task.description || task.name;
+  const running = task.status === 'running';
+  return (
+    <button
+      type="button"
+      data-testid="agent-run-link"
+      onClick={() => workflow.openTranscript(task.toolUseId)}
+      className={`group mb-2 flex w-full items-baseline gap-2 rounded-lg border ${BOX_BORDER} px-3 py-2 text-start text-[0.9375rem] ${SUMMARY_TEXT}`}
+    >
+      {/* While the agent works the words carry the same moving light as the working line. */}
+      <span className={`flex-shrink-0${running ? ' transcript-shimmer' : ''}`}>{running ? t('transcript.streaming.activity.agent') : t('transcript.tools.ranAgent')}</span>
+      <span className={`min-w-0 truncate ${LINK_TEXT} group-hover:underline`}>{text}</span>
+    </button>
+  );
+}
+
+/**
+ * What an agent call shows once opened: the card that leads to its run window and nothing else, since the window is
+ * where its prompt, what it did and what it returned are read. A call the app is not tracking (a reloaded chat's
+ * foreground agent) has no window to lead to, so it keeps the plain input and output instead of showing an empty row.
+ */
+function AgentDetail({ call, withPictures }: { call: ToolCall; withPictures: boolean }) {
+  const workflow = useOptionalWorkflowState();
+  // Where the app tracks tasks, the card is all an agent call shows, and a call with no window to lead to is not
+  // opened at all (see TranscriptToolRow). Without that, the plain input and output.
+  if (workflow) return <AgentRunLink call={call} />;
+  return <InputOutputDetail call={call} withPictures={withPictures} />;
+}
+
 /** What a row shows once it is opened. */
 function ToolDetail({ calls, withPictures = true }: { calls: ToolCall[]; withPictures?: boolean }) {
   const call = calls[0];
@@ -502,6 +557,7 @@ function ToolDetail({ calls, withPictures = true }: { calls: ToolCall[]; withPic
   if (kind === 'messageSent') return <SentMessageDetail call={call} />;
   if (call.toolUse.name === 'Edit' || call.toolUse.name === 'Write') return <FileChangeDetail calls={calls} />;
   if (browserToolOf(call.toolUse.name) !== '') return <PlainDetail call={call} />;
+  if (kind === 'agent') return <AgentDetail call={call} withPictures={withPictures} />;
   // Every other call, as the desktop app draws the ones it has no design of their own for: what the call was given,
   // and what it printed.
   return <InputOutputDetail call={call} withPictures={withPictures} />;
@@ -589,7 +645,11 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live }: { calls: ToolCal
   const running = !call.toolUse.tool_result && (call.message.isStreaming ?? false);
   const label = rowLabel(call, t);
   const path = pathOf(call);
-  const expandable = isExpandable(call);
+  const workflowState = useOptionalWorkflowState();
+  // An agent call opens to the card that leads to its run window. Where there is no window to lead to, there is
+  // nothing to open, so the line does not fold open onto an empty space (#673).
+  const agentWithoutWindow = !!workflowState && toolKindOf(call) === 'agent' && !openableAgentTask(workflowState, call);
+  const expandable = isExpandable(call) && !agentWithoutWindow;
   const pictures = picturesOfCalls([call]);
   const [openPicture, thumbnailViewer] = useThumbnailViewer();
 

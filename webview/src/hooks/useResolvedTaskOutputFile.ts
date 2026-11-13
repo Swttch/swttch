@@ -24,11 +24,21 @@ import type { WorkflowTask } from '@/shared';
  * event stream has not supplied `outputFile` yet.
  */
 export function useResolvedTaskOutputFile(task: WorkflowTask): string | undefined {
+  return useTaskOutputFileLookup(task).path;
+}
+
+/**
+ * The same lookup, plus whether it has come to nothing. A task that is over and
+ * has no file to be found (a cancelled agent's result names no agent id to look
+ * it up by, or the runtime directory was cleared) would otherwise sit on "starting"
+ * for good, as though its file were still on the way (#673).
+ */
+export function useTaskOutputFileLookup(task: WorkflowTask): { path: string | undefined; unavailable: boolean } {
   const { send } = useBridge();
   const { workingDirectory } = useWorkingDirOrNull() ?? { workingDirectory: null };
   const taskId = task.outputFile ? undefined : task.taskId;
 
-  const { data } = useQuery({
+  const { data, isFetched } = useQuery({
     queryKey: ['bg-task-output-path', taskId, workingDirectory],
     queryFn: async (): Promise<string | null> => {
       const res = await send<{ path: string | null }>(MessageType.FIND_BG_TASK_OUTPUT_PATH, {
@@ -45,5 +55,9 @@ export function useResolvedTaskOutputFile(task: WorkflowTask): string | undefine
     staleTime: 2000,
   });
 
-  return task.outputFile ?? data ?? undefined;
+  const path = task.outputFile ?? data ?? undefined;
+  // Over, and nowhere to look (no id to ask by) or asked and not found.
+  const unavailable =
+    path === undefined && task.status !== 'running' && (!task.taskId || (isFetched && !data));
+  return { path, unavailable };
 }

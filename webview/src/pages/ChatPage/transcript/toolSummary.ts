@@ -419,8 +419,12 @@ export function rowLabel(call: ToolCall, t: TFunction): RowLabel {
       return { ...plain(t('transcript.tools.fetched', { ns: 'chat' })), meta: hostOf(inputString(call, 'url')) };
     case 'webSearch':
       return { ...plain(t('transcript.tools.searchedWeb', { ns: 'chat' })), meta: inputString(call, 'query') };
-    case 'agent':
-      return { ...plain(t('transcript.tools.ranAgent', { ns: 'chat' })), meta: inputString(call, 'description') || inputString(call, 'subagent_type') };
+    case 'agent': {
+      // The agent's own name is the line, as the desktop app draws it; "Ran agent" is said on the card inside once the
+      // line is opened (#673), so it is not said twice. A call that names nothing keeps the words.
+      const named = inputString(call, 'description') || inputString(call, 'subagent_type');
+      return named ? plain(named) : plain(t('transcript.tools.ranAgent', { ns: 'chat' }));
+    }
     case 'stopTask':
       return plain(t('transcript.tools.stoppedTask', { ns: 'chat' }));
     case 'skill':

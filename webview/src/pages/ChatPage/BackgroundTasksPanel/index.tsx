@@ -70,13 +70,15 @@ function WorkflowTaskRow({
 
 export function BackgroundTasksPanel() {
     const { t } = useTranslation('chat');
-    const { panelOpen, closePanel, runningTasks, finishedTasks, clearFinished, dismissTask, focusedToolUseId, getByToolUseId } =
-        useWorkflowState();
+    const {
+        panelOpen, closePanel, runningTasks, finishedTasks, clearFinished, dismissTask, focusedToolUseId, getByToolUseId,
+        transcriptToolUseId, openTranscript, closeTranscript,
+    } = useWorkflowState();
     const [showFinished, setShowFinished] = useState(true);
-    // Store only the id and re-look-up the task each render, so the modal keeps
-    // showing the live WorkflowTask (updated agents/stats) as the workflow
+    // Only the id is kept (in the shared state, so a card in the chat can open
+    // the window too), and the task is looked up again each render: the modal
+    // keeps showing the live WorkflowTask (updated agents/stats) as the workflow
     // progresses instead of a frozen snapshot taken at click time (issue #347).
-    const [transcriptToolUseId, setTranscriptToolUseId] = useState<string | null>(null);
     const transcriptTask = transcriptToolUseId ? getByToolUseId(transcriptToolUseId) ?? null : null;
     const panelRef = useRef<HTMLDivElement>(null);
     const now = useNow(panelOpen && runningTasks.length > 0);
@@ -113,7 +115,15 @@ export function BackgroundTasksPanel() {
         return () => document.removeEventListener('mousedown', handleMouseDown);
     }, [panelOpen, transcriptToolUseId, closePanel]);
 
-    if (!panelOpen) return null;
+    // The run window can be open with the panel shut (opened from a card in the
+    // chat), so it is drawn on its own in that case.
+    if (!panelOpen) {
+        return transcriptTask ? (
+            <Portal>
+                <AgentTranscriptModal task={transcriptTask} onClose={closeTranscript} />
+            </Portal>
+        ) : null;
+    }
 
     return (
         <Portal>
@@ -157,7 +167,7 @@ export function BackgroundTasksPanel() {
                                     focused={task.toolUseId === focusedToolUseId}
                                     onDismiss={dismissTask}
                                     onCancel={cancelTask}
-                                    onOpenTranscript={(t) => setTranscriptToolUseId(t.toolUseId)}
+                                    onOpenTranscript={(t) => openTranscript(t.toolUseId)}
                                 />
                             ))}
                         </section>
@@ -188,7 +198,7 @@ export function BackgroundTasksPanel() {
                                         focused={task.toolUseId === focusedToolUseId}
                                         onDismiss={dismissTask}
                                     onCancel={cancelTask}
-                                    onOpenTranscript={(t) => setTranscriptToolUseId(t.toolUseId)}
+                                    onOpenTranscript={(t) => openTranscript(t.toolUseId)}
                                     />
                                 ))}
                         </section>
@@ -197,7 +207,7 @@ export function BackgroundTasksPanel() {
             </div>
 
             {transcriptTask && (
-                <AgentTranscriptModal task={transcriptTask} onClose={() => setTranscriptToolUseId(null)} />
+                <AgentTranscriptModal task={transcriptTask} onClose={closeTranscript} />
             )}
         </Portal>
     );

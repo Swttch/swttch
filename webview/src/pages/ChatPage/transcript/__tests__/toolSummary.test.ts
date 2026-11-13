@@ -151,6 +151,15 @@ describe('rowLabel', () => {
     expect(rowLabel(call('2', 'Bash'), t).before).toBe('ranCommand');
   });
 
+  // #673: the line over an agent call is the agent's own name; "Ran agent" is said on the card inside.
+  it('names an agent call by its description, then its type, and says "ran agent" only when it names nothing', () => {
+    expect(rowLabel(call('1', 'Agent', { description: 'Create directory', subagent_type: 'general-purpose' }), t)).toEqual(
+      expect.objectContaining({ before: 'Create directory' }),
+    );
+    expect(rowLabel(call('2', 'Agent', { subagent_type: 'general-purpose' }), t).before).toBe('general-purpose');
+    expect(rowLabel(call('3', 'Agent', {}), t).before).toBe('ranAgent');
+  });
+
   it('puts the name of a file where it falls in the label, so it can be drawn as a link', () => {
     const label = rowLabel(call('1', 'Edit', { file_path: '/a/b/x.ts' }), ((_key: string, o?: { name?: string }) => `Edited ${o?.name}!`) as unknown as TFunction);
     expect(label).toEqual({ before: 'Edited ', fileName: 'x.ts', after: '!' });

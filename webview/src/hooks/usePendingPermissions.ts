@@ -144,6 +144,22 @@ export function usePendingPermissions(): UsePendingPermissionsReturn {
     return unsubscribe;
   }, [api.tools]);
 
+  // The CLI withdrew a question it had asked (the tool use was aborted: the agent
+  // asking was cancelled, the turn was interrupted). Its prompt is then a question
+  // nobody is waiting on, and answering it would reach a request that no longer
+  // exists, so it goes the way an answered one does (#673).
+  useEffect(() => {
+    const bridge = getBridgeClient();
+    return bridge.subscribe(MessageType.CLI_EVENT, (message) => {
+      const cliEvent = message.payload as { type?: string; request_id?: unknown } | undefined;
+      if (cliEvent?.type !== 'control_cancel_request') return;
+      const controlRequestId = cliEvent.request_id;
+      if (typeof controlRequestId !== 'string' || !controlRequestId) return;
+      processedIdsRef.current.add(controlRequestId);
+      setRequests(prev => prev.filter(r => r.controlRequestId !== controlRequestId));
+    });
+  }, []);
+
   // A request answered in the IDE's diff review is settled — drop its prompt
   // here rather than leaving a question the CLI has already moved on from, which
   // the user would otherwise have to dismiss after watching their edit apply.

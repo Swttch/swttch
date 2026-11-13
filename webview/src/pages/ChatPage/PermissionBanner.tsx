@@ -3,6 +3,7 @@ import type { TFunction } from 'i18next';
 import { ApprovalPanel } from './ApprovalPanel';
 import { OptionItem } from './ApprovalPanel/OptionButton';
 import { TitleWithFileLink } from './PermissionBanner/TitleWithFileLink';
+import { permissionPreview, permissionSubtitle } from './PermissionBanner/PermissionPreview';
 import { useChatStreamContext } from '../../contexts/ChatStreamContext';
 import { useOpenDiffReview } from '../../hooks/useOpenDiffReview';
 import { useAutoOpenDiffReview } from '../../hooks/useAutoOpenDiffReview';
@@ -186,7 +187,13 @@ export function PermissionBanner(props: Props) {
   }, [t, parts, openDiff]);
 
   const isWorkflow = permission.toolName === 'Workflow';
-  const subtitle = isWorkflow ? (permission.input.description as string | undefined) : undefined;
+  const subtitle = isWorkflow
+    ? (permission.input.description as string | undefined)
+    : permissionSubtitle(permission.toolName, permission.input);
+  const preview = useMemo(
+    () => permissionPreview(permission.toolName, permission.input),
+    [permission.toolName, permission.input],
+  );
   const notice = isWorkflow ? t('permissionBanner.workflowNotice') : undefined;
 
   /*
@@ -276,6 +283,7 @@ export function PermissionBanner(props: Props) {
       collapsedTitle={t(parts.key, { ...parts.values, file: parts.file })}
       subtitle={subtitle}
       notice={notice}
+      preview={preview}
       options={options}
       onOptionSelect={handleOptionSelect}
       textareaPlaceholder={t('permissionBanner.textareaPlaceholder')}
