@@ -389,6 +389,8 @@
     "card": {
       "question": "允許 Claude {{action}}嗎？",
       "actionRunCommand": "執行此指令",
+      "actionSearchWeb": "搜尋網頁",
+      "questionRead": "允許 Claude 讀取 {{file}} 嗎？",
       "deny": "拒絕",
       "alwaysAllow": "一律允許",
       "alwaysAllowHint": "不再針對此工具詢問",

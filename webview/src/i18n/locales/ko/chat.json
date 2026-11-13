@@ -389,6 +389,8 @@
     "card": {
       "question": "{{action}} 권한을 허용하시겠습니까?",
       "actionRunCommand": "이 명령 실행",
+      "actionSearchWeb": "웹 검색",
+      "questionRead": "{{file}} 항목을 읽도록 허용하시겠습니까?",
       "deny": "거부",
       "alwaysAllow": "항상 허용",
       "alwaysAllowHint": "이 도구에 대해 다시 묻지 않기",

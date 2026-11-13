@@ -3,7 +3,7 @@ import type { TFunction } from 'i18next';
 import { ApprovalPanel } from './ApprovalPanel';
 import { OptionItem } from './ApprovalPanel/OptionButton';
 import { TitleWithFileLink } from './PermissionBanner/TitleWithFileLink';
-import { permissionPreview, permissionSubtitle } from './PermissionBanner/PermissionPreview';
+import { desktopCardPreview, permissionPreview, permissionSubtitle } from './PermissionBanner/PermissionPreview';
 import { DesktopPermissionCard, usesDesktopPermissionCard } from './PermissionBanner/DesktopPermissionCard';
 import { useTranscriptViewMode } from './message-renderers/transcriptViewMode';
 import { useChatStreamContext } from '../../contexts/ChatStreamContext';
@@ -199,6 +199,12 @@ export function PermissionBanner(props: Props) {
     () => permissionPreview(permission.toolName, permission.input),
     [permission.toolName, permission.input],
   );
+  const desktopPreview = useMemo(
+    () => desktopCardPreview(permission.toolName, permission.input) ?? preview,
+    [permission.toolName, permission.input, preview],
+  );
+  // A read outside the working directories says why the CLI asks, in the CLI's words; a command says what it is for.
+  const desktopSubtitle = permission.toolName === 'Read' ? permission.decisionReason : subtitle;
   const notice = isWorkflow ? t('permissionBanner.workflowNotice') : undefined;
 
   /*
@@ -286,8 +292,8 @@ export function PermissionBanner(props: Props) {
     return (
       <DesktopPermissionCard
         permission={permission}
-        subtitle={subtitle}
-        preview={preview}
+        subtitle={desktopSubtitle}
+        preview={desktopPreview}
         onApprove={onApprove}
         onApproveAlways={onApproveAlways ?? onApprove}
         onDeny={() => onDeny()}

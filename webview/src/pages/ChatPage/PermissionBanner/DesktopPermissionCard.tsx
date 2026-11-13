@@ -15,7 +15,7 @@ import { getLastAllowChoice, setLastAllowChoice } from './lastAllowChoice';
  * desktop app (Normal, Thinking, Verbose). Grows one kind of request at a time; the classic chat keeps
  * its own prompt for all of them (#673).
  */
-const DESKTOP_CARD_TOOLS = new Set(['Bash', 'PowerShell']);
+const DESKTOP_CARD_TOOLS = new Set(['Bash', 'PowerShell', 'Read', 'WebSearch']);
 
 export function usesDesktopPermissionCard(toolName: string, viewMode: TranscriptViewMode | null): boolean {
   return viewMode !== null && DESKTOP_CARD_TOOLS.has(toolName);
@@ -32,6 +32,17 @@ interface Props {
   /** Approve and install the narrow rule the CLI suggested, for this session. */
   onApproveAlways: () => void;
   onDeny: () => void;
+}
+
+/** The heading's question, in the words the desktop app asks it with for each kind of request. */
+function questionFor(permission: PendingPermission, t: (key: string, values?: Record<string, unknown>) => string): string {
+  if (permission.toolName === 'Read') {
+    const path = typeof permission.input.file_path === 'string' ? permission.input.file_path : '';
+    const name = path.split(/[\\/]/).filter(Boolean).pop() ?? path;
+    return t('permissionBanner.card.questionRead', { file: name });
+  }
+  const action = permission.toolName === 'WebSearch' ? 'actionSearchWeb' : 'actionRunCommand';
+  return t('permissionBanner.card.question', { action: t(`permissionBanner.card.${action}`) });
 }
 
 function isTypingTarget(target: EventTarget | null): boolean {
@@ -153,7 +164,7 @@ export function DesktopPermissionCard(props: Props) {
     return () => window.removeEventListener('keydown', onKeyDown, true);
   }, [menuOpen, onDeny, onApprove, onApproveAlways, alwaysAvailable]);
 
-  const question = t('permissionBanner.card.question', { action: t('permissionBanner.card.actionRunCommand') });
+  const question = questionFor(permission, t);
 
   return (
     <div className="w-full px-4 pb-2 pt-[6px] shrink-0 flex flex-col">
@@ -181,7 +192,8 @@ export function DesktopPermissionCard(props: Props) {
           {preview}
         </div>
 
-        <div className="relative flex items-center justify-end gap-[18px] px-[18px] pb-[18px] pt-[24px]">
+        {/* 24px under a command's box; 5px more under the value box of a read or a web search (measured on the desktop app). */}
+        <div className={`relative flex items-center justify-end gap-[18px] px-[18px] pb-[18px] ${permission.toolName === 'Read' || permission.toolName === 'WebSearch' ? 'pt-[29.6px]' : 'pt-[24px]'}`}>
           <button
             type="button"
             data-testid="permission-deny"

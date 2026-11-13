@@ -393,6 +393,8 @@
     "card": {
       "question": "Allow Claude to {{action}}?",
       "actionRunCommand": "run this command",
+      "actionSearchWeb": "search the web",
+      "questionRead": "Allow Claude to read {{file}}?",
       "deny": "Deny",
       "alwaysAllow": "Always allow",
       "alwaysAllowHint": "Don’t ask again for this tool",

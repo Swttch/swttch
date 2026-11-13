@@ -49,6 +49,53 @@ export function permissionSubtitle(toolName: string, rawInput: unknown): string 
   return typeof description === 'string' && description.trim() !== '' ? description.trim() : undefined;
 }
 
+/** The input that says what a request is about, for the requests the desktop card shows as a value box (#673). */
+const MAIN_INPUT: Record<string, string> = { Read: 'file_path', WebSearch: 'query' };
+
+function captionOf(key: string): string {
+  const spaced = key.replace(/[_-]+/g, ' ').trim();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+/**
+ * What the desktop card shows for a read or a web search: the thing asked about in a box (a path, the words searched),
+ * and the rest of the request's input as captioned lines under it ("Mode  standard"), as the desktop app draws it.
+ * Null for any other tool: those keep their own content.
+ */
+export function desktopCardPreview(toolName: string, rawInput: unknown): ReactNode | null {
+  const mainKey = MAIN_INPUT[toolName];
+  if (!mainKey) return null;
+  const input = asInput(rawInput);
+  const main = input[mainKey];
+  if (typeof main !== 'string' || main.trim() === '') return null;
+  // Read's `limit` and `offset` say how much, not what: the desktop card leaves them out.
+  const rest = toolName === 'Read'
+    ? []
+    : Object.entries(input).filter(([key, value]) => key !== mainKey && (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'));
+  // The value box is at least 42px (47 here) tall with its text in the middle: measured on the desktop app's single-line one.
+  return (
+    <>
+      <div
+        dir="ltr"
+        data-testid="permission-value"
+        className="flex min-h-[46.7px] items-center rounded-[10px] border border-border-subtle bg-[var(--md-code-block-bg)] px-[16.5px] py-[6.9px] font-mono text-[0.9rem] leading-[1.5] whitespace-pre-wrap break-words text-text-secondary"
+      >
+        {main}
+      </div>
+      {rest.length > 0 && (
+        <dl data-testid="permission-input-rows" className="mt-[14px] grid grid-cols-[178px_1fr] gap-y-[6px] text-[0.9rem] leading-[1.5]">
+          {rest.map(([key, value]) => (
+            <div key={key} className="contents">
+              <dt className="text-text-secondary">{captionOf(key)}</dt>
+              <dd className="text-text-primary">{String(value)}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </>
+  );
+}
+
 /**
  * The content between the heading and the options, or null when this tool's
  * prompt has nothing to add (or the request carries nothing to show).

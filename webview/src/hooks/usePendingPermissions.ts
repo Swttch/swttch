@@ -20,6 +20,8 @@ export interface PendingPermission {
    * "allow for the session" answer must not be offered.
    */
   suppressAlwaysAllowRule: boolean;
+  /** Why the CLI asks at all, in its words (`decision_reason`): "Path is outside allowed working directories". */
+  decisionReason?: string;
   /**
    * What the CLI suggested installing if the user says "don't ask again": `permission_suggestions`, as the
    * CLI sent it. Read through {@link alwaysAllowFromSuggestions}, never trusted as it stands.
@@ -149,6 +151,7 @@ export function usePendingPermissions(): UsePendingPermissionsReturn {
         riskLevel: assessRiskLevel(toolName, input),
         description: generateDescription(toolName, input),
         suppressAlwaysAllowRule,
+        decisionReason: typeof request.decision_reason === 'string' ? request.decision_reason : undefined,
         suggestions: request.permission_suggestions,
       }]);
     });

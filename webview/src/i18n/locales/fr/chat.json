@@ -389,6 +389,8 @@
     "card": {
       "question": "Autoriser Claude à {{action}} ?",
       "actionRunCommand": "exécuter cette commande",
+      "actionSearchWeb": "rechercher sur le web",
+      "questionRead": "Autoriser Claude à lire {{file}} ?",
       "deny": "Refuser",
       "alwaysAllow": "Toujours autoriser",
       "alwaysAllowHint": "Ne plus demander pour cet outil",

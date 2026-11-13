@@ -393,6 +393,8 @@
     "card": {
       "question": "Разрешить Claude {{action}}?",
       "actionRunCommand": "выполнить эту команду",
+      "actionSearchWeb": "выполнить поиск в интернете",
+      "questionRead": "Разрешить Claude прочитать {{file}}?",
       "deny": "Отклонить",
       "alwaysAllow": "Всегда разрешать",
       "alwaysAllowHint": "Больше не спрашивать для этого инструмента",

@@ -389,6 +389,8 @@
     "card": {
       "question": "Claude が{{action}}ことを許可しますか？",
       "actionRunCommand": "このコマンドを実行する",
+      "actionSearchWeb": "ウェブを検索する",
+      "questionRead": "Claude に{{file}}の読み取りを許可しますか？",
       "deny": "拒否",
       "alwaysAllow": "常に許可",
       "alwaysAllowHint": "このツールについて今後確認しない",
