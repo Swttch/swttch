@@ -10,6 +10,7 @@ import { StreamErrorBanner } from '../StreamErrorBanner';
 import { TranscriptStreamingIndicator } from './TranscriptStreamingIndicator';
 import { TranscriptAwaitingInput } from './TranscriptAwaitingInput';
 import { TranscriptHeldMessages } from './TranscriptHeldMessages';
+import { TranscriptBackgroundWorking } from './TranscriptBackgroundWorking';
 import { PendingSentMessages } from '../PendingSentMessages';
 import { runningActivity } from './streamingActivity';
 import { EmptyState } from '../EmptyState';
@@ -173,6 +174,7 @@ export function TranscriptArea(props: TranscriptAreaProps) {
         </SendActionsContext.Provider>
       </SectionFoldContext.Provider>
       <PendingSentMessages />
+      {!isStreaming && <TranscriptBackgroundWorking hidden={awaitingInput} />}
       {/* While a call is being waited on, the run of calls that holds it is the working indicator (see TranscriptToolRun); this line is for the rest of the turn, when the model thinks or writes. A dropped connection and the CLI's retries still say so here. */}
       {isStreaming && (waitedCall === null || disconnectCountdown !== null || apiRetry !== null) && (
         <div>
