@@ -983,6 +983,16 @@ export class WorkflowProgressTracker {
     return this.entries.get(this.key(sessionId, toolUseId))?.task.status === 'running';
   }
 
+  /**
+   * The task as the live stream has it, while it is running and reported. A reload rebuilds a running task from
+   * the transcript, which cannot say what only the stream said (a foreground agent's id arrives with its report,
+   * at the end), so the screen that attaches mid-run is handed this one instead (#673).
+   */
+  liveTask(sessionId: string, toolUseId: string): WorkflowTask | undefined {
+    const entry = this.entries.get(this.resolveKey(sessionId, toolUseId));
+    return entry && entry.backgrounded && entry.task.status === 'running' ? entry.task : undefined;
+  }
+
   /** Whether any workflow of the session is still running, i.e. the CLI has work going on its own. */
   hasRunning(sessionId: string): boolean {
     for (const entry of this.entries.values()) {

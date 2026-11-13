@@ -1103,6 +1103,36 @@ describe('only tasks the CLI says were backgrounded', () => {
     expect(last().status).toBe('running');
   });
 
+  // #673: a screen that attaches mid-run is handed the live task, which knows the
+  // agent's id from task_started (a rebuild from the transcript cannot, before the
+  // run ends).
+  it('hands out a running subagent as the stream has it, and not once it has ended', () => {
+    const { tracker } = makeTracker();
+    tracker.handleEvent('s1', {
+      type: 'system',
+      subtype: 'task_started',
+      task_id: 'a1',
+      tool_use_id: 'toolu_fg_agent',
+      description: 'Bash permission repro',
+      is_backgrounded: false,
+      task_type: 'local_agent',
+    });
+
+    expect(tracker.liveTask('s1', 'toolu_fg_agent')?.taskId).toBe('a1');
+    expect(tracker.liveTask('s1', 'toolu_other')).toBeUndefined();
+    expect(tracker.liveTask('s2', 'toolu_fg_agent')).toBeUndefined();
+
+    tracker.handleEvent('s1', { type: 'system', subtype: 'task_notification', tool_use_id: 'toolu_fg_agent', status: 'completed' });
+
+    expect(tracker.liveTask('s1', 'toolu_fg_agent')).toBeUndefined();
+  });
+
+  it('hands out nothing for an inline command that was never reported', () => {
+    const { tracker } = makeTracker();
+    tracker.handleEvent('s1', inlineBash);
+    expect(tracker.liveTask('s1', 'toolu_inline')).toBeUndefined();
+  });
+
   // A workflow never carries the field, because it is always backgrounded.
   it('still tracks a workflow, which states no such field', () => {
     const { tracker, last } = makeTracker();

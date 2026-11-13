@@ -2,7 +2,7 @@ import type { ConnectionManager } from '../../ws/connection-manager';
 import { loadSessionMessages } from '../features/loadSessionMessages';
 import { getSessionEntry } from '../features/getSessionEntry';
 import { reconstructWorkflowTasks } from '../features/workflow-tracker';
-import { isWorkflowRunning } from '../claude-process';
+import { getLiveWorkflowTask, isWorkflowRunning } from '../claude-process';
 import { MessageType } from '../../shared';
 
 export interface LoadAndSendSessionOptions {
@@ -80,7 +80,11 @@ export async function loadAndSendSession(
       result.activeChain as Array<Record<string, unknown>>,
       (toolUseId) => isWorkflowRunning(sessionId, toolUseId),
     );
-    for (const task of workflows) {
+    for (const rebuilt of workflows) {
+      // A task still running is sent as the live stream has it: a reload in the middle of a run (a foreground
+      // agent waiting on a permission answer, say) must not swap what the stream knew, the agent's id above all,
+      // for what the transcript can say before the run ends (#673).
+      const task = getLiveWorkflowTask(sessionId, rebuilt.toolUseId) ?? rebuilt;
       connections.sendTo(
         connectionId,
         MessageType.WORKFLOW_PROGRESS,
