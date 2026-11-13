@@ -172,8 +172,8 @@ function ChatPageContent() {
   // An allow hands them to the CLI at the click but keeps drawing them where they are until the command has finished
   // (see TranscriptArea), so the CLI reads them with the command's result and answers once, as the desktop app does.
   // A denial ends the turn there, so they enter the chat with the answer.
-  const answerAfterHeld = (answer: () => void, denied = false) => {
-    void releaseHeldMessages(!denied).finally(() => {
+  const answerAfterHeld = (answer: () => void, denied = false): Promise<void> => {
+    return releaseHeldMessages(!denied).finally(() => {
       answer();
       // After a denial what follows is a new stretch of work: its time and tokens are counted from here, as the
       // desktop app does ("Thinking", then "3.8s · 46 tokens"). After an allow the same stretch goes on: the

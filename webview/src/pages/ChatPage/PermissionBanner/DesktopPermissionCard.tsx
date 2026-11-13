@@ -26,7 +26,8 @@ interface Props {
   subtitle?: string;
   /** What the request would do: the command, as the prompt draws it. */
   preview: ReactNode;
-  onApprove: () => void;
+  /** Settles once the answer has gone to the CLI (it first hands over what was written under the card). */
+  onApprove: () => void | Promise<void>;
   /** Approve and install the narrow rule the CLI suggested, for this session. */
   onApproveAlways: () => void;
   onDeny: () => void;
@@ -65,9 +66,10 @@ export function DesktopPermissionCard(props: Props) {
     (inputMode === InputModeValues.ASK_BEFORE_EDIT || inputMode === InputModeValues.AUTO_EDIT);
 
   const allowAndSwitchToAuto = useCallback(() => {
-    // The mode first, so the rest of the session is reviewed from here on, then the answer to this one.
-    setInputMode(InputModeValues.AUTO);
-    onApprove();
+    // The answer to this call first and the mode after it: the CLI drops the call it is waiting on when the mode
+    // changes under it, so a mode that went first left the command without its answer ("not recorded", then
+    // asked again). Measured in this view, and the desktop app's call goes through.
+    void Promise.resolve(onApprove()).then(() => setInputMode(InputModeValues.AUTO));
   }, [setInputMode, onApprove]);
 
   const menuItems: Array<{ key: string; label: string; description?: string; onSelect: () => void }> = [];
@@ -187,7 +189,7 @@ export function DesktopPermissionCard(props: Props) {
                     <div
                       role="menu"
                       data-testid="permission-menu"
-                      className="min-w-[16rem] max-w-[20rem] rounded-xl border border-border-default bg-surface-raised p-1.5 text-text-primary shadow-lg"
+                      className="min-w-[16rem] max-w-[20rem] rounded-xl bg-surface-hover p-1.5 text-text-primary shadow-[0_4px_16px_rgba(0,0,0,0.35)]"
                     >
                       {menuItems.map((item) => (
                         <button
@@ -199,7 +201,7 @@ export function DesktopPermissionCard(props: Props) {
                             setMenuOpen(false);
                             item.onSelect();
                           }}
-                          className="flex w-full flex-col items-start rounded-lg px-3 py-2 text-start transition-colors hover:bg-surface-hover"
+                          className="flex w-full flex-col items-start rounded-lg px-3 py-2 text-start font-normal transition-colors hover:bg-text-primary/[0.1]"
                         >
                           <span className="text-[1rem]">{item.label}</span>
                           {item.description && (

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { DesktopPermissionCard, usesDesktopPermissionCard } from '../PermissionBanner/DesktopPermissionCard';
 import type { PendingPermission } from '../../../hooks/usePendingPermissions';
 
@@ -120,12 +120,20 @@ describe('DesktopPermissionCard — the menu', () => {
     expect(screen.queryByTestId('permission-menu')).not.toBeInTheDocument();
   });
 
-  it('"Allow and switch to Auto" switches the mode, then allows this one', () => {
+  it('"Allow and switch to Auto" answers this call first and switches the mode after it', async () => {
+    // The CLI drops the call it waits on when the mode changes under it, so the answer must reach it first.
+    const order: string[] = [];
+    session.setInputMode.mockImplementation(() => order.push('mode'));
     const h = setup();
+    h.onApprove.mockImplementation(() => {
+      order.push('answer');
+      return Promise.resolve();
+    });
     fireEvent.click(screen.getByTestId('permission-more'));
     fireEvent.click(screen.getByTestId('permission-menu-auto'));
-    expect(session.setInputMode).toHaveBeenCalledWith('auto');
+    await waitFor(() => expect(session.setInputMode).toHaveBeenCalledWith('auto'));
     expect(h.onApprove).toHaveBeenCalledTimes(1);
+    expect(order).toEqual(['answer', 'mode']);
   });
 
   it('offers no Auto switch when already in Auto, or when the CLI does not allow Auto', () => {
