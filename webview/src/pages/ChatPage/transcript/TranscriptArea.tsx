@@ -10,6 +10,7 @@ import { StreamErrorBanner } from '../StreamErrorBanner';
 import { TranscriptStreamingIndicator } from './TranscriptStreamingIndicator';
 import { TranscriptAwaitingInput } from './TranscriptAwaitingInput';
 import { TranscriptHeldMessages } from './TranscriptHeldMessages';
+import { TranscriptHeldWorking } from './TranscriptHeldWorking';
 import { useReleaseHeldMessages } from '../../../hooks/useReleaseHeldMessages';
 import { TranscriptBackgroundWorking, useBackgroundTaskStart } from './TranscriptBackgroundWorking';
 import { PendingSentMessages } from '../PendingSentMessages';
@@ -86,7 +87,7 @@ export function TranscriptArea(props: TranscriptAreaProps) {
   // Held under a card, they are handed over once the card is answered AND the call it held has finished (a denial
   // hands them over with the answer, in ChatPage): the desktop app keeps them held, with "Send now", while the
   // allowed command runs.
-  const { releaseHeldMessages, dropReleasedHeldMessages } = useChatStreamContext();
+  const { releaseHeldMessages, dropReleasedHeldMessages, heldMessages } = useChatStreamContext();
   // A call is still running until its result has come back: in the stream the result is a message of its own after the
   // call, not yet folded into the call.
   const callRunning = useMemo(() => {
@@ -198,6 +199,12 @@ export function TranscriptArea(props: TranscriptAreaProps) {
         </SendActionsContext.Provider>
       </SectionFoldContext.Provider>
       {!awaitingInput && <TranscriptHeldMessages atEnd />}
+      {/* The allowed command is running while its answer's messages are still drawn here: the line says what it is for. */}
+      {!awaitingInput && waitedCall !== null && heldMessages.some((held) => held.released) && (
+        <div>
+          <TranscriptHeldWorking activity={waitedCall} />
+        </div>
+      )}
       <PendingSentMessages />
       {!isStreaming && <TranscriptBackgroundWorking hidden={awaitingInput} />}
       {/* While a call is being waited on, the run of calls that holds it is the working indicator (see TranscriptToolRun); this line is for the rest of the turn, when the model thinks or writes. A dropped connection and the CLI's retries still say so here. */}
