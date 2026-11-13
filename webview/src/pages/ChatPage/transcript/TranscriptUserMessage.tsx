@@ -19,6 +19,7 @@ import { useSendActionsValue } from '../SendActionsContext';
 import { isCompactSummaryEntry } from './compact';
 import { TranscriptSessionBrief } from './TranscriptSessionBrief';
 import { TranscriptUserFooter } from './TranscriptUserFooter';
+import { USER_BUBBLE_CLASS } from './userBubble';
 
 const INTERRUPTED_TEXT = '[Request interrupted by user]';
 const INTERRUPTED_FOR_TOOL_USE_TEXT = '[Request interrupted by user for tool use]';
@@ -120,7 +121,7 @@ function SendBubble({ message, sectionKey }: Props) {
         {parsed.excerpts.length > 0 && <ExcerptCards excerpts={parsed.excerpts} />}
 
         {hasBubble && (
-          <div className="max-w-[37rem] min-w-0 rounded-2xl bg-surface-hover px-3.5 py-2">
+          <div className={USER_BUBBLE_CLASS}>
             {parsed.replies.length > 0 && <ReplyQuotes replies={parsed.replies} followedByText={parsed.text !== ''} />}
             <div className="text-text-primary/80 text-[1rem] leading-[1.5] whitespace-pre-wrap break-words">
               {isCommand ? (

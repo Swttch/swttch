@@ -1,7 +1,7 @@
 import type { TFunction } from 'i18next';
 import type { LoadedMessageDto } from '../../../types';
 import { parseSessionDelivery } from '../message-renderers/ToolRenderers/SendMessageRenderer';
-import { toolResultRawText, toolResultText, toolStatus } from '../message-renderers/ToolRenderers/common/toolStatus';
+import { isUserDeclined, toolResultRawText, toolResultText, toolStatus } from '../message-renderers/ToolRenderers/common/toolStatus';
 import { APP_EVENT_TOOL, BACKGROUND_DONE_TOOL, PEER_MESSAGE_TOOL, type ToolCall } from './buildSegments';
 import { changedLineCounts } from './fileDiff';
 
@@ -216,7 +216,9 @@ const STOPPED_RESULT_PREFIX = "The user doesn't want to proceed with this tool u
  * a failure of the call, and the desktop app says so with its own word ("Stopped") instead of "Failed".
  */
 export function wasStopped(call: ToolCall): boolean {
-  return toolResultRawText(call.toolUse.tool_result as LoadedMessageDto | undefined).startsWith(STOPPED_RESULT_PREFIX);
+  const result = call.toolUse.tool_result as LoadedMessageDto | undefined;
+  // Turned down in this app's own card: the result carries this app's marker, not the CLI's wording.
+  return isUserDeclined(result) || toolResultRawText(result).startsWith(STOPPED_RESULT_PREFIX);
 }
 
 export function hasFailed(call: ToolCall): boolean {

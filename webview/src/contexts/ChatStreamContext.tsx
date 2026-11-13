@@ -85,7 +85,7 @@ interface ChatStreamContextType {
   authDiagnosis: { envApiKeys: string[]; message: string } | null;
 
   // Actions
-  sendMessage: (content: string, inputMode: InputMode, context?: Context[], attachments?: Attachment[], accountId?: string) => void;
+  sendMessage: (content: string, inputMode: InputMode, context?: Context[], attachments?: Attachment[], accountId?: string, inChatNow?: boolean) => Promise<void>;
   /**
    * `invertFollowUp` does the opposite of the configured follow-up behavior for
    * this one message — the derived key described in {@link invertedOf}. The
@@ -127,8 +127,8 @@ interface ChatStreamContextType {
    * the answer to the message sent before it.
    */
   sentWhileRunning: SentWhileRunning[];
-  /** Send every held message now, in the order they were written. */
-  releaseHeldMessages: () => void;
+  /** Send every held message now, in the order they were written; settles when the backend has all of them. */
+  releaseHeldMessages: () => Promise<void>;
   /** Send one held message now, ahead of the card's answer. */
   sendHeldMessage: (id: string) => void;
 
@@ -633,7 +633,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   }, [chatStream.isStreaming, appendSentMessage]);
 
   const sendMessage = useCallback(
-    (content: string, inputMode: InputMode, context?: Context[], attachments?: Attachment[], accountId?: string) => {
+    (content: string, inputMode: InputMode, context?: Context[], attachments?: Attachment[], accountId?: string, inChatNow = false) => {
       // Prepend the IDE-context tag (open file / selection) when the toggle is on
       // and a selection is available. parseUserContent() turns the tag back into a
       // context chip in the UI bubble, while the CLI sees the same hint. Gated on
@@ -667,7 +667,11 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
       // Sent while a turn is running, it waits after what that turn has written and enters the chat when the
       // turn ends: the CLI answers it after the turn, so a bubble put in now would stand above the answer to
       // the message sent before it (#673).
-      if (isStreamingRef.current && !isNewSession) {
+      if (inChatNow && isStreamingRef.current && !isNewSession) {
+        // Written under a permission card and handed over with its answer: it is read before the turn goes on, so
+        // it stands here, above whatever the turn writes next, without beginning a turn of its own.
+        appendSentMessage(content, context, attachments);
+      } else if (isStreamingRef.current && !isNewSession) {
         setSentWhileRunning((all) => [...all, { id: crypto.randomUUID(), content, context, attachments }]);
       } else {
         addUserMessage(content, context, attachments);
@@ -700,7 +704,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
       // interrupt manually) before their message reached Claude (#220).
       // The backend reuses the running process, so this never respawns the CLI.
       // A view picked before the session existed goes to the backend first: the spawn reads it.
-      (pendingViewSaved ?? Promise.resolve()).catch(() => undefined).then(() => bridge.send(MessageType.SEND_MESSAGE, payload)).then((response) => {
+      return (pendingViewSaved ?? Promise.resolve()).catch(() => undefined).then(() => bridge.send(MessageType.SEND_MESSAGE, payload)).then((response) => {
         if (response?.status === 'error') {
           console.error('[ChatStreamContext] Backend error:', response.error);
         }
@@ -708,7 +712,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
         console.error('[ChatStreamContext] Failed to send message to bridge:', error);
       });
     },
-    [addUserMessage, adoptAllowAllDraft, adoptPendingView, bridge, session, sessionModel]
+    [addUserMessage, appendSentMessage, adoptAllowAllDraft, adoptPendingView, bridge, session, sessionModel]
   );
 
   /**
@@ -904,11 +908,14 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     [sendMessage]
   );
 
-  const releaseHeldMessages = useCallback(() => {
+  const releaseHeldMessages = useCallback(async () => {
     const all = heldMessagesRef.current;
     if (all.length === 0) return;
     setHeldMessages([]);
-    all.forEach((held) => sendMessage(held.content, held.inputMode, undefined, held.attachments));
+    // In order, each one handed over before the next: the CLI reads its input in the order it arrives.
+    for (const held of all) {
+      await sendMessage(held.content, held.inputMode, undefined, held.attachments, undefined, true);
+    }
   }, [sendMessage]);
 
   // handleSubmit: convenience wrapper for form submission.

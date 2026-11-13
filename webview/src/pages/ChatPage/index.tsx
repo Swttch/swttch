@@ -169,6 +169,11 @@ function ChatPageContent() {
   const cardWaiting = Boolean(pendingPermission && usesDesktopPermissionCard(pendingPermission.toolName, transcriptViewMode));
   // What was written under the card goes out the moment the card is answered.
   useReleaseHeldMessages(cardWaiting, releaseHeldMessages);
+  // What was written under the card reaches the CLI before the card is answered, so the turn that goes on after
+  // the answer already has it and answers it with the rest (the desktop app's order), not in a turn of its own.
+  const answerAfterHeld = (answer: () => void) => {
+    void releaseHeldMessages().finally(answer);
+  };
   /**
    * An approval prompt is standing in the composer's slot at the foot of the
    * chat, so the composer is unmounted right now.
@@ -492,10 +497,10 @@ function ChatPageContent() {
               cardWaiting && pendingPermission ? (
                 <PermissionBanner
                   permission={pendingPermission}
-                  onApprove={() => approvePermission(pendingPermission.controlRequestId)}
-                  onApproveForSession={() => approveForSession(pendingPermission.controlRequestId)}
-                  onApproveAlways={() => approveAlways(pendingPermission.controlRequestId)}
-                  onDeny={(reason) => denyPermission(pendingPermission.controlRequestId, reason)}
+                  onApprove={() => answerAfterHeld(() => approvePermission(pendingPermission.controlRequestId))}
+                  onApproveForSession={() => answerAfterHeld(() => approveForSession(pendingPermission.controlRequestId))}
+                  onApproveAlways={() => answerAfterHeld(() => approveAlways(pendingPermission.controlRequestId))}
+                  onDeny={(reason) => answerAfterHeld(() => denyPermission(pendingPermission.controlRequestId, reason))}
                   onOpenDiffOverlay={setDiffOverlayToolUseId}
                 />
               ) : null

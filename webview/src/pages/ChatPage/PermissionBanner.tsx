@@ -291,7 +291,6 @@ export function PermissionBanner(props: Props) {
         onApprove={onApprove}
         onApproveAlways={onApproveAlways ?? onApprove}
         onDeny={() => onDeny()}
-        onCancel={handleCancel}
       />
     );
   }

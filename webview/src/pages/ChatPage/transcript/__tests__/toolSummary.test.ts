@@ -192,6 +192,16 @@ describe('a call the user stopped', () => {
     expect(hasFailed(c)).toBe(false);
   });
 
+  // #673: a call turned down in this app's own permission card carries this app's marker, not the CLI's wording.
+  it('is stopped when it was turned down in this app\u2019s own card, with or without a reason', () => {
+    for (const text of ['\u200BUser declined to run this tool.', '\u200BUser declined to run this tool. Asked Claude instead: use ls']) {
+      const tool_result = { message: { content: [{ type: 'tool_result', tool_use_id: 'd', is_error: true, content: text }] } } as unknown as LoadedMessageDto;
+      const c = { toolUse: { id: 'd', name: 'Bash', input: {}, tool_result } as unknown as ToolCall['toolUse'], message } as ToolCall;
+      expect(wasStopped(c)).toBe(true);
+      expect(hasFailed(c)).toBe(false);
+    }
+  });
+
   it('is told apart from a call that really failed', () => {
     const failed = call('2', 'Bash', {}, true);
     expect(wasStopped(failed)).toBe(false);

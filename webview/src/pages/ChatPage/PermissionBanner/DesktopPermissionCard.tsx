@@ -20,9 +20,6 @@ export function usesDesktopPermissionCard(toolName: string, viewMode: Transcript
   return viewMode !== null && DESKTOP_CARD_TOOLS.has(toolName);
 }
 
-/** Stands in for the action in the question while its shape is worked out. No translation contains it. */
-const ACTION_MARKER = '\u0000action\u0000';
-
 interface Props {
   permission: PendingPermission;
   /** The request's one-line description, when it has one. */
@@ -33,8 +30,6 @@ interface Props {
   /** Approve and install the narrow rule the CLI suggested, for this session. */
   onApproveAlways: () => void;
   onDeny: () => void;
-  /** Escape: not "no to this one" but "stop what you are doing" (deny, and end the turn). */
-  onCancel: () => void;
 }
 
 function isTypingTarget(target: EventTarget | null): boolean {
@@ -55,7 +50,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
  * button that leads is "Allow once".
  */
 export function DesktopPermissionCard(props: Props) {
-  const { permission, subtitle, preview, onApprove, onApproveAlways, onDeny, onCancel } = props;
+  const { permission, subtitle, preview, onApprove, onApproveAlways, onDeny } = props;
   const { t } = useTranslation('chat');
   const { inputMode, availableModes, setInputMode } = useSessionContext();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -92,7 +87,7 @@ export function DesktopPermissionCard(props: Props) {
   const primaryTitle = alwaysAvailable ? t('permissionBanner.card.alwaysAllowHint') : undefined;
   const primaryAction = alwaysAvailable ? onApproveAlways : onApprove;
 
-  // Keys, as the desktop app binds them: Esc stops, Cmd/Ctrl+Enter allows once, and with Shift allows
+  // Keys, as the desktop app binds them: Esc denies, Cmd/Ctrl+Enter allows once, and with Shift allows
   // always. Never while the person is typing: Cmd+Enter there is "queue this message".
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -107,7 +102,7 @@ export function DesktopPermissionCard(props: Props) {
         }
         if (isTypingTarget(event.target)) return;
         event.preventDefault();
-        onCancel();
+        onDeny();
         return;
       }
       if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && !isTypingTarget(event.target)) {
@@ -120,53 +115,54 @@ export function DesktopPermissionCard(props: Props) {
     // order the two were (re)subscribed in, so "handled" is visible to it.
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [menuOpen, onCancel, onApprove, onApproveAlways, alwaysAvailable]);
+  }, [menuOpen, onDeny, onApprove, onApproveAlways, alwaysAvailable]);
 
-  const action = t('permissionBanner.card.actionRunCommand');
-  const marked = t('permissionBanner.card.question', { action: ACTION_MARKER });
-  const at = marked.indexOf(ACTION_MARKER);
-  const question =
-    at === -1 ? (
-      marked
-    ) : (
-      <>
-        {marked.slice(0, at)}
-        <b className="font-semibold">{action}</b>
-        {marked.slice(at + ACTION_MARKER.length)}
-      </>
-    );
+  const question = t('permissionBanner.card.question', { action: t('permissionBanner.card.actionRunCommand') });
 
   return (
-    <div className="w-full max-w-[var(--chat-column-max,44rem)] mx-auto px-4 sm:px-[var(--chat-column-px,1rem)] pb-2 pt-4 shrink-0 flex flex-col">
+    <div className="w-full px-4 pb-2 pt-[6px] shrink-0 flex flex-col">
       <div
         data-testid="desktop-permission-card"
-        className="w-full max-w-[30rem] rounded-xl border border-border-default bg-surface-base flex flex-col"
+        // 535px (482 on screen), a 1px border one faint step lighter than the page (0.05: the 2-row blur of a 1px line hid half of it in the recording), 13px corners.
+        className="w-full max-w-[535px] overflow-hidden rounded-[13px] border border-text-primary/[0.05] flex flex-col"
       >
-        <div className="px-4 py-4 rounded-t-xl bg-surface-raised text-[1rem] text-text-primary">{question}</div>
+        {/* The heading band: 54px (49 on screen), one step lighter than the page, the text in one weight. */}
+        <div className="flex h-[54px] shrink-0 items-center bg-text-primary/[0.04] px-[19.5px] text-[0.9rem] text-text-primary">
+          {question}
+        </div>
 
-        <div className="px-4 py-3 flex flex-col gap-2">
-          {subtitle && <p className="text-[1rem] text-text-secondary">{subtitle}</p>}
+        <div
+          className={
+            'flex flex-col px-[18px] pt-[12px] ' +
+            // The command box is drawn by the shared preview; here it keeps this app's own fill and takes the
+            // desktop app's size: 15px by 6.9px inside, the command in 13px.
+            '[&_[data-testid=permission-command]]:rounded-[10px] [&_[data-testid=permission-command]]:px-[15px] ' +
+            '[&_[data-testid=permission-command]]:py-[6.9px] [&_[data-testid=permission-command]]:text-[0.9rem] ' +
+            '[&_[data-testid=permission-command]]:leading-[1.5]'
+          }
+        >
+          {subtitle && <p className="pb-[10px] text-[0.9rem] leading-[1.5] text-text-secondary">{subtitle}</p>}
           {preview}
         </div>
 
-        <div className="relative flex items-center justify-end gap-2 px-4 pb-4 pt-3">
+        <div className="relative flex items-center justify-end gap-[18px] px-[18px] pb-[18px] pt-[24px]">
           <button
             type="button"
             data-testid="permission-deny"
             onClick={onDeny}
-            className="rounded-lg bg-surface-hover px-3 py-1.5 text-[1rem] text-text-primary transition-opacity hover:opacity-80"
+            className="h-[30.5px] rounded-[9px] bg-text-primary/[0.12] px-[9px] text-[1rem] text-text-primary transition-opacity hover:opacity-80"
           >
             {t('permissionBanner.card.deny')}
           </button>
 
-          <div className="relative flex items-stretch rounded-lg bg-text-primary text-text-inverse">
+          <div className="relative flex h-[30.5px] items-stretch rounded-[9px] bg-text-primary/[0.92] text-text-inverse">
             <Tooltip content={primaryTitle}>
               <button
                 type="button"
                 data-testid="permission-primary"
                 onClick={primaryAction}
-                className={`px-3 py-1.5 text-[1rem] font-medium transition-opacity hover:opacity-90 ${
-                  menuItems.length > 0 ? 'rounded-s-lg' : 'rounded-lg'
+                className={`px-[9px] text-[1rem] transition-opacity hover:opacity-90 ${
+                  menuItems.length > 0 ? 'rounded-s-[9px]' : 'rounded-[9px]'
                 }`}
               >
                 {primaryLabel}
@@ -217,7 +213,7 @@ export function DesktopPermissionCard(props: Props) {
                   aria-haspopup="menu"
                   aria-expanded={menuOpen}
                   onClick={() => setMenuOpen((open) => !open)}
-                  className="flex items-center rounded-e-lg border-s border-black/20 px-1.5 transition-opacity hover:opacity-90"
+                  className="flex items-center rounded-e-[9px] border-s border-black/20 px-[7.8px] transition-opacity hover:opacity-90"
                 >
                   <ChevronDownIcon className="h-4 w-4" />
                 </button>

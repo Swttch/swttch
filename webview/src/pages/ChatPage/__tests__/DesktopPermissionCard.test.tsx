@@ -41,7 +41,6 @@ function setup(p: PendingPermission = permission()) {
     onApprove: vi.fn(),
     onApproveAlways: vi.fn(),
     onDeny: vi.fn(),
-    onCancel: vi.fn(),
   };
   render(
     <DesktopPermissionCard
@@ -138,7 +137,6 @@ describe('DesktopPermissionCard — the menu', () => {
         onApprove={vi.fn()}
         onApproveAlways={vi.fn()}
         onDeny={vi.fn()}
-        onCancel={vi.fn()}
       />,
     );
     fireEvent.click(screen.getAllByTestId('permission-more')[0]);
@@ -168,15 +166,15 @@ describe('DesktopPermissionCard — keys', () => {
       window.dispatchEvent(event);
     });
     expect(screen.queryByTestId('permission-menu')).not.toBeInTheDocument();
-    expect(h.onCancel).not.toHaveBeenCalled();
+    expect(h.onDeny).not.toHaveBeenCalled();
     // Marked as used, so the composer's "stop the response" Escape skips it.
     expect(event.defaultPrevented).toBe(true);
   });
 
-  it('Escape with the menu closed stops (deny and end the turn)', () => {
+  it('Escape with the menu closed denies', () => {
     const h = setup();
     fireEvent.keyDown(window, { key: 'Escape' });
-    expect(h.onCancel).toHaveBeenCalledTimes(1);
+    expect(h.onDeny).toHaveBeenCalledTimes(1);
   });
 
   it('Cmd+Enter allows once; with Shift it takes the leading allow answer', () => {
@@ -194,7 +192,7 @@ describe('DesktopPermissionCard — keys', () => {
     fireEvent.keyDown(box, { key: 'Enter', metaKey: true });
     fireEvent.keyDown(box, { key: 'Escape' });
     expect(h.onApprove).not.toHaveBeenCalled();
-    expect(h.onCancel).not.toHaveBeenCalled();
+    expect(h.onDeny).not.toHaveBeenCalled();
     box.remove();
   });
 });
