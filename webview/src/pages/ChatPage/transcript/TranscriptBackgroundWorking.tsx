@@ -2,6 +2,15 @@ import { useEffect, useState } from 'react';
 import { useOptionalWorkflowState } from '@/contexts/WorkflowStateContext';
 import { ActivityGlyph, useFormatElapsed } from './TranscriptActivity';
 
+/** When the longest-running background task started, or null when none runs. */
+export function useBackgroundTaskStart(): number | null {
+  const workflow = useOptionalWorkflowState();
+  return (workflow?.runningTasks ?? [])
+    .map((task) => task.startedAt)
+    .filter((at) => at > 0)
+    .reduce<number | null>((oldest, at) => (oldest === null || at < oldest ? at : oldest), null);
+}
+
 /**
  * What the Transcript view modes show at the end of the chat while the model's own turn is over but a background
  * task it started is still running (a subagent, a workflow), as the desktop app does: the working dots and the time
@@ -11,12 +20,8 @@ import { ActivityGlyph, useFormatElapsed } from './TranscriptActivity';
  * Nothing is drawn while no task runs, or while a permission card waits for the person (the card says so).
  */
 export function TranscriptBackgroundWorking({ hidden }: { hidden: boolean }) {
-  const workflow = useOptionalWorkflowState();
   const formatElapsed = useFormatElapsed();
-  const started = (workflow?.runningTasks ?? [])
-    .map((task) => task.startedAt)
-    .filter((at) => at > 0)
-    .reduce<number | null>((oldest, at) => (oldest === null || at < oldest ? at : oldest), null);
+  const started = useBackgroundTaskStart();
   const showing = !hidden && started !== null;
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {

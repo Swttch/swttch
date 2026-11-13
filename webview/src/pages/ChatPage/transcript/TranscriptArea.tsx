@@ -10,7 +10,7 @@ import { StreamErrorBanner } from '../StreamErrorBanner';
 import { TranscriptStreamingIndicator } from './TranscriptStreamingIndicator';
 import { TranscriptAwaitingInput } from './TranscriptAwaitingInput';
 import { TranscriptHeldMessages } from './TranscriptHeldMessages';
-import { TranscriptBackgroundWorking } from './TranscriptBackgroundWorking';
+import { TranscriptBackgroundWorking, useBackgroundTaskStart } from './TranscriptBackgroundWorking';
 import { PendingSentMessages } from '../PendingSentMessages';
 import { runningActivity } from './streamingActivity';
 import { EmptyState } from '../EmptyState';
@@ -83,6 +83,7 @@ export function TranscriptArea(props: TranscriptAreaProps) {
   const { retry: onRetry, messages: streamMessages, isStreaming: turnRunning } = useChatStreamContext();
   const waitedCall = useMemo(() => (isStreaming ? runningActivity(streamMessages) : null), [isStreaming, streamMessages]);
   const heldCall = useMemo(() => (awaitingInput && turnRunning ? runningActivity(streamMessages) : null), [awaitingInput, turnRunning, streamMessages]);
+  const backgroundWorking = !isStreaming && !awaitingInput && useBackgroundTaskStart() !== null;
   const containerRef = useRef<HTMLDivElement>(null);
 
   const fold = useSectionFold();
@@ -163,7 +164,7 @@ export function TranscriptArea(props: TranscriptAreaProps) {
                 )}
                 {/* Sent while the card holds the turn: right after the latest message, above the calls still running, as in the desktop app. */}
                 {awaitingInput && sectionIndex === sections.length - 1 && <TranscriptHeldMessages />}
-                <div data-section-body data-after-send={section.head ? '' : undefined} className={`${sectionIndex < sections.length - 1 ? 'pb-[13px]' : isStreaming || awaitingInput ? 'pb-0' : 'pb-[54px]'}`}>
+                <div data-section-body data-after-send={section.head ? '' : undefined} className={`${sectionIndex < sections.length - 1 ? 'pb-[13px]' : isStreaming || awaitingInput || backgroundWorking ? 'pb-0' : 'pb-[54px]'}`}>
                   <TranscriptBody body={section.body} mergedMessages={mergedMessages} onRetry={onRetry} turnRunning={isStreaming && sectionIndex === sections.length - 1} />
                   {/* The turn's wrap-up is drawn here, after its last message, not where its call sits: a recap as text until the closing message begins, then the question and its answers. */}
                   <TranscriptWrapUp body={section.body} next={sections[sectionIndex + 1]?.head ?? null} />
