@@ -220,7 +220,11 @@
 [data-streamdown="code-block-body"] {
   padding: 0.85em !important;
   font-family: var(--ide-font-code);
-  font-size: 13px !important;
+  /* Relative, not `13px` (#685): an absolute size ignores the Font size
+     setting, which only moves the root `rem`, so the block stayed small while
+     the text around it grew. Following the surrounding text keeps the two in
+     step; the tokens (0.9em below) and the line numbers inherit from here. */
+  font-size: 1em !important;
   line-height: 1.5;
   overflow-x: auto;
   background: var(--md-code-block-bg) !important;
