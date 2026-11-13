@@ -74,6 +74,8 @@ export interface HeldMessage {
   content: string;
   inputMode: InputMode;
   attachments?: Attachment[];
+  /** Already handed to the CLI (at an allow), still drawn here until the call it waited for has finished. */
+  released?: boolean;
 }
 
 interface ChatStreamContextType {
@@ -85,7 +87,7 @@ interface ChatStreamContextType {
   authDiagnosis: { envApiKeys: string[]; message: string } | null;
 
   // Actions
-  sendMessage: (content: string, inputMode: InputMode, context?: Context[], attachments?: Attachment[], accountId?: string, inChatNow?: boolean) => Promise<void>;
+  sendMessage: (content: string, inputMode: InputMode, context?: Context[], attachments?: Attachment[], accountId?: string, inChatNow?: boolean, skipEcho?: boolean) => Promise<void>;
   /**
    * `invertFollowUp` does the opposite of the configured follow-up behavior for
    * this one message — the derived key described in {@link invertedOf}. The
@@ -130,7 +132,10 @@ interface ChatStreamContextType {
   /** Count the running turn's time and written tokens from now (after a permission card was answered). */
   restartTurnClock: () => void;
   /** Send every held message now, in the order they were written; settles when the backend has all of them. */
-  releaseHeldMessages: () => Promise<void>;
+  /** `keepShown`: hand them to the CLI now but keep drawing them until dropReleasedHeldMessages. */
+  releaseHeldMessages: (keepShown?: boolean) => Promise<void>;
+  /** Enter the messages released with keepShown into the chat, where they stand above what the turn writes next. */
+  dropReleasedHeldMessages: () => void;
   /** Send one held message now, ahead of the card's answer. */
   sendHeldMessage: (id: string) => void;
 
@@ -636,7 +641,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   }, [chatStream.isStreaming, appendSentMessage]);
 
   const sendMessage = useCallback(
-    (content: string, inputMode: InputMode, context?: Context[], attachments?: Attachment[], accountId?: string, inChatNow = false) => {
+    (content: string, inputMode: InputMode, context?: Context[], attachments?: Attachment[], accountId?: string, inChatNow = false, skipEcho = false) => {
       // Prepend the IDE-context tag (open file / selection) when the toggle is on
       // and a selection is available. parseUserContent() turns the tag back into a
       // context chip in the UI bubble, while the CLI sees the same hint. Gated on
@@ -670,7 +675,9 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
       // Sent while a turn is running, it waits after what that turn has written and enters the chat when the
       // turn ends: the CLI answers it after the turn, so a bubble put in now would stand above the answer to
       // the message sent before it (#673).
-      if (inChatNow && isStreamingRef.current && !isNewSession) {
+      if (skipEcho) {
+        // Drawn by the held list until the call has finished; entered into the chat then.
+      } else if (inChatNow && isStreamingRef.current && !isNewSession) {
         // Written under a permission card and handed over with its answer: it is read before the turn goes on, so
         // it stands here, above whatever the turn writes next, without beginning a turn of its own.
         appendSentMessage(content, context, attachments);
@@ -904,22 +911,36 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   const sendHeldMessage = useCallback(
     (id: string) => {
       const held = heldMessagesRef.current.find((message) => message.id === id);
-      if (!held) return;
+      // One already handed to the CLI at an allow is on its way; there is nothing more to send.
+      if (!held || held.released) return;
       setHeldMessages((all) => all.filter((message) => message.id !== id));
       sendMessage(held.content, held.inputMode, undefined, held.attachments);
     },
     [sendMessage]
   );
 
-  const releaseHeldMessages = useCallback(async () => {
-    const all = heldMessagesRef.current;
-    if (all.length === 0) return;
-    setHeldMessages([]);
-    // In order, each one handed over before the next: the CLI reads its input in the order it arrives.
-    for (const held of all) {
-      await sendMessage(held.content, held.inputMode, undefined, held.attachments, undefined, true);
-    }
-  }, [sendMessage]);
+  const releaseHeldMessages = useCallback(
+    async (keepShown = false) => {
+      const all = heldMessagesRef.current.filter((held) => !held.released);
+      if (all.length === 0) return;
+      const ids = new Set(all.map((held) => held.id));
+      setHeldMessages((rest) =>
+        keepShown ? rest.map((held) => (ids.has(held.id) ? { ...held, released: true } : held)) : rest.filter((held) => !ids.has(held.id)),
+      );
+      // In order, each one handed over before the next: the CLI reads its input in the order it arrives.
+      for (const held of all) {
+        await sendMessage(held.content, held.inputMode, undefined, held.attachments, undefined, true, keepShown);
+      }
+    },
+    [sendMessage]
+  );
+
+  const dropReleasedHeldMessages = useCallback(() => {
+    const released = heldMessagesRef.current.filter((held) => held.released);
+    if (released.length === 0) return;
+    setHeldMessages((rest) => rest.filter((held) => !held.released));
+    released.forEach((held) => appendSentMessage(held.content, undefined, held.attachments));
+  }, [appendSentMessage]);
 
   // handleSubmit: convenience wrapper for form submission.
   // Reads input via inputRef so this callback stays stable across keystrokes
@@ -1038,6 +1059,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     heldMessages,
     sentWhileRunning,
     releaseHeldMessages,
+    dropReleasedHeldMessages,
     sendHeldMessage,
     restartTurnClock,
 
@@ -1120,6 +1142,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     heldMessages,
     sentWhileRunning,
     releaseHeldMessages,
+    dropReleasedHeldMessages,
     sendHeldMessage,
     restartTurnClock,
     tools,

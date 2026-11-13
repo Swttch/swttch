@@ -169,10 +169,11 @@ function ChatPageContent() {
   // What was written under the card goes out the moment the card is answered.
   // What was written under the card reaches the CLI before the card is answered, so the turn that goes on after
   // the answer already has it and answers it with the rest (the desktop app's order), not in a turn of its own.
-  // Only a denial does it at the click: the turn ends there, and the messages go with the answer. An allow leaves them
-  // held while the command runs; they are handed over when it has finished (see TranscriptArea).
-  const answerAfterHeld = (answer: () => void, releaseNow = false) => {
-    void (releaseNow ? releaseHeldMessages() : Promise.resolve()).finally(() => {
+  // An allow hands them to the CLI at the click but keeps drawing them where they are until the command has finished
+  // (see TranscriptArea), so the CLI reads them with the command's result and answers once, as the desktop app does.
+  // A denial ends the turn there, so they enter the chat with the answer.
+  const answerAfterHeld = (answer: () => void, denied = false) => {
+    void releaseHeldMessages(!denied).finally(() => {
       answer();
       // What follows the answer is a new stretch of work: its time and tokens are counted from here, as the
       // desktop app does ("Thinking", then "3.8s · 46 tokens"), not on top of the stretch that ended at the card.

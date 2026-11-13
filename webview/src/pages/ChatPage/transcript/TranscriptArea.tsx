@@ -1,4 +1,4 @@
-import { useMemo, useRef, type ReactNode } from 'react';
+import { useCallback, useMemo, useRef, type ReactNode } from 'react';
 import { withoutPeerSections } from './peerSections';
 import type { LoadedMessageDto } from '../../../types';
 import type { SessionSend } from '@/shared';
@@ -86,9 +86,25 @@ export function TranscriptArea(props: TranscriptAreaProps) {
   // Held under a card, they are handed over once the card is answered AND the call it held has finished (a denial
   // hands them over with the answer, in ChatPage): the desktop app keeps them held, with "Send now", while the
   // allowed command runs.
-  const { releaseHeldMessages } = useChatStreamContext();
-  const callRunning = useMemo(() => runningActivity(streamMessages) !== null, [streamMessages]);
-  useReleaseHeldMessages(awaitingInput || callRunning, releaseHeldMessages);
+  const { releaseHeldMessages, dropReleasedHeldMessages } = useChatStreamContext();
+  // A call is still running until its result has come back: in the stream the result is a message of its own after the
+  // call, not yet folded into the call.
+  const callRunning = useMemo(() => {
+    const activity = runningActivity(streamMessages);
+    if (!activity) return false;
+    return !streamMessages.some((message) => {
+      const content = message.message?.content;
+      return (
+        Array.isArray(content) &&
+        content.some((block) => (block as { type?: string }).type === 'tool_result' && (block as { tool_use_id?: string }).tool_use_id === activity.toolUseId)
+      );
+    });
+  }, [streamMessages]);
+  const settleHeldMessages = useCallback(async () => {
+    await releaseHeldMessages();
+    dropReleasedHeldMessages();
+  }, [releaseHeldMessages, dropReleasedHeldMessages]);
+  useReleaseHeldMessages(awaitingInput || callRunning, settleHeldMessages);
   const heldCall = useMemo(() => (awaitingInput && turnRunning ? runningActivity(streamMessages) : null), [awaitingInput, turnRunning, streamMessages]);
   const backgroundWorking = !isStreaming && !awaitingInput && useBackgroundTaskStart() !== null;
   const containerRef = useRef<HTMLDivElement>(null);
