@@ -23,20 +23,21 @@ object ClaudePanelRegistry {
     private val panels = CopyOnWriteArrayList<ClaudeCodePanel>()
     private val restartGate = RestartGate()
 
-    init {
-        wire()
-    }
-
     /**
      * Tells the backend service that [restart] is the function for every restart. The service is
-     * below this layer and cannot name it, so it keeps a slot that is filled here. Called from the
-     * first use of this object and again from project open, which is before any recovery can run.
+     * below this layer and cannot name it, so it keeps a slot that is filled here. Called from
+     * project open, which is before any recovery can run, and again whenever a panel registers.
+     *
+     * It must not run from this object's initializer: the platform refuses to create a service while
+     * a class is being initialized, and when the service does not exist yet (the plugin was just
+     * enabled in a running IDE) that refusal is reported as an error of this plugin (#682).
      */
     fun wire() {
         NodeBackendService.getInstance().restartFacade = ::restart
     }
 
     fun register(panel: ClaudeCodePanel) {
+        wire()
         panels.addIfAbsent(panel)
     }
 
