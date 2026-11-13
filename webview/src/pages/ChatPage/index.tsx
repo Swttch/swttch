@@ -139,7 +139,7 @@ function ChatPageContent() {
   const api = useApi();
   const onboarding = useOnboarding();
   const { currentSessionId, currentSession } = useSessionContext();
-  const { messages, isStreaming, error, disconnectCountdown, apiRetry, hasMoreOlder, oldestLoadedUuid, releaseHeldMessages } = useChatStreamContext();
+  const { messages, isStreaming, error, disconnectCountdown, apiRetry, hasMoreOlder, oldestLoadedUuid, releaseHeldMessages, restartTurnClock } = useChatStreamContext();
   // null is the chat released so far; a named view mode draws the transcript with its own code.
   const transcriptViewMode = useTranscriptViewMode();
   // The send index sits on the start edge in the transcript view modes, where user messages are on the end side,
@@ -172,7 +172,12 @@ function ChatPageContent() {
   // What was written under the card reaches the CLI before the card is answered, so the turn that goes on after
   // the answer already has it and answers it with the rest (the desktop app's order), not in a turn of its own.
   const answerAfterHeld = (answer: () => void) => {
-    void releaseHeldMessages().finally(answer);
+    void releaseHeldMessages().finally(() => {
+      answer();
+      // What follows the answer is a new stretch of work: its time and tokens are counted from here, as the
+      // desktop app does ("Thinking", then "3.8s · 46 tokens"), not on top of the stretch that ended at the card.
+      restartTurnClock();
+    });
   };
   /**
    * An approval prompt is standing in the composer's slot at the foot of the

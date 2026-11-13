@@ -127,6 +127,8 @@ interface ChatStreamContextType {
    * the answer to the message sent before it.
    */
   sentWhileRunning: SentWhileRunning[];
+  /** Count the running turn's time and written tokens from now (after a permission card was answered). */
+  restartTurnClock: () => void;
   /** Send every held message now, in the order they were written; settles when the backend has all of them. */
   releaseHeldMessages: () => Promise<void>;
   /** Send one held message now, ahead of the card's answer. */
@@ -353,6 +355,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   const {
     addUserMessage,
     appendSentMessage,
+    restartTurnClock,
     addCommandEcho,
     clearMessages: chatStreamClearMessages,
     loadMessages: chatStreamLoadMessages,
@@ -1036,6 +1039,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     sentWhileRunning,
     releaseHeldMessages,
     sendHeldMessage,
+    restartTurnClock,
 
     resetStreamState: chatStreamResetStreamState,
 
@@ -1117,6 +1121,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     sentWhileRunning,
     releaseHeldMessages,
     sendHeldMessage,
+    restartTurnClock,
     tools,
     diffs,
     isThinkingExpanded,

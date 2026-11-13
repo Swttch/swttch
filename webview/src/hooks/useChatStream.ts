@@ -129,6 +129,8 @@ export interface UseChatStreamReturn {
   addUserMessage: (content: string, context?: Context[], attachments?: Attachment[]) => void;
   /** Put a message sent while a turn was running into the chat, without beginning a turn. */
   appendSentMessage: (content: string, context?: Context[], attachments?: Attachment[]) => void;
+  /** Count the running turn's time and written tokens from now: what follows an answered permission card is a new stretch of work. */
+  restartTurnClock: () => void;
   /** Echo a command with no assistant turn — for control_request commands (#270). */
   addCommandEcho: (content: string) => void;
   clearMessages: () => void;
@@ -605,6 +607,11 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
 
   // A message sent while a turn was running goes into the chat only now, where the CLI took it up (#673):
   // no new turn is begun here, the turn that answers it begins by itself when the CLI starts it.
+  const restartTurnClock = useCallback(() => {
+    setTurnOutputTokens(0);
+    setTurnStartedAt(Date.now());
+  }, []);
+
   const appendSentMessage = useCallback((content: string, context?: Context[], attachments?: Attachment[]) => {
     if (!content.trim() && (!attachments || attachments.length === 0)) return;
     appendMessage(buildUserMessage(content, context, attachments), true);
@@ -1615,6 +1622,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     authDiagnosis,
     addUserMessage,
     appendSentMessage,
+    restartTurnClock,
     addCommandEcho,
     clearMessages,
     loadMessages,
