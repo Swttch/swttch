@@ -16,7 +16,7 @@ export interface CliControlRequestEvent {
     suppress_always_allow_rule?: boolean;
     /**
      * What the CLI proposes installing if the user answers "don't ask again": rule updates it
-     * built for this request (for a command, its prefix). Read through `sessionRulesFromSuggestions`.
+     * built for this request (for a command, its prefix). Read through `alwaysAllowFromSuggestions`.
      */
     permission_suggestions?: unknown;
     [key: string]: unknown;

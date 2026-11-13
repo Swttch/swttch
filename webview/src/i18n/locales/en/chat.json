@@ -399,7 +399,13 @@
       "allowOnce": "Allow once",
       "allowAndSwitchToAuto": "Allow and switch to Auto",
       "autoReviewsRest": "Auto reviews the rest of this session.",
-      "moreAllowOptions": "More allow options"
+      "moreAllowOptions": "More allow options",
+      "scope": {
+        "session": "Applies to this session only",
+        "project": "Saves to project settings",
+        "projectLocal": "Saves to local project settings",
+        "user": "Saves to user settings (all projects)"
+      }
     },
     "textareaPlaceholder": "Tell Claude what to do instead",
     "workflowNotice": "Dynamic workflows run many subagents in parallel and can use a lot of your usage limit. Stop them any time from the tasks panel.",

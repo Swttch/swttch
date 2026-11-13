@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useApi } from '@/contexts/ApiContext';
 import { getBridgeClient } from '@/api/bridge/BridgeClient';
 import type { CliControlRequestEvent } from '@/types';
-import { MessageType, sessionRulesFromSuggestions } from '@/shared';
+import { MessageType, alwaysAllowFromSuggestions } from '@/shared';
 import { useAllowAllCommands } from '@/contexts/AllowAllCommandsContext';
 import { useSessionContext } from '@/contexts/SessionContext';
 
@@ -22,7 +22,7 @@ export interface PendingPermission {
   suppressAlwaysAllowRule: boolean;
   /**
    * What the CLI suggested installing if the user says "don't ask again": `permission_suggestions`, as the
-   * CLI sent it. Read through {@link sessionRulesFromSuggestions}, never trusted as it stands.
+   * CLI sent it. Read through {@link alwaysAllowFromSuggestions}, never trusted as it stands.
    */
   suggestions?: unknown;
 }
@@ -73,7 +73,7 @@ interface UsePendingPermissionsReturn {
   approve: (controlRequestId: string) => void;
   approveForSession: (controlRequestId: string) => void;
   /**
-   * Approve and install the narrow rule the CLI suggested (see {@link sessionRulesFromSuggestions}), for this
+   * Approve and install the narrow rule the CLI suggested (see {@link alwaysAllowFromSuggestions}), for this
    * session. Approves just this once when there is no such rule, so an answer is never lost to a missing one.
    */
   approveAlways: (controlRequestId: string) => void;
@@ -209,7 +209,7 @@ export function usePendingPermissions(): UsePendingPermissionsReturn {
     if (!req) return;
 
     processedIdsRef.current.add(controlRequestId);
-    const rules = req.suppressAlwaysAllowRule ? undefined : sessionRulesFromSuggestions(req.toolName, req.suggestions);
+    const rules = req.suppressAlwaysAllowRule ? undefined : alwaysAllowFromSuggestions(req.toolName, req.suggestions);
     if (rules) api.tools.approveWithRules(req.toolUseId, rules, controlRequestId, req.input);
     else api.tools.approve(req.toolUseId, controlRequestId, req.input);
     setRequests(prev => prev.filter(r => r.controlRequestId !== controlRequestId));

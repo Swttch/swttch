@@ -395,7 +395,13 @@
       "allowOnce": "Permitir uma vez",
       "allowAndSwitchToAuto": "Permitir e mudar para Auto",
       "autoReviewsRest": "O modo Auto revisa o restante desta sessão.",
-      "moreAllowOptions": "Mais opções de permissão"
+      "moreAllowOptions": "Mais opções de permissão",
+      "scope": {
+        "session": "Aplica-se apenas a esta sessão",
+        "project": "Salva nas configurações do projeto",
+        "projectLocal": "Salva nas configurações locais do projeto",
+        "user": "Salva nas configurações do usuário (todos os projetos)"
+      }
     },
     "textareaPlaceholder": "Diga ao Claude o que fazer em vez disso",
     "workflowNotice": "Fluxos de trabalho dinâmicos executam muitos subagentes em paralelo e podem consumir boa parte do seu limite de uso. Pare-os a qualquer momento no painel de tarefas.",

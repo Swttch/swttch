@@ -5,7 +5,7 @@ import { useTranslation } from '@/i18n';
 import { Tooltip } from '@/components/Tooltip';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { InputModeValues } from '@/types/chatInput';
-import { sessionRulesFromSuggestions } from '@/shared';
+import { alwaysAllowFromSuggestions, alwaysAllowScope } from '@/shared';
 import type { TranscriptViewMode } from '@/types/settings';
 import type { PendingPermission } from '../../../hooks/usePendingPermissions';
 
@@ -57,7 +57,7 @@ export function DesktopPermissionCard(props: Props) {
 
   const alwaysAvailable =
     !permission.suppressAlwaysAllowRule &&
-    sessionRulesFromSuggestions(permission.toolName, permission.suggestions) !== undefined;
+    alwaysAllowFromSuggestions(permission.toolName, permission.suggestions) !== undefined;
 
   // Switching to Auto is offered from the modes that ask, and only where the CLI allows Auto at all.
   const canSwitchToAuto =
@@ -84,7 +84,13 @@ export function DesktopPermissionCard(props: Props) {
   }
 
   const primaryLabel = alwaysAvailable ? t('permissionBanner.card.alwaysAllow') : t('permissionBanner.card.allowOnce');
-  const primaryTitle = alwaysAvailable ? t('permissionBanner.card.alwaysAllowHint') : undefined;
+  // The hover line says where the rule is kept, as the desktop app's does ("Saves to local project settings").
+  const scope = alwaysAllowScope(permission.toolName, permission.suggestions);
+  const primaryTitle = alwaysAvailable
+    ? scope
+      ? t(`permissionBanner.card.scope.${scope}`)
+      : t('permissionBanner.card.alwaysAllowHint')
+    : undefined;
   const primaryAction = alwaysAvailable ? onApproveAlways : onApprove;
 
   // Keys, as the desktop app binds them: Esc denies, Cmd/Ctrl+Enter allows once, and with Shift allows
@@ -161,7 +167,7 @@ export function DesktopPermissionCard(props: Props) {
                 type="button"
                 data-testid="permission-primary"
                 onClick={primaryAction}
-                className={`px-[9px] text-[1rem] transition-opacity hover:opacity-90 ${
+                className={`px-[9px] text-[1rem] transition-colors hover:bg-black/[0.11] ${
                   menuItems.length > 0 ? 'rounded-s-[9px]' : 'rounded-[9px]'
                 }`}
               >
@@ -213,7 +219,7 @@ export function DesktopPermissionCard(props: Props) {
                   aria-haspopup="menu"
                   aria-expanded={menuOpen}
                   onClick={() => setMenuOpen((open) => !open)}
-                  className="flex items-center rounded-e-[9px] border-s border-black/20 px-[7.8px] transition-opacity hover:opacity-90"
+                  className="flex items-center rounded-e-[9px] border-s border-black/20 px-[7.8px] transition-colors hover:bg-black/[0.11]"
                 >
                   <ChevronDownIcon className="h-4 w-4" />
                 </button>

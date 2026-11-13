@@ -395,7 +395,13 @@
       "allowOnce": "一度だけ許可",
       "allowAndSwitchToAuto": "許可して Auto に切り替え",
       "autoReviewsRest": "このセッションの残りの操作は自動モードが確認します。",
-      "moreAllowOptions": "その他の許可オプション"
+      "moreAllowOptions": "その他の許可オプション",
+      "scope": {
+        "session": "このセッションのみに適用されます",
+        "project": "プロジェクト設定に保存されます",
+        "projectLocal": "ローカルプロジェクト設定に保存されます",
+        "user": "ユーザー設定に保存されます（すべてのプロジェクト）"
+      }
     },
     "textareaPlaceholder": "代わりにClaudeにしてほしいことを伝える",
     "workflowNotice": "動的ワークフローは多数のサブエージェントを並列実行し、使用量上限を大きく消費する場合があります。タスクパネルからいつでも停止できます。",

@@ -395,7 +395,13 @@
       "allowOnce": "僅允許一次",
       "allowAndSwitchToAuto": "允許並切換至 Auto",
       "autoReviewsRest": "Auto 會審查本工作階段的其餘操作。",
-      "moreAllowOptions": "更多允許選項"
+      "moreAllowOptions": "更多允許選項",
+      "scope": {
+        "session": "僅適用於此工作階段",
+        "project": "儲存到專案設定",
+        "projectLocal": "儲存到本機專案設定",
+        "user": "儲存到使用者設定（所有專案）"
+      }
     },
     "textareaPlaceholder": "告訴 Claude 該做些什麼",
     "workflowNotice": "動態工作流程會並行執行許多子代理程式，可能會消耗大量用量額度。您可以隨時從工作面板停止它們。",

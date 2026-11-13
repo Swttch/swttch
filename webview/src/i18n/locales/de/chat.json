@@ -395,7 +395,13 @@
       "allowOnce": "Einmal erlauben",
       "allowAndSwitchToAuto": "Erlauben und zu Auto wechseln",
       "autoReviewsRest": "Auto prüft den Rest dieser Sitzung.",
-      "moreAllowOptions": "Weitere Zulassungsoptionen"
+      "moreAllowOptions": "Weitere Zulassungsoptionen",
+      "scope": {
+        "session": "Gilt nur für diese Sitzung",
+        "project": "Wird in den Projekteinstellungen gespeichert",
+        "projectLocal": "Wird in den lokalen Projekteinstellungen gespeichert",
+        "user": "Wird in den Benutzereinstellungen gespeichert (alle Projekte)"
+      }
     },
     "textareaPlaceholder": "Sag Claude, was stattdessen getan werden soll",
     "workflowNotice": "Dynamische Workflows führen viele Subagenten parallel aus und können einen großen Teil deines Nutzungslimits verbrauchen. Stoppe sie jederzeit über das Aufgabenpanel.",

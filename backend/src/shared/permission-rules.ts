@@ -1,6 +1,6 @@
 /**
- * Session-scoped permission rules, as the CLI's permission protocol expresses
- * them.
+ * Permission rules (session-scoped ones, and the CLI's own suggested "always allow"), as the CLI's permission
+ * protocol expresses them.
  *
  * "Yes, allow all edits this session" used to be kept on our side: the webview
  * remembered a tool name in a React ref and silently auto-answered later
@@ -40,9 +40,30 @@ export interface PermissionUpdate {
   type: 'addRules';
   rules: PermissionRule[];
   behavior: 'allow';
-  /** `session` lasts for this CLI run and is written to no settings file. */
-  destination: 'session';
+  /**
+   * Where the rule lives. `session` lasts for this CLI run and is written to no settings file; the others are the
+   * settings files the CLI itself writes "don't ask again" rules to.
+   */
+  destination: PermissionDestination;
 }
+
+/** Where a permission rule can be installed, in the CLI's own words. */
+export type PermissionDestination = 'session' | 'localSettings' | 'projectSettings' | 'userSettings';
+
+const PERMISSION_DESTINATIONS: readonly string[] = ['session', 'localSettings', 'projectSettings', 'userSettings'];
+
+/**
+ * The words the desktop app uses for where an "always allow" is kept (its own names for the destinations):
+ * this session only, the project's settings, the project's local settings, the user's settings.
+ */
+export type PermissionScope = 'session' | 'project' | 'projectLocal' | 'user';
+
+const SCOPE_OF_DESTINATION: Record<PermissionDestination, PermissionScope> = {
+  session: 'session',
+  projectSettings: 'project',
+  localSettings: 'projectLocal',
+  userSettings: 'user',
+};
 
 /**
  * The rules to send when the user answers "yes, and stop asking this session".
@@ -81,8 +102,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * The rules to send when the user answers "allow, and don't ask again for this" on a request the CLI
  * made suggestions for (`permission_suggestions` on the `can_use_tool` request).
  *
- * The CLI proposes the narrow thing (for a command, its prefix), and the answer installs exactly that,
- * for this session only: whatever destination the suggestion named, it is written to no settings file.
+ * The CLI proposes the narrow thing (for a command, its prefix) and where to keep it (for a command, the
+ * project's local settings, which is where the terminal CLI writes its own "don't ask again"), and the answer
+ * installs exactly that, there. The desktop app does the same: its "Always allow" button says "Saves to local
+ * project settings" and the rule lands in `.claude/settings.local.json` (measured, 2026-11-14). A destination the
+ * suggestion does not name, or one that is not a known one, falls back to this session only, which writes to no file.
+ *
  * What is NOT installed is a rule for the whole tool. That is the other answer
  * ({@link buildSessionPermissionUpdate}), and a suggestion that names no content is not this one's to
  * widen into it.
@@ -90,23 +115,46 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * Undefined when nothing suggested qualifies, which is also the answer for a request the CLI made no
  * suggestions for: the caller then has no "always" to offer.
  */
-export function sessionRulesFromSuggestions(toolName: string, suggestions: unknown): PermissionUpdate[] | undefined {
+export function alwaysAllowFromSuggestions(toolName: string, suggestions: unknown): PermissionUpdate[] | undefined {
   if (!Array.isArray(suggestions)) return undefined;
 
-  const rules: PermissionRule[] = [];
+  const byDestination = new Map<PermissionDestination, PermissionRule[]>();
+  let count = 0;
   for (const suggestion of suggestions) {
     if (!isRecord(suggestion) || suggestion.type !== 'addRules' || suggestion.behavior !== 'allow') continue;
     if (!Array.isArray(suggestion.rules)) continue;
+    const destination: PermissionDestination =
+      typeof suggestion.destination === 'string' && PERMISSION_DESTINATIONS.includes(suggestion.destination)
+        ? (suggestion.destination as PermissionDestination)
+        : 'session';
     for (const rule of suggestion.rules) {
       if (!isRecord(rule) || rule.toolName !== toolName) continue;
       const content = rule.ruleContent;
       if (typeof content !== 'string' || !SUGGESTED_RULE_CONTENT.test(content) || !/[a-z0-9]/i.test(content)) continue;
-      if (rules.some((existing) => existing.ruleContent === content)) continue;
-      rules.push({ toolName, ruleContent: content });
-      if (rules.length >= MAX_SUGGESTED_RULES) break;
+      const kept = byDestination.get(destination) ?? [];
+      if ([...byDestination.values()].some((rules) => rules.some((existing) => existing.ruleContent === content))) continue;
+      kept.push({ toolName, ruleContent: content });
+      byDestination.set(destination, kept);
+      count += 1;
+      if (count >= MAX_SUGGESTED_RULES) break;
     }
-    if (rules.length >= MAX_SUGGESTED_RULES) break;
+    if (count >= MAX_SUGGESTED_RULES) break;
   }
 
-  return rules.length > 0 ? [{ type: 'addRules', rules, behavior: 'allow', destination: 'session' }] : undefined;
+  if (byDestination.size === 0) return undefined;
+  return [...byDestination.entries()].map(([destination, rules]) => ({
+    type: 'addRules' as const,
+    rules,
+    behavior: 'allow' as const,
+    destination,
+  }));
+}
+
+/**
+ * Where the "always allow" of this request would be kept, in the desktop app's words, for the line it shows on
+ * hover. Undefined when there is no "always allow" to offer.
+ */
+export function alwaysAllowScope(toolName: string, suggestions: unknown): PermissionScope | undefined {
+  const updates = alwaysAllowFromSuggestions(toolName, suggestions);
+  return updates ? SCOPE_OF_DESTINATION[updates[0].destination] : undefined;
 }
