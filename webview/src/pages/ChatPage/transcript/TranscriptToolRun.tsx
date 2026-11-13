@@ -11,6 +11,7 @@ import { HighlightedCode } from '../message-renderers/ToolRenderers/Mcp/Generic/
 import { useTranscriptViewMode } from '../message-renderers/transcriptViewMode';
 import { APP_EVENT_TOOL, type ToolCall } from './buildSegments';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
+import { useNow } from '@/hooks/useNow';
 import { useOptionalWorkflowState } from '@/contexts/WorkflowStateContext';
 import { ActivityGlyph, useActivityLabel, useFormatElapsed, useTurnSeconds } from './TranscriptActivity';
 import type { WorkingActivity } from './WorkingMark';
@@ -635,10 +636,35 @@ function NestedRequestRow({ call }: { call: ToolCall }) {
   return <TranscriptToolRow calls={[call]} defaultOpen={verbose} inBox={false} />;
 }
 
+/**
+ * The working indicator of an agent call whose task is running, for a chat that does not know its turn is running:
+ * one that was reloaded in the middle of it. The turn's own state is not restored on a reload, so the line over the
+ * call would sit still and look stopped, until the agent's answer arrived and "Thinking" started again. The task is
+ * running whether or not this screen watched it start, so the line says so the same way it did before the reload:
+ * the moving dots, the agent's name in the moving light, and the time it has been going (#673).
+ */
+export function useRunningAgentLive(calls: ToolCall[]): { label: string; elapsed: string; mark: WorkingActivity } | undefined {
+  const { t } = useTranslation('chat');
+  const workflow = useOptionalWorkflowState();
+  const formatElapsed = useFormatElapsed();
+  const running = calls
+    .map((call) => ({ call, task: toolKindOf(call) === 'agent' ? workflow?.getByToolUseId(call.toolUse.id) : undefined }))
+    .find((entry) => entry.task?.status === 'running' && entry.task.startedAt > 0);
+  const now = useNow(!!running);
+  if (!running || !running.task) return undefined;
+  return {
+    label: rowLabel(running.call, t).before || t('transcript.streaming.activity.agent'),
+    elapsed: formatElapsed(Math.max(0, Math.floor((now - running.task.startedAt) / 1000))),
+    mark: 'default',
+  };
+}
+
 /** One call: a line that opens to its details. */
-function TranscriptToolRow({ calls, defaultOpen, inBox, live }: { calls: ToolCall[]; defaultOpen: boolean; inBox: boolean; live?: { label: string; elapsed: string; mark: WorkingActivity } }) {
+function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive }: { calls: ToolCall[]; defaultOpen: boolean; inBox: boolean; live?: { label: string; elapsed: string; mark: WorkingActivity } }) {
   const { t } = useTranslation('chat');
   const call = calls[0];
+  const runningAgentLive = useRunningAgentLive(calls);
+  const live = turnLive ?? runningAgentLive;
   const [open, setOpen] = useState(defaultOpen);
   // A row already drawn follows the view it is drawn in: Verbose opens it, another view shuts it again.
   useEffect(() => setOpen(defaultOpen), [defaultOpen]);
@@ -725,6 +751,7 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
   const label = useActivityLabel();
   const formatElapsed = useFormatElapsed();
   const seconds = useTurnSeconds();
+  const runningAgentLive = useRunningAgentLive(calls);
   const pictures = picturesOfCalls(calls);
   const [openPicture, thumbnailViewer] = useThumbnailViewer();
 
@@ -769,6 +796,12 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
             <span className="me-2 flex"><ActivityGlyph activity={live.mark} /></span>
             <span className="min-w-0 truncate transcript-shimmer">{label(live)}</span>
             <span className="ms-2 me-1 flex-shrink-0">{formatElapsed(seconds)}</span>
+          </>
+        ) : runningAgentLive ? (
+          <>
+            <span className="me-2 flex"><ActivityGlyph activity={runningAgentLive.mark} /></span>
+            <span className="min-w-0 truncate transcript-shimmer">{runningAgentLive.label}</span>
+            <span className="ms-2 me-1 flex-shrink-0">{runningAgentLive.elapsed}</span>
           </>
         ) : (
           <>

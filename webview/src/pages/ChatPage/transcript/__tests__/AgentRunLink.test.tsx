@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import type { WorkflowTask } from '@/shared';
 import type { ToolCall } from '../buildSegments';
 
@@ -13,7 +13,8 @@ vi.mock('@/contexts/WorkflowStateContext', () => ({
     provided ? { getByToolUseId: (id: string) => tasks[id], openTranscript } : null,
 }));
 
-import { AgentRunLink } from '../TranscriptToolRun';
+import { AgentRunLink, useRunningAgentLive } from '../TranscriptToolRun';
+import { renderHook } from '@testing-library/react';
 
 function task(overrides: Partial<WorkflowTask> = {}): WorkflowTask {
   return { toolUseId: 'toolu_a', taskId: 'a1b2c3', name: 'agent', status: 'running', startedAt: 0, phases: [], agents: [], ...overrides };
@@ -107,5 +108,55 @@ describe('AgentRunLink', () => {
     tasks = { toolu_a: task() };
     render(<AgentRunLink call={callOf({ description: 'x' })} />);
     expect(screen.queryByTestId('agent-run-link')).not.toBeInTheDocument();
+  });
+});
+
+// A chat reloaded in the middle of an agent's run does not know its turn is running, so the line over the
+// call has to say it from the task: the moving dots, the name in the light, the time so far.
+describe('useRunningAgentLive', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000_000 + 21_000);
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it('says what a running agent task is doing and for how long, from the task alone', () => {
+    tasks = { toolu_a: task({ status: 'running', startedAt: 1_000_000 }) };
+    const { result } = renderHook(() => useRunningAgentLive([callOf({ description: 'Create directory' })]));
+
+    expect(result.current?.label).toBe('Create directory');
+    expect(result.current?.elapsed).toMatch(/21/);
+  });
+
+  it('says nothing for a task that is not running', () => {
+    tasks = { toolu_a: task({ status: 'completed', startedAt: 1_000_000 }) };
+    const { result } = renderHook(() => useRunningAgentLive([callOf({ description: 'x' })]));
+    expect(result.current).toBeUndefined();
+  });
+
+  it('says nothing for a call the app does not track, or where there is no provider', () => {
+    const untracked = renderHook(() => useRunningAgentLive([callOf({ description: 'x' })]));
+    expect(untracked.result.current).toBeUndefined();
+
+    provided = false;
+    tasks = { toolu_a: task({ status: 'running', startedAt: 1_000_000 }) };
+    const none = renderHook(() => useRunningAgentLive([callOf({ description: 'x' })]));
+    expect(none.result.current).toBeUndefined();
+  });
+
+  it('says nothing for a task whose start time is unknown, which would count from 1970', () => {
+    tasks = { toolu_a: task({ status: 'running', startedAt: 0 }) };
+    const { result } = renderHook(() => useRunningAgentLive([callOf({ description: 'x' })]));
+    expect(result.current).toBeUndefined();
+  });
+
+  it('keeps counting as the clock moves', () => {
+    tasks = { toolu_a: task({ status: 'running', startedAt: 1_000_000 }) };
+    const { result } = renderHook(() => useRunningAgentLive([callOf({ description: 'x' })]));
+    const first = result.current?.elapsed;
+
+    act(() => { vi.advanceTimersByTime(5000); });
+
+    expect(result.current?.elapsed).not.toBe(first);
   });
 });
