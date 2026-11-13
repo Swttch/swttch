@@ -386,6 +386,17 @@
     "setModelTo": "已將模型設為 {{model}}"
   },
   "permissionBanner": {
+    "card": {
+      "question": "允許 Claude {{action}}嗎？",
+      "actionRunCommand": "執行此指令",
+      "deny": "拒絕",
+      "alwaysAllow": "一律允許",
+      "alwaysAllowHint": "不再針對此工具詢問",
+      "allowOnce": "僅允許一次",
+      "allowAndSwitchToAuto": "允許並切換至 Auto",
+      "autoReviewsRest": "Auto 會審查本工作階段的其餘操作。",
+      "moreAllowOptions": "更多允許選項"
+    },
     "textareaPlaceholder": "告訴 Claude 該做些什麼",
     "workflowNotice": "動態工作流程會並行執行許多子代理程式，可能會消耗大量用量額度。您可以隨時從工作面板停止它們。",
     "yes": "是",
@@ -683,7 +694,8 @@
     "rewindFailed": "無法回溯程式碼"
   },
   "chatPage": {
-    "scrollToBottom": "捲動到底部"
+    "scrollToBottom": "捲動到底部",
+    "inputNeeded": "需要輸入"
   },
   "contextUsage": {
     "heading": "上下文使用情況",

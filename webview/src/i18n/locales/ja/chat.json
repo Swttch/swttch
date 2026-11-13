@@ -386,6 +386,17 @@
     "setModelTo": "モデルを {{model}} に設定"
   },
   "permissionBanner": {
+    "card": {
+      "question": "Claude が{{action}}ことを許可しますか？",
+      "actionRunCommand": "このコマンドを実行する",
+      "deny": "拒否",
+      "alwaysAllow": "常に許可",
+      "alwaysAllowHint": "このツールについて今後確認しない",
+      "allowOnce": "一度だけ許可",
+      "allowAndSwitchToAuto": "許可して Auto に切り替え",
+      "autoReviewsRest": "このセッションの残りの操作は自動モードが確認します。",
+      "moreAllowOptions": "その他の許可オプション"
+    },
     "textareaPlaceholder": "代わりにClaudeにしてほしいことを伝える",
     "workflowNotice": "動的ワークフローは多数のサブエージェントを並列実行し、使用量上限を大きく消費する場合があります。タスクパネルからいつでも停止できます。",
     "yes": "はい",
@@ -683,7 +694,8 @@
     "rewindFailed": "コードを巻き戻せませんでした"
   },
   "chatPage": {
-    "scrollToBottom": "一番下までスクロール"
+    "scrollToBottom": "一番下までスクロール",
+    "inputNeeded": "入力が必要です"
   },
   "contextUsage": {
     "heading": "コンテキスト使用状況",

@@ -8,6 +8,8 @@ import type { PendingPermission } from '../../../hooks/usePendingPermissions';
 let mockInputMode = 'ask_before_edit';
 vi.mock('../../../contexts/SessionContext', () => ({
   useSessionContext: () => ({ inputMode: mockInputMode, currentSessionId: 'session-1' }),
+  // Read by the view-mode hook, which finds no settings provider here and so draws the classic chat.
+  useSessionContextOrNull: () => null,
 }));
 
 let mockAllowAll = false;

@@ -386,6 +386,17 @@
     "setModelTo": "Modell auf {{model}} setzen"
   },
   "permissionBanner": {
+    "card": {
+      "question": "Darf Claude {{action}}?",
+      "actionRunCommand": "diesen Befehl auszuführen",
+      "deny": "Ablehnen",
+      "alwaysAllow": "Immer erlauben",
+      "alwaysAllowHint": "Für dieses Tool nicht mehr fragen",
+      "allowOnce": "Einmal erlauben",
+      "allowAndSwitchToAuto": "Erlauben und zu Auto wechseln",
+      "autoReviewsRest": "Auto prüft den Rest dieser Sitzung.",
+      "moreAllowOptions": "Weitere Zulassungsoptionen"
+    },
     "textareaPlaceholder": "Sag Claude, was stattdessen getan werden soll",
     "workflowNotice": "Dynamische Workflows führen viele Subagenten parallel aus und können einen großen Teil deines Nutzungslimits verbrauchen. Stoppe sie jederzeit über das Aufgabenpanel.",
     "yes": "Ja",
@@ -683,7 +694,8 @@
     "rewindFailed": "Code konnte nicht zurückgesetzt werden"
   },
   "chatPage": {
-    "scrollToBottom": "Nach unten scrollen"
+    "scrollToBottom": "Nach unten scrollen",
+    "inputNeeded": "Eingabe erforderlich"
   },
   "contextUsage": {
     "heading": "Kontextnutzung",

@@ -28,6 +28,11 @@ export const FILE_EDIT_TOOLS = ['Edit', 'Write', 'MultiEdit', 'NotebookEdit'] as
 /** A single rule in a permission update. */
 export interface PermissionRule {
   toolName: string;
+  /**
+   * What the rule narrows the tool to, in the CLI's own rule syntax (for Bash a command prefix such as
+   * `mkdir:*`). Absent means the whole tool.
+   */
+  ruleContent?: string;
 }
 
 /** One entry of the `updatedPermissions` array on an allow response. */
@@ -60,4 +65,48 @@ export function buildSessionPermissionUpdate(toolName: string): PermissionUpdate
     : [{ toolName }];
 
   return [{ type: 'addRules', rules, behavior: 'allow', destination: 'session' }];
+}
+
+/** How long, and of what, a suggested rule's content may be: printable ASCII, so nothing odd rides along. */
+const SUGGESTED_RULE_CONTENT = /^[ -~]{1,200}$/;
+
+/** The most suggested rules one answer installs. */
+const MAX_SUGGESTED_RULES = 5;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * The rules to send when the user answers "allow, and don't ask again for this" on a request the CLI
+ * made suggestions for (`permission_suggestions` on the `can_use_tool` request).
+ *
+ * The CLI proposes the narrow thing (for a command, its prefix), and the answer installs exactly that,
+ * for this session only: whatever destination the suggestion named, it is written to no settings file.
+ * What is NOT installed is a rule for the whole tool. That is the other answer
+ * ({@link buildSessionPermissionUpdate}), and a suggestion that names no content is not this one's to
+ * widen into it.
+ *
+ * Undefined when nothing suggested qualifies, which is also the answer for a request the CLI made no
+ * suggestions for: the caller then has no "always" to offer.
+ */
+export function sessionRulesFromSuggestions(toolName: string, suggestions: unknown): PermissionUpdate[] | undefined {
+  if (!Array.isArray(suggestions)) return undefined;
+
+  const rules: PermissionRule[] = [];
+  for (const suggestion of suggestions) {
+    if (!isRecord(suggestion) || suggestion.type !== 'addRules' || suggestion.behavior !== 'allow') continue;
+    if (!Array.isArray(suggestion.rules)) continue;
+    for (const rule of suggestion.rules) {
+      if (!isRecord(rule) || rule.toolName !== toolName) continue;
+      const content = rule.ruleContent;
+      if (typeof content !== 'string' || !SUGGESTED_RULE_CONTENT.test(content) || !/[a-z0-9]/i.test(content)) continue;
+      if (rules.some((existing) => existing.ruleContent === content)) continue;
+      rules.push({ toolName, ruleContent: content });
+      if (rules.length >= MAX_SUGGESTED_RULES) break;
+    }
+    if (rules.length >= MAX_SUGGESTED_RULES) break;
+  }
+
+  return rules.length > 0 ? [{ type: 'addRules', rules, behavior: 'allow', destination: 'session' }] : undefined;
 }

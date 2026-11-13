@@ -4,6 +4,8 @@ import { ApprovalPanel } from './ApprovalPanel';
 import { OptionItem } from './ApprovalPanel/OptionButton';
 import { TitleWithFileLink } from './PermissionBanner/TitleWithFileLink';
 import { permissionPreview, permissionSubtitle } from './PermissionBanner/PermissionPreview';
+import { DesktopPermissionCard, usesDesktopPermissionCard } from './PermissionBanner/DesktopPermissionCard';
+import { useTranscriptViewMode } from './message-renderers/transcriptViewMode';
 import { useChatStreamContext } from '../../contexts/ChatStreamContext';
 import { useOpenDiffReview } from '../../hooks/useOpenDiffReview';
 import { useAutoOpenDiffReview } from '../../hooks/useAutoOpenDiffReview';
@@ -20,6 +22,8 @@ interface Props {
   permission: PendingPermission;
   onApprove: () => void;
   onApproveForSession: () => void;
+  /** Approve and install the narrow rule the CLI suggested, for this session (the desktop card's "Always allow"). */
+  onApproveAlways?: () => void;
   onDeny: (reason?: string) => void;
   /**
    * Show the review as an overlay over this screen.
@@ -144,7 +148,8 @@ function titleParts(toolName: string, input: Record<string, unknown>): TitlePart
 }
 
 export function PermissionBanner(props: Props) {
-  const { permission, onApprove, onApproveForSession, onDeny, onOpenDiffOverlay } = props;
+  const { permission, onApprove, onApproveForSession, onApproveAlways, onDeny, onOpenDiffOverlay } = props;
+  const viewMode = useTranscriptViewMode();
   const { stop } = useChatStreamContext();
   const openDiffReview = useOpenDiffReview();
   const { t } = useTranslation('chat');
@@ -275,6 +280,21 @@ export function PermissionBanner(props: Props) {
    * The review now gets a window of its own on every host — an IDE editor tab,
    * a browser tab, or an overlay — and the file name above is the way in.
    */
+
+  // In the views that follow the desktop app, a command is asked about the way the desktop app asks (#673).
+  if (usesDesktopPermissionCard(permission.toolName, viewMode)) {
+    return (
+      <DesktopPermissionCard
+        permission={permission}
+        subtitle={subtitle}
+        preview={preview}
+        onApprove={onApprove}
+        onApproveAlways={onApproveAlways ?? onApprove}
+        onDeny={() => onDeny()}
+        onCancel={handleCancel}
+      />
+    );
+  }
 
   return (
     <ApprovalPanel

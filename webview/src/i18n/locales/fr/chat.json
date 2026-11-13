@@ -386,6 +386,17 @@
     "setModelTo": "Modèle défini sur {{model}}"
   },
   "permissionBanner": {
+    "card": {
+      "question": "Autoriser Claude à {{action}} ?",
+      "actionRunCommand": "exécuter cette commande",
+      "deny": "Refuser",
+      "alwaysAllow": "Toujours autoriser",
+      "alwaysAllowHint": "Ne plus demander pour cet outil",
+      "allowOnce": "Autoriser une fois",
+      "allowAndSwitchToAuto": "Autoriser et passer en mode Auto",
+      "autoReviewsRest": "Le mode Auto examine le reste de cette session.",
+      "moreAllowOptions": "Plus d’options d’autorisation"
+    },
     "textareaPlaceholder": "Dites à Claude quoi faire à la place",
     "workflowNotice": "Les workflows dynamiques exécutent de nombreux sous-agents en parallèle et peuvent consommer une grande partie de votre limite d'utilisation. Arrêtez-les à tout moment depuis le panneau des tâches.",
     "yes": "Oui",
@@ -683,7 +694,8 @@
     "rewindFailed": "Impossible de restaurer le code"
   },
   "chatPage": {
-    "scrollToBottom": "Défiler vers le bas"
+    "scrollToBottom": "Défiler vers le bas",
+    "inputNeeded": "Saisie requise"
   },
   "contextUsage": {
     "heading": "Utilisation du contexte",

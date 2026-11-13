@@ -390,6 +390,17 @@
     "setModelTo": "Set model to {{model}}"
   },
   "permissionBanner": {
+    "card": {
+      "question": "Allow Claude to {{action}}?",
+      "actionRunCommand": "run this command",
+      "deny": "Deny",
+      "alwaysAllow": "Always allow",
+      "alwaysAllowHint": "Don’t ask again for this tool",
+      "allowOnce": "Allow once",
+      "allowAndSwitchToAuto": "Allow and switch to Auto",
+      "autoReviewsRest": "Auto reviews the rest of this session.",
+      "moreAllowOptions": "More allow options"
+    },
     "textareaPlaceholder": "Tell Claude what to do instead",
     "workflowNotice": "Dynamic workflows run many subagents in parallel and can use a lot of your usage limit. Stop them any time from the tasks panel.",
     "yes": "Yes",
@@ -687,7 +698,8 @@
     "rewindFailed": "Could not rewind the code"
   },
   "chatPage": {
-    "scrollToBottom": "Scroll to bottom"
+    "scrollToBottom": "Scroll to bottom",
+    "inputNeeded": "Input needed"
   },
   "contextUsage": {
     "heading": "Context Usage",

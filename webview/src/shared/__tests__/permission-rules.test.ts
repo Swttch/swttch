@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSessionPermissionUpdate, FILE_EDIT_TOOLS } from '../permission-rules';
+import { buildSessionPermissionUpdate, FILE_EDIT_TOOLS, sessionRulesFromSuggestions } from '../permission-rules';
 
 /**
  * What "yes, and stop asking this session" installs (#393).
@@ -44,5 +44,64 @@ describe('buildSessionPermissionUpdate', () => {
   it('carries MCP tool names through untouched', () => {
     const [update] = buildSessionPermissionUpdate('mcp__playwright__click');
     expect(update.rules).toEqual([{ toolName: 'mcp__playwright__click' }]);
+  });
+});
+
+/**
+ * "Always allow" (#673): the narrow rule the CLI itself suggested, for this session only.
+ *
+ * It is not "allow every command", which is the other answer. What these guard is that the two
+ * never drift into each other: a suggestion that names no content must not widen into a whole-tool
+ * rule, and a suggestion's own destination must never decide where the rule is written.
+ */
+describe('sessionRulesFromSuggestions', () => {
+  const suggestion = (rules: Array<Record<string, unknown>>, destination = 'localSettings') => [
+    { type: 'addRules', rules, behavior: 'allow', destination },
+  ];
+
+  it('installs the rule the CLI suggested, for the session, whatever destination it named', () => {
+    const result = sessionRulesFromSuggestions(
+      'Bash',
+      suggestion([{ toolName: 'Bash', ruleContent: 'mkdir:*' }], 'localSettings'),
+    );
+
+    expect(result).toEqual([
+      { type: 'addRules', rules: [{ toolName: 'Bash', ruleContent: 'mkdir:*' }], behavior: 'allow', destination: 'session' },
+    ]);
+  });
+
+  it('does not turn a suggestion with no content into a rule for the whole tool', () => {
+    expect(sessionRulesFromSuggestions('Bash', suggestion([{ toolName: 'Bash' }]))).toBeUndefined();
+  });
+
+  it('ignores rules for other tools and suggestions that are not allow-rules', () => {
+    expect(sessionRulesFromSuggestions('Bash', suggestion([{ toolName: 'Read', ruleContent: '/tmp/*' }]))).toBeUndefined();
+    expect(
+      sessionRulesFromSuggestions('Bash', [
+        { type: 'addRules', rules: [{ toolName: 'Bash', ruleContent: 'rm:*' }], behavior: 'deny', destination: 'session' },
+        { type: 'setMode', mode: 'acceptEdits', destination: 'session' },
+      ]),
+    ).toBeUndefined();
+  });
+
+  it('refuses content that is not plain printable text, or has nothing readable in it', () => {
+    for (const ruleContent of ['', '  ', '**', 'cat\u0000x', 'café:*', 'x'.repeat(201)]) {
+      expect(sessionRulesFromSuggestions('Bash', suggestion([{ toolName: 'Bash', ruleContent }]))).toBeUndefined();
+    }
+  });
+
+  it('keeps several distinct rules, drops repeats, and stops at five', () => {
+    const many = Array.from({ length: 8 }, (_, i) => ({ toolName: 'Bash', ruleContent: `cmd${i}:*` }));
+    const result = sessionRulesFromSuggestions('Bash', suggestion([...many, many[0]]));
+    expect(result?.[0].rules).toHaveLength(5);
+
+    const repeated = sessionRulesFromSuggestions('Bash', suggestion([many[0], many[0], many[1]]));
+    expect(repeated?.[0].rules.map((r) => r.ruleContent)).toEqual(['cmd0:*', 'cmd1:*']);
+  });
+
+  it('is undefined for no suggestions, or for something that is not a list', () => {
+    for (const value of [undefined, null, [], 'x', 7, {}]) {
+      expect(sessionRulesFromSuggestions('Bash', value)).toBeUndefined();
+    }
   });
 });

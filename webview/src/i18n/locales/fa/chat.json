@@ -386,6 +386,17 @@
     "setModelTo": "مدل روی {{model}} تنظیم شد"
   },
   "permissionBanner": {
+    "card": {
+      "question": "به Claude اجازه می‌دهید {{action}}؟",
+      "actionRunCommand": "این دستور را اجرا کند",
+      "deny": "رد کردن",
+      "alwaysAllow": "همیشه مجاز",
+      "alwaysAllowHint": "دیگر برای این ابزار نپرس",
+      "allowOnce": "فقط یک‌بار مجاز",
+      "allowAndSwitchToAuto": "مجاز کردن و تغییر به Auto",
+      "autoReviewsRest": "حالت Auto بقیهٔ این نشست را بررسی می‌کند.",
+      "moreAllowOptions": "گزینه‌های بیشتر برای اجازه"
+    },
     "textareaPlaceholder": "به Claude بگویید به‌جای آن چه کاری انجام دهد",
     "workflowNotice": "جریان‌های کاری پویا چندین زیرایجنت را به‌طور موازی اجرا می‌کنند و ممکن است بخش زیادی از سقف مصرف شما را استفاده کنند. هر زمان از پنل کارها می‌توانید آن‌ها را متوقف کنید.",
     "yes": "بله",
@@ -683,7 +694,8 @@
     "rewindFailed": "بازگرداندن کد ممکن نشد"
   },
   "chatPage": {
-    "scrollToBottom": "پیمایش به پایین"
+    "scrollToBottom": "پیمایش به پایین",
+    "inputNeeded": "ورودی لازم است"
   },
   "contextUsage": {
     "heading": "استفاده از بافت",

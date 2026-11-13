@@ -1,6 +1,6 @@
 import { BridgeClient } from '../bridge/BridgeClient';
 import { PermissionType, RiskLevel, FileOperation } from '../../dto/common';
-import { MessageType, buildSessionPermissionUpdate, type Hunk, type AcceptedRange } from '@/shared';
+import { MessageType, buildSessionPermissionUpdate, type Hunk, type AcceptedRange, type PermissionUpdate } from '@/shared';
 
 interface DiffAvailablePayload {
   toolUseId: string;
@@ -81,6 +81,27 @@ export class ToolsApi {
       toolUseId,
       approved: true,
       updatedPermissions: buildSessionPermissionUpdate(toolName),
+      ...(controlRequestId && { controlRequestId }),
+      ...(updatedInput && { updatedInput }),
+    });
+  }
+
+  /**
+   * Approve this request AND install the given rules for the rest of the session.
+   *
+   * The sibling of {@link approveForSession} for the answer that installs what the CLI itself suggested
+   * (a command's prefix, say) rather than the whole tool: the caller built the rules, this sends them.
+   */
+  async approveWithRules(
+    toolUseId: string,
+    updatedPermissions: PermissionUpdate[],
+    controlRequestId?: string,
+    updatedInput?: Record<string, unknown>,
+  ): Promise<void> {
+    await this.bridge.request(MessageType.TOOL_RESPONSE, {
+      toolUseId,
+      approved: true,
+      updatedPermissions,
       ...(controlRequestId && { controlRequestId }),
       ...(updatedInput && { updatedInput }),
     });

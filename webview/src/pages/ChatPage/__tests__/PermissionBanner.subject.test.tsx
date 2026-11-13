@@ -9,6 +9,7 @@ import type { PendingPermission } from '../../../hooks/usePendingPermissions';
 // same way PermissionBanner.test.tsx does.
 vi.mock('../../../contexts/SessionContext', () => ({
   useSessionContext: () => ({ inputMode: 'ask_before_edit', currentSessionId: 'session-1' }),
+  useSessionContextOrNull: () => null,
 }));
 vi.mock('../../../contexts/AllowAllCommandsContext', () => ({
   useAllowAllCommands: () => ({

@@ -386,6 +386,17 @@
     "setModelTo": "Definir modelo como {{model}}"
   },
   "permissionBanner": {
+    "card": {
+      "question": "Permitir ao Claude {{action}}?",
+      "actionRunCommand": "executar este comando",
+      "deny": "Negar",
+      "alwaysAllow": "Sempre permitir",
+      "alwaysAllowHint": "Não perguntar novamente para esta ferramenta",
+      "allowOnce": "Permitir uma vez",
+      "allowAndSwitchToAuto": "Permitir e mudar para Auto",
+      "autoReviewsRest": "O modo Auto revisa o restante desta sessão.",
+      "moreAllowOptions": "Mais opções de permissão"
+    },
     "textareaPlaceholder": "Diga ao Claude o que fazer em vez disso",
     "workflowNotice": "Fluxos de trabalho dinâmicos executam muitos subagentes em paralelo e podem consumir boa parte do seu limite de uso. Pare-os a qualquer momento no painel de tarefas.",
     "yes": "Sim",
@@ -683,7 +694,8 @@
     "rewindFailed": "Não foi possível retroceder o código"
   },
   "chatPage": {
-    "scrollToBottom": "Rolar até o final"
+    "scrollToBottom": "Rolar até o final",
+    "inputNeeded": "Entrada necessária"
   },
   "contextUsage": {
     "heading": "Uso de contexto",

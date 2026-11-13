@@ -386,6 +386,17 @@
     "setModelTo": "已将模型设置为 {{model}}"
   },
   "permissionBanner": {
+    "card": {
+      "question": "允许 Claude {{action}}吗？",
+      "actionRunCommand": "运行此命令",
+      "deny": "拒绝",
+      "alwaysAllow": "始终允许",
+      "alwaysAllowHint": "不再针对此工具询问",
+      "allowOnce": "仅允许一次",
+      "allowAndSwitchToAuto": "允许并切换到 Auto",
+      "autoReviewsRest": "Auto 将审查本会话的其余操作。",
+      "moreAllowOptions": "更多允许选项"
+    },
     "textareaPlaceholder": "告诉 Claude 该做些什么",
     "workflowNotice": "动态工作流会并行运行多个子智能体,可能消耗大量用量额度。您可以随时从任务面板停止它们。",
     "yes": "是",
@@ -683,7 +694,8 @@
     "rewindFailed": "无法回退代码"
   },
   "chatPage": {
-    "scrollToBottom": "滚动到底部"
+    "scrollToBottom": "滚动到底部",
+    "inputNeeded": "需要输入"
   },
   "contextUsage": {
     "heading": "上下文使用情况",

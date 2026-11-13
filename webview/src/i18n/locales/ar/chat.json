@@ -394,6 +394,17 @@
     "setModelTo": "تعيين النموذج إلى {{model}}"
   },
   "permissionBanner": {
+    "card": {
+      "question": "هل تسمح لـ Claude بـ{{action}}؟",
+      "actionRunCommand": "تشغيل هذا الأمر",
+      "deny": "رفض",
+      "alwaysAllow": "السماح دائمًا",
+      "alwaysAllowHint": "عدم السؤال مرة أخرى لهذه الأداة",
+      "allowOnce": "السماح مرة واحدة",
+      "allowAndSwitchToAuto": "السماح والتبديل إلى Auto",
+      "autoReviewsRest": "سيراجع وضع Auto بقية هذه الجلسة.",
+      "moreAllowOptions": "خيارات سماح إضافية"
+    },
     "textareaPlaceholder": "أخبر Claude بما يجب فعله بدلًا من ذلك",
     "workflowNotice": "تُشغّل مهام سير العمل الديناميكية العديد من الوكلاء الفرعيين بالتوازي ويمكن أن تستهلك قدرًا كبيرًا من حد استخدامك. أوقفها في أي وقت من لوحة المهام.",
     "yes": "نعم",
@@ -699,7 +710,8 @@
     "rewindFailed": "تعذّر إرجاع الكود"
   },
   "chatPage": {
-    "scrollToBottom": "التمرير إلى الأسفل"
+    "scrollToBottom": "التمرير إلى الأسفل",
+    "inputNeeded": "مطلوب إدخال"
   },
   "contextUsage": {
     "heading": "استخدام السياق",

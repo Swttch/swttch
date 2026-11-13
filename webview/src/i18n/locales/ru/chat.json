@@ -390,6 +390,17 @@
     "setModelTo": "Модель изменена на {{model}}"
   },
   "permissionBanner": {
+    "card": {
+      "question": "Разрешить Claude {{action}}?",
+      "actionRunCommand": "выполнить эту команду",
+      "deny": "Отклонить",
+      "alwaysAllow": "Всегда разрешать",
+      "alwaysAllowHint": "Больше не спрашивать для этого инструмента",
+      "allowOnce": "Разрешить один раз",
+      "allowAndSwitchToAuto": "Разрешить и переключить на Auto",
+      "autoReviewsRest": "Auto проверит остаток этой сессии.",
+      "moreAllowOptions": "Другие варианты разрешения"
+    },
     "textareaPlaceholder": "Скажите Claude, что делать вместо этого",
     "workflowNotice": "Динамические рабочие процессы запускают множество субагентов параллельно и могут значительно расходовать лимит использования. Их можно остановить в любой момент на панели задач.",
     "yes": "Да",
@@ -691,7 +702,8 @@
     "rewindFailed": "Не удалось откатить код"
   },
   "chatPage": {
-    "scrollToBottom": "Прокрутить вниз"
+    "scrollToBottom": "Прокрутить вниз",
+    "inputNeeded": "Требуется ввод"
   },
   "contextUsage": {
     "heading": "Использование контекста",
