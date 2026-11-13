@@ -137,10 +137,10 @@ export function DesktopPermissionCard(props: Props) {
     );
 
   return (
-    <div className="w-full max-w-[var(--chat-column-max,44rem)] mx-auto px-4 sm:px-[var(--chat-column-px,1rem)] pb-2 pt-2 shrink-0 flex flex-col">
+    <div className="w-full max-w-[var(--chat-column-max,44rem)] mx-auto px-4 sm:px-[var(--chat-column-px,1rem)] pb-2 pt-4 shrink-0 flex flex-col">
       <div
         data-testid="desktop-permission-card"
-        className="rounded-xl border border-border-default bg-surface-base flex flex-col"
+        className="w-full max-w-[30rem] rounded-xl border border-border-default bg-surface-base flex flex-col"
       >
         <div className="px-4 py-4 rounded-t-xl bg-surface-raised text-[1rem] text-text-primary">{question}</div>
 
