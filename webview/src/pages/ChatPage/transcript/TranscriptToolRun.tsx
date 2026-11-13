@@ -72,7 +72,7 @@ function LineStatsView({ stats }: { stats: LineStats }) {
 function Chevron({ open }: { open: boolean }) {
   return (
     <ChevronRightIcon
-      className={`w-4 h-4 flex-shrink-0 transition-transform rtl:-scale-x-100 ${open ? 'rotate-90 rtl:-rotate-90' : ''}`}
+      className={`-ms-1.5 w-4 h-4 flex-shrink-0 transition-transform rtl:-scale-x-100 ${open ? 'rotate-90 rtl:-rotate-90' : ''}`}
     />
   );
 }
@@ -685,7 +685,7 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive }: { call
         type="button"
         aria-expanded={open}
         onClick={() => expandable && setOpen((v) => !v)}
-        className={`flex w-full items-center gap-2.5 ${inBox ? 'px-3' : ''} py-[10px] text-start text-[0.9375rem] transition-colors ${SUMMARY_TEXT} ${running ? 'animate-pulse' : ''}`}
+        className={`flex w-full items-center gap-2.5 ${inBox ? 'px-3' : ''} py-[10px] text-start text-[0.9656rem] transition-colors ${SUMMARY_TEXT} ${running ? 'animate-pulse' : ''}`}
       >
         {live ? (
           <>
@@ -789,7 +789,7 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
         type="button"
         aria-expanded={open}
         onClick={toggle}
-        className={`flex w-full items-center gap-1 py-2 text-start text-[0.9375rem] transition-colors ${SUMMARY_TEXT}`}
+        className={`flex w-full items-center gap-1 py-2 text-start text-[0.9656rem] transition-colors ${SUMMARY_TEXT}`}
       >
         {active && live ? (
           <>

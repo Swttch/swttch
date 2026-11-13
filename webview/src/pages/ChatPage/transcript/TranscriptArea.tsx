@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, type ReactNode } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { withoutPeerSections } from './peerSections';
 import type { LoadedMessageDto } from '../../../types';
 import type { SessionSend } from '@/shared';
@@ -90,6 +90,12 @@ export function TranscriptArea(props: TranscriptAreaProps) {
   const { releaseHeldMessages, dropReleasedHeldMessages, heldMessages } = useChatStreamContext();
   // A call is still running until its result has come back: in the stream the result is a message of its own after the
   // call, not yet folded into the call.
+  // The model has begun writing its answer after the calls: the newest entry is its text.
+  const replyStarted = useMemo(() => {
+    const last = streamMessages[streamMessages.length - 1];
+    const content = last?.type === 'assistant' ? last.message?.content : undefined;
+    return Array.isArray(content) && content.some((block) => (block as { type?: string; text?: string }).type === 'text' && Boolean((block as { text?: string }).text?.trim()));
+  }, [streamMessages]);
   const callRunning = useMemo(() => {
     const activity = runningActivity(streamMessages);
     if (!activity) return false;
@@ -109,6 +115,23 @@ export function TranscriptArea(props: TranscriptAreaProps) {
   const heldCall = useMemo(() => (awaitingInput && turnRunning ? runningActivity(streamMessages) : null), [awaitingInput, turnRunning, streamMessages]);
   const backgroundWorking = !isStreaming && !awaitingInput && useBackgroundTaskStart() !== null;
   const containerRef = useRef<HTMLDivElement>(null);
+  // Whether the newest message's section has drawn nothing under it yet, so that the working line stands right under
+  // a message bubble (it is then 15px closer, as the desktop app's is). Read from the screen: what a section has
+  // drawn is not told by its entries, an entry can draw nothing.
+  const lastBodyRef = useRef<HTMLDivElement | null>(null);
+  const [afterBubble, setAfterBubble] = useState(false);
+  useLayoutEffect(() => {
+    const el = lastBodyRef.current;
+    if (!el) {
+      setAfterBubble(false);
+      return;
+    }
+    const measure = () => setAfterBubble((el.textContent ?? '').trim() === '' && !el.querySelector('img, svg, pre, table'));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  });
 
   const fold = useSectionFold();
   const sendActions = useSendActions(mergedMessages);
@@ -188,7 +211,7 @@ export function TranscriptArea(props: TranscriptAreaProps) {
                 )}
                 {/* Sent while the card holds the turn: right after the latest message, above the calls still running, as in the desktop app. */}
                 {awaitingInput && sectionIndex === sections.length - 1 && <TranscriptHeldMessages />}
-                <div data-section-body data-after-send={section.head ? '' : undefined} className={`${section.body.length > 0 ? 'pt-[3px] ' : ''}${sectionIndex < sections.length - 1 ? (section.body.length > 0 ? 'pb-[29.7px]' : 'pb-[13px]') : isStreaming || awaitingInput || backgroundWorking ? 'pb-0' : 'pb-[54px]'}`}>
+                <div ref={sectionIndex === sections.length - 1 ? lastBodyRef : undefined} data-section-body data-after-send={section.head ? '' : undefined} className={`${section.body.length > 0 ? 'pt-[3px] ' : ''}${sectionIndex < sections.length - 1 ? (section.body.length > 0 ? 'pb-[35.5px]' : 'pb-[13px]') : isStreaming || awaitingInput || backgroundWorking ? 'pb-0' : 'pb-[54px]'}`}>
                   <TranscriptBody body={section.body} mergedMessages={mergedMessages} onRetry={onRetry} turnRunning={isStreaming && sectionIndex === sections.length - 1} />
                   {/* The turn's wrap-up is drawn here, after its last message, not where its call sits: a recap as text until the closing message begins, then the question and its answers. */}
                   <TranscriptWrapUp body={section.body} next={sections[sectionIndex + 1]?.head ?? null} />
@@ -210,7 +233,7 @@ export function TranscriptArea(props: TranscriptAreaProps) {
       {/* While a call is being waited on, the run of calls that holds it is the working indicator (see TranscriptToolRun); this line is for the rest of the turn, when the model thinks or writes. A dropped connection and the CLI's retries still say so here. */}
       {isStreaming && (waitedCall === null || disconnectCountdown !== null || apiRetry !== null) && (
         <div>
-          <TranscriptStreamingIndicator countdownSeconds={disconnectCountdown} apiRetry={apiRetry} />
+          <TranscriptStreamingIndicator countdownSeconds={disconnectCountdown} apiRetry={apiRetry} replyStarted={replyStarted} afterBubble={afterBubble} />
         </div>
       )}
       {awaitingInput && turnRunning && heldCall === null && (

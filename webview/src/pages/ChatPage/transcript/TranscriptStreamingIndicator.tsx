@@ -16,9 +16,15 @@ import { formatTokenCount } from './streamingActivity';
 export function TranscriptStreamingIndicator({
   countdownSeconds = null,
   apiRetry = null,
+  replyStarted = false,
+  afterBubble = false,
 }: {
   countdownSeconds?: number | null;
   apiRetry?: { attempt: number; max: number } | null;
+  /** The model has begun writing its answer under the line: the line then carries the time as well ("25s · 71 tokens"). */
+  replyStarted?: boolean;
+  /** The line stands right under a message bubble: the desktop app's is 15px closer to it than under other lines. */
+  afterBubble?: boolean;
 }) {
   const { t } = useTranslation('chat');
   const seconds = useTurnSeconds();
@@ -30,13 +36,15 @@ export function TranscriptStreamingIndicator({
   }
 
   return (
-    <div className="flex items-center gap-2.5 px-4 py-[17px] text-[0.9375rem] text-[var(--tr-muted)]" role="status" data-transcript-streaming>
+    <div className={`flex items-center gap-2.5 px-4 py-[17px] text-[0.9375rem] text-[var(--tr-muted)]${afterBubble ? ' -mt-[17.4px]' : ''}`} role="status" data-transcript-streaming>
       <ActivityGlyph />
       <span>
         {turnOutputTokens > 0 ? (
+          // Measured on the desktop app: the tokens alone while the model thinks, and once it writes its answer the time
+          // first, then the tokens ("25초 · 71 토큰").
           <>
+            {replyStarted && <span className="me-1.5">{formatElapsed(seconds)} ·</span>}
             <span className="transcript-shimmer">{t('transcript.streaming.tokens', { count: formatTokenCount(turnOutputTokens) })}</span>
-            <span className="ms-2">{formatElapsed(seconds)}</span>
           </>
         ) : (
           <>

@@ -175,9 +175,10 @@ function ChatPageContent() {
   const answerAfterHeld = (answer: () => void, denied = false) => {
     void releaseHeldMessages(!denied).finally(() => {
       answer();
-      // What follows the answer is a new stretch of work: its time and tokens are counted from here, as the
-      // desktop app does ("Thinking", then "3.8s · 46 tokens"), not on top of the stretch that ended at the card.
-      restartTurnClock();
+      // After a denial what follows is a new stretch of work: its time and tokens are counted from here, as the
+      // desktop app does ("Thinking", then "3.8s · 46 tokens"). After an allow the same stretch goes on: the
+      // desktop app's line says "36 tokens" straight after the click and "71 tokens" at the end.
+      if (denied) restartTurnClock();
     });
   };
   /**
