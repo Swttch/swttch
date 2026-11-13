@@ -711,7 +711,8 @@
   },
   "chatPage": {
     "scrollToBottom": "التمرير إلى الأسفل",
-    "inputNeeded": "مطلوب إدخال"
+    "inputNeeded": "مطلوب إدخال",
+    "sendHeldNow": "أرسل الآن"
   },
   "contextUsage": {
     "heading": "استخدام السياق",

@@ -107,6 +107,7 @@ import { insertNewlineAtCursor } from './RichInput/insertNewlineAtCursor';
 import { TelemetryConsentBanner } from '../TelemetryConsentBanner';
 import { InputBanner } from '../InputBanner';
 import { QueuedMessagesStack } from './QueuedMessagesStack';
+import { runningActivity } from '../transcript/streamingActivity';
 import { AnnouncementInputBannerSlot } from '@/components/Announcements/placements';
 import {
   useTelemetryConsent,
@@ -133,7 +134,16 @@ interface NativeDropEntry {
   type: 'file' | 'folder';
 }
 
-export function ChatInput() {
+interface ChatInputProps {
+  /**
+   * A permission card waits under the conversation. When a call of the running turn is the one it holds, a message
+   * sent now could not be picked up before the card is answered: it is kept in the queue, as the desktop app does,
+   * and drawn in the conversation under the card instead of stacked above the composer.
+   */
+  cardWaiting?: boolean;
+}
+
+export function ChatInput({ cardWaiting = false }: ChatInputProps = {}) {
   const { t } = useTranslation('chat');
   // The library's own strings live in the common namespace, and the delete
   // question must read the same here as it does inside the library.
@@ -143,6 +153,8 @@ export function ChatInput() {
   const chatStream = useChatStreamContext();
   const onboarding = useOnboarding();
   const { handleSubmit: onSubmit, isStreaming, stop: onStop, queuedMessages, cancelQueuedMessage, mergeQueuedMessages, moveQueuedMessage, steerQueuedMessage } = chatStream;
+  const queueWhileWaiting = cardWaiting && runningActivity(chatStream.messages) !== null;
+  const queueInChat = cardWaiting;
   const { input: value, setInput: onChange, setComposerHasContent } = useChatInputState();
   const inputHistory = useInputHistory({ workingDirectory, sessionId: currentSessionId });
   const { pushToHistory, navigateUp, navigateDown, resetHistory } = inputHistory;
@@ -677,7 +689,7 @@ export function ChatInput() {
 
     pushToHistory(value);
 
-    onSubmit(undefined, mode, attachments.length > 0 ? attachments : undefined, invertFollowUp);
+    onSubmit(undefined, mode, attachments.length > 0 ? attachments : undefined, invertFollowUp, queueWhileWaiting);
     clearAttachments();
     setPathTokens([]);
   }, [
@@ -694,6 +706,7 @@ export function ChatInput() {
     sendMessage,
     onChange,
     onSubmit,
+    queueWhileWaiting,
     clearAttachments,
   ]);
 
@@ -1404,7 +1417,7 @@ export function ChatInput() {
           setting). Drawn exactly as ChatStreamContext.queuedMessages reports
           it — this component holds nothing of its own. */}
       <QueuedMessagesStack
-        messages={queuedMessages}
+        messages={queueInChat ? [] : queuedMessages}
         onCancel={cancelQueuedMessage}
         onSteer={steerQueuedMessage}
         onMerge={mergeQueuedMessages}

@@ -695,7 +695,8 @@
   },
   "chatPage": {
     "scrollToBottom": "Desplazarse al final",
-    "inputNeeded": "Se necesita tu respuesta"
+    "inputNeeded": "Se necesita tu respuesta",
+    "sendHeldNow": "Enviar ahora"
   },
   "contextUsage": {
     "heading": "Uso del contexto",

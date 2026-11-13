@@ -484,6 +484,19 @@ function ChatPageContent() {
         ) : (
           <TranscriptArea
             isStreaming={isStreaming && !isAwaitingUser}
+            awaitingInput={cardWaiting}
+            trailing={
+              cardWaiting && pendingPermission ? (
+                <PermissionBanner
+                  permission={pendingPermission}
+                  onApprove={() => approvePermission(pendingPermission.controlRequestId)}
+                  onApproveForSession={() => approveForSession(pendingPermission.controlRequestId)}
+                  onApproveAlways={() => approveAlways(pendingPermission.controlRequestId)}
+                  onDeny={(reason) => denyPermission(pendingPermission.controlRequestId, reason)}
+                  onOpenDiffOverlay={setDiffOverlayToolUseId}
+                />
+              ) : null
+            }
             disconnectCountdown={disconnectCountdown}
             apiRetry={apiRetry}
             mergedMessages={mergedMessages}
@@ -493,19 +506,6 @@ function ChatPageContent() {
             isLoadingMore={isLoadingMore}
             onLoadMore={loadMore}
             findInChat={findInChat}
-          />
-        )}
-
-        {/* In the conversation, not pinned over it: it scrolls away with the messages, and the "scroll to
-            bottom" pill below says an answer is needed while it is out of sight. */}
-        {cardWaiting && pendingPermission && (
-          <PermissionBanner
-            permission={pendingPermission}
-            onApprove={() => approvePermission(pendingPermission.controlRequestId)}
-            onApproveForSession={() => approveForSession(pendingPermission.controlRequestId)}
-            onApproveAlways={() => approveAlways(pendingPermission.controlRequestId)}
-            onDeny={(reason) => denyPermission(pendingPermission.controlRequestId, reason)}
-            onOpenDiffOverlay={setDiffOverlayToolUseId}
           />
         )}
 
@@ -562,7 +562,7 @@ function ChatPageContent() {
                    and the composer stays where it is: what is typed there is an ordinary message and does not
                    answer the card (#673). */
                 <div>
-                  <ChatInput />
+                  <ChatInput cardWaiting />
                 </div>
               ) : (
                 <PermissionBanner

@@ -75,7 +75,7 @@ interface ChatStreamContextType {
    * this one message — the derived key described in {@link invertedOf}. The
    * setting is not touched, so the next message follows it again.
    */
-  handleSubmit: (e: React.FormEvent | undefined, inputMode: InputMode, attachments?: Attachment[], invertFollowUp?: boolean) => void;
+  handleSubmit: (e: React.FormEvent | undefined, inputMode: InputMode, attachments?: Attachment[], invertFollowUp?: boolean, forceQueue?: boolean) => void;
   /** Run a slash command the CLI only accepts as a control_request (#270). */
   runControlRequestCommand: (command: string, inputMode: InputMode) => void;
   stop: () => void;
@@ -834,7 +834,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   // Reads input via inputRef so this callback stays stable across keystrokes
   // — otherwise every key press would invalidate contextValue.
   const handleSubmit = useCallback(
-    (e: React.FormEvent | undefined, inputMode: InputMode, attachments?: Attachment[], invertFollowUp = false) => {
+    (e: React.FormEvent | undefined, inputMode: InputMode, attachments?: Attachment[], invertFollowUp = false, forceQueue = false) => {
       if (e) e.preventDefault();
       const typedInput = inputRef.current.trim();
       if (!typedInput && (!attachments || attachments.length === 0) && getPendingElements().length === 0 && getPendingReplies().length === 0) return;
@@ -870,7 +870,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
       // message goes back to whichever behavior is configured.
       const chosen = resolveFollowUpBehavior(appSettings);
       const behavior = invertFollowUp ? invertFollowUpBehavior(chosen) : chosen;
-      if (chatStream.isStreaming && behavior === FollowUpBehavior.Queue) {
+      if (chatStream.isStreaming && (forceQueue || behavior === FollowUpBehavior.Queue)) {
         queueMessage(trimmedInput, attachments);
         setInput('');
         return;

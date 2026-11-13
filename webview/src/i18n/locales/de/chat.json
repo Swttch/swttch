@@ -695,7 +695,8 @@
   },
   "chatPage": {
     "scrollToBottom": "Nach unten scrollen",
-    "inputNeeded": "Eingabe erforderlich"
+    "inputNeeded": "Eingabe erforderlich",
+    "sendHeldNow": "Jetzt senden"
   },
   "contextUsage": {
     "heading": "Kontextnutzung",

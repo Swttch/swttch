@@ -703,7 +703,8 @@
   },
   "chatPage": {
     "scrollToBottom": "Прокрутить вниз",
-    "inputNeeded": "Требуется ввод"
+    "inputNeeded": "Требуется ввод",
+    "sendHeldNow": "Отправить сейчас"
   },
   "contextUsage": {
     "heading": "Использование контекста",

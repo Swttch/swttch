@@ -695,7 +695,8 @@
   },
   "chatPage": {
     "scrollToBottom": "捲動到底部",
-    "inputNeeded": "需要輸入"
+    "inputNeeded": "需要輸入",
+    "sendHeldNow": "立即傳送"
   },
   "contextUsage": {
     "heading": "上下文使用情況",

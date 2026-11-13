@@ -695,7 +695,8 @@
   },
   "chatPage": {
     "scrollToBottom": "맨 아래로 스크롤",
-    "inputNeeded": "입력이 필요합니다"
+    "inputNeeded": "입력이 필요합니다",
+    "sendHeldNow": "지금 보내기"
   },
   "contextUsage": {
     "heading": "컨텍스트 사용량",

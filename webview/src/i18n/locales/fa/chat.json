@@ -695,7 +695,8 @@
   },
   "chatPage": {
     "scrollToBottom": "پیمایش به پایین",
-    "inputNeeded": "ورودی لازم است"
+    "inputNeeded": "ورودی لازم است",
+    "sendHeldNow": "همین حالا ارسال کن"
   },
   "contextUsage": {
     "heading": "استفاده از بافت",

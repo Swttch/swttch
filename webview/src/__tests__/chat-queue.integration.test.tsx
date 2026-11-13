@@ -126,6 +126,13 @@ function TestChatComponent() {
       >
         Send inverted
       </button>
+      {/* A turn held by a permission card: the message cannot be read until the card is answered. */}
+      <button
+        data-testid="submit-held"
+        onClick={() => ctx.handleSubmit(undefined, 'ask_before_edit', undefined, false, true)}
+      >
+        Send held
+      </button>
       {ctx.queuedMessages.map(m => (
         <button key={m.id} data-testid={`cancel-${m.id}`} onClick={() => ctx.cancelQueuedMessage(m.id)}>
           Cancel {m.content}
@@ -223,6 +230,27 @@ describe('queued follow-up message integration', () => {
     });
     expect(mockBridge.send.mock.calls.some(call => call[0] === MessageType.QUEUE_MESSAGE)).toBe(false);
     expect(screen.getByTestId('queue-count')).toHaveTextContent('0');
+  });
+
+  // #673: while a permission card holds the running turn, the CLI cannot read what is sent, so even in the
+  // default (steer) behavior the message is kept in the queue, as the desktop app does.
+  it('queues a mid-turn message in steer mode when a permission card holds the turn', async () => {
+    composerFollowUpBehavior = null;
+    render(<TestWrapper><TestChatComponent /></TestWrapper>);
+    await startStreaming();
+
+    await act(async () => {
+      fireEvent.change(screen.getByTestId('input'), { target: { value: 'while waiting' } });
+      fireEvent.click(screen.getByTestId('submit-held'));
+    });
+
+    await waitFor(() => {
+      expect(mockBridge.send).toHaveBeenCalledWith(MessageType.QUEUE_MESSAGE, expect.objectContaining({
+        sessionId: 'queue-session',
+        content: 'while waiting',
+      }));
+    });
+    expect(mockBridge.send.mock.calls.some(call => call[0] === MessageType.SEND_MESSAGE && call[1]?.content === 'while waiting')).toBe(false);
   });
 
   // The setting's description promises a key that does the opposite for one

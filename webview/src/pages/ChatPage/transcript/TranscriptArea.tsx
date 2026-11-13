@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, type ReactNode } from 'react';
 import { withoutPeerSections } from './peerSections';
 import type { LoadedMessageDto } from '../../../types';
 import type { SessionSend } from '@/shared';
@@ -8,6 +8,8 @@ import { useSessionContext } from '../../../contexts/SessionContext';
 import { useChatStreamContext } from '../../../contexts/ChatStreamContext';
 import { StreamErrorBanner } from '../StreamErrorBanner';
 import { TranscriptStreamingIndicator } from './TranscriptStreamingIndicator';
+import { TranscriptAwaitingInput } from './TranscriptAwaitingInput';
+import { TranscriptHeldMessages } from './TranscriptHeldMessages';
 import { runningActivity } from './streamingActivity';
 import { EmptyState } from '../EmptyState';
 import { isJetBrains } from '@/config/environment';
@@ -38,6 +40,10 @@ const LOADED_ONLY: ChatSearchSource = {
 /** The same props as `ChatMessageArea`: `ChatPage` hands one of the two the same thing. */
 export interface TranscriptAreaProps {
   isStreaming: boolean;
+  /** A permission card waits for the person: while a turn runs and no call of its own holds it, the line says so. */
+  awaitingInput?: boolean;
+  /** Drawn last, in the conversation itself: the permission card, which scrolls away with the messages. */
+  trailing?: ReactNode;
   /** Seconds left before a dropped connection ends the turn; null while connected. */
   disconnectCountdown?: number | null;
   /** The CLI's retry progress; null when not retrying. */
@@ -69,11 +75,12 @@ export interface TranscriptAreaProps {
  */
 export function TranscriptArea(props: TranscriptAreaProps) {
   const { t } = useTranslation('chat');
-  const { isStreaming, disconnectCountdown = null, apiRetry = null, mergedMessages, hasMore, isLoadingMore, onLoadMore, findInChat = LOADED_ONLY } = props;
+  const { isStreaming, awaitingInput = false, trailing = null, disconnectCountdown = null, apiRetry = null, mergedMessages, hasMore, isLoadingMore, onLoadMore, findInChat = LOADED_ONLY } = props;
   const sections = useMemo(() => withoutPeerSections(props.sections), [props.sections]);
   const { workingDirectory } = useSessionContext();
-  const { retry: onRetry, messages: streamMessages } = useChatStreamContext();
+  const { retry: onRetry, messages: streamMessages, isStreaming: turnRunning } = useChatStreamContext();
   const waitedCall = useMemo(() => (isStreaming ? runningActivity(streamMessages) : null), [isStreaming, streamMessages]);
+  const heldCall = useMemo(() => (awaitingInput && turnRunning ? runningActivity(streamMessages) : null), [awaitingInput, turnRunning, streamMessages]);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const fold = useSectionFold();
@@ -168,6 +175,13 @@ export function TranscriptArea(props: TranscriptAreaProps) {
           <TranscriptStreamingIndicator countdownSeconds={disconnectCountdown} apiRetry={apiRetry} />
         </div>
       )}
+      {awaitingInput && <TranscriptHeldMessages />}
+      {awaitingInput && turnRunning && heldCall === null && (
+        <div>
+          <TranscriptAwaitingInput />
+        </div>
+      )}
+      {trailing}
       <StreamErrorBanner />
     </div>
   );

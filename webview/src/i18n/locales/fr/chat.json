@@ -695,7 +695,8 @@
   },
   "chatPage": {
     "scrollToBottom": "Défiler vers le bas",
-    "inputNeeded": "Saisie requise"
+    "inputNeeded": "Saisie requise",
+    "sendHeldNow": "Envoyer maintenant"
   },
   "contextUsage": {
     "heading": "Utilisation du contexte",
