@@ -131,6 +131,12 @@ export interface UseChatStreamReturn {
   addCommandEcho: (content: string) => void;
   clearMessages: () => void;
   loadMessages: (msgs: LoadedMessageDto[]) => void;
+  /**
+   * Take up a turn that was already running when this screen attached (a reload, a tab opened again): the
+   * composer and the working indicators say so from `startedAt` on, and the turn's own events (which keep
+   * arriving) carry it from there to its `result`.
+   */
+  resumeTurn: (startedAt: number) => void;
   prependOlderMessages: (msgs: LoadedMessageDto[]) => void;
   appendMessage: (message: LoadedMessageDto) => void;
   updateMessage: (id: string, updates: Partial<LoadedMessageDto>) => void;
@@ -733,6 +739,14 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
       });
     }
   }, [messages, addUserMessage, bridge, endStreaming]);
+
+  // A turn that began before this screen did (see UseChatStreamReturn.resumeTurn). The streaming state is
+  // what the CLI's own events then carry to the end: the first delta opens its message as usual and the
+  // `result` ends it.
+  const resumeTurn = useCallback((startedAt: number) => {
+    setTurnStartedAt(startedAt);
+    setIsStreaming(true);
+  }, []);
 
   // Stop
   const stop = useCallback(() => {
@@ -1588,6 +1602,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     addCommandEcho,
     clearMessages,
     loadMessages,
+    resumeTurn,
     prependOlderMessages,
     appendMessage,
     updateMessage,

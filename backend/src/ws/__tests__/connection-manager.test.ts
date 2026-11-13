@@ -1349,4 +1349,97 @@ describe('ConnectionManager — the session remembers its working directory', ()
       expect(deliveries(ws)).toHaveLength(0);
     });
   });
+
+  // #673: a screen that attaches in the middle of a turn did not see it start, so it is
+  // told when the turn began. The CLI's own output is the source, not what a screen
+  // reported, since a reload is exactly the moment no screen has reported yet.
+  describe('when the turn in flight began', () => {
+    const T0 = 1_800_000_000_000;
+    const cliEvent = (type: string) => ({ type });
+
+    function session() {
+      cm.getOrCreateSession('sess-t');
+      cm.setProcess('sess-t', { pid: 1 } as never);
+    }
+    const emit = (type: string) => cm.broadcastToSession('sess-t', MessageType.CLI_EVENT, cliEvent(type));
+
+    beforeEach(() => vi.setSystemTime(T0));
+
+    it('is null for a session it does not know, or one with no live CLI', () => {
+      expect(cm.getTurnStartedAt('nobody')).toBeNull();
+      cm.getOrCreateSession('sess-t');
+      expect(cm.getTurnStartedAt('sess-t')).toBeNull();
+    });
+
+    it('is null before the CLI has said anything', () => {
+      session();
+      expect(cm.getTurnStartedAt('sess-t')).toBeNull();
+    });
+
+    it('is the moment of the first event after the last result', () => {
+      session();
+      emit('assistant');
+      vi.setSystemTime(T0 + 4_000);
+      emit('stream_event');
+      expect(cm.getTurnStartedAt('sess-t')).toBe(T0);
+    });
+
+    it('is null again once the turn ends with a result', () => {
+      session();
+      emit('assistant');
+      emit('result');
+      expect(cm.getTurnStartedAt('sess-t')).toBeNull();
+    });
+
+    // The notices that trail a result (hook notices, task events, rate limits) must not
+    // turn a finished turn back into a running one: a page reloaded in the minutes after
+    // a turn would be told to draw a stop button over a CLI that is idle.
+    it('is not reopened by the events that trail a result', () => {
+      session();
+      emit('assistant');
+      emit('result');
+      emit('system');
+      emit('rate_limit_event');
+      emit('user');
+      expect(cm.getTurnStartedAt('sess-t')).toBeNull();
+    });
+
+    it('is not begun by an event that is not the model speaking', () => {
+      session();
+      emit('system');
+      emit('rate_limit_event');
+      expect(cm.getTurnStartedAt('sess-t')).toBeNull();
+    });
+
+    it('is the start of the next turn after a result, not the one before', () => {
+      session();
+      emit('assistant');
+      emit('result');
+      vi.setSystemTime(T0 + 60_000);
+      emit('assistant');
+      expect(cm.getTurnStartedAt('sess-t')).toBe(T0 + 60_000);
+    });
+
+    it('is null when the turn has gone quiet for longer than a turn can', () => {
+      session();
+      emit('assistant');
+      vi.setSystemTime(T0 + 6 * 60_000);
+      expect(cm.getTurnStartedAt('sess-t')).toBeNull();
+    });
+
+    it('stays set however quiet it is while a question waits for a person', () => {
+      session();
+      emit('assistant');
+      cm.rememberOpenRequest('sess-t', { type: 'control_request', request_id: 'r1' });
+      vi.setSystemTime(T0 + 30 * 60_000);
+      expect(cm.getTurnStartedAt('sess-t')).toBe(T0);
+    });
+
+    it('is null once the CLI process is gone', () => {
+      session();
+      emit('assistant');
+      cm.setProcess('sess-t', null);
+      expect(cm.getTurnStartedAt('sess-t')).toBeNull();
+    });
+  });
 });

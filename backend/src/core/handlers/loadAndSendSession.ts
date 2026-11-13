@@ -64,6 +64,10 @@ export async function loadAndSendSession(
     // This session's own list row (see `entry` above). Same shape as a row from
     // GET_SESSIONS, so the webview merges it into the list it already holds.
     session: entry,
+    // When the turn the CLI has in flight began, or null. A screen that attaches in
+    // the middle of one did not see it start, and says so in its composer only if it
+    // is told (#673). Not on an older page: that is more of the same transcript.
+    turnStartedAt: isOlderPage ? null : connections.getTurnStartedAt(sessionId),
   });
 
   // Rebuild background-workflow state from the transcript so the inline cards

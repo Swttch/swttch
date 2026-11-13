@@ -464,6 +464,47 @@ describe('useChatStream', () => {
     });
   });
 
+  // #673: a screen that attaches in the middle of a turn takes it up, and the turn's own
+  // events carry it to its result, the way they carry a turn this screen started.
+  describe('resumeTurn', () => {
+    it('says a turn is running, from the time it began', () => {
+      const { bridge } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+      expect(result.current.isStreaming).toBe(false);
+      expect(result.current.turnStartedAt).toBeNull();
+
+      act(() => result.current.resumeTurn(1_800_000_000_000));
+
+      expect(result.current.isStreaming).toBe(true);
+      expect(result.current.turnStartedAt).toBe(1_800_000_000_000);
+    });
+
+    it('is ended by the turn\'s own result', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+      act(() => result.current.resumeTurn(1_800_000_000_000));
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, { type: 'result' });
+      });
+
+      expect(result.current.isStreaming).toBe(false);
+    });
+
+    it('lets the turn\'s next delta open its message as usual, still running', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+      act(() => result.current.resumeTurn(1_800_000_000_000));
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, { type: 'stream_event', event: { delta: { type: 'text_delta', text: 'Hello' } } });
+      });
+
+      expect(result.current.messages).toHaveLength(1);
+      expect(result.current.isStreaming).toBe(true);
+    });
+  });
+
   describe('result 처리', () => {
     it('수신 시 isStreaming이 false로 전환된다', () => {
       const { bridge, emit } = createMockBridge();

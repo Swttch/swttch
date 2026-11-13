@@ -68,6 +68,16 @@ interface SessionRecord {
    * screen to be attached, so it still answers once the last tab has gone (issue #605).
    */
   cliTurnOpen: boolean;
+  /**
+   * When the model began the turn now in flight: the first `assistant` or `stream_event` after the last
+   * `result`. 0 when none.
+   *
+   * Stricter than [cliTurnOpen] on purpose, because it is told to a screen that then draws "working" and a
+   * stop button over it: [cliTurnOpen] is opened by ANY event after a `result` (the hook notices and task
+   * events that trail one), which is fine for a judgement about whether to stop an idle CLI but would show a
+   * finished turn as running to every page reloaded in the minutes after it.
+   */
+  turnStartedAt: number;
   /** When the CLI last emitted an event, for judging a turn that went quiet. */
   lastCliEventAt: number;
   /**
@@ -600,8 +610,14 @@ export class ConnectionManager {
     }
 
     if (type === MessageType.CLI_EVENT) {
-      session.lastCliEventAt = Date.now();
+      const now = Date.now();
+      session.lastCliEventAt = now;
       session.cliTurnOpen = payload.type !== 'result';
+      // The model speaking starts a turn and the `result` ends it; the notices that trail a result do neither.
+      if (payload.type === 'result') session.turnStartedAt = 0;
+      else if ((payload.type === 'assistant' || payload.type === 'stream_event') && session.turnStartedAt === 0) {
+        session.turnStartedAt = now;
+      }
     }
 
     const message: IPCMessage = {
@@ -863,6 +879,24 @@ export class ConnectionManager {
       if (everyScreenHidden) ids.push(session.sessionId);
     }
     return ids;
+  }
+
+  /**
+   * When the turn this session's CLI has in flight began, or null when there is none.
+   *
+   * Handed to a screen that attaches mid-turn (a reloaded page, a tab opened again), which
+   * did not see the turn start and would otherwise draw an idle composer over a running CLI
+   * until the answer arrived (#673). A turn that is waiting on a person (an open permission
+   * question) counts however quiet it has been, since silence is what waiting looks like.
+   */
+  getTurnStartedAt(sessionId: string): number | null {
+    const session = this.sessionRegistry.get(sessionId);
+    if (!session?.process || session.turnStartedAt === 0) return null;
+    // Quiet for longer than a turn can be means it hung or was lost, and nobody should be told it is running;
+    // unless it is waiting on a person, for whom silence is what waiting looks like.
+    const waitingOnPerson = session.openRequests.size > 0;
+    if (!waitingOnPerson && Date.now() - session.lastCliEventAt >= TURN_SILENCE_LIMIT_MS) return null;
+    return session.turnStartedAt;
   }
 
   /** A live CLI that is part-way through a turn and has not gone quiet for too long. */
@@ -1162,6 +1196,7 @@ export class ConnectionManager {
         workingDir: workingDir ?? '',
         activity: SessionActivity.Idle,
         cliTurnOpen: false,
+        turnStartedAt: 0,
         lastCliEventAt: 0,
         inputMode: null,
         effortLevel: null,
@@ -1185,6 +1220,7 @@ export class ConnectionManager {
     if (!proc) {
       session.inputMode = null;
       session.cliTurnOpen = false;
+      session.turnStartedAt = 0;
     }
     // Same for the pinned effort level: `--effort` pins the process it launched, so
     // once that process is gone nothing is pinned any more.

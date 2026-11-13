@@ -104,6 +104,8 @@ interface ChatStreamContextType {
   // From useChatStream (message manipulation)
   clearMessages: () => void;
   loadMessages: (msgs: LoadedMessageDto[]) => void;
+  /** Take up a turn that was already running when this screen attached (see UseChatStreamReturn.resumeTurn). */
+  resumeTurn: (startedAt: number) => void;
   prependOlderMessages: (msgs: LoadedMessageDto[]) => void;
   appendMessage: (message: LoadedMessageDto) => void;
   updateMessage: (id: string, updates: Partial<LoadedMessageDto>) => void;
@@ -321,6 +323,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     addCommandEcho,
     clearMessages: chatStreamClearMessages,
     loadMessages: chatStreamLoadMessages,
+    resumeTurn: chatStreamResumeTurn,
     prependOlderMessages: chatStreamPrependOlderMessages,
     appendMessage: chatStreamAppendMessage,
     updateMessage: chatStreamUpdateMessage,
@@ -938,6 +941,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     // Message manipulation
     clearMessages: chatStreamClearMessages,
     loadMessages: chatStreamLoadMessages,
+    resumeTurn: chatStreamResumeTurn,
     prependOlderMessages: chatStreamPrependOlderMessages,
     appendMessage: chatStreamAppendMessage,
     updateMessage: chatStreamUpdateMessage,
@@ -992,6 +996,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     chatStreamResetStreamState,
     chatStreamClearMessages,
     chatStreamLoadMessages,
+    chatStreamResumeTurn,
     chatStreamPrependOlderMessages,
     chatStreamAppendMessage,
     chatStreamUpdateMessage,
