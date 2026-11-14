@@ -41,9 +41,11 @@ export const AskUserQuestionInputPanel = (props: Props) => {
     if (controlRequestId) {
       api.tools.deny(toolUse.id, controlRequestId);
     }
-    stop();
+    // The classic panel's cancel ends the turn. In the views that follow the desktop app "Skip" turns down this
+    // question only and the turn goes on: Claude took the answer and asked again (measured on its recording).
+    if (viewMode === null) stop();
     onDismiss();
-  }, [toolUse.id, controlRequestId, api, onDismiss, stop]);
+  }, [toolUse.id, controlRequestId, api, onDismiss, stop, viewMode]);
 
   // Esc: deny (capture phase)
   useEffect(() => {
