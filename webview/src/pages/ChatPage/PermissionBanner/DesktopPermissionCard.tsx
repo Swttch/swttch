@@ -220,7 +220,7 @@ export function DesktopPermissionCard(props: Props) {
             type="button"
             data-testid="permission-deny"
             onClick={onDeny}
-            className="h-[1.9062rem] rounded-[0.5625rem] bg-text-primary/[0.12] px-[0.5625rem] text-[1rem] text-text-primary transition-opacity hover:opacity-80"
+            className="h-[1.9062rem] rounded-[0.5625rem] bg-text-primary/[0.12] px-[0.5625rem] text-[1rem] text-text-primary transition-colors hover:bg-text-primary/[0.2]"
           >
             {t('permissionBanner.card.deny')}
           </button>
@@ -263,7 +263,7 @@ export function DesktopPermissionCard(props: Props) {
                             setMenuOpen(false);
                             item.onSelect();
                           }}
-                          className="flex w-full flex-col items-start rounded-lg px-3 py-2 text-start font-normal transition-colors hover:bg-text-primary/[0.1]"
+                          className="flex w-full flex-col items-start rounded-lg px-3 py-2 text-start font-normal transition-colors hover:bg-text-primary/[0.14]"
                         >
                           <span className="text-[1rem]">{item.label}</span>
                           {item.description && (

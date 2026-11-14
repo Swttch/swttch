@@ -187,7 +187,7 @@ export function DesktopPlanCard({ pending, onApprove, onDeny }: Props) {
                           setMenuOpen(false);
                           accept(item.mode);
                         }}
-                        className="flex w-full rounded-lg px-3 py-2 text-start text-[1rem] font-normal transition-colors hover:bg-text-primary/[0.1]"
+                        className="flex w-full rounded-lg px-3 py-2 text-start text-[1rem] font-normal transition-colors hover:bg-text-primary/[0.14]"
                       >
                         {item.label}
                       </button>
