@@ -17,8 +17,19 @@ import { getLastAllowChoice, setLastAllowChoice } from './lastAllowChoice';
  */
 const DESKTOP_CARD_TOOLS = new Set(['Bash', 'PowerShell', 'Read', 'WebSearch', 'Edit', 'Write']);
 
+/** A page fetch, a sub-agent and any tool of an MCP server use the same card, with the request's input as lines. */
+function isOtherCardTool(toolName: string): boolean {
+  return toolName === 'WebFetch' || toolName === 'Agent' || toolName === 'Task' || toolName.startsWith('mcp__');
+}
+
 export function usesDesktopPermissionCard(toolName: string, viewMode: TranscriptViewMode | null): boolean {
-  return viewMode !== null && DESKTOP_CARD_TOOLS.has(toolName);
+  return viewMode !== null && (DESKTOP_CARD_TOOLS.has(toolName) || isOtherCardTool(toolName));
+}
+
+/** `mcp__server__tool` as "tool (server)"; any other name as it is. */
+function toolLabel(toolName: string): string {
+  const match = /^mcp__(.+?)__(.+)$/.exec(toolName);
+  return match ? `${match[2]} (${match[1]})` : toolName;
 }
 
 interface Props {
@@ -45,6 +56,23 @@ function questionFor(permission: PendingPermission, t: (key: string, values?: Re
     const path = typeof permission.input.file_path === 'string' ? permission.input.file_path : '';
     const name = path.split(/[\\/]/).filter(Boolean).pop() ?? path;
     return t(permission.toolName === 'Edit' ? 'permissionBanner.card.questionEdit' : 'permissionBanner.card.questionWrite', { file: name });
+  }
+  if (permission.toolName === 'WebFetch') {
+    const url = typeof permission.input.url === 'string' ? permission.input.url : '';
+    let site = url;
+    try {
+      site = new URL(url).host || url;
+    } catch {
+      // not a full address: the text as it came
+    }
+    return t('permissionBanner.card.questionFetch', { site });
+  }
+  if (permission.toolName === 'Agent' || permission.toolName === 'Task') {
+    const description = typeof permission.input.description === 'string' ? permission.input.description : '';
+    return t('permissionBanner.card.questionAgent', { description }).trim();
+  }
+  if (isOtherCardTool(permission.toolName)) {
+    return t('permissionBanner.card.questionTool', { tool: toolLabel(permission.toolName) });
   }
   const action = permission.toolName === 'WebSearch' ? 'actionSearchWeb' : 'actionRunCommand';
   return t('permissionBanner.card.question', { action: t(`permissionBanner.card.${action}`) });

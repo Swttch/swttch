@@ -69,7 +69,27 @@ describe('usesDesktopPermissionCard', () => {
     expect(usesDesktopPermissionCard('Edit', 'normal')).toBe(true);
     expect(usesDesktopPermissionCard('Write', 'normal')).toBe(true);
     expect(usesDesktopPermissionCard('NotebookEdit', 'normal')).toBe(false);
-    expect(usesDesktopPermissionCard('mcp__a__b', 'thinking')).toBe(false);
+    expect(usesDesktopPermissionCard('mcp__a__b', 'thinking')).toBe(true);
+    expect(usesDesktopPermissionCard('WebFetch', 'normal')).toBe(true);
+    expect(usesDesktopPermissionCard('Agent', 'normal')).toBe(true);
+    expect(usesDesktopPermissionCard('Agent', null)).toBe(false);
+  });
+});
+
+describe('DesktopPermissionCard — a fetch, a sub-agent and an MCP tool', () => {
+  it('asks about the site that would be fetched', () => {
+    setup(permission({ toolName: 'WebFetch', input: { url: 'https://example.com/docs/page', prompt: 'summarise' } }));
+    expect(screen.getByTestId('desktop-permission-card')).toHaveTextContent('Allow Claude to fetch example.com?');
+  });
+
+  it('asks about the agent by its description', () => {
+    setup(permission({ toolName: 'Agent', input: { description: 'Search the code', prompt: 'find it' } }));
+    expect(screen.getByTestId('desktop-permission-card')).toHaveTextContent('Allow Claude to run an agent Search the code?');
+  });
+
+  it('asks about a tool of an MCP server by its name and the server', () => {
+    setup(permission({ toolName: 'mcp__context7__resolve-library-id', input: { libraryName: 'react' } }));
+    expect(screen.getByTestId('desktop-permission-card')).toHaveTextContent('Allow Claude to use resolve-library-id (context7)?');
   });
 });
 

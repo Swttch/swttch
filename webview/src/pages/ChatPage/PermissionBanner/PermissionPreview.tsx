@@ -51,7 +51,15 @@ export function permissionSubtitle(toolName: string, rawInput: unknown): string 
 }
 
 /** The input that says what a request is about, for the requests the desktop card shows as a value box (#673). */
-const MAIN_INPUT: Record<string, string> = { Read: 'file_path', WebSearch: 'query', Edit: 'file_path', Write: 'file_path' };
+const MAIN_INPUT: Record<string, string> = { Read: 'file_path', WebSearch: 'query', Edit: 'file_path', Write: 'file_path', WebFetch: 'url' };
+
+/** What a long value shows of itself in a line: its start. */
+const MAX_VALUE_LENGTH = 600;
+
+function valueText(value: unknown): string {
+  const text = typeof value === 'string' ? value : JSON.stringify(value);
+  return text.length > MAX_VALUE_LENGTH ? `${text.slice(0, MAX_VALUE_LENGTH)}…` : text;
+}
 
 function captionOf(key: string): string {
   const spaced = key.replace(/[_-]+/g, ' ').trim();
@@ -65,8 +73,25 @@ function captionOf(key: string): string {
  */
 export function desktopCardPreview(toolName: string, rawInput: unknown): ReactNode | null {
   const mainKey = MAIN_INPUT[toolName];
-  if (!mainKey) return null;
   const input = asInput(rawInput);
+  // A sub-agent or a tool of an MCP server has no one thing it is about: its input is the lines.
+  if (!mainKey) {
+    if (toolName !== 'Agent' && toolName !== 'Task' && !toolName.startsWith('mcp__')) return null;
+    const isAgent = toolName === 'Agent' || toolName === 'Task';
+    // A sub-agent's description is already in the heading.
+    const lines = Object.entries(input).filter(([key, value]) => value !== undefined && value !== null && !(isAgent && key === 'description'));
+    if (lines.length === 0) return null;
+    return (
+      <dl data-testid="permission-input-rows" className="grid grid-cols-[11.125rem_1fr] gap-y-[0.375rem] text-[0.9rem] leading-[1.5]">
+        {lines.map(([key, value]) => (
+          <div key={key} className="contents">
+            <dt className="text-text-secondary">{captionOf(key)}</dt>
+            <dd className="line-clamp-6 whitespace-pre-wrap break-words text-text-primary">{valueText(value)}</dd>
+          </div>
+        ))}
+      </dl>
+    );
+  }
   const main = input[mainKey];
   if (typeof main !== 'string' || main.trim() === '') return null;
   // Read's `limit` and `offset` say how much, not what: the desktop card leaves them out.

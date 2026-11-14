@@ -17,6 +17,27 @@ describe('desktopCardPreview', () => {
     expect(rows).toHaveTextContent('standard');
   });
 
+  it('shows a page fetch as the address in a box and the rest of its input as lines', () => {
+    render(<>{desktopCardPreview('WebFetch', { url: 'https://example.com', prompt: 'first heading' })}</>);
+    expect(screen.getByTestId('permission-value')).toHaveTextContent('https://example.com');
+    expect(screen.getByTestId('permission-input-rows')).toHaveTextContent('first heading');
+  });
+
+  it('shows a sub-agent as its input lines without its description (the heading has it)', () => {
+    render(<>{desktopCardPreview('Agent', { description: 'Search the code', subagent_type: 'general-purpose', prompt: 'find it' })}</>);
+    const rows = screen.getByTestId('permission-input-rows');
+    expect(rows).toHaveTextContent('Subagent type');
+    expect(rows).toHaveTextContent('general-purpose');
+    expect(rows).not.toHaveTextContent('Search the code');
+    expect(screen.queryByTestId('permission-value')).not.toBeInTheDocument();
+  });
+
+  it('shows the input of an MCP tool as lines, an object as its JSON', () => {
+    render(<>{desktopCardPreview('mcp__a__b', { name: 'x', options: { deep: true } })}</>);
+    const rows = screen.getByTestId('permission-input-rows');
+    expect(rows).toHaveTextContent('{"deep":true}');
+  });
+
   it('shows an edit as the path and the lines taken out above the lines put in, with the changed words marked', () => {
     render(<>{desktopCardPreview('Edit', { file_path: '/tmp/x/dm.txt', old_string: 'l1\nl2', new_string: 'L1\nl2' })}</>);
     expect(screen.getByTestId('permission-value')).toHaveTextContent('/tmp/x/dm.txt');
