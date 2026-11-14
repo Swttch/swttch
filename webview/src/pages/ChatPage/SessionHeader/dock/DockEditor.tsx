@@ -5,7 +5,7 @@ import type { DockItemId } from '@/types/settings';
 import { getDockItem } from './registry';
 import { toggleDockVisible } from './toggleDockVisible';
 import { useDockLayout } from './useDockLayout';
-import { useDockItemActions } from './useDockItemActions';
+import { useDockItemActions, type DockClickModifiers } from './useDockItemActions';
 import { DockEditorRow } from './DockEditorRow';
 
 interface Props {
@@ -50,9 +50,9 @@ export function DockEditor(props: Props) {
   const [preview, setPreview] = useState<DockItemId[] | null>(null);
   const order = preview ?? layout.order;
 
-  const runItem = (id: DockItemId) => {
+  const runItem = (id: DockItemId, click: DockClickModifiers) => {
     onRun();
-    actions[id]?.();
+    actions[id]?.({ metaKey: click.metaKey, ctrlKey: click.ctrlKey });
   };
 
   return (
@@ -78,7 +78,7 @@ export function DockEditor(props: Props) {
               item={item}
               index={index}
               isVisible={visible.has(id)}
-              onRun={() => runItem(id)}
+              onRun={(click) => runItem(id, click)}
               onToggleVisible={(target) => save(toggleDockVisible(layout, target))}
             />
           );

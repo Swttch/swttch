@@ -10,7 +10,8 @@ import { SessionMetaDto } from '../../../dto';
 import type { SessionState } from '../../../types';
 import { Route } from '@/router';
 import { setCurrentSettings } from '@/utils/openSettingsAt';
-import { DEFAULT_SETTINGS, type SettingsState } from '@/types/settings';
+import { DEFAULT_SETTINGS, DockItemId, type SettingsState } from '@/types/settings';
+import { OPEN_TUNNEL_EVENT } from '../SessionHeader/dock/actions';
 
 // 테스트 시점 기준 상대 날짜 생성 헬퍼.
 // 기준 시각을 "오늘 정오"로 고정한다. 자정 직후(예: 00:00~02:00)에 실행하면
@@ -52,8 +53,23 @@ vi.mock('../../../contexts/SettingsContext', () => ({
 // SettingsButton goes through openSettingsAt(), which asks the adapter for a
 // dedicated tab when the stored preference says new-tab.
 const mockOpenSettingsAdapter = vi.fn();
+// The tunnel item's Cmd/Ctrl-click opens this session in the system browser.
+const mockOpenUrl = vi.fn();
 vi.mock('@/adapters', () => ({
-  getAdapter: () => ({ openSettings: mockOpenSettingsAdapter }),
+  getAdapter: () => ({ openSettings: mockOpenSettingsAdapter, openUrl: mockOpenUrl }),
+}));
+
+// The tunnel item asks the backend for a pairing code through useBridge before
+// opening the browser; nothing else in the header goes through it.
+const mockBridgeSend = vi.fn();
+vi.mock('@/hooks/useBridge', () => ({
+  useBridge: () => ({
+    isConnected: true,
+    send: mockBridgeSend,
+    sendRaw: vi.fn(),
+    subscribe: vi.fn(() => vi.fn()),
+    lastError: null,
+  }),
 }));
 
 // Mock BridgeContext
@@ -174,6 +190,9 @@ beforeEach(() => {
   // it directly) — reset it so one test's stored preference cannot leak into
   // the next.
   mockOpenSettingsAdapter.mockReset();
+  mockOpenUrl.mockReset();
+  mockBridgeSend.mockReset();
+  mockBridgeSend.mockResolvedValue(undefined);
   setCurrentSettings({ ...DEFAULT_SETTINGS } as SettingsState);
 });
 
@@ -421,6 +440,45 @@ describe('SessionHeader', () => {
     await user.click(screen.getByText('Settings'));
 
     expect(mockOpenSettingsAdapter).toHaveBeenCalledWith(Route.SETTINGS_GENERAL);
+  });
+
+  // The tunnel row runs the same click as the tunnel's dock icon: a Cmd/Ctrl-click
+  // opens this session in the system browser, with a pairing code of its own,
+  // instead of the tunnel modal.
+  it('Ctrl-clicking the tunnel row opens the session in the browser instead of the tunnel modal', async () => {
+    const user = userEvent.setup();
+    const openTunnel = vi.fn();
+    window.addEventListener(OPEN_TUNNEL_EVENT, openTunnel);
+    mockBridgeSend.mockResolvedValue({ status: 'ok', code: 'browser-code' });
+    try {
+      render(<SessionHeader />, { wrapper: queryWrapper });
+
+      await openOverflowMenu(user);
+      fireEvent.click(within(dockRow(DockItemId.TUNNEL)).getByText('Remote Tunnel (Unofficial)'), { ctrlKey: true });
+
+      await waitFor(() => expect(mockOpenUrl).toHaveBeenCalledTimes(1));
+      expect(new URL(mockOpenUrl.mock.calls[0][0] as string).searchParams.get('pair')).toBe('browser-code');
+      expect(openTunnel).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener(OPEN_TUNNEL_EVENT, openTunnel);
+    }
+  });
+
+  it('a plain click on the tunnel row opens the tunnel modal', async () => {
+    const user = userEvent.setup();
+    const openTunnel = vi.fn();
+    window.addEventListener(OPEN_TUNNEL_EVENT, openTunnel);
+    try {
+      render(<SessionHeader />, { wrapper: queryWrapper });
+
+      await openOverflowMenu(user);
+      await user.click(within(dockRow(DockItemId.TUNNEL)).getByText('Remote Tunnel (Unofficial)'));
+
+      expect(openTunnel).toHaveBeenCalledTimes(1);
+      expect(mockOpenUrl).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener(OPEN_TUNNEL_EVENT, openTunnel);
+    }
   });
 
   it('세션이 없어도 더보기 메뉴의 새 탭 항목은 활성화되어 있음', async () => {
