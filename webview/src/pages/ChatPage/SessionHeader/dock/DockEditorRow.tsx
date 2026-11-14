@@ -4,6 +4,7 @@ import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/solid';
 import { useTranslation } from '@/i18n';
 import type { DockItemId } from '@/types/settings';
 import type { DockItemDef } from './registry';
+import type { DockClickModifiers } from './useDockItemActions';
 import { DragHandleIcon } from './DragHandleIcon';
 import { DockItemStatus } from './DockItemStatus';
 
@@ -11,7 +12,8 @@ interface Props {
   item: DockItemDef;
   index: number;
   isVisible: boolean;
-  onRun: () => void;
+  /** Gets the click's modifier keys, which some items read (Cmd/Ctrl-click on the tunnel). */
+  onRun: (click: DockClickModifiers) => void;
   onToggleVisible: (id: DockItemId) => void;
 }
 

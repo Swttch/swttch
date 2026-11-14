@@ -26,8 +26,19 @@ import { filePreviewPaneStore } from '@/utils/filePreviewPaneStore';
  * action — its dock icon opens a dropdown, and the ⋮ menu lists the accounts
  * inline instead (nesting a submenu inside the menu would revive the
  * open/close arbitration bugs of #236/#244).
+ *
+ * An action is handed the modifier keys of the click that ran it, so an item
+ * whose icon does something else on a Cmd/Ctrl-click (the tunnel opens the
+ * session in the browser) does the same from its ⋮ menu row. Callers that run
+ * an item without a click (desktop tab commands) pass nothing, which reads as a
+ * plain click.
  */
-export type DockItemActions = Partial<Record<DockItemId, () => void>>;
+export interface DockClickModifiers {
+  metaKey: boolean;
+  ctrlKey: boolean;
+}
+
+export type DockItemActions = Partial<Record<DockItemId, (click?: DockClickModifiers) => void>>;
 
 export function useDockItemActions(): DockItemActions {
   const { openNewTab } = useSessionContext();
@@ -72,7 +83,7 @@ export function useDockItemActions(): DockItemActions {
       [DockItemId.TOKEN_BATTERY]: openUsage,
       [DockItemId.SCHEDULED_MESSAGES]: toggleScheduled,
       [DockItemId.BACKGROUND_TASKS]: toggleWorkflows,
-      [DockItemId.TUNNEL]: tunnel.activate,
+      [DockItemId.TUNNEL]: tunnel.handleClick,
       [DockItemId.SETTINGS]: openSettings,
       [DockItemId.ASSETS]: openAssetsFromMenu,
       [DockItemId.SIDE_QUESTION]: toggleSideQuestion,
@@ -80,6 +91,6 @@ export function useDockItemActions(): DockItemActions {
       [DockItemId.NEW_TAB]: openNewTab,
       [DockItemId.BROWSER]: () => filePreviewPaneStore.toggleBrowser(),
     }),
-    [openUsage, toggleScheduled, toggleWorkflows, tunnel.activate, openSettings, openNewTab, openAssetsFromMenu, toggleSideQuestion, toggleSessionRail],
+    [openUsage, toggleScheduled, toggleWorkflows, tunnel.handleClick, openSettings, openNewTab, openAssetsFromMenu, toggleSideQuestion, toggleSessionRail],
   );
 }

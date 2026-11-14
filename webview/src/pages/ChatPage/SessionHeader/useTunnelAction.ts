@@ -42,10 +42,13 @@ export function useTunnelAction() {
     window.dispatchEvent(new CustomEvent(OPEN_TUNNEL_EVENT));
   }, []);
 
-  /** Click handler for both views: Cmd/Ctrl-click opens a browser, else the modal. */
+  /**
+   * Click handler for both views: Cmd/Ctrl-click opens a browser, else the modal.
+   * Without a click (a desktop tab command runs the item) it opens the modal.
+   */
   const handleClick = useCallback(
-    (e: { metaKey: boolean; ctrlKey: boolean }) => {
-      if (e.metaKey || e.ctrlKey) {
+    (e?: { metaKey: boolean; ctrlKey: boolean }) => {
+      if (e?.metaKey || e?.ctrlKey) {
         void openInBrowser();
       } else {
         activate();

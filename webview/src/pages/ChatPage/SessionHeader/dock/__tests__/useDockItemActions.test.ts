@@ -14,7 +14,9 @@ vi.mock('@/contexts/WorkflowStateContext', () => ({
 vi.mock('@/contexts/ScheduledMessagesContext', () => ({
   useScheduledMessages: () => ({ panelOpen: false, openPanel: vi.fn(), closePanel: vi.fn() }),
 }));
-vi.mock('../../useTunnelAction', () => ({ useTunnelAction: () => ({ activate: tunnelActivate }) }));
+vi.mock('../../useTunnelAction', () => ({
+  useTunnelAction: () => ({ activate: tunnelActivate, handleClick: tunnelActivate }),
+}));
 
 import { useDockItemActions } from '../useDockItemActions';
 
