@@ -398,6 +398,7 @@
       "alwaysAllowHint": "Ne plus demander pour cet outil",
       "allowOnce": "Autoriser une fois",
       "allowAndSwitchToAuto": "Autoriser et passer en mode Auto",
+      "acceptEditsHint": "Passe cette session en mode « Accepter les modifications »",
       "autoReviewsRest": "Le mode Auto examine le reste de cette session.",
       "moreAllowOptions": "Plus d’options d’autorisation",
       "scope": {

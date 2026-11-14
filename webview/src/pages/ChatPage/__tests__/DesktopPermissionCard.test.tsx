@@ -111,6 +111,41 @@ describe('DesktopPermissionCard — buttons', () => {
   });
 });
 
+describe('DesktopPermissionCard — the menu of a file change', () => {
+  const edit = () =>
+    permission({ toolName: 'Edit', input: { file_path: '/a/x.txt', old_string: 'a', new_string: 'b' }, suggestions: undefined });
+
+  it('offers "Always allow" as switching the session to Accept edits, first, when the CLI suggested no rule', async () => {
+    const order: string[] = [];
+    session.setInputMode.mockImplementation(() => order.push('mode'));
+    const h = setup(edit());
+    h.onApprove.mockImplementation(() => {
+      order.push('answer');
+      return Promise.resolve();
+    });
+    fireEvent.click(screen.getByTestId('permission-more'));
+    const item = screen.getByTestId('permission-menu-acceptEdits');
+    expect(item).toHaveTextContent('Always allow');
+    expect(item).toHaveTextContent('Accept edits');
+    fireEvent.click(item);
+    await waitFor(() => expect(session.setInputMode).toHaveBeenCalledWith('auto_edit'));
+    // The answer reaches the CLI before the mode changes under it, or the CLI drops the call.
+    expect(order).toEqual(['answer', 'mode']);
+  });
+
+  it('has no such item outside Ask before edits, or for a command', () => {
+    session.inputMode = 'auto_edit';
+    setup(edit());
+    fireEvent.click(screen.getByTestId('permission-more'));
+    expect(screen.queryByTestId('permission-menu-acceptEdits')).not.toBeInTheDocument();
+    cleanup();
+    session.inputMode = 'ask_before_edit';
+    setup(permission());
+    fireEvent.click(screen.getByTestId('permission-more'));
+    expect(screen.queryByTestId('permission-menu-acceptEdits')).not.toBeInTheDocument();
+  });
+});
+
 describe('DesktopPermissionCard — the menu', () => {
   it('lists "Allow once" and "Allow and switch to Auto" behind the arrow', () => {
     const h = setup();

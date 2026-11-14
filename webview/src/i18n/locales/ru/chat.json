@@ -402,6 +402,7 @@
       "alwaysAllowHint": "Больше не спрашивать для этого инструмента",
       "allowOnce": "Разрешить один раз",
       "allowAndSwitchToAuto": "Разрешить и переключить на Auto",
+      "acceptEditsHint": "Переключает эту сессию в режим принятия правок",
       "autoReviewsRest": "Auto проверит остаток этой сессии.",
       "moreAllowOptions": "Другие варианты разрешения",
       "scope": {

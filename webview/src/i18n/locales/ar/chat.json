@@ -406,6 +406,7 @@
       "alwaysAllowHint": "عدم السؤال مرة أخرى لهذه الأداة",
       "allowOnce": "السماح مرة واحدة",
       "allowAndSwitchToAuto": "السماح والتبديل إلى Auto",
+      "acceptEditsHint": "يحوّل هذه الجلسة إلى وضع قبول التعديلات",
       "autoReviewsRest": "سيراجع وضع Auto بقية هذه الجلسة.",
       "moreAllowOptions": "خيارات سماح إضافية",
       "scope": {

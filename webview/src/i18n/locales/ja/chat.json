@@ -398,6 +398,7 @@
       "alwaysAllowHint": "このツールについて今後確認しない",
       "allowOnce": "一度だけ許可",
       "allowAndSwitchToAuto": "許可して Auto に切り替え",
+      "acceptEditsHint": "このセッションを「編集を承認」モードに切り替えます",
       "autoReviewsRest": "このセッションの残りの操作は自動モードが確認します。",
       "moreAllowOptions": "その他の許可オプション",
       "scope": {

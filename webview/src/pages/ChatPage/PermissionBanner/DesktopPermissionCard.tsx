@@ -89,6 +89,15 @@ export function DesktopPermissionCard(props: Props) {
     void Promise.resolve(onApprove()).then(() => setInputMode(InputModeValues.AUTO));
   }, [setInputMode, onApprove]);
 
+  // A file change offers "Always allow" as "switch this session to Accept edits" (the desktop app's menu for an edit says
+  // so under it), where the CLI suggested no rule to keep. It answers this request first and changes the mode after.
+  const isFileChange = permission.toolName === 'Edit' || permission.toolName === 'Write';
+  const canAcceptEdits =
+    isFileChange && !alwaysAvailable && inputMode === InputModeValues.ASK_BEFORE_EDIT && availableModes.includes(InputModeValues.AUTO_EDIT);
+  const allowAndAcceptEdits = useCallback(() => {
+    void Promise.resolve(onApprove()).then(() => setInputMode(InputModeValues.AUTO_EDIT));
+  }, [setInputMode, onApprove]);
+
   const alwaysLeads = alwaysAvailable && getLastAllowChoice() === 'always';
   const scope = alwaysAllowScope(permission.toolName, permission.suggestions);
   const scopeLine = scope ? t(`permissionBanner.card.scope.${scope}`) : t('permissionBanner.card.alwaysAllowHint');
@@ -116,6 +125,14 @@ export function DesktopPermissionCard(props: Props) {
             },
           },
     );
+  }
+  if (canAcceptEdits) {
+    menuItems.push({
+      key: 'acceptEdits',
+      label: t('permissionBanner.card.alwaysAllow'),
+      description: t('permissionBanner.card.acceptEditsHint'),
+      onSelect: allowAndAcceptEdits,
+    });
   }
   if (canSwitchToAuto) {
     menuItems.push({

@@ -398,6 +398,7 @@
       "alwaysAllowHint": "이 도구에 대해 다시 묻지 않기",
       "allowOnce": "한 번만 허용",
       "allowAndSwitchToAuto": "허용하고 Auto 모드로 전환",
+      "acceptEditsHint": "이 세션을 편집 수락 모드로 전환합니다",
       "autoReviewsRest": "이 세션의 나머지 작업을 자동으로 검토합니다.",
       "moreAllowOptions": "더 많은 허용 옵션",
       "scope": {

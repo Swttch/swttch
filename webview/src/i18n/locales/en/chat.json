@@ -402,6 +402,7 @@
       "alwaysAllowHint": "Don’t ask again for this tool",
       "allowOnce": "Allow once",
       "allowAndSwitchToAuto": "Allow and switch to Auto",
+      "acceptEditsHint": "Switches this session to Accept edits",
       "autoReviewsRest": "Auto reviews the rest of this session.",
       "moreAllowOptions": "More allow options",
       "scope": {

@@ -398,6 +398,7 @@
       "alwaysAllowHint": "不再针对此工具询问",
       "allowOnce": "仅允许一次",
       "allowAndSwitchToAuto": "允许并切换到 Auto",
+      "acceptEditsHint": "将此会话切换为接受编辑模式",
       "autoReviewsRest": "Auto 将审查本会话的其余操作。",
       "moreAllowOptions": "更多允许选项",
       "scope": {

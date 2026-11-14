@@ -398,6 +398,7 @@
       "alwaysAllowHint": "不再針對此工具詢問",
       "allowOnce": "僅允許一次",
       "allowAndSwitchToAuto": "允許並切換至 Auto",
+      "acceptEditsHint": "將此工作階段切換為接受編輯模式",
       "autoReviewsRest": "Auto 會審查本工作階段的其餘操作。",
       "moreAllowOptions": "更多允許選項",
       "scope": {
