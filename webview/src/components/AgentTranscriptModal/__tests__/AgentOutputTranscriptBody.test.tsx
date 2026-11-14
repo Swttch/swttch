@@ -57,6 +57,21 @@ describe('AgentOutputTranscriptBody', () => {
     handlers.clear();
   });
 
+  // #673: a task that is over with no file to be found is not waiting on one.
+  it('says there is nothing to show, instead of starting, when the lookup came to nothing', () => {
+    render(
+      <AgentOutputTranscriptBody
+        task={makeTask({ status: 'failed' })}
+        outputFile={undefined}
+        unavailable
+        sendCount={0}
+      />,
+    );
+
+    expect(screen.queryByText(/starting|시작/i)).not.toBeInTheDocument();
+    expect(screen.getByText('No messages yet.')).toBeInTheDocument();
+  });
+
   it('shows a starting state when the output file is not yet resolved', () => {
     render(<AgentOutputTranscriptBody task={makeTask()} outputFile={undefined} sendCount={0} />);
     expect(screen.getByText('Starting task…')).toBeInTheDocument();

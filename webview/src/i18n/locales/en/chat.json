@@ -279,6 +279,25 @@
     }
   },
   "acceptPlan": {
+    "started": "Started planning",
+    "starting": "Making a plan",
+    "notApproved": "Not approved",
+    "failed": "Failed",
+    "proposing": "Proposing plan {{title}}",
+    "proposed": "Proposed plan {{title}}",
+    "card": {
+      "title": "Claude proposed a plan",
+      "openPlan": "Open plan",
+      "revisePlaceholder": "What should change? (optional)",
+      "back": "Back",
+      "reviseSubmit": "Revise",
+      "reject": "Reject",
+      "revise": "Revise…",
+      "accept": "Accept",
+      "acceptAuto": "Accept and use auto mode",
+      "acceptEdits": "Accept and allow edits",
+      "acceptBypass": "Accept and bypass permissions"
+    },
     "title": "Accept this plan?",
     "subtitle": "Select text in the preview to add comments",
     "textareaPlaceholder": "Tell Claude what to do instead",
@@ -301,7 +320,14 @@
     "submit": "Submit answers",
     "next": "Next",
     "other": "Other",
-    "otherPlaceholder": "Type your answer..."
+    "otherPlaceholder": "Type your answer...",
+    "card": {
+      "skip": "Skip",
+      "submit": "Submit",
+      "placeholder": "Type your own answer here",
+      "progress": "{{current}} of {{total}}",
+      "skipped": "Skipped"
+    }
   },
   "backgroundTasks": {
     "title": "Background tasks",
@@ -390,6 +416,31 @@
     "setModelTo": "Set model to {{model}}"
   },
   "permissionBanner": {
+    "card": {
+      "question": "Allow Claude to {{action}}?",
+      "actionRunCommand": "run this command",
+      "actionSearchWeb": "search the web",
+      "questionRead": "Allow Claude to read {{file}}?",
+      "questionEdit": "Allow Claude to edit {{file}}?",
+      "questionWrite": "Allow Claude to write {{file}}?",
+      "questionFetch": "Allow Claude to fetch {{site}}?",
+      "questionTool": "Allow Claude to use {{tool}}?",
+      "questionAgent": "Allow Claude to run an agent {{description}}?",
+      "deny": "Deny",
+      "alwaysAllow": "Always allow",
+      "alwaysAllowHint": "Don’t ask again for this tool",
+      "allowOnce": "Allow once",
+      "allowAndSwitchToAuto": "Allow and switch to Auto",
+      "acceptEditsHint": "Switches this session to Accept edits",
+      "autoReviewsRest": "Auto reviews the rest of this session.",
+      "moreAllowOptions": "More allow options",
+      "scope": {
+        "session": "Applies to this session only",
+        "project": "Saves to project settings",
+        "projectLocal": "Saves to local project settings",
+        "user": "Saves to user settings (all projects)"
+      }
+    },
     "textareaPlaceholder": "Tell Claude what to do instead",
     "workflowNotice": "Dynamic workflows run many subagents in parallel and can use a lot of your usage limit. Stop them any time from the tasks panel.",
     "yes": "Yes",
@@ -687,7 +738,9 @@
     "rewindFailed": "Could not rewind the code"
   },
   "chatPage": {
-    "scrollToBottom": "Scroll to bottom"
+    "scrollToBottom": "Scroll to bottom",
+    "inputNeeded": "Input needed",
+    "sendHeldNow": "Send now"
   },
   "contextUsage": {
     "heading": "Context Usage",
@@ -1072,6 +1125,20 @@
     "editHint": "Enter to save · Esc to cancel"
   },
   "transcript": {
+    "userMessage": {
+      "showMore": "Show more",
+      "showLess": "Show less"
+    },
+    "fileChanges": {
+      "title": "{{count}} files changed",
+      "title_one": "{{count}} file changed",
+      "title_other": "{{count}} files changed",
+      "undo": "Undo",
+      "undoHint": "Ask Claude to undo this turn’s file changes",
+      "total": "Total",
+      "viewAll": "View all",
+      "viewLess": "Show less"
+    },
     "tools": {
       "ranCommand": "Ran command",
       "ranCommands_one": "Ran {{count}} command",
@@ -1089,6 +1156,11 @@
       "editedFiles_other": "Edited {{count}} files",
       "createdFile": "Created {{name}}",
       "editedFile": "Edited {{name}}",
+      "notApplied": "Not applied",
+      "interrupted": "Interrupted",
+      "updatedFile": "Updated {{name}}",
+      "editingFile": "Editing {{name}}",
+      "creatingFile": "Creating {{name}}",
       "failed_one": "{{count}} failed",
       "failed_other": "{{count}} failed",
       "readAndEditedFile": "Read and edited {{name}}",

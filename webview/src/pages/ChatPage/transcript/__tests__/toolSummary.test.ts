@@ -151,6 +151,15 @@ describe('rowLabel', () => {
     expect(rowLabel(call('2', 'Bash'), t).before).toBe('ranCommand');
   });
 
+  // #673: the line over an agent call is the agent's own name; "Ran agent" is said on the card inside.
+  it('names an agent call by its description, then its type, and says "ran agent" only when it names nothing', () => {
+    expect(rowLabel(call('1', 'Agent', { description: 'Create directory', subagent_type: 'general-purpose' }), t)).toEqual(
+      expect.objectContaining({ before: 'Create directory' }),
+    );
+    expect(rowLabel(call('2', 'Agent', { subagent_type: 'general-purpose' }), t).before).toBe('general-purpose');
+    expect(rowLabel(call('3', 'Agent', {}), t).before).toBe('ranAgent');
+  });
+
   it('puts the name of a file where it falls in the label, so it can be drawn as a link', () => {
     const label = rowLabel(call('1', 'Edit', { file_path: '/a/b/x.ts' }), ((_key: string, o?: { name?: string }) => `Edited ${o?.name}!`) as unknown as TFunction);
     expect(label).toEqual({ before: 'Edited ', fileName: 'x.ts', after: '!' });
@@ -181,6 +190,16 @@ describe('a call the user stopped', () => {
     const c = stopped('1', { command: 'ping -c 100 127.0.0.1' });
     expect(wasStopped(c)).toBe(true);
     expect(hasFailed(c)).toBe(false);
+  });
+
+  // #673: a call turned down in this app's own permission card carries this app's marker, not the CLI's wording.
+  it('is stopped when it was turned down in this app\u2019s own card, with or without a reason', () => {
+    for (const text of ['\u200BUser declined to run this tool.', '\u200BUser declined to run this tool. Asked Claude instead: use ls']) {
+      const tool_result = { message: { content: [{ type: 'tool_result', tool_use_id: 'd', is_error: true, content: text }] } } as unknown as LoadedMessageDto;
+      const c = { toolUse: { id: 'd', name: 'Bash', input: {}, tool_result } as unknown as ToolCall['toolUse'], message } as ToolCall;
+      expect(wasStopped(c)).toBe(true);
+      expect(hasFailed(c)).toBe(false);
+    }
   });
 
   it('is told apart from a call that really failed', () => {

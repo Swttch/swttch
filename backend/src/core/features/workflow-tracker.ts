@@ -89,6 +89,17 @@ function getEventText(event: Record<string, unknown>): string {
   return '';
 }
 
+/** The text of a list of content blocks (a tool_result's `content` when it is not a plain string). */
+function blockListText(content: unknown): string {
+  if (!Array.isArray(content)) return '';
+  return content
+    .map((b) => {
+      const block = b as Record<string, unknown>;
+      return block['type'] === 'text' && typeof block['text'] === 'string' ? (block['text'] as string) : '';
+    })
+    .join('\n');
+}
+
 function parseXmlTag(text: string, tag: string): string | undefined {
   const match = text.match(new RegExp(`<${tag}>(.*?)</${tag}>`, 's'));
   return match?.[1]?.trim();
@@ -170,18 +181,27 @@ function parseImmediateAgentResult(text: string): { agentId?: string; outputFile
  * on `task_started`, and it has to be derived rather than read because the
  * persisted transcript records the tool call, not the system event.
  *
- * `Agent` and `Bash` each run inline unless explicitly backgrounded, so the
- * flag is what separates a task from an ordinary call. `Workflow` always runs
- * in the background and carries no such flag.
+ * `Bash` runs inline unless explicitly backgrounded, so the flag is what
+ * separates a task from an ordinary command. `Workflow` always runs in the
+ * background and carries no such flag. An `Agent` is a task either way (#673):
+ * a foreground subagent is listed while it runs, so a reload keeps listing it,
+ * and the run window opened from it is where what it did inside can be read.
  */
 function backgroundTaskType(block: Record<string, unknown>): BackgroundTaskType | undefined {
   const name = block['name'];
   if (name === 'Workflow') return 'local_workflow';
+  if (name === 'Agent') return 'local_agent';
   const input = (block['input'] as Record<string, unknown> | undefined) ?? {};
   if (input['run_in_background'] !== true) return undefined;
-  if (name === 'Agent') return 'local_agent';
   if (name === 'Bash') return 'local_bash';
   return undefined;
+}
+
+/** Whether an Agent call ran in the foreground: its first tool_result is its final report, not a launch notice. */
+function isForegroundAgent(block: Record<string, unknown> | undefined): boolean {
+  if (!block || block['name'] !== 'Agent') return false;
+  const input = (block['input'] as Record<string, unknown> | undefined) ?? {};
+  return input['run_in_background'] !== true;
 }
 
 /**
@@ -455,12 +475,21 @@ export async function reconstructWorkflowTasks(
       const task = tasks.get(toolUseId);
       if (!task) continue;
       const content = block['content'];
-      const text = typeof content === 'string' ? content : getEventText(msg);
+      // A result is a string, or a list of blocks. A subagent's report arrives as the list, and the line that names
+      // its agent is in it, so a string-only read would never learn the id.
+      const text = typeof content === 'string' ? content : blockListText(content) || getEventText(msg);
 
       // Each kind announces itself in its own words, so each gets its own
       // parser — the same three shapes the live path already distinguishes in
       // onImmediateResult.
       if (task.taskType === 'local_agent') {
+        // A foreground agent's result is its report: it has ended, and it ended
+        // the way the result says. No task-notification follows, so without this
+        // it would come back as stopped, as an agent nobody heard the end of.
+        if (isForegroundAgent(task.events?.tool_use) && !isLive?.(toolUseId)) {
+          task.status = block['is_error'] === true ? 'failed' : 'completed';
+          task.endedAt = eventTimestamp(msg);
+        }
         if (task.outputFile) continue;
         const { agentId, outputFile } = parseImmediateAgentResult(text);
         if (outputFile) task.outputFile = outputFile;
@@ -682,7 +711,13 @@ export class WorkflowProgressTracker {
     // and listing them filled it with rows for `ls` and the like. The task is
     // still tracked — a later `task_updated` can flip this to true — but it is
     // not reported until it does. A workflow carries no such field at all.
-    if (event['is_backgrounded'] === false) entry.backgrounded = false;
+    //
+    // A subagent is the exception (#673). It is no ordinary command: the
+    // transcript holds a one-line summary of it, and what it is doing inside —
+    // the commands it runs, which it may ask permission for — is visible only in
+    // its own run window, which the panel's row opens. The desktop app lists a
+    // running subagent either way, so a foreground one gets its row too.
+    if (event['is_backgrounded'] === false && event['task_type'] !== 'local_agent') entry.backgrounded = false;
 
     const t = entry.task;
     const prompt = typeof event['prompt'] === 'string' ? (event['prompt'] as string) : undefined;
@@ -946,6 +981,16 @@ export class WorkflowProgressTracker {
    */
   isRunning(sessionId: string, toolUseId: string): boolean {
     return this.entries.get(this.key(sessionId, toolUseId))?.task.status === 'running';
+  }
+
+  /**
+   * The task as the live stream has it, while it is running and reported. A reload rebuilds a running task from
+   * the transcript, which cannot say what only the stream said (a foreground agent's id arrives with its report,
+   * at the end), so the screen that attaches mid-run is handed this one instead (#673).
+   */
+  liveTask(sessionId: string, toolUseId: string): WorkflowTask | undefined {
+    const entry = this.entries.get(this.resolveKey(sessionId, toolUseId));
+    return entry && entry.backgrounded && entry.task.status === 'running' ? entry.task : undefined;
   }
 
   /** Whether any workflow of the session is still running, i.e. the CLI has work going on its own. */

@@ -19,6 +19,8 @@ import { DETAIL_STORAGE_KEY } from './detailScroll';
 interface Props {
   task: WorkflowTask;
   outputFile: string | undefined;
+  /** The lookup came to nothing for a task that is over: there is no file to wait for. */
+  unavailable?: boolean;
   /**
    * How many messages the user has sent from this modal. Each one switches
    * following back on, the way sending in the main chat does.
@@ -40,7 +42,7 @@ interface Props {
  * bytes, so parsing the pushed text into entries is a frontend-only concern.
  */
 export function AgentOutputTranscriptBody(props: Props) {
-  const { task, outputFile, sendCount } = props;
+  const { task, outputFile, unavailable = false, sendCount } = props;
   const { t } = useTranslation('chat');
   const isRunning = task.status === 'running';
 
@@ -82,6 +84,10 @@ export function AgentOutputTranscriptBody(props: Props) {
     repositionOnRemount: true,
   });
   useGlideOnSend(sendCount, scrollToBottom);
+
+  if (!outputFile && unavailable) {
+    return <div className="flex-1 flex items-center justify-center text-text-primary/50 text-[0.9230rem]">{t('backgroundTasks.transcriptModal.empty')}</div>;
+  }
 
   if (!outputFile || loading) {
     return (

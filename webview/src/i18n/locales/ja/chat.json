@@ -279,6 +279,25 @@
     }
   },
   "acceptPlan": {
+    "started": "計画を開始しました",
+    "starting": "計画を立てています",
+    "notApproved": "未承認",
+    "failed": "失敗",
+    "proposing": "計画を提案中 {{title}}",
+    "proposed": "計画を提案しました {{title}}",
+    "card": {
+      "title": "Claude が計画を提案しました",
+      "openPlan": "計画を開く",
+      "revisePlaceholder": "何を変更しますか？（任意）",
+      "back": "戻る",
+      "reviseSubmit": "修正",
+      "reject": "拒否する",
+      "revise": "修正…",
+      "accept": "承認",
+      "acceptAuto": "同意して自動モードを使用",
+      "acceptEdits": "承認して編集を許可する",
+      "acceptBypass": "権限を承認してバイパスする"
+    },
     "title": "このプランを承認しますか?",
     "subtitle": "プレビュー内のテキストを選択してコメントを追加",
     "textareaPlaceholder": "代わりにClaudeにしてほしいことを伝える",
@@ -301,7 +320,14 @@
     "submit": "回答を送信",
     "next": "次へ",
     "other": "その他",
-    "otherPlaceholder": "回答を入力..."
+    "otherPlaceholder": "回答を入力...",
+    "card": {
+      "skip": "スキップ",
+      "submit": "送信",
+      "placeholder": "ここに独自の回答を入力してください",
+      "progress": "{{current}}/{{total}}",
+      "skipped": "スキップ済み"
+    }
   },
   "backgroundTasks": {
     "title": "バックグラウンドタスク",
@@ -386,6 +412,31 @@
     "setModelTo": "モデルを {{model}} に設定"
   },
   "permissionBanner": {
+    "card": {
+      "question": "Claude が{{action}}ことを許可しますか？",
+      "actionRunCommand": "このコマンドを実行する",
+      "actionSearchWeb": "ウェブを検索する",
+      "questionRead": "Claude に{{file}}の読み取りを許可しますか？",
+      "questionEdit": "Claude に{{file}}の編集を許可しますか？",
+      "questionWrite": "Claude に{{file}}への書き込みを許可しますか？",
+      "questionFetch": "Claude に {{site}} の取得を許可しますか？",
+      "questionTool": "Claude に{{tool}}の使用を許可しますか？",
+      "questionAgent": "Claude にエージェントの実行を許可しますか？{{description}}",
+      "deny": "拒否",
+      "alwaysAllow": "常に許可",
+      "alwaysAllowHint": "このツールについて今後確認しない",
+      "allowOnce": "一度だけ許可",
+      "allowAndSwitchToAuto": "許可して Auto に切り替え",
+      "acceptEditsHint": "このセッションを「編集を承認」モードに切り替えます",
+      "autoReviewsRest": "このセッションの残りの操作は自動モードが確認します。",
+      "moreAllowOptions": "その他の許可オプション",
+      "scope": {
+        "session": "このセッションのみに適用されます",
+        "project": "プロジェクト設定に保存されます",
+        "projectLocal": "ローカルプロジェクト設定に保存されます",
+        "user": "ユーザー設定に保存されます（すべてのプロジェクト）"
+      }
+    },
     "textareaPlaceholder": "代わりにClaudeにしてほしいことを伝える",
     "workflowNotice": "動的ワークフローは多数のサブエージェントを並列実行し、使用量上限を大きく消費する場合があります。タスクパネルからいつでも停止できます。",
     "yes": "はい",
@@ -683,7 +734,9 @@
     "rewindFailed": "コードを巻き戻せませんでした"
   },
   "chatPage": {
-    "scrollToBottom": "一番下までスクロール"
+    "scrollToBottom": "一番下までスクロール",
+    "inputNeeded": "入力が必要です",
+    "sendHeldNow": "今すぐ送信"
   },
   "contextUsage": {
     "heading": "コンテキスト使用状況",
@@ -1059,6 +1112,19 @@
     "editHint": "Enterで保存 · Escでキャンセル"
   },
   "transcript": {
+    "userMessage": {
+      "showMore": "さらに表示",
+      "showLess": "表示を減らす"
+    },
+    "fileChanges": {
+      "title": "{{count}} 個のファイルが変更されました",
+      "title_other": "{{count}} 個のファイルが変更されました",
+      "undo": "元に戻す",
+      "undoHint": "このターンのファイル変更を元に戻すよう Claude に依頼する",
+      "total": "合計",
+      "viewAll": "すべて表示",
+      "viewLess": "表示を減らす"
+    },
     "tools": {
       "ranCommand": "コマンドを実行",
       "ranCommands_other": "{{count}}個のコマンドを実行",
@@ -1071,6 +1137,11 @@
       "editedFiles_other": "{{count}}個のファイルを編集",
       "createdFile": "{{name}} を作成",
       "editedFile": "{{name}} を編集",
+      "notApplied": "未適用",
+      "interrupted": "中断されました",
+      "updatedFile": "{{name}}を更新しました",
+      "editingFile": "{{name}}を編集中",
+      "creatingFile": "{{name}}を作成中",
       "failed_other": "{{count}}件失敗",
       "readAndEditedFile": "{{name}} を読み取り、編集",
       "runningCommand": "コマンドを実行中",

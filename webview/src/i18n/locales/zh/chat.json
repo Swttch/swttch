@@ -279,6 +279,25 @@
     }
   },
   "acceptPlan": {
+    "started": "已开始规划",
+    "starting": "正在制定计划",
+    "notApproved": "未获批准",
+    "failed": "失败",
+    "proposing": "正在提出计划 {{title}}",
+    "proposed": "已提出计划 {{title}}",
+    "card": {
+      "title": "Claude 提出了一个计划",
+      "openPlan": "打开计划",
+      "revisePlaceholder": "需要更改什么？（可选）",
+      "back": "返回",
+      "reviseSubmit": "修改",
+      "reject": "拒绝",
+      "revise": "修改…",
+      "accept": "接受",
+      "acceptAuto": "接受并使用自动模式",
+      "acceptEdits": "接受并允许编辑",
+      "acceptBypass": "接受并绕过权限"
+    },
     "title": "接受此计划?",
     "subtitle": "在预览中选择文本以添加批注",
     "textareaPlaceholder": "告诉 Claude 该做些什么",
@@ -301,7 +320,14 @@
     "submit": "提交答案",
     "next": "下一步",
     "other": "其他",
-    "otherPlaceholder": "输入您的答案..."
+    "otherPlaceholder": "输入您的答案...",
+    "card": {
+      "skip": "跳过",
+      "submit": "提交",
+      "placeholder": "在此输入你的答案",
+      "progress": "第 {{current}} 个，共 {{total}} 个",
+      "skipped": "已跳过"
+    }
   },
   "backgroundTasks": {
     "title": "后台任务",
@@ -386,6 +412,31 @@
     "setModelTo": "已将模型设置为 {{model}}"
   },
   "permissionBanner": {
+    "card": {
+      "question": "允许 Claude {{action}}吗？",
+      "actionRunCommand": "运行此命令",
+      "actionSearchWeb": "搜索网页",
+      "questionRead": "允许 Claude 读取 {{file}} 吗？",
+      "questionEdit": "允许 Claude 编辑 {{file}} 吗？",
+      "questionWrite": "允许 Claude 写入 {{file}} 吗？",
+      "questionFetch": "允许 Claude 获取 {{site}} 吗？",
+      "questionTool": "允许 Claude 使用 {{tool}} 吗？",
+      "questionAgent": "允许 Claude 运行代理：{{description}} 吗？",
+      "deny": "拒绝",
+      "alwaysAllow": "始终允许",
+      "alwaysAllowHint": "不再针对此工具询问",
+      "allowOnce": "仅允许一次",
+      "allowAndSwitchToAuto": "允许并切换到 Auto",
+      "acceptEditsHint": "将此会话切换为接受编辑模式",
+      "autoReviewsRest": "Auto 将审查本会话的其余操作。",
+      "moreAllowOptions": "更多允许选项",
+      "scope": {
+        "session": "仅适用于此会话",
+        "project": "保存到项目设置",
+        "projectLocal": "保存到本地项目设置",
+        "user": "保存到用户设置（所有项目）"
+      }
+    },
     "textareaPlaceholder": "告诉 Claude 该做些什么",
     "workflowNotice": "动态工作流会并行运行多个子智能体,可能消耗大量用量额度。您可以随时从任务面板停止它们。",
     "yes": "是",
@@ -683,7 +734,9 @@
     "rewindFailed": "无法回退代码"
   },
   "chatPage": {
-    "scrollToBottom": "滚动到底部"
+    "scrollToBottom": "滚动到底部",
+    "inputNeeded": "需要输入",
+    "sendHeldNow": "立即发送"
   },
   "contextUsage": {
     "heading": "上下文使用情况",
@@ -1059,6 +1112,19 @@
     "editHint": "按 Enter 保存 · 按 Esc 取消"
   },
   "transcript": {
+    "userMessage": {
+      "showMore": "展开",
+      "showLess": "收起"
+    },
+    "fileChanges": {
+      "title": "已更改 {{count}} 个文件",
+      "title_other": "已更改 {{count}} 个文件",
+      "undo": "撤销",
+      "undoHint": "请 Claude 撤销本轮的文件更改",
+      "total": "总计",
+      "viewAll": "查看全部",
+      "viewLess": "收起"
+    },
     "tools": {
       "ranCommand": "运行了命令",
       "ranCommands_other": "运行了 {{count}} 条命令",
@@ -1071,6 +1137,11 @@
       "editedFiles_other": "编辑了 {{count}} 个文件",
       "createdFile": "创建了 {{name}}",
       "editedFile": "编辑了 {{name}}",
+      "notApplied": "未应用",
+      "interrupted": "已中断",
+      "updatedFile": "已更新 {{name}}",
+      "editingFile": "正在编辑 {{name}}",
+      "creatingFile": "正在创建 {{name}}",
       "failed_other": "{{count}} 个失败",
       "readAndEditedFile": "读取并编辑了 {{name}}",
       "runningCommand": "正在运行命令",

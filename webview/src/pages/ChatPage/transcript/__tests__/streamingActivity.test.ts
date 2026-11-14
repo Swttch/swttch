@@ -16,7 +16,7 @@ const call = (id: string, name: string, input: Record<string, unknown> = {}, too
 describe('runningActivity', () => {
   it('finds the last call that has no result, with its own description', () => {
     const found = runningActivity([assistant([call('1', 'Bash', { description: 'Run the tests', command: 'x' })])]);
-    expect(found).toEqual({ toolUseId: '1', description: 'Run the tests', phrase: 'command', mark: 'code' });
+    expect(found).toEqual({ toolUseId: '1', description: 'Run the tests', phrase: 'command', mark: 'code', file: null });
   });
 
   it('falls back to the phrase for the kind of call when there is no description', () => {

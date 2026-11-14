@@ -22,10 +22,14 @@ interface FormValues {
   currentIndex: number;
 }
 
-export function useFormState(questions: QuestionItem[]) {
+/** `preselectFirst`: in the views that follow the desktop app a question with one answer opens with its first option picked. */
+export function useFormState(questions: QuestionItem[], preselectFirst = false) {
   const { control, watch, setValue, getValues } = useForm<FormValues>({
     defaultValues: {
-      questions: questions.map(() => ({ selected: [], otherText: '' })),
+      questions: questions.map((question) => ({
+        selected: preselectFirst && !question.multiSelect && question.options?.[0] ? [question.options[0].label] : [],
+        otherText: '',
+      })),
       currentIndex: 0,
     },
   });

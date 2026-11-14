@@ -30,7 +30,7 @@ import { removeSessionTitleOverride } from './features/sessionTitleOverrides';
 import { renamedSessionTitle } from './features/sessionRenamedReply';
 import { announceSessionToolChanges } from './features/sessionToolAnnouncer';
 import { swttchEntrypointName } from './features/sessionEntrypoint';
-import { MessageType, SessionActivity } from '../shared';
+import { MessageType, SessionActivity, type WorkflowTask } from '../shared';
 import { ingestRateLimitWindows } from './handlers/getUsage';
 import { SESSION_MCP_AREAS, resolveInstalledSessionMcp, type InstalledSessionMcp } from './session-mcp';
 
@@ -76,6 +76,11 @@ export function stopWorkflowsForSession(sessionId: string): void {
  */
 export function isWorkflowRunning(sessionId: string, toolUseId: string): boolean {
   return peekWorkflowTracker()?.isRunning(sessionId, toolUseId) ?? false;
+}
+
+/** The running task as the live stream has it, if any (see WorkflowProgressTracker.liveTask). */
+export function getLiveWorkflowTask(sessionId: string, toolUseId: string): WorkflowTask | undefined {
+  return peekWorkflowTracker()?.liveTask(sessionId, toolUseId);
 }
 
 // InputMode -> CLI --permission-mode flag mapping

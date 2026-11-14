@@ -7,6 +7,8 @@ import { useFormState } from './useFormState';
 import { TabBar } from './TabBar';
 import { OptionList } from './OptionList';
 import { Footer } from './Footer';
+import { DesktopQuestionCard } from './DesktopQuestionCard';
+import { useTranscriptViewMode } from '../message-renderers/transcriptViewMode';
 import {
   CollapseToggle,
   CollapsedSummaryBar,
@@ -23,11 +25,12 @@ export const AskUserQuestionInputPanel = (props: Props) => {
   const { toolUse, controlRequestId, onDismiss } = props;
   const api = useApi();
   const { stop } = useChatStreamContext();
+  const viewMode = useTranscriptViewMode();
   const panelRef = useRef<HTMLDivElement>(null);
 
   const questions = toolUse.input.questions;
 
-  const form = useFormState(questions);
+  const form = useFormState(questions, viewMode !== null);
   const { collapsed, toggle: toggleCollapsed, expand } = useCollapsiblePanel();
 
   const questionText = form.currentQuestion.header
@@ -38,9 +41,11 @@ export const AskUserQuestionInputPanel = (props: Props) => {
     if (controlRequestId) {
       api.tools.deny(toolUse.id, controlRequestId);
     }
-    stop();
+    // The classic panel's cancel ends the turn. In the views that follow the desktop app "Skip" turns down this
+    // question only and the turn goes on: Claude took the answer and asked again (measured on its recording).
+    if (viewMode === null) stop();
     onDismiss();
-  }, [toolUse.id, controlRequestId, api, onDismiss, stop]);
+  }, [toolUse.id, controlRequestId, api, onDismiss, stop, viewMode]);
 
   // Esc: deny (capture phase)
   useEffect(() => {
@@ -88,6 +93,19 @@ export const AskUserQuestionInputPanel = (props: Props) => {
   };
 
   const summaryTitle = form.currentQuestion.header || form.currentQuestion.question;
+
+  // In the views that follow the desktop app the question is drawn as its card; the answers go the same way.
+  if (viewMode !== null) {
+    return (
+      <DesktopQuestionCard
+        form={form}
+        total={questions.length}
+        onSubmit={handleSubmit}
+        onCancel={handleCancel}
+        onOtherKeyDown={handleOtherKeyDown}
+      />
+    );
+  }
 
   if (collapsed) {
     return (

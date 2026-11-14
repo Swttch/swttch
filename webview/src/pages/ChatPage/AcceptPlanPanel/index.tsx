@@ -6,6 +6,8 @@ import { useSessionContext } from '../../../contexts/SessionContext';
 import { InputModeValues } from '../../../types/chatInput';
 import type { PendingPlanApproval } from '../../../hooks/usePendingPlanApproval';
 import { useTranslation } from '@/i18n';
+import { useTranscriptViewMode } from '../message-renderers/transcriptViewMode';
+import { DesktopPlanCard } from './DesktopPlanCard';
 
 interface Props {
   pending: PendingPlanApproval;
@@ -18,6 +20,7 @@ export function AcceptPlanPanel(props: Props) {
   const { stop } = useChatStreamContext();
   const { setInputMode } = useSessionContext();
   const { t } = useTranslation('chat');
+  const viewMode = useTranscriptViewMode();
 
   const options: OptionItem[] = useMemo(() => [
     { key: '1', label: t('acceptPlan.options.autoAccept') },
@@ -46,6 +49,9 @@ export function AcceptPlanPanel(props: Props) {
     onDeny(pending.controlRequestId);
     stop();
   }, [pending, onDeny, stop]);
+
+  // In the views that follow the desktop app the plan is asked about with its card.
+  if (viewMode !== null) return <DesktopPlanCard pending={pending} onApprove={onApprove} onDeny={onDeny} />;
 
   return (
     <ApprovalPanel

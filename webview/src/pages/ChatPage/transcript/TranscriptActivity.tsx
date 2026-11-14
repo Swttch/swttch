@@ -35,5 +35,8 @@ export function useFormatElapsed(): (seconds: number) => string {
 /** What the live call is doing, in words: its own description, or the desktop app's phrase for the kind of call. */
 export function useActivityLabel(): (activity: StreamingActivity) => string {
   const { t } = useTranslation('chat');
-  return (activity) => activity.description ?? t(`transcript.streaming.activity.${activity.phrase}`);
+  return (activity) =>
+    activity.file
+      ? t(activity.file.creating ? 'transcript.tools.creatingFile' : 'transcript.tools.editingFile', { name: activity.file.name })
+      : (activity.description ?? t(`transcript.streaming.activity.${activity.phrase}`));
 }

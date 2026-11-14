@@ -2,7 +2,7 @@ import type { ConnectionManager } from '../../ws/connection-manager';
 import { loadSessionMessages } from '../features/loadSessionMessages';
 import { getSessionEntry } from '../features/getSessionEntry';
 import { reconstructWorkflowTasks } from '../features/workflow-tracker';
-import { isWorkflowRunning } from '../claude-process';
+import { getLiveWorkflowTask, isWorkflowRunning } from '../claude-process';
 import { MessageType } from '../../shared';
 
 export interface LoadAndSendSessionOptions {
@@ -64,6 +64,10 @@ export async function loadAndSendSession(
     // This session's own list row (see `entry` above). Same shape as a row from
     // GET_SESSIONS, so the webview merges it into the list it already holds.
     session: entry,
+    // When the turn the CLI has in flight began, or null. A screen that attaches in
+    // the middle of one did not see it start, and says so in its composer only if it
+    // is told (#673). Not on an older page: that is more of the same transcript.
+    turnStartedAt: isOlderPage ? null : connections.getTurnStartedAt(sessionId),
   });
 
   // Rebuild background-workflow state from the transcript so the inline cards
@@ -80,7 +84,11 @@ export async function loadAndSendSession(
       result.activeChain as Array<Record<string, unknown>>,
       (toolUseId) => isWorkflowRunning(sessionId, toolUseId),
     );
-    for (const task of workflows) {
+    for (const rebuilt of workflows) {
+      // A task still running is sent as the live stream has it: a reload in the middle of a run (a foreground
+      // agent waiting on a permission answer, say) must not swap what the stream knew, the agent's id above all,
+      // for what the transcript can say before the run ends (#673).
+      const task = getLiveWorkflowTask(sessionId, rebuilt.toolUseId) ?? rebuilt;
       connections.sendTo(
         connectionId,
         MessageType.WORKFLOW_PROGRESS,

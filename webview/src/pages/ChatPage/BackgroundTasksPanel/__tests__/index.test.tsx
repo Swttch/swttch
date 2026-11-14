@@ -19,20 +19,31 @@ function makeTask(overrides: Partial<WorkflowTask> = {}): WorkflowTask {
   };
 }
 
-vi.mock('@/contexts/WorkflowStateContext', () => ({
-  useWorkflowState: () => ({
-    tasks: Object.values(tasksById),
-    getByToolUseId: (id: string) => tasksById[id],
-    runningTasks: Object.values(tasksById).filter((t) => t.status === 'running'),
-    finishedTasks: Object.values(tasksById).filter((t) => t.status !== 'running'),
-    clearFinished: vi.fn(),
-    dismissTask: vi.fn(),
-    panelOpen,
-    openPanel: vi.fn(),
-    closePanel: closePanelMock,
-    focusedToolUseId: null,
-  }),
-}));
+// The open run window lives in the shared state (so a card in the chat can open
+// it), so the stand-in keeps it in state of its own, the way the real provider does.
+vi.mock('@/contexts/WorkflowStateContext', async () => {
+  const { useState } = await import('react');
+  return {
+    useWorkflowState: () => {
+      const [transcriptToolUseId, setTranscriptToolUseId] = useState<string | null>(null);
+      return {
+        tasks: Object.values(tasksById),
+        getByToolUseId: (id: string) => tasksById[id],
+        runningTasks: Object.values(tasksById).filter((t) => t.status === 'running'),
+        finishedTasks: Object.values(tasksById).filter((t) => t.status !== 'running'),
+        clearFinished: vi.fn(),
+        dismissTask: vi.fn(),
+        panelOpen,
+        openPanel: vi.fn(),
+        closePanel: closePanelMock,
+        focusedToolUseId: null,
+        transcriptToolUseId,
+        openTranscript: setTranscriptToolUseId,
+        closeTranscript: () => setTranscriptToolUseId(null),
+      };
+    },
+  };
+});
 
 vi.mock('@/hooks/useBackgroundTaskActions', () => ({
   useBackgroundTaskActions: () => ({ cancelTask: cancelTaskMock }),

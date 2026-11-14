@@ -60,6 +60,24 @@ interface SendMessagePayload {
   accountId?: string;
 }
 
+/** A message sent while a turn was running, waiting for that turn to end before it enters the chat. */
+export interface SentWhileRunning {
+  id: string;
+  content: string;
+  context?: Context[];
+  attachments?: Attachment[];
+}
+
+/** A message written while a permission card holds the turn, not yet sent (see ChatStreamContextType.heldMessages). */
+export interface HeldMessage {
+  id: string;
+  content: string;
+  inputMode: InputMode;
+  attachments?: Attachment[];
+  /** Already handed to the CLI (at an allow), still drawn here until the call it waited for has finished. */
+  released?: boolean;
+}
+
 interface ChatStreamContextType {
   // From useChatStream
   messages: LoadedMessageDto[];
@@ -69,13 +87,13 @@ interface ChatStreamContextType {
   authDiagnosis: { envApiKeys: string[]; message: string } | null;
 
   // Actions
-  sendMessage: (content: string, inputMode: InputMode, context?: Context[], attachments?: Attachment[], accountId?: string) => void;
+  sendMessage: (content: string, inputMode: InputMode, context?: Context[], attachments?: Attachment[], accountId?: string, inChatNow?: boolean, skipEcho?: boolean) => Promise<void>;
   /**
    * `invertFollowUp` does the opposite of the configured follow-up behavior for
    * this one message — the derived key described in {@link invertedOf}. The
    * setting is not touched, so the next message follows it again.
    */
-  handleSubmit: (e: React.FormEvent | undefined, inputMode: InputMode, attachments?: Attachment[], invertFollowUp?: boolean) => void;
+  handleSubmit: (e: React.FormEvent | undefined, inputMode: InputMode, attachments?: Attachment[], invertFollowUp?: boolean, forceQueue?: boolean) => void;
   /** Run a slash command the CLI only accepts as a control_request (#270). */
   runControlRequestCommand: (command: string, inputMode: InputMode) => void;
   stop: () => void;
@@ -99,11 +117,34 @@ interface ChatStreamContextType {
   moveQueuedMessage: (id: string, toIndex: number) => void;
   /** Take one held message out of the queue and send it to the CLI now. */
   steerQueuedMessage: (id: string) => void;
+  /**
+   * Messages written while a permission card holds the running turn (#673). They are kept here, in this view only,
+   * never in the backend queue: the CLI cannot read them before the card is answered, and they go out as ordinary
+   * messages the moment it is.
+   */
+  heldMessages: HeldMessage[];
+  /**
+   * Messages sent while a turn was running, shown after what that turn has written until it ends (#673): the
+   * CLI answers them after the turn, so a bubble put into the chat at the moment of sending would stand above
+   * the answer to the message sent before it.
+   */
+  sentWhileRunning: SentWhileRunning[];
+  /** Count the running turn's time and written tokens from now (after a permission card was answered). */
+  restartTurnClock: () => void;
+  /** Send every held message now, in the order they were written; settles when the backend has all of them. */
+  /** `keepShown`: hand them to the CLI now but keep drawing them until dropReleasedHeldMessages. */
+  releaseHeldMessages: (keepShown?: boolean) => Promise<void>;
+  /** Enter the messages released with keepShown into the chat, where they stand above what the turn writes next. */
+  dropReleasedHeldMessages: () => void;
+  /** Send one held message now, ahead of the card's answer. */
+  sendHeldMessage: (id: string) => void;
 
   resetStreamState: () => void;
   // From useChatStream (message manipulation)
   clearMessages: () => void;
   loadMessages: (msgs: LoadedMessageDto[]) => void;
+  /** Take up a turn that was already running when this screen attached (see UseChatStreamReturn.resumeTurn). */
+  resumeTurn: (startedAt: number) => void;
   prependOlderMessages: (msgs: LoadedMessageDto[]) => void;
   appendMessage: (message: LoadedMessageDto) => void;
   updateMessage: (id: string, updates: Partial<LoadedMessageDto>) => void;
@@ -318,9 +359,12 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   // don't depend on the plain-object chatStream reference (new every render).
   const {
     addUserMessage,
+    appendSentMessage,
+    restartTurnClock,
     addCommandEcho,
     clearMessages: chatStreamClearMessages,
     loadMessages: chatStreamLoadMessages,
+    resumeTurn: chatStreamResumeTurn,
     prependOlderMessages: chatStreamPrependOlderMessages,
     appendMessage: chatStreamAppendMessage,
     updateMessage: chatStreamUpdateMessage,
@@ -576,8 +620,28 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     if (forkHandoff?.promptText) setInput(forkHandoff.promptText);
   }, [forkHandoff?.promptText, setInput]);
 
+  const [sentWhileRunning, setSentWhileRunning] = useState<SentWhileRunning[]>([]);
+  const isStreamingRef = useRef(chatStream.isStreaming);
+  isStreamingRef.current = chatStream.isStreaming;
+  const sentWhileRunningRef = useRef<SentWhileRunning[]>([]);
+  sentWhileRunningRef.current = sentWhileRunning;
+
+  // A message waiting for its turn to end belongs to the session it was sent in.
+  useEffect(() => {
+    setSentWhileRunning([]);
+  }, [session.currentSessionId]);
+
+  // When the turn ends, what was sent during it enters the chat, in the order it was sent.
+  useEffect(() => {
+    if (chatStream.isStreaming) return;
+    const pending = sentWhileRunningRef.current;
+    if (pending.length === 0) return;
+    setSentWhileRunning([]);
+    pending.forEach((sent) => appendSentMessage(sent.content, sent.context, sent.attachments));
+  }, [chatStream.isStreaming, appendSentMessage]);
+
   const sendMessage = useCallback(
-    (content: string, inputMode: InputMode, context?: Context[], attachments?: Attachment[], accountId?: string) => {
+    (content: string, inputMode: InputMode, context?: Context[], attachments?: Attachment[], accountId?: string, inChatNow = false, skipEcho = false) => {
       // Prepend the IDE-context tag (open file / selection) when the toggle is on
       // and a selection is available. parseUserContent() turns the tag back into a
       // context chip in the UI bubble, while the CLI sees the same hint. Gated on
@@ -607,8 +671,21 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
         console.log('[ChatStreamContext] New session created:', sessionId);
       }
 
-      // Add to local chat state (항상 — UI에는 즉시 표시)
-      addUserMessage(content, context, attachments);
+      // Add to local chat state (항상 — UI에는 즉시 표시).
+      // Sent while a turn is running, it waits after what that turn has written and enters the chat when the
+      // turn ends: the CLI answers it after the turn, so a bubble put in now would stand above the answer to
+      // the message sent before it (#673).
+      if (skipEcho) {
+        // Drawn by the held list until the call has finished; entered into the chat then.
+      } else if (inChatNow && isStreamingRef.current && !isNewSession) {
+        // Written under a permission card and handed over with its answer: it is read before the turn goes on, so
+        // it stands here, above whatever the turn writes next, without beginning a turn of its own.
+        appendSentMessage(content, context, attachments);
+      } else if (isStreamingRef.current && !isNewSession) {
+        setSentWhileRunning((all) => [...all, { id: crypto.randomUUID(), content, context, attachments }]);
+      } else {
+        addUserMessage(content, context, attachments);
+      }
 
       // 강등 감지를 위해 이번에 요청한 모드를 기록한다(systemInit 수신 시 비교).
       lastSentModeRef.current = inputMode;
@@ -637,7 +714,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
       // interrupt manually) before their message reached Claude (#220).
       // The backend reuses the running process, so this never respawns the CLI.
       // A view picked before the session existed goes to the backend first: the spawn reads it.
-      (pendingViewSaved ?? Promise.resolve()).catch(() => undefined).then(() => bridge.send(MessageType.SEND_MESSAGE, payload)).then((response) => {
+      return (pendingViewSaved ?? Promise.resolve()).catch(() => undefined).then(() => bridge.send(MessageType.SEND_MESSAGE, payload)).then((response) => {
         if (response?.status === 'error') {
           console.error('[ChatStreamContext] Backend error:', response.error);
         }
@@ -645,7 +722,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
         console.error('[ChatStreamContext] Failed to send message to bridge:', error);
       });
     },
-    [addUserMessage, adoptAllowAllDraft, adoptPendingView, bridge, session, sessionModel]
+    [addUserMessage, appendSentMessage, adoptAllowAllDraft, adoptPendingView, bridge, session, sessionModel]
   );
 
   /**
@@ -827,11 +904,49 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     [addCommandEcho, adoptAllowAllDraft, adoptPendingView, dispatchControlRequestCommand, runSideQuestion, sendMessage, session, sessionModel]
   );
 
+  const [heldMessages, setHeldMessages] = useState<HeldMessage[]>([]);
+  const heldMessagesRef = useRef<HeldMessage[]>([]);
+  heldMessagesRef.current = heldMessages;
+
+  const sendHeldMessage = useCallback(
+    (id: string) => {
+      const held = heldMessagesRef.current.find((message) => message.id === id);
+      // One already handed to the CLI at an allow is on its way; there is nothing more to send.
+      if (!held || held.released) return;
+      setHeldMessages((all) => all.filter((message) => message.id !== id));
+      sendMessage(held.content, held.inputMode, undefined, held.attachments);
+    },
+    [sendMessage]
+  );
+
+  const releaseHeldMessages = useCallback(
+    async (keepShown = false) => {
+      const all = heldMessagesRef.current.filter((held) => !held.released);
+      if (all.length === 0) return;
+      const ids = new Set(all.map((held) => held.id));
+      setHeldMessages((rest) =>
+        keepShown ? rest.map((held) => (ids.has(held.id) ? { ...held, released: true } : held)) : rest.filter((held) => !ids.has(held.id)),
+      );
+      // In order, each one handed over before the next: the CLI reads its input in the order it arrives.
+      for (const held of all) {
+        await sendMessage(held.content, held.inputMode, undefined, held.attachments, undefined, true, keepShown);
+      }
+    },
+    [sendMessage]
+  );
+
+  const dropReleasedHeldMessages = useCallback(() => {
+    const released = heldMessagesRef.current.filter((held) => held.released);
+    if (released.length === 0) return;
+    setHeldMessages((rest) => rest.filter((held) => !held.released));
+    released.forEach((held) => appendSentMessage(held.content, undefined, held.attachments));
+  }, [appendSentMessage]);
+
   // handleSubmit: convenience wrapper for form submission.
   // Reads input via inputRef so this callback stays stable across keystrokes
   // — otherwise every key press would invalidate contextValue.
   const handleSubmit = useCallback(
-    (e: React.FormEvent | undefined, inputMode: InputMode, attachments?: Attachment[], invertFollowUp = false) => {
+    (e: React.FormEvent | undefined, inputMode: InputMode, attachments?: Attachment[], invertFollowUp = false, forceQueue = false) => {
       if (e) e.preventDefault();
       const typedInput = inputRef.current.trim();
       if (!typedInput && (!attachments || attachments.length === 0) && getPendingElements().length === 0 && getPendingReplies().length === 0) return;
@@ -867,6 +982,15 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
       // message goes back to whichever behavior is configured.
       const chosen = resolveFollowUpBehavior(appSettings);
       const behavior = invertFollowUp ? invertFollowUpBehavior(chosen) : chosen;
+      // A permission card holds the turn: keep the message in this view until the card is answered (#673).
+      if (chatStream.isStreaming && forceQueue) {
+        setHeldMessages((all) => [
+          ...all,
+          { id: crypto.randomUUID(), content: trimmedInput, inputMode, attachments },
+        ]);
+        setInput('');
+        return;
+      }
       if (chatStream.isStreaming && behavior === FollowUpBehavior.Queue) {
         queueMessage(trimmedInput, attachments);
         setInput('');
@@ -932,12 +1056,19 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     mergeQueuedMessages,
     moveQueuedMessage,
     steerQueuedMessage,
+    heldMessages,
+    sentWhileRunning,
+    releaseHeldMessages,
+    dropReleasedHeldMessages,
+    sendHeldMessage,
+    restartTurnClock,
 
     resetStreamState: chatStreamResetStreamState,
 
     // Message manipulation
     clearMessages: chatStreamClearMessages,
     loadMessages: chatStreamLoadMessages,
+    resumeTurn: chatStreamResumeTurn,
     prependOlderMessages: chatStreamPrependOlderMessages,
     appendMessage: chatStreamAppendMessage,
     updateMessage: chatStreamUpdateMessage,
@@ -992,6 +1123,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     chatStreamResetStreamState,
     chatStreamClearMessages,
     chatStreamLoadMessages,
+    chatStreamResumeTurn,
     chatStreamPrependOlderMessages,
     chatStreamAppendMessage,
     chatStreamUpdateMessage,
@@ -1007,6 +1139,12 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     mergeQueuedMessages,
     moveQueuedMessage,
     steerQueuedMessage,
+    heldMessages,
+    sentWhileRunning,
+    releaseHeldMessages,
+    dropReleasedHeldMessages,
+    sendHeldMessage,
+    restartTurnClock,
     tools,
     diffs,
     isThinkingExpanded,

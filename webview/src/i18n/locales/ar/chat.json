@@ -279,6 +279,25 @@
     }
   },
   "acceptPlan": {
+    "started": "بدأ التخطيط",
+    "starting": "جارٍ وضع خطة",
+    "notApproved": "لم تتم الموافقة",
+    "failed": "فشل",
+    "proposing": "جارٍ اقتراح الخطة {{title}}",
+    "proposed": "تم اقتراح الخطة {{title}}",
+    "card": {
+      "title": "اقترح Claude خطة",
+      "openPlan": "فتح الخطة",
+      "revisePlaceholder": "ما الذي يجب تغييره؟ (اختياري)",
+      "back": "رجوع",
+      "reviseSubmit": "تعديل",
+      "reject": "رفض",
+      "revise": "تعديل…",
+      "accept": "قبول",
+      "acceptAuto": "قبول واستخدام الوضع التلقائي",
+      "acceptEdits": "قبول والسماح بالتعديلات",
+      "acceptBypass": "قبول وتجاوز الأذونات"
+    },
     "title": "قبول هذه الخطة؟",
     "subtitle": "حدد نصًا في المعاينة لإضافة تعليقات",
     "textareaPlaceholder": "أخبر Claude بما يجب فعله بدلًا من ذلك",
@@ -301,7 +320,14 @@
     "submit": "إرسال الإجابات",
     "next": "التالي",
     "other": "أخرى",
-    "otherPlaceholder": "اكتب إجابتك..."
+    "otherPlaceholder": "اكتب إجابتك...",
+    "card": {
+      "skip": "تخطي",
+      "submit": "إرسال",
+      "placeholder": "اكتب إجابتك هنا",
+      "progress": "{{current}} من {{total}}",
+      "skipped": "تم التخطي"
+    }
   },
   "backgroundTasks": {
     "title": "المهام الخلفية",
@@ -394,6 +420,31 @@
     "setModelTo": "تعيين النموذج إلى {{model}}"
   },
   "permissionBanner": {
+    "card": {
+      "question": "هل تسمح لـ Claude بـ{{action}}؟",
+      "actionRunCommand": "تشغيل هذا الأمر",
+      "actionSearchWeb": "البحث في الويب",
+      "questionRead": "هل تسمح لـ Claude بقراءة {{file}}؟",
+      "questionEdit": "هل تسمح لـ Claude بتعديل {{file}}؟",
+      "questionWrite": "هل تسمح لـ Claude بالكتابة في {{file}}؟",
+      "questionFetch": "هل تسمح لـ Claude بجلب {{site}}؟",
+      "questionTool": "هل تسمح لـ Claude باستخدام {{tool}}؟",
+      "questionAgent": "هل تسمح لـ Claude بتشغيل وكيل: {{description}}؟",
+      "deny": "رفض",
+      "alwaysAllow": "السماح دائمًا",
+      "alwaysAllowHint": "عدم السؤال مرة أخرى لهذه الأداة",
+      "allowOnce": "السماح مرة واحدة",
+      "allowAndSwitchToAuto": "السماح والتبديل إلى Auto",
+      "acceptEditsHint": "يحوّل هذه الجلسة إلى وضع قبول التعديلات",
+      "autoReviewsRest": "سيراجع وضع Auto بقية هذه الجلسة.",
+      "moreAllowOptions": "خيارات سماح إضافية",
+      "scope": {
+        "session": "ينطبق على هذه الجلسة فقط",
+        "project": "يُحفظ في إعدادات المشروع",
+        "projectLocal": "يُحفظ في إعدادات المشروع المحلية",
+        "user": "يُحفظ في إعدادات المستخدم (كل المشاريع)"
+      }
+    },
     "textareaPlaceholder": "أخبر Claude بما يجب فعله بدلًا من ذلك",
     "workflowNotice": "تُشغّل مهام سير العمل الديناميكية العديد من الوكلاء الفرعيين بالتوازي ويمكن أن تستهلك قدرًا كبيرًا من حد استخدامك. أوقفها في أي وقت من لوحة المهام.",
     "yes": "نعم",
@@ -699,7 +750,9 @@
     "rewindFailed": "تعذّر إرجاع الكود"
   },
   "chatPage": {
-    "scrollToBottom": "التمرير إلى الأسفل"
+    "scrollToBottom": "التمرير إلى الأسفل",
+    "inputNeeded": "مطلوب إدخال",
+    "sendHeldNow": "أرسل الآن"
   },
   "contextUsage": {
     "heading": "استخدام السياق",
@@ -1111,6 +1164,19 @@
     "editHint": "Enter للحفظ · Esc للإلغاء"
   },
   "transcript": {
+    "userMessage": {
+      "showMore": "عرض المزيد",
+      "showLess": "عرض أقل"
+    },
+    "fileChanges": {
+      "title": "تم تغيير {{count}} ملفات",
+      "title_other": "تم تغيير {{count}} ملفات",
+      "undo": "تراجع",
+      "undoHint": "اطلب من Claude التراجع عن تغييرات الملفات في هذه الجولة",
+      "total": "الإجمالي",
+      "viewAll": "عرض الكل",
+      "viewLess": "عرض أقل"
+    },
     "tools": {
       "ranCommand": "تم تنفيذ أمر",
       "ranCommands_zero": "تم تنفيذ {{count}} أمر",
@@ -1148,6 +1214,11 @@
       "editedFiles_other": "تم تعديل {{count}} ملف",
       "createdFile": "تم إنشاء {{name}}",
       "editedFile": "تم تعديل {{name}}",
+      "notApplied": "لم يتم التطبيق",
+      "interrupted": "تمت المقاطعة",
+      "updatedFile": "تم تحديث {{name}}",
+      "editingFile": "جارٍ تعديل {{name}}",
+      "creatingFile": "جارٍ إنشاء {{name}}",
       "failed_zero": "فشل {{count}}",
       "failed_one": "فشل {{count}}",
       "failed_two": "فشل {{count}}",

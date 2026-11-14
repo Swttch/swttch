@@ -57,6 +57,79 @@ describe('WorkflowTaskSummary', () => {
   });
 });
 
+// #673: a running task's elapsed time follows the clock. The CLI's own figure is
+// the one from its last progress event, so it stops at "2s" while the agent
+// waits on a permission answer and the row beside it counts on.
+describe('WorkflowTaskSummary: the elapsed time of a running task', () => {
+  const running = (overrides: Partial<WorkflowTask> = {}) =>
+    makeTask({ status: 'running', startedAt: 1_000_000, usage: { duration_ms: 2000 }, agents: [], ...overrides });
+
+  it('counts from the start time, not from the last figure the CLI sent', () => {
+    render(<WorkflowTaskSummary task={running()} now={1_000_000 + 21_000} />);
+
+    expect(screen.getByText(/21s/)).toBeInTheDocument();
+    expect(screen.queryByText(/\b2s\b/)).not.toBeInTheDocument();
+  });
+
+  it('keeps counting as the clock moves', () => {
+    const { rerender } = render(<WorkflowTaskSummary task={running()} now={1_000_000 + 21_000} />);
+    rerender(<WorkflowTaskSummary task={running()} now={1_000_000 + 33_000} />);
+
+    expect(screen.getByText(/33s/)).toBeInTheDocument();
+  });
+
+  it('uses the span between start and end for a task that was cancelled, whose usage is stale', () => {
+    render(
+      <WorkflowTaskSummary
+        task={running({ status: 'stopped', endedAt: 1_000_000 + 25_000, usage: { duration_ms: 2000 } })}
+        now={1_000_000 + 90_000}
+      />,
+    );
+
+    expect(screen.getByText(/25s/)).toBeInTheDocument();
+    expect(screen.queryByText(/\b2s\b/)).not.toBeInTheDocument();
+  });
+
+  // The notification of a cancelled task is as the CLI sent it: "stopped", with no usage.
+  it('uses the span when the closing notification carried no usage', () => {
+    render(
+      <WorkflowTaskSummary
+        task={running({
+          status: 'stopped',
+          endedAt: 1_000_000 + 15_000,
+          usage: { duration_ms: 1590 },
+          events: { task_notification: { status: 'stopped' } },
+        })}
+        now={1_000_000 + 90_000}
+      />,
+    );
+
+    expect(screen.getByText(/15s/)).toBeInTheDocument();
+  });
+
+  it('keeps the CLI figure when its closing notification carried one', () => {
+    render(
+      <WorkflowTaskSummary
+        task={running({
+          status: 'completed',
+          endedAt: 1_000_000 + 30_000,
+          usage: { duration_ms: 20_652 },
+          events: { task_notification: { status: 'completed', usage: { duration_ms: 20_652 } } },
+        })}
+        now={1_000_000 + 90_000}
+      />,
+    );
+
+    expect(screen.getByText(/21s/)).toBeInTheDocument();
+  });
+
+  it('falls back to the CLI figure when the start time is unknown', () => {
+    render(<WorkflowTaskSummary task={running({ startedAt: 0 })} now={1_789_000_000_000} />);
+
+    expect(screen.getByText(/2s/)).toBeInTheDocument();
+  });
+});
+
 describe('WorkflowAgentsTable', () => {
   it('renders one row per agent with its stats', () => {
     render(<WorkflowAgentsTable task={makeTask()} />);

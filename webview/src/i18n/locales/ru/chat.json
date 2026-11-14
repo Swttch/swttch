@@ -279,6 +279,25 @@
     }
   },
   "acceptPlan": {
+    "started": "Планирование начато",
+    "starting": "Составляется план",
+    "notApproved": "Не утверждено",
+    "failed": "Ошибка",
+    "proposing": "Предлагается план {{title}}",
+    "proposed": "План предложен {{title}}",
+    "card": {
+      "title": "Claude предложил план",
+      "openPlan": "Открыть план",
+      "revisePlaceholder": "Что нужно изменить? (необязательно)",
+      "back": "Назад",
+      "reviseSubmit": "Изменить",
+      "reject": "Отклонить",
+      "revise": "Изменить…",
+      "accept": "Принять",
+      "acceptAuto": "Принять и включить авторежим",
+      "acceptEdits": "Принять и разрешить правки",
+      "acceptBypass": "Принять и обойти разрешения"
+    },
     "title": "Принять этот план?",
     "subtitle": "Выделите текст в предпросмотре, чтобы добавить комментарии",
     "textareaPlaceholder": "Скажите Claude, что делать вместо этого",
@@ -301,7 +320,14 @@
     "submit": "Отправить ответы",
     "next": "Далее",
     "other": "Другое",
-    "otherPlaceholder": "Введите свой ответ..."
+    "otherPlaceholder": "Введите свой ответ...",
+    "card": {
+      "skip": "Пропустить",
+      "submit": "Отправить",
+      "placeholder": "Введите свой ответ здесь",
+      "progress": "{{current}} из {{total}}",
+      "skipped": "Пропущено"
+    }
   },
   "backgroundTasks": {
     "title": "Фоновые задачи",
@@ -390,6 +416,31 @@
     "setModelTo": "Модель изменена на {{model}}"
   },
   "permissionBanner": {
+    "card": {
+      "question": "Разрешить Claude {{action}}?",
+      "actionRunCommand": "выполнить эту команду",
+      "actionSearchWeb": "выполнить поиск в интернете",
+      "questionRead": "Разрешить Claude прочитать {{file}}?",
+      "questionEdit": "Разрешить Claude изменить {{file}}?",
+      "questionWrite": "Разрешить Claude записать в {{file}}?",
+      "questionFetch": "Разрешить Claude получить {{site}}?",
+      "questionTool": "Разрешить Claude использовать {{tool}}?",
+      "questionAgent": "Разрешить Claude запустить агента: {{description}}?",
+      "deny": "Отклонить",
+      "alwaysAllow": "Всегда разрешать",
+      "alwaysAllowHint": "Больше не спрашивать для этого инструмента",
+      "allowOnce": "Разрешить один раз",
+      "allowAndSwitchToAuto": "Разрешить и переключить на Auto",
+      "acceptEditsHint": "Переключает эту сессию в режим принятия правок",
+      "autoReviewsRest": "Auto проверит остаток этой сессии.",
+      "moreAllowOptions": "Другие варианты разрешения",
+      "scope": {
+        "session": "Действует только в этом сеансе",
+        "project": "Сохраняется в настройках проекта",
+        "projectLocal": "Сохраняется в локальных настройках проекта",
+        "user": "Сохраняется в настройках пользователя (все проекты)"
+      }
+    },
     "textareaPlaceholder": "Скажите Claude, что делать вместо этого",
     "workflowNotice": "Динамические рабочие процессы запускают множество субагентов параллельно и могут значительно расходовать лимит использования. Их можно остановить в любой момент на панели задач.",
     "yes": "Да",
@@ -691,7 +742,9 @@
     "rewindFailed": "Не удалось откатить код"
   },
   "chatPage": {
-    "scrollToBottom": "Прокрутить вниз"
+    "scrollToBottom": "Прокрутить вниз",
+    "inputNeeded": "Требуется ввод",
+    "sendHeldNow": "Отправить сейчас"
   },
   "contextUsage": {
     "heading": "Использование контекста",
@@ -1094,6 +1147,22 @@
     "editHint": "Enter — сохранить · Esc — отмена"
   },
   "transcript": {
+    "userMessage": {
+      "showMore": "Показать больше",
+      "showLess": "Показать меньше"
+    },
+    "fileChanges": {
+      "title": "Изменено {{count}} файла",
+      "title_one": "Изменён {{count}} файл",
+      "title_few": "Изменено {{count}} файла",
+      "title_many": "Изменено {{count}} файлов",
+      "title_other": "Изменено {{count}} файла",
+      "undo": "Отменить",
+      "undoHint": "Попросить Claude отменить изменения файлов в этом ходе",
+      "total": "Итого",
+      "viewAll": "Показать все",
+      "viewLess": "Показать меньше"
+    },
     "tools": {
       "ranCommand": "Выполнена команда",
       "ranCommands_one": "Выполнена {{count}} команда",
@@ -1121,6 +1190,11 @@
       "editedFiles_other": "Изменено {{count}} файла",
       "createdFile": "Создан {{name}}",
       "editedFile": "Изменён {{name}}",
+      "notApplied": "Не применено",
+      "interrupted": "Прервано",
+      "updatedFile": "Обновлён {{name}}",
+      "editingFile": "Редактирование {{name}}",
+      "creatingFile": "Создание {{name}}",
       "failed_one": "ошибок: {{count}}",
       "failed_few": "ошибок: {{count}}",
       "failed_many": "ошибок: {{count}}",

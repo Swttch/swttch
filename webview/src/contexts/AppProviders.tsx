@@ -64,7 +64,7 @@ export function SessionLoader({ children }: { children: ReactNode }) {
     loadSessions, currentSessionId, navigateToNewSession, mergeSession,
     isNewlyCreatedSession, setSessionState, syncEffectiveMode,
   } = useSessionContext();
-  const { loadMessages, prependOlderMessages, setPaginationState, resetForSessionSwitch } = useChatStreamContext();
+  const { loadMessages, resumeTurn, prependOlderMessages, setPaginationState, resetForSessionSwitch } = useChatStreamContext();
   const { settings } = useSettings();
   // Not read directly — it is what makes the session-loading effect re-run when
   // a navigation swaps the working directory alongside the session id.
@@ -153,6 +153,7 @@ export function SessionLoader({ children }: { children: ReactNode }) {
         const oldestUuid = message.payload?.oldestUuid as string | undefined;
         const lastReportedMode = message.payload?.lastReportedMode as string | null | undefined;
         const sessionMissing = message.payload?.sessionMissing as boolean | undefined;
+        const turnStartedAt = message.payload?.turnStartedAt as number | null | undefined;
 
         // Guard: ignore stale responses from previously requested sessions
         if (sid && sid !== currentSessionIdRef.current) {
@@ -196,6 +197,14 @@ export function SessionLoader({ children }: { children: ReactNode }) {
         }
         setPaginationState(!!hasMore, oldestUuid ?? null);
 
+        // A turn was already running when this screen attached (a reload, a tab opened
+        // again). This screen did not see it start, so it would draw an idle composer
+        // (no stop button) over a CLI that is working until the answer arrived. The
+        // CLI's own events carry the turn from here to its result (#673).
+        if (!prepend && typeof turnStartedAt === 'number') {
+          resumeTurn(turnStartedAt);
+        }
+
         // Restore the permission mode this session was last running under, found
         // within the newest page (backend never returns this on an older/prepend
         // page). Null means the newest page carried no mode within its bounds —
@@ -207,7 +216,7 @@ export function SessionLoader({ children }: { children: ReactNode }) {
         }
       }
     });
-  }, [subscribe, loadMessages, prependOlderMessages, setPaginationState, isNewlyCreatedSession, syncEffectiveMode, navigateToNewSession, mergeSession]);
+  }, [subscribe, loadMessages, resumeTurn, prependOlderMessages, setPaginationState, isNewlyCreatedSession, syncEffectiveMode, navigateToNewSession, mergeSession]);
 
   return <>{children}</>;
 }

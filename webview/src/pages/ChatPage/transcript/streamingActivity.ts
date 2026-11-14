@@ -1,7 +1,7 @@
 import type { LoadedMessageDto } from '../../../types';
 import { isContentBlockArray } from '../../../types';
 import { ContentBlockType, type ToolUseBlockDto } from '../../../dto/message/ContentBlockDto';
-import { toolKindOf, type ToolKind } from './toolSummary';
+import { baseName, pathOf, toolKindOf, type ToolKind } from './toolSummary';
 import { isCardTool, type ToolCall } from './buildSegments';
 import type { WorkingActivity } from './WorkingMark';
 
@@ -15,6 +15,8 @@ export interface StreamingActivity {
   phrase: 'command' | 'pageScript' | 'editing' | 'reading' | 'searching' | 'fetching' | 'agent' | 'working';
   /** Which mark says it: a command runs with the square of four dots, a file is read with the circling dots, and any other call with the row of three. */
   mark: WorkingActivity;
+  /** The file a change is being made to, for a file edit or a new file: the line then names it ("Editing x") instead of counting seconds. */
+  file: { name: string; creating: boolean } | null;
 }
 
 const PHRASE_OF: Partial<Record<ToolKind, StreamingActivity['phrase']>> = {
@@ -58,7 +60,14 @@ export function runningActivity(messages: LoadedMessageDto[]): StreamingActivity
       const call: ToolCall = { toolUse, message };
       const description = typeof toolUse.input?.description === 'string' ? (toolUse.input.description as string).trim() : '';
       const kind = toolKindOf(call);
-      return { toolUseId: toolUse.id, description: description || null, phrase: PHRASE_OF[kind] ?? 'working', mark: MARK_OF[kind] ?? 'default' };
+      const path = kind === 'edit' || kind === 'write' ? pathOf(call) : '';
+      return {
+        toolUseId: toolUse.id,
+        description: description || null,
+        phrase: PHRASE_OF[kind] ?? 'working',
+        mark: MARK_OF[kind] ?? 'default',
+        file: path ? { name: baseName(path), creating: kind === 'write' } : null,
+      };
     }
   }
   return null;

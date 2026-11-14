@@ -23,6 +23,14 @@ interface WorkflowStateValue {
   openPanel: (toolUseId?: string) => void;
   closePanel: () => void;
   focusedToolUseId: string | null;
+  /**
+   * The task whose run window (AgentTranscriptModal) is open, by tool_use id.
+   * Held here rather than in the panel so a card in the chat can open the
+   * window directly, with the panel closed (#673).
+   */
+  transcriptToolUseId: string | null;
+  openTranscript: (toolUseId: string) => void;
+  closeTranscript: () => void;
 }
 
 const WorkflowStateContext = createContext<WorkflowStateValue | null>(null);
@@ -42,6 +50,7 @@ export function WorkflowStateProvider({ children }: { children: ReactNode }) {
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [panelOpen, setPanelOpen] = useState(false);
   const [focusedToolUseId, setFocusedToolUseId] = useState<string | null>(null);
+  const [transcriptToolUseId, setTranscriptToolUseId] = useState<string | null>(null);
 
   // currentSessionId is derived from the URL (SSOT) — clear when it changes.
   useEffect(() => {
@@ -49,6 +58,7 @@ export function WorkflowStateProvider({ children }: { children: ReactNode }) {
     setDismissedIds(new Set());
     setPanelOpen(false);
     setFocusedToolUseId(null);
+    setTranscriptToolUseId(null);
   }, [currentSessionId]);
 
   const openPanel = useCallback((toolUseId?: string) => {
@@ -56,6 +66,8 @@ export function WorkflowStateProvider({ children }: { children: ReactNode }) {
     setPanelOpen(true);
   }, []);
   const closePanel = useCallback(() => setPanelOpen(false), []);
+  const openTranscript = useCallback((toolUseId: string) => setTranscriptToolUseId(toolUseId), []);
+  const closeTranscript = useCallback(() => setTranscriptToolUseId(null), []);
 
   useEffect(() => {
     if (!isConnected) return;
@@ -97,10 +109,21 @@ export function WorkflowStateProvider({ children }: { children: ReactNode }) {
       openPanel,
       closePanel,
       focusedToolUseId,
+      transcriptToolUseId,
+      openTranscript,
+      closeTranscript,
     };
-  }, [taskMap, dismissedIds, panelOpen, openPanel, closePanel, focusedToolUseId]);
+  }, [taskMap, dismissedIds, panelOpen, openPanel, closePanel, focusedToolUseId, transcriptToolUseId, openTranscript, closeTranscript]);
 
   return <WorkflowStateContext.Provider value={value}>{children}</WorkflowStateContext.Provider>;
+}
+
+/**
+ * Like `useWorkflowState`, but null where there is no provider: for a card that
+ * offers a way into a task's run window only when that window can be opened.
+ */
+export function useOptionalWorkflowState(): WorkflowStateValue | null {
+  return useContext(WorkflowStateContext);
 }
 
 export function useWorkflowState(): WorkflowStateValue {

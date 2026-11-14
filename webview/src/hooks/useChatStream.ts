@@ -127,10 +127,20 @@ export interface UseChatStreamReturn {
 
   // 로컬 메시지 조작 (전송은 하지 않음)
   addUserMessage: (content: string, context?: Context[], attachments?: Attachment[]) => void;
+  /** Put a message sent while a turn was running into the chat, without beginning a turn. */
+  appendSentMessage: (content: string, context?: Context[], attachments?: Attachment[]) => void;
+  /** Count the running turn's time and written tokens from now: what follows an answered permission card is a new stretch of work. */
+  restartTurnClock: () => void;
   /** Echo a command with no assistant turn — for control_request commands (#270). */
   addCommandEcho: (content: string) => void;
   clearMessages: () => void;
   loadMessages: (msgs: LoadedMessageDto[]) => void;
+  /**
+   * Take up a turn that was already running when this screen attached (a reload, a tab opened again): the
+   * composer and the working indicators say so from `startedAt` on, and the turn's own events (which keep
+   * arriving) carry it from there to its `result`.
+   */
+  resumeTurn: (startedAt: number) => void;
   prependOlderMessages: (msgs: LoadedMessageDto[]) => void;
   appendMessage: (message: LoadedMessageDto) => void;
   updateMessage: (id: string, updates: Partial<LoadedMessageDto>) => void;
@@ -547,15 +557,8 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     return () => clearInterval(timer);
   }, [bridge.isConnected, isStreaming, endStreaming]);
 
-  // addUserMessage - 로컬 상태 조작만 (bridge.send 하지 않음)
-  const addUserMessage = useCallback((content: string, context?: Context[], attachments?: Attachment[]) => {
-    if (!content.trim() && (!attachments || attachments.length === 0)) return;
-
-    setTurnOutputTokens(0);
-    setTurnStartedAt(Date.now());
-    setError(null);
-    setAuthDiagnosis(null);
-
+  // The message a send puts in the chat, built from what was typed and attached.
+  const buildUserMessage = useCallback((content: string, context?: Context[], attachments?: Attachment[]): LoadedMessageDto => {
     // 파일/폴더 첨부를 context로 변환
     const fileContexts: Context[] = (attachments ?? [])
       .filter(att => !isImageAttachment(att))
@@ -599,6 +602,31 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
       message: { role: MessageRole.User, content: messageContent } as any,
       context: allContexts,
     };
+    return userMessage;
+  }, [generateMessageId]);
+
+  // A message sent while a turn was running goes into the chat only now, where the CLI took it up (#673):
+  // no new turn is begun here, the turn that answers it begins by itself when the CLI starts it.
+  const restartTurnClock = useCallback(() => {
+    setTurnOutputTokens(0);
+    setTurnStartedAt(Date.now());
+  }, []);
+
+  const appendSentMessage = useCallback((content: string, context?: Context[], attachments?: Attachment[]) => {
+    if (!content.trim() && (!attachments || attachments.length === 0)) return;
+    appendMessage(buildUserMessage(content, context, attachments), true);
+  }, [appendMessage, buildUserMessage]);
+
+  // addUserMessage - 로컬 상태 조작만 (bridge.send 하지 않음)
+  const addUserMessage = useCallback((content: string, context?: Context[], attachments?: Attachment[]) => {
+    if (!content.trim() && (!attachments || attachments.length === 0)) return;
+
+    setTurnOutputTokens(0);
+    setTurnStartedAt(Date.now());
+    setError(null);
+    setAuthDiagnosis(null);
+
+    const userMessage = buildUserMessage(content, context, attachments);
     appendMessage(userMessage, true);
 
     // 스트리밍 중이면 사용자 메시지만 추가 (assistant placeholder 생성 스킵).
@@ -645,7 +673,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
         }, 30);
       }, 2000);
     }
-  }, [isStreaming, bridge.isConnected, generateMessageId, appendMessage, startStreaming, scheduleFlush, endStreaming, flushPendingDeltas, updateMessage]);
+  }, [isStreaming, bridge.isConnected, generateMessageId, appendMessage, buildUserMessage, startStreaming, scheduleFlush, endStreaming, flushPendingDeltas, updateMessage]);
 
   const applyContextWindow = useCallback((contextWindow: number) => {
     if (!(contextWindow > 0)) return;
@@ -733,6 +761,14 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
       });
     }
   }, [messages, addUserMessage, bridge, endStreaming]);
+
+  // A turn that began before this screen did (see UseChatStreamReturn.resumeTurn). The streaming state is
+  // what the CLI's own events then carry to the end: the first delta opens its message as usual and the
+  // `result` ends it.
+  const resumeTurn = useCallback((startedAt: number) => {
+    setTurnStartedAt(startedAt);
+    setIsStreaming(true);
+  }, []);
 
   // Stop
   const stop = useCallback(() => {
@@ -1585,9 +1621,12 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     error,
     authDiagnosis,
     addUserMessage,
+    appendSentMessage,
+    restartTurnClock,
     addCommandEcho,
     clearMessages,
     loadMessages,
+    resumeTurn,
     prependOlderMessages,
     appendMessage,
     updateMessage,

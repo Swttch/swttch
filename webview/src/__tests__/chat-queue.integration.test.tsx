@@ -126,6 +126,24 @@ function TestChatComponent() {
       >
         Send inverted
       </button>
+      {/* A turn held by a permission card: the message cannot be read until the card is answered. */}
+      <button
+        data-testid="submit-held"
+        onClick={() => ctx.handleSubmit(undefined, 'ask_before_edit', undefined, false, true)}
+      >
+        Send held
+      </button>
+      <div data-testid="held-count">{ctx.heldMessages.length}</div>
+      <div data-testid="sent-pending">{ctx.sentWhileRunning.map(m => m.content).join('|')}</div>
+      <div data-testid="user-texts">
+        {ctx.messages
+          .filter(m => m.type === 'user')
+          .map(m => (typeof m.message?.content === 'string' ? m.message.content : ''))
+          .join('|')}
+      </div>
+      <button data-testid="release-held" onClick={() => ctx.releaseHeldMessages()}>
+        Release held
+      </button>
       {ctx.queuedMessages.map(m => (
         <button key={m.id} data-testid={`cancel-${m.id}`} onClick={() => ctx.cancelQueuedMessage(m.id)}>
           Cancel {m.content}
@@ -223,6 +241,67 @@ describe('queued follow-up message integration', () => {
     });
     expect(mockBridge.send.mock.calls.some(call => call[0] === MessageType.QUEUE_MESSAGE)).toBe(false);
     expect(screen.getByTestId('queue-count')).toHaveTextContent('0');
+  });
+
+  // #673: while a permission card holds the running turn, the CLI cannot read what is sent, so the message is held in
+  // the view (never in the backend queue, so it never shows in the stack above the composer) and goes out as an
+  // ordinary message when the card is answered.
+  it('holds a mid-turn message in the view while a permission card holds the turn, and sends it on release', async () => {
+    composerFollowUpBehavior = null;
+    render(<TestWrapper><TestChatComponent /></TestWrapper>);
+    await startStreaming();
+
+    await act(async () => {
+      fireEvent.change(screen.getByTestId('input'), { target: { value: 'while waiting' } });
+      fireEvent.click(screen.getByTestId('submit-held'));
+    });
+
+    expect(screen.getByTestId('held-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('queue-count')).toHaveTextContent('0');
+    expect(mockBridge.send.mock.calls.some(call => call[0] === MessageType.QUEUE_MESSAGE)).toBe(false);
+    expect(mockBridge.send.mock.calls.some(call => call[0] === MessageType.SEND_MESSAGE && call[1]?.content === 'while waiting')).toBe(false);
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('release-held'));
+    });
+
+    await waitFor(() => {
+      expect(mockBridge.send).toHaveBeenCalledWith(MessageType.SEND_MESSAGE, expect.objectContaining({
+        sessionId: 'queue-session',
+        content: 'while waiting',
+      }));
+    });
+    expect(screen.getByTestId('held-count')).toHaveTextContent('0');
+    expect(mockBridge.send.mock.calls.some(call => call[0] === MessageType.QUEUE_MESSAGE)).toBe(false);
+  });
+
+  // #673: a message sent while a turn runs is answered after that turn, so its bubble waits after what the turn has
+  // written and enters the chat when the turn ends. Put in at once, it stood above the answer to the message
+  // sent before it.
+  it('keeps a message sent mid-turn after the turn until the turn ends, then puts it in the chat', async () => {
+    composerFollowUpBehavior = null;
+    render(<TestWrapper><TestChatComponent /></TestWrapper>);
+    await startStreaming();
+
+    await act(async () => {
+      fireEvent.change(screen.getByTestId('input'), { target: { value: 'sent mid-turn' } });
+      fireEvent.click(screen.getByTestId('submit'));
+    });
+
+    // Written to the CLI at once, but not yet part of the chat.
+    await waitFor(() => {
+      expect(mockBridge.send).toHaveBeenCalledWith(MessageType.SEND_MESSAGE, expect.objectContaining({ content: 'sent mid-turn' }));
+    });
+    expect(screen.getByTestId('sent-pending')).toHaveTextContent('sent mid-turn');
+    expect(screen.getByTestId('user-texts')).not.toHaveTextContent('sent mid-turn');
+
+    await act(async () => {
+      emitBridgeEvent(MessageType.CLI_EVENT, { type: 'result', is_error: false });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('is-streaming')).toHaveTextContent('false'));
+    await waitFor(() => expect(screen.getByTestId('user-texts')).toHaveTextContent('sent mid-turn'));
+    expect(screen.getByTestId('sent-pending')).toHaveTextContent('');
   });
 
   // The setting's description promises a key that does the opposite for one

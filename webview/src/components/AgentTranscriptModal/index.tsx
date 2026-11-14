@@ -7,7 +7,7 @@ import { useBackgroundTaskActions } from '@/hooks/useBackgroundTaskActions';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { useNow } from '@/hooks/useNow';
 import { useVerticalResize } from '@/hooks/useVerticalResize';
-import { useResolvedTaskOutputFile } from '@/hooks/useResolvedTaskOutputFile';
+import { useTaskOutputFileLookup } from '@/hooks/useResolvedTaskOutputFile';
 import { agentAddressOf } from '@/hooks/useSendToAgent';
 import { useUnreachableAgents } from '@/hooks/useUnreachableAgents';
 import { agentDisplayStatus } from '@/utils/workflowFormat';
@@ -121,7 +121,7 @@ export function AgentTranscriptModal(props: Props) {
   // (AgentOutputTranscriptBody) rather than dumped as raw text.
   const isBashTask = task.taskType === 'local_bash';
   const isAgentTask = task.taskType === 'local_agent';
-  const resolvedOutputFile = useResolvedTaskOutputFile(task);
+  const { path: resolvedOutputFile, unavailable: outputUnavailable } = useTaskOutputFileLookup(task);
   // An agent can be spoken to for as long as it exists — a finished one is
   // resumed by the message, which is how the CLI itself describes it.
   const agentAddress = agentAddressOf(task);
@@ -194,7 +194,7 @@ export function AgentTranscriptModal(props: Props) {
               // There is no picker because there is one agent, not many.
               <div className="flex flex-1 min-h-0 flex-col">
                 <DetailHeader source={task} />
-                <AgentOutputTranscriptBody task={task} outputFile={resolvedOutputFile} sendCount={sendCount} />
+                <AgentOutputTranscriptBody task={task} outputFile={resolvedOutputFile} unavailable={outputUnavailable} sendCount={sendCount} />
                 {agentAddress && (
                   <AgentComposer
                     agentId={agentAddress}

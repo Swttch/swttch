@@ -806,17 +806,91 @@ describe('reconstructWorkflowTasks: backgrounded Agent and Bash tasks', () => {
     expect(t.outputFile).toBe('/tmp/tasks/b27yhtv6i.output');
   });
 
-  // Both tools run inline unless asked to background themselves, and an inline
-  // call never becomes a task. Rebuilding one would put a row in the panel for
-  // something that was never a background task at all.
-  it('ignores Agent and Bash calls that were not backgrounded', async () => {
+  // A command run inline never becomes a task: rebuilding one would put a row
+  // in the panel for something that was never a background task at all.
+  it('ignores Bash calls that were not backgrounded', async () => {
     const tasks = await reconstructWorkflowTasks([
-      toolUse('toolu_c', 'Agent', { description: 'inline agent', prompt: 'do it' }),
       toolUse('toolu_d', 'Bash', { command: 'ls', description: 'list' }),
       toolUse('toolu_e', 'Bash', { command: 'ls', description: 'list', run_in_background: false }),
     ]);
 
     expect(tasks).toEqual([]);
+  });
+
+  // #673: a subagent run in the foreground is a task the live stream lists, so a
+  // reload lists it too. Its first tool_result is its report, which says it ended.
+  describe('a foreground Agent call', () => {
+    const report = [
+      'Done.',
+      "agentId: a91aee75561e526f4 (use SendMessage with to: 'a91aee75561e526f4', summary: '<5-10 word recap>' to continue this agent)",
+      '<usage>subagent_tokens: 83426',
+      'tool_uses: 1',
+      'duration_ms: 20652</usage>',
+    ].join('\n');
+
+    it('comes back finished, under the agentId its report states', async () => {
+      const tasks = await reconstructWorkflowTasks([
+        toolUse('toolu_f', 'Agent', { description: 'Create directory', prompt: 'do it', subagent_type: 'general-purpose' }),
+        toolResult('toolu_f', report),
+      ]);
+
+      expect(tasks).toHaveLength(1);
+      const t = tasks[0];
+      expect(t.taskType).toBe('local_agent');
+      expect(t.name).toBe('Create directory');
+      expect(t.status).toBe('completed');
+      expect(t.taskId).toBe('a91aee75561e526f4');
+      // Resolved later from taskId (<runtime dir>/tasks/<taskId>.output), as for a resumed agent.
+      expect(t.outputFile).toBeUndefined();
+    });
+
+    // The report is stored as a list of text blocks, not one string, and the
+    // agent's id is a line of it.
+    it('reads the agentId from a result stored as a list of text blocks', async () => {
+      const listed = {
+        type: 'user',
+        message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_f', content: [{ type: 'text', text: report }] }] },
+      } as Record<string, unknown>;
+      const tasks = await reconstructWorkflowTasks([
+        toolUse('toolu_f', 'Agent', { description: 'Create directory', prompt: 'do it' }),
+        listed,
+      ]);
+
+      expect(tasks[0].taskId).toBe('a91aee75561e526f4');
+      expect(tasks[0].status).toBe('completed');
+    });
+
+    it('comes back failed when its result is an error', async () => {
+      const failed = toolResult('toolu_f', report);
+      ((failed['message'] as { content: Array<Record<string, unknown>> }).content[0])['is_error'] = true;
+      const tasks = await reconstructWorkflowTasks([
+        toolUse('toolu_f', 'Agent', { description: 'Create directory', prompt: 'do it' }),
+        failed,
+      ]);
+
+      expect(tasks[0].status).toBe('failed');
+    });
+
+    it('stays running while the CLI still has it, and is stopped when it never got a result', async () => {
+      const live = await reconstructWorkflowTasks(
+        [toolUse('toolu_f', 'Agent', { description: 'Create directory', prompt: 'do it' })],
+        (id) => id === 'toolu_f',
+      );
+      expect(live[0].status).toBe('running');
+
+      const gone = await reconstructWorkflowTasks([
+        toolUse('toolu_g', 'Agent', { description: 'Create directory', prompt: 'do it' }),
+      ]);
+      expect(gone[0].status).toBe('stopped');
+    });
+
+    it('treats run_in_background: false the same as leaving it out', async () => {
+      const tasks = await reconstructWorkflowTasks([
+        toolUse('toolu_h', 'Agent', { description: 'x', prompt: 'y', run_in_background: false }),
+        toolResult('toolu_h', report),
+      ]);
+      expect(tasks[0].status).toBe('completed');
+    });
   });
 
   it('settles a rebuilt Agent task from its terminal notification', async () => {
@@ -1009,6 +1083,54 @@ describe('only tasks the CLI says were backgrounded', () => {
     tracker.handleEvent('s1', { ...inlineBash, tool_use_id: 'toolu_bg', is_backgrounded: true });
     expect(last().toolUseId).toBe('toolu_bg');
     expect(last().taskType).toBe('local_bash');
+  });
+
+  // #673: a subagent run in the foreground is still listed, because its run
+  // window (opened from the panel row) is where what it does inside can be read.
+  it('tracks a subagent the CLI says was not backgrounded', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', {
+      type: 'system',
+      subtype: 'task_started',
+      task_id: 'a1',
+      tool_use_id: 'toolu_fg_agent',
+      description: 'Bash permission repro',
+      is_backgrounded: false,
+      task_type: 'local_agent',
+    });
+    expect(last().toolUseId).toBe('toolu_fg_agent');
+    expect(last().taskType).toBe('local_agent');
+    expect(last().status).toBe('running');
+  });
+
+  // #673: a screen that attaches mid-run is handed the live task, which knows the
+  // agent's id from task_started (a rebuild from the transcript cannot, before the
+  // run ends).
+  it('hands out a running subagent as the stream has it, and not once it has ended', () => {
+    const { tracker } = makeTracker();
+    tracker.handleEvent('s1', {
+      type: 'system',
+      subtype: 'task_started',
+      task_id: 'a1',
+      tool_use_id: 'toolu_fg_agent',
+      description: 'Bash permission repro',
+      is_backgrounded: false,
+      task_type: 'local_agent',
+    });
+
+    expect(tracker.liveTask('s1', 'toolu_fg_agent')?.taskId).toBe('a1');
+    expect(tracker.liveTask('s1', 'toolu_other')).toBeUndefined();
+    expect(tracker.liveTask('s2', 'toolu_fg_agent')).toBeUndefined();
+
+    tracker.handleEvent('s1', { type: 'system', subtype: 'task_notification', tool_use_id: 'toolu_fg_agent', status: 'completed' });
+
+    expect(tracker.liveTask('s1', 'toolu_fg_agent')).toBeUndefined();
+  });
+
+  it('hands out nothing for an inline command that was never reported', () => {
+    const { tracker } = makeTracker();
+    tracker.handleEvent('s1', inlineBash);
+    expect(tracker.liveTask('s1', 'toolu_inline')).toBeUndefined();
   });
 
   // A workflow never carries the field, because it is always backgrounded.

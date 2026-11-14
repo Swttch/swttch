@@ -3,6 +3,9 @@ import type { TFunction } from 'i18next';
 import { ApprovalPanel } from './ApprovalPanel';
 import { OptionItem } from './ApprovalPanel/OptionButton';
 import { TitleWithFileLink } from './PermissionBanner/TitleWithFileLink';
+import { desktopCardPreview, permissionPreview, permissionSubtitle } from './PermissionBanner/PermissionPreview';
+import { DesktopPermissionCard, usesDesktopPermissionCard } from './PermissionBanner/DesktopPermissionCard';
+import { useTranscriptViewMode } from './message-renderers/transcriptViewMode';
 import { useChatStreamContext } from '../../contexts/ChatStreamContext';
 import { useOpenDiffReview } from '../../hooks/useOpenDiffReview';
 import { useAutoOpenDiffReview } from '../../hooks/useAutoOpenDiffReview';
@@ -19,6 +22,8 @@ interface Props {
   permission: PendingPermission;
   onApprove: () => void;
   onApproveForSession: () => void;
+  /** Approve and install the narrow rule the CLI suggested, for this session (the desktop card's "Always allow"). */
+  onApproveAlways?: () => void;
   onDeny: (reason?: string) => void;
   /**
    * Show the review as an overlay over this screen.
@@ -143,7 +148,8 @@ function titleParts(toolName: string, input: Record<string, unknown>): TitlePart
 }
 
 export function PermissionBanner(props: Props) {
-  const { permission, onApprove, onApproveForSession, onDeny, onOpenDiffOverlay } = props;
+  const { permission, onApprove, onApproveForSession, onApproveAlways, onDeny, onOpenDiffOverlay } = props;
+  const viewMode = useTranscriptViewMode();
   const { stop } = useChatStreamContext();
   const openDiffReview = useOpenDiffReview();
   const { t } = useTranslation('chat');
@@ -186,7 +192,19 @@ export function PermissionBanner(props: Props) {
   }, [t, parts, openDiff]);
 
   const isWorkflow = permission.toolName === 'Workflow';
-  const subtitle = isWorkflow ? (permission.input.description as string | undefined) : undefined;
+  const subtitle = isWorkflow
+    ? (permission.input.description as string | undefined)
+    : permissionSubtitle(permission.toolName, permission.input);
+  const preview = useMemo(
+    () => permissionPreview(permission.toolName, permission.input),
+    [permission.toolName, permission.input],
+  );
+  const desktopPreview = useMemo(
+    () => desktopCardPreview(permission.toolName, permission.input) ?? preview,
+    [permission.toolName, permission.input, preview],
+  );
+  // A read outside the working directories says why the CLI asks, in the CLI's words; a command says what it is for.
+  const desktopSubtitle = ['Read', 'Edit', 'Write'].includes(permission.toolName) ? permission.decisionReason : subtitle;
   const notice = isWorkflow ? t('permissionBanner.workflowNotice') : undefined;
 
   /*
@@ -269,6 +287,20 @@ export function PermissionBanner(props: Props) {
    * a browser tab, or an overlay — and the file name above is the way in.
    */
 
+  // In the views that follow the desktop app, a command is asked about the way the desktop app asks (#673).
+  if (usesDesktopPermissionCard(permission.toolName, viewMode)) {
+    return (
+      <DesktopPermissionCard
+        permission={permission}
+        subtitle={desktopSubtitle}
+        preview={desktopPreview}
+        onApprove={onApprove}
+        onApproveAlways={onApproveAlways ?? onApprove}
+        onDeny={() => onDeny()}
+      />
+    );
+  }
+
   return (
     <ApprovalPanel
       keyboardPaused={allowAll.confirmOpen}
@@ -276,6 +308,7 @@ export function PermissionBanner(props: Props) {
       collapsedTitle={t(parts.key, { ...parts.values, file: parts.file })}
       subtitle={subtitle}
       notice={notice}
+      preview={preview}
       options={options}
       onOptionSelect={handleOptionSelect}
       textareaPlaceholder={t('permissionBanner.textareaPlaceholder')}

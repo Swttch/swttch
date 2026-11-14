@@ -1,4 +1,4 @@
-import { Fragment, memo, useMemo } from 'react';
+import { Fragment, memo, useMemo, type ReactNode } from 'react';
 import type { LoadedMessageDto } from '../../../types';
 import {
   ContentBlockType,
@@ -9,6 +9,7 @@ import { MessageBubble } from '../MessageBubble';
 import { StreamingMessage } from '../StreamingMessage';
 import { ToolRenderer } from '../message-renderers/ToolRenderer';
 import { TranscriptReplyFooter } from './TranscriptReplyFooter';
+import { TranscriptFileChanges, changedFilesOf } from './TranscriptFileChanges';
 import { ContextUsageCard } from '../message-renderers/components/ContextUsageCard';
 import { parseContextUsage } from '@/utils/parseContextUsage';
 import { useSendActionsValue } from '../SendActionsContext';
@@ -29,10 +30,16 @@ function TranscriptBlocks({
   message,
   blocks,
   showFooter,
+  summary,
+  summaryShown,
 }: {
   message: LoadedMessageDto;
   blocks: AnyContentBlockDto[];
   showFooter: boolean;
+  /** What closes the turn, drawn between the text and the footer: the desktop app has its copy / fork row under it. */
+  summary?: ReactNode;
+  /** The turn has a file summary under this text: the text's last paragraph or list gives up its own bottom margin to it. */
+  summaryShown?: boolean;
 }) {
   const sendActions = useSendActionsValue();
   const streaming = message.isStreaming ?? false;
@@ -70,17 +77,20 @@ function TranscriptBlocks({
               plain
               content={text}
               isStreaming={streaming}
-              className="text-[var(--tr-text)] text-[1.02rem] leading-[1.3]"
+              className={`text-[var(--tr-text)] text-[1.02rem] leading-[1.3]${summaryShown && showFooter && !streaming ? ' [&_.markdown-content>*:last-child]:mb-0 [&_.markdown-content>div>*:last-child]:mb-0 [&_.markdown-content>div>ul:last-child]:pb-0 [&_.markdown-content>div>ol:last-child]:pb-0 [&_.markdown-content>div>ul:last-child>li:last-child]:pb-0 [&_.markdown-content>div>ol:last-child>li:last-child]:pb-0' : ''}`}
               message={message}
               footer={
                 streaming || !showFooter ? undefined : (
-                  <TranscriptReplyFooter
-                    className="mt-1.5"
-                    copyText={text}
-                    readAloudKey={message.uuid ? `${message.uuid}:${index}` : undefined}
-                    timestamp={message.timestamp}
-                    onFork={sendActions && message.uuid && sendActions.canForkReply(message.uuid) ? () => sendActions.forkAtReply(message.uuid as string) : undefined}
-                  />
+                  <>
+                    {summary}
+                    <TranscriptReplyFooter
+                      className="mt-1.5"
+                      copyText={text}
+                      readAloudKey={message.uuid ? `${message.uuid}:${index}` : undefined}
+                      timestamp={message.timestamp}
+                      onFork={sendActions && message.uuid && sendActions.canForkReply(message.uuid) ? () => sendActions.forkAtReply(message.uuid as string) : undefined}
+                    />
+                  </>
                 )
               }
             />
@@ -92,7 +102,7 @@ function TranscriptBlocks({
   );
 }
 
-function SegmentView({ segment, endsTurn, onRetry }: { segment: Segment; endsTurn: boolean; onRetry?: (messageId: string) => void }) {
+function SegmentView({ segment, endsTurn, onRetry, summary, summaryShown }: { segment: Segment; endsTurn: boolean; onRetry?: (messageId: string) => void; summary?: ReactNode; summaryShown?: boolean }) {
   switch (segment.kind) {
     case 'message':
       // What a compaction leaves in the record is drawn as the desktop app draws it: a line where it happened, the
@@ -104,7 +114,7 @@ function SegmentView({ segment, endsTurn, onRetry }: { segment: Segment; endsTur
     case 'blocks':
       return (
         <div className="group transcript-prose px-4 [&_.markdown-content_p:first-child]:mt-0">
-          <TranscriptBlocks message={segment.message} blocks={segment.blocks} showFooter={endsTurn} />
+          <TranscriptBlocks message={segment.message} blocks={segment.blocks} showFooter={endsTurn} summary={summary} summaryShown={summaryShown} />
         </div>
       );
     case 'tools':
@@ -158,10 +168,12 @@ interface Props {
   onRetry?: (messageId: string) => void;
   /** The model is still working on this reply, so no text in it ends the turn yet. */
   turnRunning?: boolean;
+  /** The send this reply answers: the turn's file summary offers to undo what the turn changed through it. */
+  sectionKey?: string | null;
 }
 
 /** One send's reply, drawn as the transcript's segments: text, gathered tool calls, cards. */
-export const TranscriptBody = memo(function TranscriptBody({ body, mergedMessages, onRetry, turnRunning = false }: Props) {
+export const TranscriptBody = memo(function TranscriptBody({ body, mergedMessages, onRetry, turnRunning = false, sectionKey = null }: Props) {
   const segments = useMemo(() => buildSegments(body), [body]);
   // The copy / fork / time line is under the text a turn ends on, and only there. A turn is what the model does
   // from the moment someone else speaks (the user, another session, the app) to the moment it is done, with any
@@ -184,6 +196,7 @@ export const TranscriptBody = memo(function TranscriptBody({ body, mergedMessage
   // done now (see TranscriptToolRun). The plan stands above it; otherwise it stands at the very end.
   const planBefore = turnRunning && segments.length > 0 && segments[segments.length - 1].kind === 'tools' ? segments[segments.length - 1].key : null;
   const plan = <TranscriptPlan body={body} running={turnRunning} />;
+  const hasFileSummary = useMemo(() => !turnRunning && changedFilesOf(body).length > 0, [body, turnRunning]);
 
   return (
     <>
@@ -199,7 +212,7 @@ export const TranscriptBody = memo(function TranscriptBody({ body, mergedMessage
             console.log(entry, mergedMessages.indexOf(entry), mergedMessages); // NEVER REMOVE THIS LINE
           }}
         >
-          <SegmentView segment={segment} endsTurn={turnEnds.has(segment.key)} onRetry={onRetry} />
+          <SegmentView segment={segment} endsTurn={turnEnds.has(segment.key)} onRetry={onRetry} summary={<TranscriptFileChanges body={body} sectionKey={sectionKey} hidden={turnRunning} />} summaryShown={hasFileSummary} />
         </div>
         </Fragment>
       ))}

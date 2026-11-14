@@ -9,6 +9,7 @@ import { TranscriptArea } from './transcript/TranscriptArea';
 import { useTranscriptViewMode } from './message-renderers/transcriptViewMode';
 import type { ChatSearchSource } from './chatSearch/useChatSearch';
 import { PermissionBanner } from './PermissionBanner';
+import { usesDesktopPermissionCard } from './PermissionBanner/DesktopPermissionCard';
 import { AskUserQuestionInputPanel } from './AskUserQuestionInputPanel';
 import { AcceptPlanPanel } from './AcceptPlanPanel';
 import { BannerArea } from './BannerArea';
@@ -137,7 +138,7 @@ function ChatPageContent() {
   const api = useApi();
   const onboarding = useOnboarding();
   const { currentSessionId, currentSession } = useSessionContext();
-  const { messages, isStreaming, error, disconnectCountdown, apiRetry, hasMoreOlder, oldestLoadedUuid } = useChatStreamContext();
+  const { messages, isStreaming, error, disconnectCountdown, apiRetry, hasMoreOlder, oldestLoadedUuid, releaseHeldMessages, restartTurnClock } = useChatStreamContext();
   // null is the chat released so far; a named view mode draws the transcript with its own code.
   const transcriptViewMode = useTranscriptViewMode();
   // The send index sits on the start edge in the transcript view modes, where user messages are on the end side,
@@ -153,7 +154,7 @@ function ChatPageContent() {
   // send them through the normal composer path (independent of any limit banner).
   useScheduledDelivery();
   const { pending: pendingUserAnswer, dismiss } = usePendingAskUserQuestion(messages, isStreaming);
-  const { pending: pendingPermission, approve: approvePermission, approveForSession, deny: denyPermission } = usePendingPermissions();
+  const { pending: pendingPermission, approve: approvePermission, approveForSession, approveAlways, deny: denyPermission } = usePendingPermissions();
   const { pending: pendingPlan, approve: approvePlan, deny: denyPlan } = usePendingPlanApproval();
   /**
    * The CLI has stopped and is waiting for this user to answer something.
@@ -164,6 +165,25 @@ function ChatPageContent() {
    * really has not ended, so it cannot answer this question on its own.
    */
   const isAwaitingUser = Boolean(pendingUserAnswer || pendingPlan || pendingPermission);
+  const cardWaiting = Boolean(pendingPermission && usesDesktopPermissionCard(pendingPermission.toolName, transcriptViewMode));
+  // A question or a plan waiting for its answer in the views that follow the desktop app says "Input needed" too.
+  const answerCard = transcriptViewMode !== null && Boolean(pendingUserAnswer || pendingPlan);
+  const inputNeeded = cardWaiting || answerCard;
+  // What was written under the card goes out the moment the card is answered.
+  // What was written under the card reaches the CLI before the card is answered, so the turn that goes on after
+  // the answer already has it and answers it with the rest (the desktop app's order), not in a turn of its own.
+  // An allow hands them to the CLI at the click but keeps drawing them where they are until the command has finished
+  // (see TranscriptArea), so the CLI reads them with the command's result and answers once, as the desktop app does.
+  // A denial ends the turn there, so they enter the chat with the answer.
+  const answerAfterHeld = (answer: () => void, denied = false): Promise<void> => {
+    return releaseHeldMessages(!denied).finally(() => {
+      answer();
+      // After a denial what follows is a new stretch of work: its time and tokens are counted from here, as the
+      // desktop app does ("Thinking", then "3.8s · 46 tokens"). After an allow the same stretch goes on: the
+      // desktop app's line says "36 tokens" straight after the click and "71 tokens" at the end.
+      if (denied) restartTurnClock();
+    });
+  };
   /**
    * An approval prompt is standing in the composer's slot at the foot of the
    * chat, so the composer is unmounted right now.
@@ -482,6 +502,28 @@ function ChatPageContent() {
         ) : (
           <TranscriptArea
             isStreaming={isStreaming && !isAwaitingUser}
+            awaitingInput={cardWaiting || answerCard}
+            awaitingInputLine={answerCard ? (pendingUserAnswer ? 'after' : 'none') : 'before'}
+            trailing={
+              answerCard && pendingUserAnswer ? (
+                <AskUserQuestionInputPanel
+                  toolUse={pendingUserAnswer.toolUse}
+                  controlRequestId={pendingUserAnswer.controlRequestId}
+                  onDismiss={() => dismiss(pendingUserAnswer.toolUse.id)}
+                />
+              ) : answerCard && pendingPlan ? (
+                <AcceptPlanPanel pending={pendingPlan} onApprove={approvePlan} onDeny={denyPlan} />
+              ) : cardWaiting && pendingPermission ? (
+                <PermissionBanner
+                  permission={pendingPermission}
+                  onApprove={() => answerAfterHeld(() => approvePermission(pendingPermission.controlRequestId))}
+                  onApproveForSession={() => answerAfterHeld(() => approveForSession(pendingPermission.controlRequestId))}
+                  onApproveAlways={() => answerAfterHeld(() => approveAlways(pendingPermission.controlRequestId))}
+                  onDeny={(reason) => answerAfterHeld(() => denyPermission(pendingPermission.controlRequestId, reason), true)}
+                  onOpenDiffOverlay={setDiffOverlayToolUseId}
+                />
+              ) : null
+            }
             disconnectCountdown={disconnectCountdown}
             apiRetry={apiRetry}
             mergedMessages={mergedMessages}
@@ -519,14 +561,22 @@ function ChatPageContent() {
           {showScrollButton && (
               <button
                   onClick={scrollToBottom}
+                  data-testid={inputNeeded ? 'scroll-to-input-needed' : undefined}
                   className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20 flex items-center gap-1.5 px-3 py-1.5 bg-surface-raised border border-border-default rounded-full shadow-md text-xs text-text-primary hover:bg-surface-hover transition-colors"
               >
+                {/* While a desktop-style card waits for an answer, the pill says so, as the desktop app does. */}
+                {inputNeeded && <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-blue-500" />}
+                {inputNeeded ? t('chatPage.inputNeeded') : t('chatPage.scrollToBottom')}
                 <ChevronDownIcon className="w-3.5 h-3.5" />
-                {t('chatPage.scrollToBottom')}
               </button>
           )}
           {composerReplaced && <ListeningNotice />}
-          {pendingUserAnswer ? (
+          {answerCard ? (
+              /* The card is part of the conversation above, after the last message, and the composer stays (#673). */
+              <div>
+                <ChatInput cardWaiting />
+              </div>
+          ) : pendingUserAnswer ? (
               <AskUserQuestionInputPanel
                   toolUse={pendingUserAnswer.toolUse}
                   controlRequestId={pendingUserAnswer.controlRequestId}
@@ -539,13 +589,23 @@ function ChatPageContent() {
                   onDeny={denyPlan}
               />
           ) : pendingPermission ? (
-              <PermissionBanner
-                  permission={pendingPermission}
-                  onApprove={() => approvePermission(pendingPermission.controlRequestId)}
-                  onApproveForSession={() => approveForSession(pendingPermission.controlRequestId)}
-                  onDeny={(reason) => denyPermission(pendingPermission.controlRequestId, reason)}
-                  onOpenDiffOverlay={setDiffOverlayToolUseId}
-              />
+              cardWaiting ? (
+                /* The card the desktop app draws is part of the conversation (above, after the last message)
+                   and the composer stays where it is: what is typed there is an ordinary message and does not
+                   answer the card (#673). */
+                <div>
+                  <ChatInput cardWaiting />
+                </div>
+              ) : (
+                <PermissionBanner
+                    permission={pendingPermission}
+                    onApprove={() => approvePermission(pendingPermission.controlRequestId)}
+                    onApproveForSession={() => approveForSession(pendingPermission.controlRequestId)}
+                    onApproveAlways={() => approveAlways(pendingPermission.controlRequestId)}
+                    onDeny={(reason) => denyPermission(pendingPermission.controlRequestId, reason)}
+                    onOpenDiffOverlay={setDiffOverlayToolUseId}
+                />
+              )
           ) : folderGone ? (
               <MissingFolderBar />
           ) : currentSessionId && isArchivedMark(currentSession?.sessionMark) ? (

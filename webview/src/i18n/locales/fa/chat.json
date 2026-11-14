@@ -279,6 +279,25 @@
     }
   },
   "acceptPlan": {
+    "started": "برنامه‌ریزی آغاز شد",
+    "starting": "در حال تهیه طرح",
+    "notApproved": "تأیید نشد",
+    "failed": "ناموفق",
+    "proposing": "در حال پیشنهاد طرح {{title}}",
+    "proposed": "طرح پیشنهاد شد {{title}}",
+    "card": {
+      "title": "Claude یک طرح پیشنهاد کرد",
+      "openPlan": "باز کردن طرح",
+      "revisePlaceholder": "چه چیزی باید تغییر کند؟ (اختیاری)",
+      "back": "بازگشت",
+      "reviseSubmit": "ویرایش",
+      "reject": "رد",
+      "revise": "ویرایش…",
+      "accept": "پذیرش",
+      "acceptAuto": "پذیرش و استفاده از حالت خودکار",
+      "acceptEdits": "پذیرش و اجازه ویرایش",
+      "acceptBypass": "پذیرش و دور زدن مجوزها"
+    },
     "title": "این برنامه پذیرفته شود؟",
     "subtitle": "برای افزودن نظر، متنی را در پیش‌نمایش انتخاب کنید",
     "textareaPlaceholder": "به Claude بگویید به‌جای آن چه کاری انجام دهد",
@@ -301,7 +320,14 @@
     "submit": "ارسال پاسخ‌ها",
     "next": "بعدی",
     "other": "سایر",
-    "otherPlaceholder": "پاسخ خود را بنویسید..."
+    "otherPlaceholder": "پاسخ خود را بنویسید...",
+    "card": {
+      "skip": "رد شدن",
+      "submit": "ارسال",
+      "placeholder": "پاسخ خود را اینجا بنویسید",
+      "progress": "{{current}} از {{total}}",
+      "skipped": "رد شد"
+    }
   },
   "backgroundTasks": {
     "title": "کارهای پس‌زمینه",
@@ -386,6 +412,31 @@
     "setModelTo": "مدل روی {{model}} تنظیم شد"
   },
   "permissionBanner": {
+    "card": {
+      "question": "به Claude اجازه می‌دهید {{action}}؟",
+      "actionRunCommand": "این دستور را اجرا کند",
+      "actionSearchWeb": "در وب جست‌وجو کند",
+      "questionRead": "به Claude اجازه می‌دهید {{file}} را بخواند؟",
+      "questionEdit": "به Claude اجازه می‌دهید {{file}} را ویرایش کند؟",
+      "questionWrite": "به Claude اجازه می‌دهید در {{file}} بنویسد؟",
+      "questionFetch": "به Claude اجازه می‌دهید {{site}} را دریافت کند؟",
+      "questionTool": "به Claude اجازه می‌دهید از {{tool}} استفاده کند؟",
+      "questionAgent": "به Claude اجازه می‌دهید عاملی اجرا کند: {{description}}؟",
+      "deny": "رد کردن",
+      "alwaysAllow": "همیشه مجاز",
+      "alwaysAllowHint": "دیگر برای این ابزار نپرس",
+      "allowOnce": "فقط یک‌بار مجاز",
+      "allowAndSwitchToAuto": "مجاز کردن و تغییر به Auto",
+      "acceptEditsHint": "این جلسه را به حالت پذیرش ویرایش‌ها تغییر می‌دهد",
+      "autoReviewsRest": "حالت Auto بقیهٔ این نشست را بررسی می‌کند.",
+      "moreAllowOptions": "گزینه‌های بیشتر برای اجازه",
+      "scope": {
+        "session": "فقط برای همین نشست اعمال می‌شود",
+        "project": "در تنظیمات پروژه ذخیره می‌شود",
+        "projectLocal": "در تنظیمات محلی پروژه ذخیره می‌شود",
+        "user": "در تنظیمات کاربر ذخیره می‌شود (همه پروژه‌ها)"
+      }
+    },
     "textareaPlaceholder": "به Claude بگویید به‌جای آن چه کاری انجام دهد",
     "workflowNotice": "جریان‌های کاری پویا چندین زیرایجنت را به‌طور موازی اجرا می‌کنند و ممکن است بخش زیادی از سقف مصرف شما را استفاده کنند. هر زمان از پنل کارها می‌توانید آن‌ها را متوقف کنید.",
     "yes": "بله",
@@ -683,7 +734,9 @@
     "rewindFailed": "بازگرداندن کد ممکن نشد"
   },
   "chatPage": {
-    "scrollToBottom": "پیمایش به پایین"
+    "scrollToBottom": "پیمایش به پایین",
+    "inputNeeded": "ورودی لازم است",
+    "sendHeldNow": "همین حالا ارسال کن"
   },
   "contextUsage": {
     "heading": "استفاده از بافت",
@@ -1068,6 +1121,19 @@
     "editHint": "Enter برای ذخیره · Esc برای لغو"
   },
   "transcript": {
+    "userMessage": {
+      "showMore": "نمایش بیشتر",
+      "showLess": "نمایش کمتر"
+    },
+    "fileChanges": {
+      "title": "{{count}} فایل تغییر کرد",
+      "title_other": "{{count}} فایل تغییر کرد",
+      "undo": "واگرد",
+      "undoHint": "از Claude بخواهید تغییرات فایل این نوبت را واگرد کند",
+      "total": "مجموع",
+      "viewAll": "نمایش همه",
+      "viewLess": "نمایش کمتر"
+    },
     "tools": {
       "ranCommand": "دستور اجرا شد",
       "ranCommands_one": "{{count}} دستور اجرا شد",
@@ -1085,6 +1151,11 @@
       "editedFiles_other": "{{count}} فایل ویرایش شد",
       "createdFile": "{{name}} ایجاد شد",
       "editedFile": "{{name}} ویرایش شد",
+      "notApplied": "اعمال نشد",
+      "interrupted": "متوقف شد",
+      "updatedFile": "به‌روزرسانی شد {{name}}",
+      "editingFile": "در حال ویرایش {{name}}",
+      "creatingFile": "در حال ایجاد {{name}}",
       "failed_one": "{{count}} ناموفق",
       "failed_other": "{{count}} ناموفق",
       "readAndEditedFile": "{{name}} خوانده و ویرایش شد",

@@ -51,9 +51,15 @@ interface Props {
     /**
      * Draw it the way Claude Desktop's tooltips are drawn: a smaller, flatter box in a fixed dark
      * grey, with `shortcut` after the text in a fainter tone. Rendered into <body>, so it is placed
-     * from the button and kept inside the window whatever box the button sits in.
+     * from the button and kept inside the window whatever box the button sits in. `'large'` is the one
+     * a permission card's "Always allow" shows (14.4px text, 9px by 6px inside).
      */
-    desktop?: boolean;
+    desktop?: boolean | 'large';
+    /**
+     * For a `desktop` tooltip whose text is long enough to wrap: the widest the box gets, in rem so it follows the Font size setting. The
+     * text then breaks anywhere it must (the desktop app wraps the Korean line of "Undo" at about 152px on screen).
+     */
+    maxWidth?: string;
     /** The keys that do the same thing, shown after the text of a `desktop` tooltip (`⌘\\`). */
     shortcut?: string;
     /**
@@ -69,7 +75,7 @@ interface Props {
 }
 
 export function Tooltip(props: Props) {
-    const {content, children, placement = "top", selectable = false, inBody = false, desktop = false, shortcut, onShow} = props;
+    const {content, children, placement = "top", selectable = false, inBody = false, desktop = false, shortcut, maxWidth, onShow} = props;
     const interactive = props.interactive || selectable;
 
     const instance = useRef<Instance | null>(null);
@@ -121,11 +127,12 @@ export function Tooltip(props: Props) {
                     className={desktop
                         // Measured on Claude Desktop's own tooltip: #303030, 13px/18px, 3px 8px, radius 6px, a 1px
                         // inner ring and a soft drop shadow, text at 93% white.
-                        ? "z-50 flex items-center gap-3 whitespace-nowrap rounded-md bg-[#303030] px-2 py-[3px] text-[0.8125rem] leading-[18px] text-white/90 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04),0_1px_2px_rgba(11,11,11,0.06),0_2px_8px_rgba(0,0,0,0.24)]"
+                        ? `z-50 flex items-center gap-3 ${maxWidth ? '[overflow-wrap:anywhere]' : 'whitespace-nowrap'} rounded-md bg-[#303030] ${desktop === 'large' ? 'px-[0.5625rem] py-[0.375rem] text-[0.9rem] leading-[1.25rem]' : 'px-2 py-[0.1875rem] text-[0.8125rem] leading-[1.125rem]'} text-white/90 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04),0_1px_2px_rgba(11,11,11,0.06),0_2px_8px_rgba(0,0,0,0.24)]`
                         : `max-w-[min(32rem,calc(100vw-1rem))] whitespace-pre-wrap break-all rounded-md border border-border-default bg-surface-overlay px-2 py-1 text-xs text-text-primary shadow-lg z-50${selectable ? " select-text cursor-text" : ""}`}
                     onMouseEnter={selectable ? () => { overTooltip.current = true; } : undefined}
                     onMouseLeave={selectable ? () => { overTooltip.current = false; } : undefined}
                     onMouseDown={selectable ? startPress : undefined}
+                    style={desktop && maxWidth ? { maxWidth } : undefined}
                     {...attrs}
                 >
                     {content}

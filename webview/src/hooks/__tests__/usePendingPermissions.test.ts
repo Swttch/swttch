@@ -331,6 +331,56 @@ describe('usePendingPermissions', () => {
     });
   });
 
+  // #673: the CLI withdraws a question when the tool use is aborted (the agent that
+  // was asking got cancelled). A prompt left up would ask the user about a request
+  // that no longer exists.
+  describe('a request the CLI withdrew', () => {
+    const withdraw = (requestId: string) =>
+      mockEmit(MessageType.CLI_EVENT, { type: 'control_cancel_request', request_id: requestId });
+
+    it('drops its prompt', () => {
+      const { result } = renderHook(() => usePendingPermissions());
+      act(() => emitBashRequest(mockEmit, { controlRequestId: 'ctrl-gone' }));
+      expect(result.current.pending?.controlRequestId).toBe('ctrl-gone');
+
+      act(() => withdraw('ctrl-gone'));
+
+      expect(result.current.pending).toBeNull();
+    });
+
+    it('leaves another request that is still open', () => {
+      const { result } = renderHook(() => usePendingPermissions());
+      act(() => {
+        emitBashRequest(mockEmit, { controlRequestId: 'ctrl-gone', toolUseId: 'tool-gone' });
+        emitBashRequest(mockEmit, { controlRequestId: 'ctrl-open', toolUseId: 'tool-open' });
+      });
+
+      act(() => withdraw('ctrl-gone'));
+
+      expect(result.current.pending?.controlRequestId).toBe('ctrl-open');
+    });
+
+    it('does not answer the CLI on its own', () => {
+      renderHook(() => usePendingPermissions());
+      act(() => emitBashRequest(mockEmit, { controlRequestId: 'ctrl-gone' }));
+
+      act(() => withdraw('ctrl-gone'));
+
+      expect(mockApprove).not.toHaveBeenCalled();
+      expect(mockDeny).not.toHaveBeenCalled();
+    });
+
+    it('ignores a withdrawal of a request it never had, or with no id', () => {
+      const { result } = renderHook(() => usePendingPermissions());
+      act(() => emitBashRequest(mockEmit, { controlRequestId: 'ctrl-open' }));
+
+      act(() => withdraw('ctrl-unknown'));
+      act(() => mockEmit(MessageType.CLI_EVENT, { type: 'control_cancel_request' }));
+
+      expect(result.current.pending?.controlRequestId).toBe('ctrl-open');
+    });
+  });
+
   describe('UsePendingPermissionsReturn interface', () => {
     it('deny property on the returned object accepts two arguments', () => {
       const { result } = renderHook(() => usePendingPermissions());

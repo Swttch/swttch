@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../features/loadSessionMessages', () => ({
   loadSessionMessages: vi.fn(),
@@ -8,9 +8,11 @@ vi.mock('../../features/workflow-tracker', () => ({
 }));
 vi.mock('../../claude-process', () => ({
   isWorkflowRunning: vi.fn(() => false),
+  getLiveWorkflowTask: vi.fn(() => undefined),
 }));
 
 import { loadAndSendSession } from '../loadAndSendSession';
+import { getLiveWorkflowTask } from '../../claude-process';
 import { loadSessionMessages } from '../../features/loadSessionMessages';
 import { reconstructWorkflowTasks } from '../../features/workflow-tracker';
 import type { ConnectionManager } from '../../../ws/connection-manager';
@@ -24,12 +26,15 @@ interface SentMessage {
   payload: Record<string, unknown>;
 }
 
+let turnStartedAt: number | null = null;
+
 function makeConnections(): { conn: ConnectionManager; sent: SentMessage[] } {
   const sent: SentMessage[] = [];
   const conn = {
     sendTo: (_id: string, type: string, payload: Record<string, unknown>) => {
       sent.push({ type, payload });
     },
+    getTurnStartedAt: () => turnStartedAt,
   } as unknown as ConnectionManager;
   return { conn, sent };
 }
@@ -88,6 +93,69 @@ describe('loadAndSendSession', () => {
     // Must receive the whole chain (u1 + u99), not the latest page (u99 only) —
     // otherwise workflows older than the page are dropped on reload.
     expect(mockReconstruct.mock.calls[0][0]).toEqual(fullChain);
+  });
+
+  // #673: a screen attaching in the middle of a turn is told when it began, so its
+  // composer does not say "idle" over a CLI that is working.
+  describe('the turn in flight', () => {
+    afterEach(() => {
+      turnStartedAt = null;
+    });
+
+    it('is sent with the session, as the time it began', async () => {
+      turnStartedAt = 1_800_000_000_000;
+      const { conn, sent } = makeConnections();
+
+      await loadAndSendSession('conn-1', conn, '/work', 'sess-1', {});
+
+      const loaded = sent.find((m) => m.type === MessageType.SESSION_LOADED);
+      expect(loaded?.payload.turnStartedAt).toBe(1_800_000_000_000);
+    });
+
+    it('is null when no turn is in flight', async () => {
+      const { conn, sent } = makeConnections();
+      await loadAndSendSession('conn-1', conn, '/work', 'sess-1', {});
+      expect(sent.find((m) => m.type === MessageType.SESSION_LOADED)?.payload.turnStartedAt).toBeNull();
+    });
+
+    it('is not sent with an older page, which is more of the same transcript', async () => {
+      turnStartedAt = 1_800_000_000_000;
+      const { conn, sent } = makeConnections();
+      await loadAndSendSession('conn-1', conn, '/work', 'sess-1', { isOlderPage: true, beforeUuid: 'u1' });
+      expect(sent.find((m) => m.type === MessageType.SESSION_LOADED)?.payload.turnStartedAt).toBeNull();
+    });
+  });
+
+  // #673: a reload in the middle of a run is handed the task as the live stream has
+  // it (a foreground agent's id arrives with its report, so the transcript cannot
+  // say it yet), and a task that is not live is sent as it was rebuilt.
+  describe('a task still running when the screen attaches', () => {
+    const rebuilt = { toolUseId: 'toolu_a', name: 'agent', status: 'running', startedAt: 1, phases: [], agents: [] };
+    const live = { ...rebuilt, taskId: 'a1b2c3', startedAt: 5 };
+
+    it('is sent as the live stream has it', async () => {
+      mockReconstruct.mockResolvedValue([rebuilt] as never);
+      vi.mocked(getLiveWorkflowTask).mockReturnValue(live as never);
+      const { conn, sent } = makeConnections();
+
+      await loadAndSendSession('conn-1', conn, '/work', 'sess-1', {});
+
+      const progress = sent.filter((m) => m.type === MessageType.WORKFLOW_PROGRESS);
+      expect(progress).toHaveLength(1);
+      expect(progress[0].payload).toMatchObject({ toolUseId: 'toolu_a', taskId: 'a1b2c3' });
+      expect(getLiveWorkflowTask).toHaveBeenCalledWith('sess-1', 'toolu_a');
+    });
+
+    it('is sent as rebuilt when the stream has no live one', async () => {
+      mockReconstruct.mockResolvedValue([rebuilt] as never);
+      vi.mocked(getLiveWorkflowTask).mockReturnValue(undefined);
+      const { conn, sent } = makeConnections();
+
+      await loadAndSendSession('conn-1', conn, '/work', 'sess-1', {});
+
+      const progress = sent.filter((m) => m.type === MessageType.WORKFLOW_PROGRESS);
+      expect(progress[0].payload).not.toHaveProperty('taskId');
+    });
   });
 
   // #433: the webview leaves a session URL on this flag, so it has to survive the

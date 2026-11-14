@@ -5,6 +5,10 @@ import {mermaid, MERMAID_CONTROLS, useMermaidOptions} from '@/utils/mermaidPlugi
 import {ToolUseBlockDto} from "@/dto";
 import {useTranslation} from "@/i18n";
 import {useChatStreamContextOrNull} from "@/contexts/ChatStreamContext";
+import {useState} from "react";
+import {ChevronRightIcon} from "@heroicons/react/20/solid";
+import {useTranscriptViewMode} from "../transcriptViewMode";
+import {isUserDeclined} from "./common/toolStatus";
 import {findPlanFileContent} from "./planFromTranscript";
 import {Container, LabelValue, RendererProps, ToolHeader, ToolWrapper} from "./common";
 
@@ -28,11 +32,52 @@ export function ExitPlanModeRenderer(props: RendererProps) {
     const resultBlock = toolResult?.message?.content?.[0];
     const isError = resultBlock?.is_error ?? false;
     const feedbackContent = resultBlock?.content;
+    const declined = isUserDeclined(props.toolResult);
     const statusText = toolResult
         ? (isError ? t('exitPlanMode.stayedInPlanMode') : t('exitPlanMode.approved'))
         : undefined;
 
     const headerName = plan ? t('exitPlanMode.title') : t('exitPlanMode.planModeTitle');
+    const viewMode = useTranscriptViewMode();
+    const [open, setOpen] = useState(false);
+    const { t: tChat } = useTranslation('chat');
+
+    // In the views that follow the desktop app the plan is one line, "Proposing plan x" while it waits and "Proposed
+    // plan x" after, that opens to the plan; the card under the chat is where it is answered.
+    if (viewMode !== null) {
+        // While the plan waits, its line is drawn under the card that asks about it (DesktopPlanCard).
+        if (!toolResult) return <div hidden data-testid="plan-row" />;
+        const title = (plan.split('\n').map((line) => line.trim()).find((line) => line !== '') ?? '').replace(/^#+\s*/, '');
+        return (
+            <div data-testid="plan-row" className="mb-[1.4rem]">
+                <button
+                    type="button"
+                    aria-expanded={open}
+                    onClick={() => setOpen((value) => !value)}
+                    className="flex w-full items-center gap-[0.35rem] py-[0.625rem] text-start text-[0.9656rem] text-text-secondary"
+                >
+                    {isError && !declined ? (
+                        <span className="min-w-0 truncate">
+                            {tChat('acceptPlan.proposing', { title: '' }).trim()} <span className="text-[rgb(226,88,110)]">{tChat('acceptPlan.failed')}</span>
+                        </span>
+                    ) : (
+                        <span className="min-w-0 truncate">
+                            {tChat(toolResult ? 'acceptPlan.proposed' : 'acceptPlan.proposing', { title })}
+                            {isError && declined ? ` ${tChat('acceptPlan.notApproved')}` : ''}
+                        </span>
+                    )}
+                    <ChevronRightIcon className={`h-4 w-4 shrink-0 transition-transform ${open ? 'rotate-90' : ''}`} />
+                </button>
+                {open && plan && (
+                    <div className="markdown-content mb-2 text-text-primary text-[1rem] leading-relaxed">
+                        <Streamdown mode="static" controls={{ code: true, table: true, mermaid: MERMAID_CONTROLS }} plugins={{ math, code, mermaid }} mermaid={mermaidOptions}>
+                            {plan}
+                        </Streamdown>
+                    </div>
+                )}
+            </div>
+        );
+    }
 
     return (
         <ToolWrapper message={props.message}>

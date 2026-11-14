@@ -77,4 +77,17 @@ describe('WorkflowStateContext', () => {
     expect(ctx.getByToolUseId('t2')?.status).toBe('completed');
     expect(ctx.getByToolUseId('t3')?.status).toBe('stopped');
   });
+
+  // #673: a card in the chat opens a task's run window without the panel.
+  it('opens and closes a task run window on its own, with the panel shut', () => {
+    emit({ toolUseId: 't1' });
+    expect(ctx.transcriptToolUseId).toBeNull();
+
+    act(() => ctx.openTranscript('t1'));
+    expect(ctx.transcriptToolUseId).toBe('t1');
+    expect(ctx.panelOpen).toBe(false);
+
+    act(() => ctx.closeTranscript());
+    expect(ctx.transcriptToolUseId).toBeNull();
+  });
 });

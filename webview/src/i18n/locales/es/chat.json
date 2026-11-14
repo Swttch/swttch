@@ -279,6 +279,25 @@
     }
   },
   "acceptPlan": {
+    "started": "Planificación iniciada",
+    "starting": "Elaborando un plan",
+    "notApproved": "No aprobado",
+    "failed": "Error",
+    "proposing": "Proponiendo plan {{title}}",
+    "proposed": "Plan propuesto {{title}}",
+    "card": {
+      "title": "Claude propuso un plan",
+      "openPlan": "Abrir plan",
+      "revisePlaceholder": "¿Qué debería cambiar? (opcional)",
+      "back": "Atrás",
+      "reviseSubmit": "Revisar",
+      "reject": "Rechazar",
+      "revise": "Revisar…",
+      "accept": "Aceptar",
+      "acceptAuto": "Aceptar y usar el modo automático",
+      "acceptEdits": "Aceptar y permitir ediciones",
+      "acceptBypass": "Aceptar y omitir permisos"
+    },
     "title": "¿Aceptar este plan?",
     "subtitle": "Selecciona texto en la vista previa para agregar comentarios",
     "textareaPlaceholder": "Dile a Claude qué hacer en su lugar",
@@ -301,7 +320,14 @@
     "submit": "Enviar respuestas",
     "next": "Siguiente",
     "other": "Otro",
-    "otherPlaceholder": "Escribe tu respuesta..."
+    "otherPlaceholder": "Escribe tu respuesta...",
+    "card": {
+      "skip": "Omitir",
+      "submit": "Enviar",
+      "placeholder": "Escribe tu propia respuesta aquí",
+      "progress": "{{current}} de {{total}}",
+      "skipped": "Omitida"
+    }
   },
   "backgroundTasks": {
     "title": "Tareas en segundo plano",
@@ -386,6 +412,31 @@
     "setModelTo": "Establecer modelo en {{model}}"
   },
   "permissionBanner": {
+    "card": {
+      "question": "¿Permitir que Claude pueda {{action}}?",
+      "actionRunCommand": "ejecutar este comando",
+      "actionSearchWeb": "buscar en la web",
+      "questionRead": "¿Permitir que Claude lea {{file}}?",
+      "questionEdit": "¿Permitir que Claude edite {{file}}?",
+      "questionWrite": "¿Permitir que Claude escriba en {{file}}?",
+      "questionFetch": "¿Permitir que Claude obtenga {{site}}?",
+      "questionTool": "¿Permitir que Claude use {{tool}}?",
+      "questionAgent": "¿Permitir que Claude ejecute un agente {{description}}?",
+      "deny": "Denegar",
+      "alwaysAllow": "Permitir siempre",
+      "alwaysAllowHint": "No volver a preguntar para esta herramienta",
+      "allowOnce": "Permitir una vez",
+      "allowAndSwitchToAuto": "Permitir y cambiar a Auto",
+      "acceptEditsHint": "Cambia esta sesión al modo “Aceptar ediciones”",
+      "autoReviewsRest": "Auto revisa el resto de esta sesión.",
+      "moreAllowOptions": "Más opciones de permiso",
+      "scope": {
+        "session": "Solo aplica a esta sesión",
+        "project": "Se guarda en la configuración del proyecto",
+        "projectLocal": "Se guarda en la configuración local del proyecto",
+        "user": "Se guarda en la configuración del usuario (todos los proyectos)"
+      }
+    },
     "textareaPlaceholder": "Dile a Claude qué hacer en su lugar",
     "workflowNotice": "Los flujos de trabajo dinámicos ejecutan muchos subagentes en paralelo y pueden consumir gran parte de tu límite de uso. Detenlos en cualquier momento desde el panel de tareas.",
     "yes": "Sí",
@@ -683,7 +734,9 @@
     "rewindFailed": "No se pudo retroceder el código"
   },
   "chatPage": {
-    "scrollToBottom": "Desplazarse al final"
+    "scrollToBottom": "Desplazarse al final",
+    "inputNeeded": "Se necesita tu respuesta",
+    "sendHeldNow": "Enviar ahora"
   },
   "contextUsage": {
     "heading": "Uso del contexto",
@@ -1068,6 +1121,20 @@
     "editHint": "Intro para guardar · Esc para cancelar"
   },
   "transcript": {
+    "userMessage": {
+      "showMore": "Mostrar más",
+      "showLess": "Mostrar menos"
+    },
+    "fileChanges": {
+      "title": "{{count}} archivos modificados",
+      "title_one": "{{count}} archivo modificado",
+      "title_other": "{{count}} archivos modificados",
+      "undo": "Deshacer",
+      "undoHint": "Pedir a Claude que deshaga los cambios de archivos de este turno",
+      "total": "Total",
+      "viewAll": "Ver todo",
+      "viewLess": "Mostrar menos"
+    },
     "tools": {
       "ranCommand": "Comando ejecutado",
       "ranCommands_one": "{{count}} comando ejecutado",
@@ -1090,6 +1157,11 @@
       "editedFiles_other": "{{count}} archivos editados",
       "createdFile": "{{name}} creado",
       "editedFile": "{{name}} editado",
+      "notApplied": "No aplicado",
+      "interrupted": "Interrumpido",
+      "updatedFile": "Actualizado {{name}}",
+      "editingFile": "Editando {{name}}",
+      "creatingFile": "Creando {{name}}",
       "failed_one": "{{count}} falló",
       "failed_many": "{{count}} fallaron",
       "failed_other": "{{count}} fallaron",

@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useApi } from '@/contexts/ApiContext';
 import { getBridgeClient } from '@/api/bridge/BridgeClient';
 import type { CliControlRequestEvent } from '@/types';
-import { MessageType } from '@/shared';
+import { MessageType, alwaysAllowFromSuggestions } from '@/shared';
 import { useAllowAllCommands } from '@/contexts/AllowAllCommandsContext';
 import { useSessionContext } from '@/contexts/SessionContext';
 
@@ -20,6 +20,13 @@ export interface PendingPermission {
    * "allow for the session" answer must not be offered.
    */
   suppressAlwaysAllowRule: boolean;
+  /** Why the CLI asks at all, in its words (`decision_reason`): "Path is outside allowed working directories". */
+  decisionReason?: string;
+  /**
+   * What the CLI suggested installing if the user says "don't ask again": `permission_suggestions`, as the
+   * CLI sent it. Read through {@link alwaysAllowFromSuggestions}, never trusted as it stands.
+   */
+  suggestions?: unknown;
 }
 
 function assessRiskLevel(toolName: string, input: Record<string, unknown>): PermissionRiskLevel {
@@ -67,6 +74,11 @@ interface UsePendingPermissionsReturn {
   pending: PendingPermission | null;
   approve: (controlRequestId: string) => void;
   approveForSession: (controlRequestId: string) => void;
+  /**
+   * Approve and install the narrow rule the CLI suggested (see {@link alwaysAllowFromSuggestions}), for this
+   * session. Approves just this once when there is no such rule, so an answer is never lost to a missing one.
+   */
+  approveAlways: (controlRequestId: string) => void;
   deny: (controlRequestId: string, reason?: string) => void;
 }
 
@@ -139,10 +151,28 @@ export function usePendingPermissions(): UsePendingPermissionsReturn {
         riskLevel: assessRiskLevel(toolName, input),
         description: generateDescription(toolName, input),
         suppressAlwaysAllowRule,
+        decisionReason: typeof request.decision_reason === 'string' ? request.decision_reason : undefined,
+        suggestions: request.permission_suggestions,
       }]);
     });
     return unsubscribe;
   }, [api.tools]);
+
+  // The CLI withdrew a question it had asked (the tool use was aborted: the agent
+  // asking was cancelled, the turn was interrupted). Its prompt is then a question
+  // nobody is waiting on, and answering it would reach a request that no longer
+  // exists, so it goes the way an answered one does (#673).
+  useEffect(() => {
+    const bridge = getBridgeClient();
+    return bridge.subscribe(MessageType.CLI_EVENT, (message) => {
+      const cliEvent = message.payload as { type?: string; request_id?: unknown } | undefined;
+      if (cliEvent?.type !== 'control_cancel_request') return;
+      const controlRequestId = cliEvent.request_id;
+      if (typeof controlRequestId !== 'string' || !controlRequestId) return;
+      processedIdsRef.current.add(controlRequestId);
+      setRequests(prev => prev.filter(r => r.controlRequestId !== controlRequestId));
+    });
+  }, []);
 
   // A request answered in the IDE's diff review is settled — drop its prompt
   // here rather than leaving a question the CLI has already moved on from, which
@@ -177,6 +207,17 @@ export function usePendingPermissions(): UsePendingPermissionsReturn {
     setRequests(prev => prev.filter(r => r.controlRequestId !== controlRequestId));
   }, [requests, api.tools]);
 
+  const approveAlways = useCallback((controlRequestId: string) => {
+    const req = requests.find(r => r.controlRequestId === controlRequestId);
+    if (!req) return;
+
+    processedIdsRef.current.add(controlRequestId);
+    const rules = req.suppressAlwaysAllowRule ? undefined : alwaysAllowFromSuggestions(req.toolName, req.suggestions);
+    if (rules) api.tools.approveWithRules(req.toolUseId, rules, controlRequestId, req.input);
+    else api.tools.approve(req.toolUseId, controlRequestId, req.input);
+    setRequests(prev => prev.filter(r => r.controlRequestId !== controlRequestId));
+  }, [requests, api.tools]);
+
   const deny = useCallback((controlRequestId: string, reason?: string) => {
     const req = requests.find(r => r.controlRequestId === controlRequestId);
     if (!req) return;
@@ -189,5 +230,5 @@ export function usePendingPermissions(): UsePendingPermissionsReturn {
   // Return the first pending request (FIFO)
   const pending = requests.length > 0 ? requests[0] : null;
 
-  return { pending, approve, approveForSession, deny };
+  return { pending, approve, approveForSession, approveAlways, deny };
 }
