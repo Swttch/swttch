@@ -1096,6 +1096,8 @@
       "title_one": "{{count}} archivo modificado",
       "title_other": "{{count}} archivos modificados",
       "undo": "Deshacer",
+      "undoHint": "Pedir a Claude que deshaga los cambios de archivos de este turno",
+      "undoPrompt": "Deshaz todos los cambios de archivos que hiciste en este turno.",
       "total": "Total"
     },
     "tools": {

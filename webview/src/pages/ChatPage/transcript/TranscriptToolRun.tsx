@@ -704,7 +704,7 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive }: { call
                 event.stopPropagation();
                 if (path) void openChatFile(path);
               }}
-              className={`${LINK_TEXT} min-w-0 cursor-pointer truncate hover:underline`}
+              className={`${LINK_TEXT} min-w-0 cursor-pointer truncate transition-[filter] hover:brightness-[1.08]`}
             >
               {label.fileName}
             </span>

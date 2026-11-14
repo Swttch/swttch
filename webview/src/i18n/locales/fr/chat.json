@@ -1096,6 +1096,8 @@
       "title_one": "{{count}} fichier modifié",
       "title_other": "{{count}} fichiers modifiés",
       "undo": "Annuler",
+      "undoHint": "Demander à Claude d’annuler les modifications de fichiers de ce tour",
+      "undoPrompt": "Annule toutes les modifications de fichiers que tu as faites pendant ce tour.",
       "total": "Total"
     },
     "tools": {

@@ -1,8 +1,10 @@
 import { useMemo } from 'react';
 import { DocumentIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '@/i18n';
+import { Tooltip } from '@/components/Tooltip';
+import { useChatStreamContextOrNull } from '@/contexts/ChatStreamContext';
+import { useSessionContextOrNull } from '@/contexts/SessionContext';
 import type { LoadedMessageDto } from '@/types';
-import { useSendActionsValue } from '../SendActionsContext';
 import { buildSegments, type ToolCall } from './buildSegments';
 import { baseName, hasFailed, lineStatsOf, pathOf, wasStopped, type LineStats } from './toolSummary';
 
@@ -51,37 +53,62 @@ function Counts({ stats }: { stats: LineStats }) {
 }
 
 /**
- * What closes a turn that changed two or more files, the way the desktop app draws it: a card with the number of
- * files and "Undo" over a line for each file with its lines put in and taken out, and the totals under them.
- * Measured on the desktop app's recording of an edit to two files at once; a turn that changed one file has none.
- *
- * "Undo" is the code rewind of the send the turn answers (the same restore the send's own menu offers), so it puts
- * back every file the turn changed. Without a send to name, or while the code cannot be restored, there is no button.
+ * "Undo": asks Claude to take back what the turn changed, as the desktop app's does (its hover line says so: "Ask
+ * Claude to undo this turn's file changes"). It sends a message; it does not restore the files by itself. It gets a
+ * pill behind it while the pointer is on it. The words of the message are ours: the desktop app's are not in its files.
  */
-export function TranscriptFileChanges({ body, sectionKey, hidden }: { body: LoadedMessageDto[]; sectionKey: string | null; hidden: boolean }) {
+function UndoButton() {
   const { t } = useTranslation('chat');
-  const sendActions = useSendActionsValue();
+  const stream = useChatStreamContextOrNull();
+  const inputMode = useSessionContextOrNull()?.inputMode;
+  const send = stream?.sendMessage;
+  if (!send || inputMode === undefined) return null;
+  return (
+    <Tooltip content={t('transcript.fileChanges.undoHint')} desktop="large" maxWidth={169}>
+      <button
+        type="button"
+        onClick={() => send(t('transcript.fileChanges.undoPrompt'), inputMode)}
+        className="-my-1 rounded-[7px] px-[8.8px] py-[3.3px] text-text-secondary transition-colors hover:bg-text-primary/[0.1] hover:text-text-primary"
+      >
+        {t('transcript.fileChanges.undo')}
+      </button>
+    </Tooltip>
+  );
+}
+
+/**
+ * What closes a turn that changed files, the way the desktop app draws it. One file is a single line: its name,
+ * "Undo" and the lines put in and taken out. Several are a card with the number of files and "Undo" over a line for
+ * each file, and the totals under them. Measured on the desktop app's recordings.
+ */
+export function TranscriptFileChanges({ body, hidden }: { body: LoadedMessageDto[]; sectionKey?: string | null; hidden: boolean }) {
+  const { t } = useTranslation('chat');
   const files = useMemo(() => changedFilesOf(body), [body]);
-  if (hidden || files.length < 2) return null;
+  if (hidden || files.length < 1) return null;
+  const border = 'rounded-[11px] border border-text-primary/[0.07]';
+  if (files.length === 1) {
+    const [file] = files;
+    return (
+      <div className="pb-[4px] pt-[3px]" data-transcript-file-changes>
+        <div className={`flex h-[44.4px] items-center gap-[10px] px-[17px] text-[0.9656rem] text-text-primary ${border}`}>
+          <DocumentIcon className="h-4 w-4 flex-shrink-0 text-text-secondary" />
+          <span className="min-w-0 flex-1 truncate">{baseName(file.path)}</span>
+          <UndoButton />
+          <Counts stats={file.stats} />
+        </div>
+      </div>
+    );
+  }
   const total = files.reduce(
     (sum, file) => ({ added: sum.added + file.stats.added, removed: sum.removed + file.stats.removed }),
     { added: 0, removed: 0 },
   );
-  const canUndo = sendActions !== null && sectionKey !== null && sendActions.canRewind(sectionKey);
   return (
     <div className="pb-[4px] pt-[3px]" data-transcript-file-changes>
-      <div className="overflow-hidden rounded-[11px] border border-text-primary/[0.07] text-[0.9656rem] text-text-primary">
+      <div className={`overflow-hidden text-[0.9656rem] text-text-primary ${border}`}>
         <div className="flex h-[42px] items-center justify-between border-b border-text-primary/[0.07] px-[17px]">
           <span>{t('transcript.fileChanges.title', { count: files.length })}</span>
-          {canUndo && sectionKey !== null && (
-            <button
-              type="button"
-              onClick={() => sendActions?.rewindCode(sectionKey)}
-              className="text-text-secondary transition-colors hover:text-text-primary"
-            >
-              {t('transcript.fileChanges.undo')}
-            </button>
-          )}
+          <UndoButton />
         </div>
         <div className="flex flex-col py-[4.8px]">
           {files.map((file) => (

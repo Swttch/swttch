@@ -1096,6 +1096,8 @@
       "title_one": "{{count}} Datei geändert",
       "title_other": "{{count}} Dateien geändert",
       "undo": "Rückgängig",
+      "undoHint": "Claude bitten, die Dateiänderungen dieses Schritts rückgängig zu machen",
+      "undoPrompt": "Mach alle Dateiänderungen aus diesem Schritt rückgängig.",
       "total": "Gesamt"
     },
     "tools": {
