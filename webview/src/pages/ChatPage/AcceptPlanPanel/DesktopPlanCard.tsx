@@ -19,8 +19,8 @@ function planTitle(plan: unknown): string {
   return line.replace(/^#+\s*/, '');
 }
 
-const BUTTON = 'h-[1.9062rem] rounded-[0.5625rem] px-[0.5625rem] text-[1rem] transition-opacity hover:opacity-80';
-const GRAY = `${BUTTON} bg-text-primary/[0.12] text-text-primary`;
+const BUTTON = 'h-[1.9062rem] rounded-[0.5625rem] px-[0.5625rem] text-[1rem] transition-colors';
+const GRAY = `${BUTTON} bg-text-primary/[0.12] text-text-primary hover:bg-text-primary/[0.2]`;
 
 /**
  * A plan waiting for its answer, drawn as the desktop app draws it in the views that follow it (#673): a heading
@@ -130,7 +130,7 @@ export function DesktopPlanCard({ pending, onApprove, onDeny }: Props) {
                 type="button"
                 data-testid="plan-revise-submit"
                 onClick={() => onDeny(pending.controlRequestId, feedback.trim() || undefined)}
-                className={`${BUTTON} bg-text-primary/[0.92] text-text-inverse`}
+                className={`${BUTTON} bg-text-primary/[0.92] text-text-inverse hover:bg-text-primary/[0.85]`}
               >
                 {t('acceptPlan.card.reviseSubmit')}
               </button>

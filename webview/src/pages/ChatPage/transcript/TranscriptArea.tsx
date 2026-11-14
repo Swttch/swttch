@@ -48,6 +48,8 @@ export interface TranscriptAreaProps {
   awaitingInput?: boolean;
   /** Drawn last, in the conversation itself: the permission card, which scrolls away with the messages. */
   trailing?: ReactNode;
+  /** Where the "Input needed" line goes: before the card (default), after it (a question), or nowhere (a plan). */
+  awaitingInputLine?: 'before' | 'after' | 'none';
   /** Seconds left before a dropped connection ends the turn; null while connected. */
   disconnectCountdown?: number | null;
   /** The CLI's retry progress; null when not retrying. */
@@ -79,7 +81,7 @@ export interface TranscriptAreaProps {
  */
 export function TranscriptArea(props: TranscriptAreaProps) {
   const { t } = useTranslation('chat');
-  const { isStreaming, awaitingInput = false, trailing = null, disconnectCountdown = null, apiRetry = null, mergedMessages, hasMore, isLoadingMore, onLoadMore, findInChat = LOADED_ONLY } = props;
+  const { isStreaming, awaitingInput = false, trailing = null, awaitingInputLine = 'before', disconnectCountdown = null, apiRetry = null, mergedMessages, hasMore, isLoadingMore, onLoadMore, findInChat = LOADED_ONLY } = props;
   const sections = useMemo(() => withoutPeerSections(props.sections), [props.sections]);
   const { workingDirectory } = useSessionContext();
   const { retry: onRetry, messages: streamMessages, isStreaming: turnRunning } = useChatStreamContext();
@@ -236,12 +238,17 @@ export function TranscriptArea(props: TranscriptAreaProps) {
           <TranscriptStreamingIndicator countdownSeconds={disconnectCountdown} apiRetry={apiRetry} replyStarted={replyStarted} afterBubble={afterBubble} />
         </div>
       )}
-      {awaitingInput && turnRunning && heldCall === null && (
+      {awaitingInput && awaitingInputLine === 'before' && turnRunning && heldCall === null && (
         <div>
           <TranscriptAwaitingInput />
         </div>
       )}
       {trailing}
+      {awaitingInput && awaitingInputLine === 'after' && turnRunning && heldCall === null && (
+        <div>
+          <TranscriptAwaitingInput />
+        </div>
+      )}
       <StreamErrorBanner />
     </div>
   );

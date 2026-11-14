@@ -30,7 +30,7 @@ export const AskUserQuestionInputPanel = (props: Props) => {
 
   const questions = toolUse.input.questions;
 
-  const form = useFormState(questions);
+  const form = useFormState(questions, viewMode !== null);
   const { collapsed, toggle: toggleCollapsed, expand } = useCollapsiblePanel();
 
   const questionText = form.currentQuestion.header

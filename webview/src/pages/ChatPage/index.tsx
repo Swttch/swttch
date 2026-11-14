@@ -503,6 +503,7 @@ function ChatPageContent() {
           <TranscriptArea
             isStreaming={isStreaming && !isAwaitingUser}
             awaitingInput={cardWaiting || answerCard}
+            awaitingInputLine={answerCard ? (pendingUserAnswer ? 'after' : 'none') : 'before'}
             trailing={
               answerCard && pendingUserAnswer ? (
                 <AskUserQuestionInputPanel

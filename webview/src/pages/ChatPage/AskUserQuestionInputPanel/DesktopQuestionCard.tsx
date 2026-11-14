@@ -77,7 +77,7 @@ export function DesktopQuestionCard({ form, total, onSubmit, onCancel, onOtherKe
                 aria-checked={checked}
                 data-testid={isOther ? 'question-option-other' : 'question-option'}
                 onClick={() => form.selectOption(form.currentIndex, option.label, multi)}
-                className="flex w-full items-start border-t border-text-primary/[0.06] px-[1.1rem] pb-[1.2rem] pt-[1.1rem] text-start transition-colors first:border-t-0 hover:bg-text-primary/[0.03]"
+                className="flex w-full items-start border-t border-text-primary/[0.06] px-[1.1rem] pb-[1.2rem] pt-[1.1rem] text-start first:border-t-0"
               >
                 <span
                   className={`mt-[0.0625rem] flex h-[1.39rem] w-[1.39rem] shrink-0 items-center justify-center border ${multi ? 'rounded-[0.35rem]' : 'rounded-full'} ${
@@ -114,7 +114,7 @@ export function DesktopQuestionCard({ form, total, onSubmit, onCancel, onOtherKe
             type="button"
             data-testid="question-skip"
             onClick={onCancel}
-            className="h-[1.9062rem] rounded-[0.5625rem] bg-text-primary/[0.12] px-[0.5625rem] text-[1rem] text-text-primary transition-opacity hover:opacity-80"
+            className="h-[1.9062rem] rounded-[0.5625rem] bg-text-primary/[0.12] px-[0.5625rem] text-[1rem] text-text-primary transition-colors hover:bg-text-primary/[0.2]"
           >
             {t('askUserQuestion.card.skip')}
           </button>
@@ -123,7 +123,7 @@ export function DesktopQuestionCard({ form, total, onSubmit, onCancel, onOtherKe
             data-testid="question-submit"
             disabled={!form.canSubmitCurrent}
             onClick={onSubmit}
-            className="h-[1.9062rem] rounded-[0.5625rem] bg-text-primary/[0.92] px-[0.5625rem] text-[1rem] text-text-inverse transition-colors hover:bg-text-primary disabled:opacity-50"
+            className="h-[1.9062rem] rounded-[0.5625rem] bg-text-primary/[0.92] px-[0.5625rem] text-[1rem] text-text-inverse transition-colors hover:bg-text-primary/[0.85] disabled:opacity-50"
           >
             {form.isLastTab ? t('askUserQuestion.card.submit') : t('askUserQuestion.next')}
           </button>
