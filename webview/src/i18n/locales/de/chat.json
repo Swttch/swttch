@@ -1146,6 +1146,7 @@
       "createdFile": "{{name}} erstellt",
       "editedFile": "{{name}} bearbeitet",
       "notApplied": "Nicht angewendet",
+      "interrupted": "Unterbrochen",
       "updatedFile": "Aktualisiert {{name}}",
       "editingFile": "Bearbeite {{name}}",
       "creatingFile": "Erstelle {{name}}",

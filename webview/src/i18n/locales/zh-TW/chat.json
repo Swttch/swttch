@@ -1131,6 +1131,7 @@
       "createdFile": "建立了 {{name}}",
       "editedFile": "編輯了 {{name}}",
       "notApplied": "未套用",
+      "interrupted": "已中斷",
       "updatedFile": "已更新 {{name}}",
       "editingFile": "正在編輯 {{name}}",
       "creatingFile": "正在建立 {{name}}",

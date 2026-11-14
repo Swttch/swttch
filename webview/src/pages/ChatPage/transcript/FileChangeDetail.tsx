@@ -9,7 +9,7 @@ import { HighlightedCode } from '../message-renderers/ToolRenderers/Mcp/Generic/
 import type { ToolCall } from './buildSegments';
 import { diffLinesOf } from './fileDiff';
 import { hasFailed } from './toolSummary';
-import { toolResultText } from '../message-renderers/ToolRenderers/common/toolStatus';
+import { isUserDeclined, toolResultText } from '../message-renderers/ToolRenderers/common/toolStatus';
 import type { LoadedMessageDto } from '@/types';
 import { markHunk, type MarkedLine } from '../diffMarks';
 import { pathOf } from './toolSummary';
@@ -202,6 +202,8 @@ function OneChange({ call, inBox }: { call: ToolCall; inBox: boolean }) {
   const { t } = useTranslation('chat');
   const failed = hasFailed(call);
   const errorText = failed ? errorTextOf(call) : '';
+  // A change the person turned down at its card: the box says it was interrupted, as the desktop app's does.
+  const declined = !failed && isUserDeclined(call.toolUse.tool_result as LoadedMessageDto | undefined);
   const path = pathOf(call);
   const lines = useMemo(() => diffLinesOf(call, MAX_SHOWN_LINES), [call]);
   const marks = useMemo(() => chipMarks(lines), [lines]);
@@ -216,6 +218,11 @@ function OneChange({ call, inBox }: { call: ToolCall; inBox: boolean }) {
           dir="ltr"
           className="max-h-[24rem] overflow-y-auto rounded-[0.5625rem] border border-text-primary/[0.04] py-[0.4169rem] font-mono text-[0.8461rem] leading-[1.3188rem] text-[var(--tr-text)]"
         >
+          {declined && (
+            <div className="px-[0.875rem] pb-[0.9rem] pt-[0.3rem] font-sans text-[0.9rem] leading-[1.1875rem] text-text-secondary">
+              {t('transcript.tools.interrupted')}
+            </div>
+          )}
           {errorText !== '' && (
             <div className="px-[0.875rem] pb-[0.75rem] pt-[0.3rem] leading-[1.1875rem]">
               <div className="whitespace-pre-wrap break-words font-sans text-[0.9656rem] text-[rgb(214,85,105)]">{errorText}</div>

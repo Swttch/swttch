@@ -1184,6 +1184,7 @@
       "createdFile": "Создан {{name}}",
       "editedFile": "Изменён {{name}}",
       "notApplied": "Не применено",
+      "interrupted": "Прервано",
       "updatedFile": "Обновлён {{name}}",
       "editingFile": "Редактирование {{name}}",
       "creatingFile": "Создание {{name}}",

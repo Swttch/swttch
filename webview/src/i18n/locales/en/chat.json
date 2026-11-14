@@ -1150,6 +1150,7 @@
       "createdFile": "Created {{name}}",
       "editedFile": "Edited {{name}}",
       "notApplied": "Not applied",
+      "interrupted": "Interrupted",
       "updatedFile": "Updated {{name}}",
       "editingFile": "Editing {{name}}",
       "creatingFile": "Creating {{name}}",

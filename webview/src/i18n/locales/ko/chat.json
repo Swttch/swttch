@@ -1131,6 +1131,7 @@
       "createdFile": "생성됨 {{name}}",
       "editedFile": "편집됨 {{name}}",
       "notApplied": "적용되지 않음",
+      "interrupted": "중단됨",
       "updatedFile": "업데이트됨 {{name}}",
       "editingFile": "편집 중 {{name}}",
       "creatingFile": "생성 중 {{name}}",

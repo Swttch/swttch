@@ -1151,6 +1151,7 @@
       "createdFile": "{{name}} créé",
       "editedFile": "{{name}} modifié",
       "notApplied": "Non appliqué",
+      "interrupted": "Interrompu",
       "updatedFile": "Mis à jour {{name}}",
       "editingFile": "Modification de {{name}}",
       "creatingFile": "Création de {{name}}",

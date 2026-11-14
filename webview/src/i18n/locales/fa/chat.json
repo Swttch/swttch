@@ -1145,6 +1145,7 @@
       "createdFile": "{{name}} ایجاد شد",
       "editedFile": "{{name}} ویرایش شد",
       "notApplied": "اعمال نشد",
+      "interrupted": "متوقف شد",
       "updatedFile": "به‌روزرسانی شد {{name}}",
       "editingFile": "در حال ویرایش {{name}}",
       "creatingFile": "در حال ایجاد {{name}}",

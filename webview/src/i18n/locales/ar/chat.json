@@ -1208,6 +1208,7 @@
       "createdFile": "تم إنشاء {{name}}",
       "editedFile": "تم تعديل {{name}}",
       "notApplied": "لم يتم التطبيق",
+      "interrupted": "تمت المقاطعة",
       "updatedFile": "تم تحديث {{name}}",
       "editingFile": "جارٍ تعديل {{name}}",
       "creatingFile": "جارٍ إنشاء {{name}}",
