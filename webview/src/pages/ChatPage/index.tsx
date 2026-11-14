@@ -166,6 +166,8 @@ function ChatPageContent() {
    */
   const isAwaitingUser = Boolean(pendingUserAnswer || pendingPlan || pendingPermission);
   const cardWaiting = Boolean(pendingPermission && usesDesktopPermissionCard(pendingPermission.toolName, transcriptViewMode));
+  // A question or a plan waiting for its answer in the views that follow the desktop app says "Input needed" too.
+  const inputNeeded = cardWaiting || (transcriptViewMode !== null && Boolean(pendingUserAnswer || pendingPlan));
   // What was written under the card goes out the moment the card is answered.
   // What was written under the card reaches the CLI before the card is answered, so the turn that goes on after
   // the answer already has it and answers it with the rest (the desktop app's order), not in a turn of its own.
@@ -549,12 +551,12 @@ function ChatPageContent() {
           {showScrollButton && (
               <button
                   onClick={scrollToBottom}
-                  data-testid={cardWaiting ? 'scroll-to-input-needed' : undefined}
+                  data-testid={inputNeeded ? 'scroll-to-input-needed' : undefined}
                   className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20 flex items-center gap-1.5 px-3 py-1.5 bg-surface-raised border border-border-default rounded-full shadow-md text-xs text-text-primary hover:bg-surface-hover transition-colors"
               >
                 {/* While a desktop-style card waits for an answer, the pill says so, as the desktop app does. */}
-                {cardWaiting && <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-blue-500" />}
-                {cardWaiting ? t('chatPage.inputNeeded') : t('chatPage.scrollToBottom')}
+                {inputNeeded && <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-blue-500" />}
+                {inputNeeded ? t('chatPage.inputNeeded') : t('chatPage.scrollToBottom')}
                 <ChevronDownIcon className="w-3.5 h-3.5" />
               </button>
           )}
