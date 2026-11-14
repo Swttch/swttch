@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { PermissionDiffBlock } from './PermissionDiffBlock';
 import { FILE_EDIT_TOOLS } from '@/shared';
 import { HighlightedCode } from '../message-renderers/ToolRenderers/Mcp/Generic/HighlightedCode';
 import { McpInputFields } from '../message-renderers/ToolRenderers/Mcp/Generic/McpIoCard';
@@ -50,7 +51,7 @@ export function permissionSubtitle(toolName: string, rawInput: unknown): string 
 }
 
 /** The input that says what a request is about, for the requests the desktop card shows as a value box (#673). */
-const MAIN_INPUT: Record<string, string> = { Read: 'file_path', WebSearch: 'query' };
+const MAIN_INPUT: Record<string, string> = { Read: 'file_path', WebSearch: 'query', Edit: 'file_path', Write: 'file_path' };
 
 function captionOf(key: string): string {
   const spaced = key.replace(/[_-]+/g, ' ').trim();
@@ -69,9 +70,16 @@ export function desktopCardPreview(toolName: string, rawInput: unknown): ReactNo
   const main = input[mainKey];
   if (typeof main !== 'string' || main.trim() === '') return null;
   // Read's `limit` and `offset` say how much, not what: the desktop card leaves them out.
-  const rest = toolName === 'Read'
+  const rest = toolName === 'Read' || toolName === 'Edit' || toolName === 'Write'
     ? []
     : Object.entries(input).filter(([key, value]) => key !== mainKey && (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'));
+  // An edit or a new file shows the change itself under the path: what was replaced by what, or all that is written.
+  let change: ReactNode = null;
+  if (toolName === 'Edit' && typeof input.old_string === 'string' && typeof input.new_string === 'string') {
+    change = <PermissionDiffBlock before={input.old_string} after={input.new_string} />;
+  } else if (toolName === 'Write' && typeof input.content === 'string') {
+    change = <PermissionDiffBlock after={input.content} />;
+  }
   // The value box is at least 42px (47 here) tall with its text in the middle: measured on the desktop app's single-line one.
   return (
     <>
@@ -82,6 +90,7 @@ export function desktopCardPreview(toolName: string, rawInput: unknown): ReactNo
       >
         {main}
       </div>
+      {change}
       {rest.length > 0 && (
         <dl data-testid="permission-input-rows" className="mt-[14px] grid grid-cols-[178px_1fr] gap-y-[6px] text-[0.9rem] leading-[1.5]">
           {rest.map(([key, value]) => (

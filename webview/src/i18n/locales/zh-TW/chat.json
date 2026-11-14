@@ -391,6 +391,8 @@
       "actionRunCommand": "執行此指令",
       "actionSearchWeb": "搜尋網頁",
       "questionRead": "允許 Claude 讀取 {{file}} 嗎？",
+      "questionEdit": "允許 Claude 編輯 {{file}} 嗎？",
+      "questionWrite": "允許 Claude 寫入 {{file}} 嗎？",
       "deny": "拒絕",
       "alwaysAllow": "一律允許",
       "alwaysAllowHint": "不再針對此工具詢問",

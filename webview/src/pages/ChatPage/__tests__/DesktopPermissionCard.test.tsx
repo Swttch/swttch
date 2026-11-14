@@ -66,7 +66,9 @@ describe('usesDesktopPermissionCard', () => {
     expect(usesDesktopPermissionCard('Bash', 'normal')).toBe(true);
     expect(usesDesktopPermissionCard('PowerShell', 'verbose')).toBe(true);
     expect(usesDesktopPermissionCard('Bash', null)).toBe(false);
-    expect(usesDesktopPermissionCard('Edit', 'normal')).toBe(false);
+    expect(usesDesktopPermissionCard('Edit', 'normal')).toBe(true);
+    expect(usesDesktopPermissionCard('Write', 'normal')).toBe(true);
+    expect(usesDesktopPermissionCard('NotebookEdit', 'normal')).toBe(false);
     expect(usesDesktopPermissionCard('mcp__a__b', 'thinking')).toBe(false);
   });
 });

@@ -395,6 +395,8 @@
       "actionRunCommand": "run this command",
       "actionSearchWeb": "search the web",
       "questionRead": "Allow Claude to read {{file}}?",
+      "questionEdit": "Allow Claude to edit {{file}}?",
+      "questionWrite": "Allow Claude to write {{file}}?",
       "deny": "Deny",
       "alwaysAllow": "Always allow",
       "alwaysAllowHint": "Don’t ask again for this tool",

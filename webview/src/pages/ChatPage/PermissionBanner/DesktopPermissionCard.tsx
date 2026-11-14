@@ -15,7 +15,7 @@ import { getLastAllowChoice, setLastAllowChoice } from './lastAllowChoice';
  * desktop app (Normal, Thinking, Verbose). Grows one kind of request at a time; the classic chat keeps
  * its own prompt for all of them (#673).
  */
-const DESKTOP_CARD_TOOLS = new Set(['Bash', 'PowerShell', 'Read', 'WebSearch']);
+const DESKTOP_CARD_TOOLS = new Set(['Bash', 'PowerShell', 'Read', 'WebSearch', 'Edit', 'Write']);
 
 export function usesDesktopPermissionCard(toolName: string, viewMode: TranscriptViewMode | null): boolean {
   return viewMode !== null && DESKTOP_CARD_TOOLS.has(toolName);
@@ -40,6 +40,11 @@ function questionFor(permission: PendingPermission, t: (key: string, values?: Re
     const path = typeof permission.input.file_path === 'string' ? permission.input.file_path : '';
     const name = path.split(/[\\/]/).filter(Boolean).pop() ?? path;
     return t('permissionBanner.card.questionRead', { file: name });
+  }
+  if (permission.toolName === 'Edit' || permission.toolName === 'Write') {
+    const path = typeof permission.input.file_path === 'string' ? permission.input.file_path : '';
+    const name = path.split(/[\\/]/).filter(Boolean).pop() ?? path;
+    return t(permission.toolName === 'Edit' ? 'permissionBanner.card.questionEdit' : 'permissionBanner.card.questionWrite', { file: name });
   }
   const action = permission.toolName === 'WebSearch' ? 'actionSearchWeb' : 'actionRunCommand';
   return t('permissionBanner.card.question', { action: t(`permissionBanner.card.${action}`) });
@@ -193,7 +198,7 @@ export function DesktopPermissionCard(props: Props) {
         </div>
 
         {/* 24px under a command's box; 5px more under the value box of a read or a web search (measured on the desktop app). */}
-        <div className={`relative flex items-center justify-end gap-[18px] px-[18px] pb-[18px] ${permission.toolName === 'Read' || permission.toolName === 'WebSearch' ? 'pt-[29.6px]' : 'pt-[24px]'}`}>
+        <div className={`relative flex items-center justify-end gap-[18px] px-[18px] pb-[18px] ${permission.toolName === 'Read' || permission.toolName === 'WebSearch' ? 'pt-[29.6px]' : permission.toolName === 'Edit' || permission.toolName === 'Write' ? 'pt-[26.7px]' : 'pt-[24px]'}`}>
           <button
             type="button"
             data-testid="permission-deny"

@@ -391,6 +391,8 @@
       "actionRunCommand": "diesen Befehl auszuführen",
       "actionSearchWeb": "im Web zu suchen",
       "questionRead": "Claude erlauben, {{file}} zu lesen?",
+      "questionEdit": "Claude erlauben, {{file}} zu bearbeiten?",
+      "questionWrite": "Claude erlauben, {{file}} zu schreiben?",
       "deny": "Ablehnen",
       "alwaysAllow": "Immer erlauben",
       "alwaysAllowHint": "Für dieses Tool nicht mehr fragen",

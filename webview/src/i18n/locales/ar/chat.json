@@ -399,6 +399,8 @@
       "actionRunCommand": "تشغيل هذا الأمر",
       "actionSearchWeb": "البحث في الويب",
       "questionRead": "هل تسمح لـ Claude بقراءة {{file}}؟",
+      "questionEdit": "هل تسمح لـ Claude بتعديل {{file}}؟",
+      "questionWrite": "هل تسمح لـ Claude بالكتابة في {{file}}؟",
       "deny": "رفض",
       "alwaysAllow": "السماح دائمًا",
       "alwaysAllowHint": "عدم السؤال مرة أخرى لهذه الأداة",

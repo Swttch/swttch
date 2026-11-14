@@ -391,6 +391,8 @@
       "actionRunCommand": "executar este comando",
       "actionSearchWeb": "pesquisar na web",
       "questionRead": "Permitir que o Claude leia {{file}}?",
+      "questionEdit": "Permitir que o Claude edite {{file}}?",
+      "questionWrite": "Permitir que o Claude escreva em {{file}}?",
       "deny": "Negar",
       "alwaysAllow": "Sempre permitir",
       "alwaysAllowHint": "Não perguntar novamente para esta ferramenta",

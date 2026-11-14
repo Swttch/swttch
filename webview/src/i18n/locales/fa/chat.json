@@ -391,6 +391,8 @@
       "actionRunCommand": "این دستور را اجرا کند",
       "actionSearchWeb": "در وب جست‌وجو کند",
       "questionRead": "به Claude اجازه می‌دهید {{file}} را بخواند؟",
+      "questionEdit": "به Claude اجازه می‌دهید {{file}} را ویرایش کند؟",
+      "questionWrite": "به Claude اجازه می‌دهید در {{file}} بنویسد؟",
       "deny": "رد کردن",
       "alwaysAllow": "همیشه مجاز",
       "alwaysAllowHint": "دیگر برای این ابزار نپرس",

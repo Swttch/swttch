@@ -204,7 +204,7 @@ export function PermissionBanner(props: Props) {
     [permission.toolName, permission.input, preview],
   );
   // A read outside the working directories says why the CLI asks, in the CLI's words; a command says what it is for.
-  const desktopSubtitle = permission.toolName === 'Read' ? permission.decisionReason : subtitle;
+  const desktopSubtitle = ['Read', 'Edit', 'Write'].includes(permission.toolName) ? permission.decisionReason : subtitle;
   const notice = isWorkflow ? t('permissionBanner.workflowNotice') : undefined;
 
   /*

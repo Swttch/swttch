@@ -395,6 +395,8 @@
       "actionRunCommand": "выполнить эту команду",
       "actionSearchWeb": "выполнить поиск в интернете",
       "questionRead": "Разрешить Claude прочитать {{file}}?",
+      "questionEdit": "Разрешить Claude изменить {{file}}?",
+      "questionWrite": "Разрешить Claude записать в {{file}}?",
       "deny": "Отклонить",
       "alwaysAllow": "Всегда разрешать",
       "alwaysAllowHint": "Больше не спрашивать для этого инструмента",

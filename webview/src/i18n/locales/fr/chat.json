@@ -391,6 +391,8 @@
       "actionRunCommand": "exécuter cette commande",
       "actionSearchWeb": "rechercher sur le web",
       "questionRead": "Autoriser Claude à lire {{file}} ?",
+      "questionEdit": "Autoriser Claude à modifier {{file}} ?",
+      "questionWrite": "Autoriser Claude à écrire dans {{file}} ?",
       "deny": "Refuser",
       "alwaysAllow": "Toujours autoriser",
       "alwaysAllowHint": "Ne plus demander pour cet outil",

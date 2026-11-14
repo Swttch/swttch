@@ -391,6 +391,8 @@
       "actionRunCommand": "运行此命令",
       "actionSearchWeb": "搜索网页",
       "questionRead": "允许 Claude 读取 {{file}} 吗？",
+      "questionEdit": "允许 Claude 编辑 {{file}} 吗？",
+      "questionWrite": "允许 Claude 写入 {{file}} 吗？",
       "deny": "拒绝",
       "alwaysAllow": "始终允许",
       "alwaysAllowHint": "不再针对此工具询问",

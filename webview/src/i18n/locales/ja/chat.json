@@ -391,6 +391,8 @@
       "actionRunCommand": "このコマンドを実行する",
       "actionSearchWeb": "ウェブを検索する",
       "questionRead": "Claude に{{file}}の読み取りを許可しますか？",
+      "questionEdit": "Claude に{{file}}の編集を許可しますか？",
+      "questionWrite": "Claude に{{file}}への書き込みを許可しますか？",
       "deny": "拒否",
       "alwaysAllow": "常に許可",
       "alwaysAllowHint": "このツールについて今後確認しない",
