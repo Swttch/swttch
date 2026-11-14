@@ -188,6 +188,14 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.37.1 - Permission and question cards now look like Claude Desktop</h3>
+            <ul>
+                <li>Draw permission, question and plan cards like Claude Desktop, including permission requests from subagents (#673, reported by @Tahiaji)</li>
+                <li>Fix code blocks not following the Font size setting (#685, reported by @yesbutno)</li>
+                <li>Fix the tool window crashing on IntelliJ 2026.2.4 (#682, reported by @dpasztor)</li>
+                <li>Fix the chat panel freezing when selecting text (#645, reported by @Zach0126)</li>
+                <li>Fix Ctrl/Cmd-click on the tunnel item in the &#8942; menu not opening the browser (#689 by @ShiningPluto, #688)</li>
+            </ul>
             <h3>0.37.0 - Now the model can manage sessions!</h3>
             <ul>
                 <li>Add Claude Desktop-style session management and session tree support (#674)</li>
