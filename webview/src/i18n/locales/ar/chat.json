@@ -306,7 +306,8 @@
       "skip": "تخطي",
       "submit": "إرسال",
       "placeholder": "اكتب إجابتك هنا",
-      "progress": "{{current}} من {{total}}"
+      "progress": "{{current}} من {{total}}",
+      "skipped": "تم التخطي"
     }
   },
   "backgroundTasks": {

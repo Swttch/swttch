@@ -306,7 +306,8 @@
       "skip": "スキップ",
       "submit": "送信",
       "placeholder": "ここに独自の回答を入力してください",
-      "progress": "{{current}}/{{total}}"
+      "progress": "{{current}}/{{total}}",
+      "skipped": "スキップ済み"
     }
   },
   "backgroundTasks": {

@@ -306,7 +306,8 @@
       "skip": "Omitir",
       "submit": "Enviar",
       "placeholder": "Escribe tu propia respuesta aquí",
-      "progress": "{{current}} de {{total}}"
+      "progress": "{{current}} de {{total}}",
+      "skipped": "Omitida"
     }
   },
   "backgroundTasks": {

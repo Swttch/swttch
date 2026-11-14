@@ -306,7 +306,8 @@
       "skip": "Pular",
       "submit": "Enviar",
       "placeholder": "Digite sua própria resposta aqui",
-      "progress": "{{current}} de {{total}}"
+      "progress": "{{current}} de {{total}}",
+      "skipped": "Ignorada"
     }
   },
   "backgroundTasks": {

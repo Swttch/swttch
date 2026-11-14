@@ -306,7 +306,8 @@
       "skip": "Überspringen",
       "submit": "Übermitteln",
       "placeholder": "Gib hier deine eigene Antwort ein",
-      "progress": "{{current}} von {{total}}"
+      "progress": "{{current}} von {{total}}",
+      "skipped": "Übersprungen"
     }
   },
   "backgroundTasks": {

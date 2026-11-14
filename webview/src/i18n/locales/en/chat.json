@@ -306,7 +306,8 @@
       "skip": "Skip",
       "submit": "Submit",
       "placeholder": "Type your own answer here",
-      "progress": "{{current}} of {{total}}"
+      "progress": "{{current}} of {{total}}",
+      "skipped": "Skipped"
     }
   },
   "backgroundTasks": {

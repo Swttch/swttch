@@ -306,7 +306,8 @@
       "skip": "Пропустить",
       "submit": "Отправить",
       "placeholder": "Введите свой ответ здесь",
-      "progress": "{{current}} из {{total}}"
+      "progress": "{{current}} из {{total}}",
+      "skipped": "Пропущено"
     }
   },
   "backgroundTasks": {

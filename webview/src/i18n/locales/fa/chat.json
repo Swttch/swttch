@@ -306,7 +306,8 @@
       "skip": "رد شدن",
       "submit": "ارسال",
       "placeholder": "پاسخ خود را اینجا بنویسید",
-      "progress": "{{current}} از {{total}}"
+      "progress": "{{current}} از {{total}}",
+      "skipped": "رد شد"
     }
   },
   "backgroundTasks": {

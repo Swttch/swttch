@@ -28,21 +28,29 @@ export function AskUserQuestionRenderer(props: RendererProps) {
     const inProgress = !toolResult && (isStreaming || !hasValidQuestions);
 
     // In the views that follow the desktop app the question is the card under the transcript and says nothing here
-    // while it waits; once answered it is each question with its answer under it.
+    // while it waits. Once it is over it is a card of its own: a row for each question with its answer under it, or
+    // "Skipped" when the question was turned down (measured on the desktop app's recording).
     if (viewMode !== null) {
         if (!toolResult) return <div hidden data-testid="question-pending" />;
         const answers = parseAnswers(output);
+        const declined = /declined to run|doesn't want to proceed/i.test(output);
+        const rows = hasValidQuestions ? (questions as Array<{ question: string; header?: string }>) : [];
+        if (rows.length === 0) return output && !declined ? <div className="whitespace-pre-wrap text-[0.9rem] text-text-secondary">{output}</div> : null;
         return (
-            <div className="flex flex-col gap-[1rem] pb-[0.5rem] text-[0.9rem] leading-[1.25rem]" data-testid="question-answered">
-                {(hasValidQuestions ? questions : []).map((q, idx) => (
-                    <div key={idx}>
-                        <div className="text-text-primary">{q.question}</div>
-                        <div className="mt-[0.2rem] text-text-secondary">{answers.get(q.question) ?? ""}</div>
-                    </div>
-                ))}
-                {(!hasValidQuestions || answers.size === 0) && output && !/declined to run|doesn't want to proceed/i.test(output) && (
-                    <div className="whitespace-pre-wrap text-text-secondary">{output}</div>
-                )}
+            <div
+                data-testid="question-answered"
+                className="my-[0.5rem] flex w-full max-w-[33.4rem] flex-col overflow-hidden rounded-[0.8125rem] border border-text-primary/[0.07] text-[0.9rem] leading-[1.25rem]"
+            >
+                {rows.map((q, idx) => {
+                    const answer = answers.get(q.question);
+                    const answered = !declined && answer !== undefined;
+                    return (
+                        <div key={idx} className="border-t border-text-primary/[0.07] px-[1.0625rem] py-[0.85rem] first:border-t-0">
+                            <div className="text-text-primary">{q.question}</div>
+                            <div className="mt-[0.35rem] text-text-secondary">{answered ? answer : t('askUserQuestion.card.skipped', { ns: 'chat' })}</div>
+                        </div>
+                    );
+                })}
             </div>
         );
     }

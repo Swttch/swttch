@@ -306,7 +306,8 @@
       "skip": "略過",
       "submit": "提交",
       "placeholder": "在此輸入你的答案",
-      "progress": "第 {{current}} 個，共 {{total}} 個"
+      "progress": "第 {{current}} 個，共 {{total}} 個",
+      "skipped": "已略過"
     }
   },
   "backgroundTasks": {
