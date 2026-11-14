@@ -77,7 +77,7 @@ export function DesktopQuestionCard({ form, total, onSubmit, onCancel, onOtherKe
                 aria-checked={checked}
                 data-testid={isOther ? 'question-option-other' : 'question-option'}
                 onClick={() => form.selectOption(form.currentIndex, option.label, multi)}
-                className="flex w-full items-start border-t border-text-primary/[0.06] px-[1.1rem] pb-[1.1rem] pt-[1.1rem] text-start transition-colors first:border-t-0 hover:bg-text-primary/[0.03]"
+                className="flex w-full items-start border-t border-text-primary/[0.06] px-[1.1rem] pb-[1.2rem] pt-[1.1rem] text-start transition-colors first:border-t-0 hover:bg-text-primary/[0.03]"
               >
                 <span
                   className={`mt-[0.0625rem] flex h-[1.39rem] w-[1.39rem] shrink-0 items-center justify-center border ${multi ? 'rounded-[0.35rem]' : 'rounded-full'} ${
@@ -109,7 +109,7 @@ export function DesktopQuestionCard({ form, total, onSubmit, onCancel, onOtherKe
           })}
         </div>
 
-        <div className="flex items-center justify-end gap-[0.75rem] px-[1.0625rem] pb-[1.125rem] pt-[0.5rem]">
+        <div className="flex items-center justify-end gap-[0.75rem] px-[1.0625rem] pb-[1.125rem] pt-[0.7rem]">
           <button
             type="button"
             data-testid="question-skip"

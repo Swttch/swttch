@@ -167,7 +167,8 @@ function ChatPageContent() {
   const isAwaitingUser = Boolean(pendingUserAnswer || pendingPlan || pendingPermission);
   const cardWaiting = Boolean(pendingPermission && usesDesktopPermissionCard(pendingPermission.toolName, transcriptViewMode));
   // A question or a plan waiting for its answer in the views that follow the desktop app says "Input needed" too.
-  const inputNeeded = cardWaiting || (transcriptViewMode !== null && Boolean(pendingUserAnswer || pendingPlan));
+  const answerCard = transcriptViewMode !== null && Boolean(pendingUserAnswer || pendingPlan);
+  const inputNeeded = cardWaiting || answerCard;
   // What was written under the card goes out the moment the card is answered.
   // What was written under the card reaches the CLI before the card is answered, so the turn that goes on after
   // the answer already has it and answers it with the rest (the desktop app's order), not in a turn of its own.
@@ -501,9 +502,17 @@ function ChatPageContent() {
         ) : (
           <TranscriptArea
             isStreaming={isStreaming && !isAwaitingUser}
-            awaitingInput={cardWaiting}
+            awaitingInput={cardWaiting || answerCard}
             trailing={
-              cardWaiting && pendingPermission ? (
+              answerCard && pendingUserAnswer ? (
+                <AskUserQuestionInputPanel
+                  toolUse={pendingUserAnswer.toolUse}
+                  controlRequestId={pendingUserAnswer.controlRequestId}
+                  onDismiss={() => dismiss(pendingUserAnswer.toolUse.id)}
+                />
+              ) : answerCard && pendingPlan ? (
+                <AcceptPlanPanel pending={pendingPlan} onApprove={approvePlan} onDeny={denyPlan} />
+              ) : cardWaiting && pendingPermission ? (
                 <PermissionBanner
                   permission={pendingPermission}
                   onApprove={() => answerAfterHeld(() => approvePermission(pendingPermission.controlRequestId))}
@@ -561,7 +570,12 @@ function ChatPageContent() {
               </button>
           )}
           {composerReplaced && <ListeningNotice />}
-          {pendingUserAnswer ? (
+          {answerCard ? (
+              /* The card is part of the conversation above, after the last message, and the composer stays (#673). */
+              <div>
+                <ChatInput cardWaiting />
+              </div>
+          ) : pendingUserAnswer ? (
               <AskUserQuestionInputPanel
                   toolUse={pendingUserAnswer.toolUse}
                   controlRequestId={pendingUserAnswer.controlRequestId}

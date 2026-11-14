@@ -74,7 +74,7 @@ export function DesktopPlanCard({ pending, onApprove, onDeny }: Props) {
   return (
     <div className="w-full shrink-0 px-4 pb-2 pt-[0.375rem]" data-testid="desktop-plan-card">
       <div className="flex w-full max-w-[33.4rem] flex-col overflow-hidden rounded-[0.8125rem] border border-text-primary/[0.05]">
-        <div className="flex items-start justify-between gap-3 bg-text-primary/[0.04] px-[1.2188rem] pb-[0.9rem] pt-[0.9rem]">
+        <div className="flex items-start justify-between gap-3 bg-text-primary/[0.04] px-[1.2188rem] pb-[0.84rem] pt-[0.84rem]">
           <div className="min-w-0">
             <div className="text-[0.9rem] leading-[1.25rem] text-text-primary">{t('acceptPlan.card.title')}</div>
             {title && <div className="mt-[0.2rem] truncate text-[0.8461rem] leading-[1.25rem] text-text-secondary">{title}</div>}
@@ -112,7 +112,7 @@ export function DesktopPlanCard({ pending, onApprove, onDeny }: Props) {
             />
           </div>
         )}
-        <div className="flex flex-wrap items-center gap-[0.75rem] px-[1.0625rem] pb-[1.0625rem] pt-[0.875rem]">
+        <div className="flex flex-wrap items-center gap-[0.75rem] px-[1.0625rem] pb-[0.8rem] pt-[0.97rem]">
           <button type="button" data-testid="plan-reject" onClick={() => onDeny(pending.controlRequestId)} className={GRAY}>
             {t('acceptPlan.card.reject')}
           </button>
