@@ -47,7 +47,7 @@ export function ExitPlanModeRenderer(props: RendererProps) {
         if (!toolResult) return <div hidden data-testid="plan-row" />;
         const title = (plan.split('\n').map((line) => line.trim()).find((line) => line !== '') ?? '').replace(/^#+\s*/, '');
         return (
-            <div data-testid="plan-row">
+            <div data-testid="plan-row" className="mb-[1.4rem]">
                 <button
                     type="button"
                     aria-expanded={open}
