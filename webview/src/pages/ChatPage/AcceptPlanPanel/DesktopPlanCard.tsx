@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Tippy from '@tippyjs/react/headless';
-import { ChevronDownIcon } from '@heroicons/react/20/solid';
+import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/20/solid';
 import { useTranslation } from '@/i18n';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { InputModeValues, type InputMode } from '@/types/chatInput';
@@ -218,6 +218,7 @@ export function DesktopPlanCard({ pending, onApprove, onDeny }: Props) {
           <span className="h-[0.25rem] w-[0.25rem] rounded-full bg-current" />
         </span>
         <span className="min-w-0 truncate">{t('acceptPlan.proposing', { title })}</span>
+        <ChevronRightIcon className="h-4 w-4 shrink-0" />
       </div>
     </div>
   );
