@@ -36,7 +36,7 @@ export function DesktopQuestionCard({ form, total, onSubmit, onCancel, onOtherKe
 
   const options = form.allOptionsFor(form.currentIndex);
   return (
-    <div className="w-full shrink-0 px-4 pb-2 pt-[0.375rem]" data-testid="desktop-question-card">
+    <div className="w-full shrink-0 animate-[fadeIn_0.3s_ease-out] px-4 pb-2 pt-[0.375rem]" data-testid="desktop-question-card">
       <div className="flex w-full max-w-[33.4rem] flex-col overflow-hidden rounded-[0.8125rem] border border-text-primary/[0.05]">
         <div className="flex h-[2.99rem] shrink-0 items-center justify-between bg-text-primary/[0.04] px-[1.2188rem] text-[0.9rem] text-text-primary">
           <span className="min-w-0 truncate">{form.currentQuestion.question}</span>

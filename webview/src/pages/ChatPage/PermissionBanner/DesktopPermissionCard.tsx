@@ -189,7 +189,7 @@ export function DesktopPermissionCard(props: Props) {
   const question = questionFor(permission, t);
 
   return (
-    <div className="w-full px-4 pb-2 pt-[0.375rem] shrink-0 flex flex-col">
+    <div className="w-full animate-[fadeIn_0.3s_ease-out] px-4 pb-2 pt-[0.375rem] shrink-0 flex flex-col">
       <div
         data-testid="desktop-permission-card"
         // 535px (482 on screen), a 1px border one faint step lighter than the page (0.05: the 2-row blur of a 1px line hid half of it in the recording), 13px corners.

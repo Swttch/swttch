@@ -72,7 +72,7 @@ export function DesktopPlanCard({ pending, onApprove, onDeny }: Props) {
   ];
 
   return (
-    <div className="w-full shrink-0 px-4 pb-2 pt-[0.375rem]" data-testid="desktop-plan-card">
+    <div className="w-full shrink-0 animate-[fadeIn_0.3s_ease-out] px-4 pb-2 pt-[0.375rem]" data-testid="desktop-plan-card">
       <div className="flex w-full max-w-[33.4rem] flex-col overflow-hidden rounded-[0.8125rem] border border-text-primary/[0.05]">
         <div className="flex items-start justify-between gap-3 bg-text-primary/[0.04] px-[1.2188rem] pb-[0.84rem] pt-[0.84rem]">
           <div className="min-w-0">
