@@ -27,11 +27,15 @@ const EDGE = 8;
 const CARD_WIDTH = 380;
 
 /**
- * The page zoom (`zoom` on the root, the zoom control's doing). A range reports its place in screen pixels, but
- * what a fixed element is given is in the zoomed pixels, so every place taken from a range is divided by this.
+ * The page zoom (`zoom` on the root, the zoom control's doing: `applyZoom` in utils/zoom.ts writes it as the root's
+ * inline style, and nothing else sets it). A range reports its place in screen pixels, but what a fixed element is
+ * given is in the zoomed pixels, so every place taken from a range is divided by this.
+ *
+ * It is read off the inline style on purpose. `getComputedStyle` first brings the style of the whole page up to date,
+ * and this is asked on every render and on every followed scroll (#645).
  */
 function pageZoom(): number {
-  const zoom = parseFloat(getComputedStyle(document.documentElement).zoom);
+  const zoom = parseFloat(document.documentElement.style.zoom);
   return Number.isFinite(zoom) && zoom > 0 ? zoom : 1;
 }
 
@@ -175,7 +179,11 @@ export function SelectionReplyLayer({ containerRef }: Props) {
         prev && prev.top === next.top && prev.bottom === next.bottom && prev.centerX === next.centerX ? prev : next,
       );
     };
-    const schedule = () => {
+    // Only the scroll of something that holds the selected text (or of the page itself) can move the text. The
+    // scrolls of everything else (the message box, a code block, the bar) no longer cost a measure.
+    const schedule = (event: Event) => {
+      const scrolled = event.target;
+      if (scrolled instanceof Node && !scrolled.contains(picked.range.commonAncestorContainer)) return;
       if (frame === 0) frame = window.requestAnimationFrame(follow);
     };
     window.addEventListener('scroll', schedule, true);

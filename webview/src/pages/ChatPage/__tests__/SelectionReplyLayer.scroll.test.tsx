@@ -95,6 +95,57 @@ describe('SelectionReplyLayer follows the text while the chat scrolls (#645)', (
     expect((view.container.querySelector('[role="toolbar"]') as HTMLElement).style.top).not.toBe(before);
   });
 
+  it('ignores the scroll of something that does not hold the selected text', () => {
+    const { view, textNode } = mount();
+    selectTranscriptText(textNode);
+    const elsewhere = document.createElement('div');
+    document.body.appendChild(elsewhere);
+    measured.mockClear();
+
+    act(() => {
+      // Scroll does not bubble, but a capture listener on the window still sees it.
+      elsewhere.dispatchEvent(new Event('scroll'));
+      view.container.querySelector('[role="toolbar"]')!.dispatchEvent(new Event('scroll'));
+      vi.advanceTimersByTime(20);
+    });
+    elsewhere.remove();
+
+    expect(measured).not.toHaveBeenCalled();
+  });
+
+  it('follows the scroll of an element that holds the selected text', () => {
+    const { view, textNode } = mount();
+    selectTranscriptText(textNode);
+    measured.mockClear();
+
+    act(() => {
+      view.container.firstElementChild!.dispatchEvent(new Event('scroll'));
+      vi.advanceTimersByTime(20);
+    });
+
+    expect(measured).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads the page zoom off the root style and never asks for the computed style (#645)', () => {
+    document.documentElement.style.zoom = '1.25';
+    const computed = vi.spyOn(window, 'getComputedStyle');
+    try {
+      const { view, textNode } = mount();
+      selectTranscriptText(textNode);
+      act(() => {
+        window.dispatchEvent(new Event('scroll'));
+        vi.advanceTimersByTime(20);
+      });
+      const bar = view.container.querySelector('[role="toolbar"]') as HTMLElement;
+      // top 100 / 1.25, minus the bar's height and gap: the placement is divided by the zoom
+      expect(bar.style.top).toBe(`${100 / 1.25 - 36 - 8}px`);
+      expect(computed).not.toHaveBeenCalled();
+    } finally {
+      computed.mockRestore();
+      document.documentElement.style.zoom = '';
+    }
+  });
+
   it('stops following once the layer is gone', () => {
     const { view, textNode } = mount();
     selectTranscriptText(textNode);
