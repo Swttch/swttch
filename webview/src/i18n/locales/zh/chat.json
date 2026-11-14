@@ -1082,6 +1082,12 @@
     "editHint": "按 Enter 保存 · 按 Esc 取消"
   },
   "transcript": {
+    "fileChanges": {
+      "title": "已更改 {{count}} 个文件",
+      "title_other": "已更改 {{count}} 个文件",
+      "undo": "撤销",
+      "total": "总计"
+    },
     "tools": {
       "ranCommand": "运行了命令",
       "ranCommands_other": "运行了 {{count}} 条命令",
@@ -1094,6 +1100,8 @@
       "editedFiles_other": "编辑了 {{count}} 个文件",
       "createdFile": "创建了 {{name}}",
       "editedFile": "编辑了 {{name}}",
+      "editingFile": "正在编辑 {{name}}",
+      "creatingFile": "正在创建 {{name}}",
       "failed_other": "{{count}} 个失败",
       "readAndEditedFile": "读取并编辑了 {{name}}",
       "runningCommand": "正在运行命令",

@@ -1082,6 +1082,12 @@
     "editHint": "Enter로 저장 · Esc로 취소"
   },
   "transcript": {
+    "fileChanges": {
+      "title": "파일 {{count}}개 편집됨",
+      "title_other": "파일 {{count}}개 편집됨",
+      "undo": "실행 취소",
+      "total": "총계"
+    },
     "tools": {
       "ranCommand": "실행함 명령어",
       "ranCommands_other": "실행됨 명령 {{count}}개",
@@ -1094,6 +1100,8 @@
       "editedFiles_other": "편집함 파일 {{count}}개",
       "createdFile": "생성됨 {{name}}",
       "editedFile": "편집됨 {{name}}",
+      "editingFile": "편집 중 {{name}}",
+      "creatingFile": "생성 중 {{name}}",
       "failed_other": "{{count}}개 실패",
       "readAndEditedFile": "읽음 및 편집함 {{name}}",
       "runningCommand": "실행 중 명령어",

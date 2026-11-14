@@ -1091,6 +1091,13 @@
     "editHint": "Enter zum Speichern · Esc zum Abbrechen"
   },
   "transcript": {
+    "fileChanges": {
+      "title": "{{count}} Dateien geändert",
+      "title_one": "{{count}} Datei geändert",
+      "title_other": "{{count}} Dateien geändert",
+      "undo": "Rückgängig",
+      "total": "Gesamt"
+    },
     "tools": {
       "ranCommand": "Befehl ausgeführt",
       "ranCommands_one": "{{count}} Befehl ausgeführt",
@@ -1108,6 +1115,8 @@
       "editedFiles_other": "{{count}} Dateien bearbeitet",
       "createdFile": "{{name}} erstellt",
       "editedFile": "{{name}} bearbeitet",
+      "editingFile": "Bearbeite {{name}}",
+      "creatingFile": "Erstelle {{name}}",
       "failed_one": "{{count}} fehlgeschlagen",
       "failed_other": "{{count}} fehlgeschlagen",
       "readAndEditedFile": "{{name}} gelesen und bearbeitet",

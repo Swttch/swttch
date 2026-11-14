@@ -1082,6 +1082,12 @@
     "editHint": "Enterで保存 · Escでキャンセル"
   },
   "transcript": {
+    "fileChanges": {
+      "title": "{{count}} 個のファイルが変更されました",
+      "title_other": "{{count}} 個のファイルが変更されました",
+      "undo": "元に戻す",
+      "total": "合計"
+    },
     "tools": {
       "ranCommand": "コマンドを実行",
       "ranCommands_other": "{{count}}個のコマンドを実行",
@@ -1094,6 +1100,8 @@
       "editedFiles_other": "{{count}}個のファイルを編集",
       "createdFile": "{{name}} を作成",
       "editedFile": "{{name}} を編集",
+      "editingFile": "{{name}}を編集中",
+      "creatingFile": "{{name}}を作成中",
       "failed_other": "{{count}}件失敗",
       "readAndEditedFile": "{{name}} を読み取り、編集",
       "runningCommand": "コマンドを実行中",

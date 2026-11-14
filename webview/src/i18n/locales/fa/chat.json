@@ -1091,6 +1091,12 @@
     "editHint": "Enter برای ذخیره · Esc برای لغو"
   },
   "transcript": {
+    "fileChanges": {
+      "title": "{{count}} فایل تغییر کرد",
+      "title_other": "{{count}} فایل تغییر کرد",
+      "undo": "واگرد",
+      "total": "مجموع"
+    },
     "tools": {
       "ranCommand": "دستور اجرا شد",
       "ranCommands_one": "{{count}} دستور اجرا شد",
@@ -1108,6 +1114,8 @@
       "editedFiles_other": "{{count}} فایل ویرایش شد",
       "createdFile": "{{name}} ایجاد شد",
       "editedFile": "{{name}} ویرایش شد",
+      "editingFile": "در حال ویرایش {{name}}",
+      "creatingFile": "در حال ایجاد {{name}}",
       "failed_one": "{{count}} ناموفق",
       "failed_other": "{{count}} ناموفق",
       "readAndEditedFile": "{{name}} خوانده و ویرایش شد",

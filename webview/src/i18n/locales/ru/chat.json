@@ -1117,6 +1117,15 @@
     "editHint": "Enter — сохранить · Esc — отмена"
   },
   "transcript": {
+    "fileChanges": {
+      "title": "Изменено {{count}} файла",
+      "title_one": "Изменён {{count}} файл",
+      "title_few": "Изменено {{count}} файла",
+      "title_many": "Изменено {{count}} файлов",
+      "title_other": "Изменено {{count}} файла",
+      "undo": "Отменить",
+      "total": "Итого"
+    },
     "tools": {
       "ranCommand": "Выполнена команда",
       "ranCommands_one": "Выполнена {{count}} команда",
@@ -1144,6 +1153,8 @@
       "editedFiles_other": "Изменено {{count}} файла",
       "createdFile": "Создан {{name}}",
       "editedFile": "Изменён {{name}}",
+      "editingFile": "Редактирование {{name}}",
+      "creatingFile": "Создание {{name}}",
       "failed_one": "ошибок: {{count}}",
       "failed_few": "ошибок: {{count}}",
       "failed_many": "ошибок: {{count}}",

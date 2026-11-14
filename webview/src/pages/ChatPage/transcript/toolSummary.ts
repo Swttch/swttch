@@ -197,10 +197,21 @@ export function lineStatsOf(call: ToolCall): LineStats {
   }
 }
 
+/**
+ * A file change that has not happened: the user turned it down, it failed, or it is still waiting for its answer
+ * (the card is up). Its line stays at the running wording and counts no lines, as the desktop app draws it.
+ */
+function unfinishedChange(call: ToolCall): boolean {
+  const name = call.toolUse.name;
+  const isChange = name === 'Edit' || name === 'Write' || name === 'NotebookEdit';
+  return hasFailed(call) || wasStopped(call) || (isChange && !call.toolUse.tool_result);
+}
+
 export function sumLineStats(calls: ToolCall[]): LineStats {
   return calls.reduce(
     (sum, call) => {
-      const stats = lineStatsOf(call);
+      // A change that did not happen has no lines to count: the desktop app shows none beside its stopped line.
+      const stats = unfinishedChange(call) ? { added: 0, removed: 0 } : lineStatsOf(call);
       return { added: sum.added + stats.added, removed: sum.removed + stats.removed };
     },
     { added: 0, removed: 0 },
@@ -466,10 +477,12 @@ export function rowLabel(call: ToolCall, t: TFunction): RowLabel {
       return { ...plain(t('sendMessage.sent', { ns: 'chatTools' })), meta: sentTo(call) || t('sendMessage.anotherSession', { ns: 'chatTools' }) };
     case 'read':
       return withFile('transcript.tools.readFile', call, t);
+    // A file change the user turned down, or that failed, stays at its running wording ("Editing x"): it is not reported
+    // as done, and the desktop app leaves the line there with the stopped mark beside it.
     case 'write':
-      return withFile('transcript.tools.createdFile', call, t);
+      return withFile(unfinishedChange(call) ? 'transcript.tools.creatingFile' : 'transcript.tools.createdFile', call, t);
     case 'edit':
-      return withFile('transcript.tools.editedFile', call, t);
+      return withFile(unfinishedChange(call) ? 'transcript.tools.editingFile' : 'transcript.tools.editedFile', call, t);
     case 'searchCode':
       return plain(t('transcript.tools.searchedCode', { ns: 'chat' }));
     case 'searchFiles':

@@ -94,14 +94,14 @@ function PathLine({ path }: { path: string }) {
 
 // The same colours as the permission card's change block (measured on the desktop app's frames).
 const ROW_TINT: Record<DiffLineType, string> = {
-  [DiffLineType.Add]: 'bg-[rgb(34,53,33)]',
-  [DiffLineType.Delete]: 'bg-[rgb(38,26,26)]',
+  [DiffLineType.Add]: 'bg-[rgb(37,56,38)]',
+  [DiffLineType.Delete]: 'bg-[rgb(44,28,30)]',
   [DiffLineType.Context]: '',
 };
 
 /** The bar at a changed line's left edge: solid green for an added line, hatched pink for a removed one. */
 const ROW_BAR: Record<DiffLineType, string> = {
-  [DiffLineType.Add]: 'bg-[rgb(57,180,63)]',
+  [DiffLineType.Add]: 'bg-[rgb(55,169,68)]',
   [DiffLineType.Delete]: 'bg-[repeating-linear-gradient(135deg,rgb(206,97,118)_0_2px,rgb(94,1,20)_2px_4px)]',
   [DiffLineType.Context]: '',
 };

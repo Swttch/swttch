@@ -1095,6 +1095,13 @@
     "editHint": "Enter to save · Esc to cancel"
   },
   "transcript": {
+    "fileChanges": {
+      "title": "{{count}} files changed",
+      "title_one": "{{count}} file changed",
+      "title_other": "{{count}} files changed",
+      "undo": "Undo",
+      "total": "Total"
+    },
     "tools": {
       "ranCommand": "Ran command",
       "ranCommands_one": "Ran {{count}} command",
@@ -1112,6 +1119,8 @@
       "editedFiles_other": "Edited {{count}} files",
       "createdFile": "Created {{name}}",
       "editedFile": "Edited {{name}}",
+      "editingFile": "Editing {{name}}",
+      "creatingFile": "Creating {{name}}",
       "failed_one": "{{count}} failed",
       "failed_other": "{{count}} failed",
       "readAndEditedFile": "Read and edited {{name}}",

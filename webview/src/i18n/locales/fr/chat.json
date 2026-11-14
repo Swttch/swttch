@@ -1091,6 +1091,13 @@
     "editHint": "Entrée pour enregistrer · Échap pour annuler"
   },
   "transcript": {
+    "fileChanges": {
+      "title": "{{count}} fichiers modifiés",
+      "title_one": "{{count}} fichier modifié",
+      "title_other": "{{count}} fichiers modifiés",
+      "undo": "Annuler",
+      "total": "Total"
+    },
     "tools": {
       "ranCommand": "Commande exécutée",
       "ranCommands_one": "{{count}} commande exécutée",
@@ -1113,6 +1120,8 @@
       "editedFiles_other": "{{count}} fichiers modifiés",
       "createdFile": "{{name}} créé",
       "editedFile": "{{name}} modifié",
+      "editingFile": "Modification de {{name}}",
+      "creatingFile": "Création de {{name}}",
       "failed_one": "{{count}} échec",
       "failed_many": "{{count}} échecs",
       "failed_other": "{{count}} échecs",

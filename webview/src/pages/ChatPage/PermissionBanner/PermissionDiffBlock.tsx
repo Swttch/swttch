@@ -24,8 +24,8 @@ function Line({ line, chip }: { line: MarkedLine; chip: string }): ReactNode {
 
 // The bar at the start of a row: hatched pink for a removed line, solid green for an added one (from the desktop app's frames).
 const BAR = "relative before:absolute before:inset-y-0 before:start-0 before:w-[7px] before:content-['']";
-const REMOVED_ROW = `${BAR} bg-[rgb(38,26,26)] before:[background:repeating-linear-gradient(135deg,rgb(206,97,118)_0_2px,rgb(94,1,20)_2px_4px)]`;
-const ADDED_ROW = `${BAR} bg-[rgb(34,53,33)] before:bg-[rgb(57,180,63)]`;
+const REMOVED_ROW = `${BAR} bg-[rgb(44,28,30)] before:[background:repeating-linear-gradient(135deg,rgb(206,97,118)_0_2px,rgb(94,1,20)_2px_4px)]`;
+const ADDED_ROW = `${BAR} bg-[rgb(37,56,38)] before:bg-[rgb(55,169,68)]`;
 
 interface Props {
   /** What the text was, for an edit. Left out for a new file, which has only what is written. */

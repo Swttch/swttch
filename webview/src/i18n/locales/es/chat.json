@@ -1091,6 +1091,13 @@
     "editHint": "Intro para guardar · Esc para cancelar"
   },
   "transcript": {
+    "fileChanges": {
+      "title": "{{count}} archivos modificados",
+      "title_one": "{{count}} archivo modificado",
+      "title_other": "{{count}} archivos modificados",
+      "undo": "Deshacer",
+      "total": "Total"
+    },
     "tools": {
       "ranCommand": "Comando ejecutado",
       "ranCommands_one": "{{count}} comando ejecutado",
@@ -1113,6 +1120,8 @@
       "editedFiles_other": "{{count}} archivos editados",
       "createdFile": "{{name}} creado",
       "editedFile": "{{name}} editado",
+      "editingFile": "Editando {{name}}",
+      "creatingFile": "Creando {{name}}",
       "failed_one": "{{count}} falló",
       "failed_many": "{{count}} fallaron",
       "failed_other": "{{count}} fallaron",

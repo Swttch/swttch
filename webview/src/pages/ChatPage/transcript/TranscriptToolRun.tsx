@@ -691,7 +691,7 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive }: { call
           <>
             <ActivityGlyph activity={live.mark} />
             <span className="min-w-0 truncate transcript-shimmer">{live.label}</span>
-            <span className="flex-shrink-0">{live.elapsed}</span>
+            {live.elapsed && <span className="flex-shrink-0">{live.elapsed}</span>}
           </>
         ) : (
         <span className={label.fileName ? 'flex min-w-0 items-baseline whitespace-nowrap' : 'min-w-0 truncate'}>
@@ -781,7 +781,7 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
           calls={[calls[0]]}
           defaultOpen={verbose}
           inBox={false}
-          live={active && live ? { label: label(live), elapsed: formatElapsed(seconds), mark: live.mark } : undefined}
+          live={active && live ? { label: label(live), elapsed: live.file ? '' : formatElapsed(seconds), mark: live.mark } : undefined}
         />
       </div>
     );
@@ -799,7 +799,7 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
           <>
             <span className="me-2 flex"><ActivityGlyph activity={live.mark} /></span>
             <span className="min-w-0 truncate transcript-shimmer">{label(live)}</span>
-            <span className="ms-2 me-1 flex-shrink-0">{formatElapsed(seconds)}</span>
+            {!live.file && <span className="ms-2 me-1 flex-shrink-0">{formatElapsed(seconds)}</span>}
           </>
         ) : runningAgentLive ? (
           <>
