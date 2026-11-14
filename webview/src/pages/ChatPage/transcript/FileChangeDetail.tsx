@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { Fragment, useMemo } from 'react';
 import { openChatFile } from '@/utils/openChatFile';
 import toast from 'react-hot-toast';
 import { ClipboardDocumentIcon } from '@heroicons/react/20/solid';
@@ -8,6 +8,7 @@ import { DiffLineType, type DiffLine } from '../message-renderers/ToolRenderers/
 import { HighlightedCode } from '../message-renderers/ToolRenderers/Mcp/Generic/HighlightedCode';
 import type { ToolCall } from './buildSegments';
 import { diffLinesOf } from './fileDiff';
+import { markHunk, type MarkedLine } from '../diffMarks';
 import { pathOf } from './toolSummary';
 
 /** A created file is a window onto its start: the real length is in its row's line counts. */
@@ -65,7 +66,7 @@ function PathLine({ path }: { path: string }) {
   const shown = withHomeAsTilde(path);
   const cut = shown.lastIndexOf('/') + 1;
   return (
-    <div dir="ltr" className="group mb-3 mt-1 flex min-w-0 items-center gap-2 text-[0.8461rem] text-[var(--tr-text)]">
+    <div dir="ltr" className="group mb-[12.2px] flex min-w-0 items-center gap-2 text-[0.9rem] text-text-primary">
       {/* The whole path is in the tooltip: the line itself may have cut the folders out of the middle. */}
       <Tooltip content={path} placement="top">
         <div role="link" tabIndex={0} onClick={() => void openChatFile(path)} className="flex min-w-0 cursor-pointer hover:underline">
@@ -91,28 +92,82 @@ function PathLine({ path }: { path: string }) {
   );
 }
 
+// The same colours as the permission card's change block (measured on the desktop app's frames).
 const ROW_TINT: Record<DiffLineType, string> = {
-  [DiffLineType.Add]: 'bg-[var(--tr-add-bg)]',
-  [DiffLineType.Delete]: 'bg-[var(--tr-del-bg)]',
+  [DiffLineType.Add]: 'bg-[rgb(34,53,33)]',
+  [DiffLineType.Delete]: 'bg-[rgb(38,26,26)]',
   [DiffLineType.Context]: '',
 };
 
-/** The bar at a changed line's left edge: solid green for an added line, hatched red for a removed one. */
+/** The bar at a changed line's left edge: solid green for an added line, hatched pink for a removed one. */
 const ROW_BAR: Record<DiffLineType, string> = {
-  [DiffLineType.Add]: 'bg-[#3fa84f]',
-  [DiffLineType.Delete]: 'bg-[repeating-linear-gradient(135deg,#c24b52_0_2px,transparent_2px_4px)]',
+  [DiffLineType.Add]: 'bg-[rgb(57,180,63)]',
+  [DiffLineType.Delete]: 'bg-[repeating-linear-gradient(135deg,rgb(206,97,118)_0_2px,rgb(94,1,20)_2px_4px)]',
   [DiffLineType.Context]: '',
 };
 
-function DiffRow({ line, digits, language }: { line: DiffLine; digits: number; language: string }) {
+const CHIP: Record<DiffLineType, string> = {
+  [DiffLineType.Add]: 'bg-[rgb(44,84,44)]',
+  [DiffLineType.Delete]: 'bg-[rgb(96,26,44)]',
+  [DiffLineType.Context]: '',
+};
+
+/**
+ * The chips of the changed words: a hunk's removed lines and added lines are paired from the top, and inside a
+ * pair the words the two lines do not share are marked. A line with no partner has none.
+ */
+function chipMarks(lines: DiffLine[]): Array<MarkedLine | null> {
+  const marks: Array<MarkedLine | null> = lines.map(() => null);
+  let index = 0;
+  while (index < lines.length) {
+    if (lines[index].type !== DiffLineType.Delete) {
+      index++;
+      continue;
+    }
+    const removedFrom = index;
+    while (index < lines.length && lines[index].type === DiffLineType.Delete) index++;
+    const addedFrom = index;
+    while (index < lines.length && lines[index].type === DiffLineType.Add) index++;
+    const hunk = markHunk(
+      lines.slice(removedFrom, addedFrom).map((line) => line.content),
+      lines.slice(addedFrom, index).map((line) => line.content),
+    );
+    hunk.removed.forEach((marked, offset) => (marks[removedFrom + offset] = marked));
+    hunk.added.forEach((marked, offset) => (marks[addedFrom + offset] = marked));
+  }
+  return marks;
+}
+
+function MarkedText({ marked, chip }: { marked: MarkedLine; chip: string }) {
+  return (
+    <>
+      {marked.tokens.map((token, index) =>
+        marked.marks[index] ? (
+          <span key={index} className={`rounded-[3px] px-[2px] ${chip}`}>
+            {token}
+          </span>
+        ) : (
+          <Fragment key={index}>{token}</Fragment>
+        ),
+      )}
+    </>
+  );
+}
+
+function DiffRow({ line, marked, language }: { line: DiffLine; marked: MarkedLine | null; language: string }) {
+  // px are before the page's 0.9 zoom. From the desktop app's frames: the number ends 40px from the box's left edge and the
+  // text starts at 57px (44.4 and 63.3 here), the bar is 7px wide.
+  const hasChip = marked !== null && marked.marks.some(Boolean);
   return (
     <div className={`flex ${ROW_TINT[line.type]}`}>
-      <span className={`w-1 flex-shrink-0 ${ROW_BAR[line.type]}`} />
-      <span className="flex-shrink-0 select-none pe-3 ps-2 text-end opacity-60" style={{ minWidth: `${digits + 2}ch` }}>
-        {line.newNo ?? line.oldNo}
-      </span>
-      <span className="min-w-0 flex-1 whitespace-pre-wrap break-words pe-3">
-        <HighlightedCode text={line.content} language={language} />
+      <span className={`w-[7px] flex-shrink-0 ${ROW_BAR[line.type]}`} />
+      <span className="w-[35.7px] flex-shrink-0 select-none text-end text-text-secondary">{line.newNo ?? line.oldNo}</span>
+      <span className="min-w-0 flex-1 whitespace-pre-wrap break-words ps-[16.8px] pe-3">
+        {hasChip ? (
+          <MarkedText marked={marked} chip={CHIP[line.type]} />
+        ) : (
+          <HighlightedCode text={line.content} language={language} />
+        )}
       </span>
     </div>
   );
@@ -137,18 +192,19 @@ export function FileChangeDetail({ calls }: { calls: ToolCall[] }) {
 function OneChange({ call }: { call: ToolCall }) {
   const path = pathOf(call);
   const lines = useMemo(() => diffLinesOf(call, MAX_SHOWN_LINES), [call]);
-  const digits = lines.reduce((max, line) => Math.max(max, String(line.newNo ?? line.oldNo ?? '').length), 0);
+  const marks = useMemo(() => chipMarks(lines), [lines]);
   const language = languageOf(path);
+  // The path and the box sit in a card of their own: 12px in on the sides and above, 8px under (on screen).
   return (
-    <div className="pb-3 pt-1">
+    <div className="mb-3 mt-1 rounded-[13px] border border-text-primary/[0.05] px-[10.6px] pb-[12.9px] pt-[16.6px]">
       <PathLine path={path} />
       {lines.length > 0 && (
         <div
           dir="ltr"
-          className="max-h-[24rem] overflow-y-auto rounded-lg border border-border-default/70 py-1 font-mono text-[0.8461rem] leading-[1.5] text-[var(--tr-text)]"
+          className="max-h-[24rem] overflow-y-auto rounded-[9px] border border-text-primary/[0.04] py-[6.67px] font-mono text-[0.8461rem] leading-[21.1px] text-[var(--tr-text)]"
         >
           {lines.map((line, index) => (
-            <DiffRow key={index} line={line} digits={digits} language={language} />
+            <DiffRow key={index} line={line} marked={marks[index]} language={language} />
           ))}
         </div>
       )}

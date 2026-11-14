@@ -745,8 +745,12 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
   const active = live !== null && calls.some((call) => call.toolUse.id === live.toolUseId);
   // Shut unless the view is Verbose or the reader opened it: a run that is still going on is not opened for them,
   // and the line over it (the dots, what is running, the seconds) is what tells them it is working.
-  const [open, setOpen] = useState(verbose);
-  useEffect(() => setOpen(verbose), [verbose]);
+  // A run of file edits and new files is open from the start, while it goes on and after it ends: the desktop app
+  // keeps the line for each file under the summary (measured on its recording of an edit to two files at once).
+  const fileChanges = calls.every((call) => call.toolUse.name === 'Edit' || call.toolUse.name === 'Write');
+  const startsOpen = verbose || fileChanges;
+  const [open, setOpen] = useState(startsOpen);
+  useEffect(() => setOpen(startsOpen), [startsOpen]);
   const toggle = () => setOpen((v) => !v);
   const label = useActivityLabel();
   const formatElapsed = useFormatElapsed();
