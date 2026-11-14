@@ -100,7 +100,7 @@ export function DesktopQuestionCard({ form, total, onSubmit, onCancel, onOtherKe
                       onChange={(event) => form.setOtherText(form.currentIndex, event.target.value)}
                       onKeyDown={onOtherKeyDown}
                       placeholder={t('askUserQuestion.card.placeholder')}
-                      className="mt-[0.7rem] block min-h-[2.64rem] w-full resize-none rounded-[0.5rem] border border-[rgb(52,120,214)] bg-text-primary/[0.03] px-[0.9rem] py-[0.55rem] text-[0.9rem] leading-[1.25rem] text-text-primary placeholder:text-text-secondary focus:outline-none"
+                      className="mt-[0.91rem] block min-h-[2.64rem] w-full resize-none rounded-[0.5rem] border border-[rgb(52,120,214)] bg-text-primary/[0.03] px-[0.9rem] py-[0.55rem] text-[0.9rem] leading-[1.25rem] text-text-primary placeholder:text-text-secondary focus:outline-none"
                     />
                   )}
                 </span>
@@ -121,8 +121,8 @@ export function DesktopQuestionCard({ form, total, onSubmit, onCancel, onOtherKe
           <button
             type="button"
             data-testid="question-submit"
-            disabled={!form.canSubmitCurrent}
-            onClick={onSubmit}
+            disabled={selected.length === 0}
+            onClick={() => form.canSubmitCurrent && onSubmit()}
             className="h-[1.9062rem] rounded-[0.5625rem] bg-text-primary/[0.92] px-[0.5625rem] text-[1rem] text-text-inverse transition-colors hover:bg-text-primary/[0.85] disabled:opacity-50"
           >
             {form.isLastTab ? t('askUserQuestion.card.submit') : t('askUserQuestion.next')}

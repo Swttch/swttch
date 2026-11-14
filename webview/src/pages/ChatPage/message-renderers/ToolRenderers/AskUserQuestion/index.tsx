@@ -39,7 +39,7 @@ export function AskUserQuestionRenderer(props: RendererProps) {
         return (
             <div
                 data-testid="question-answered"
-                className="mb-[2.1rem] mt-[0.5rem] flex w-full max-w-[33.4rem] flex-col overflow-hidden rounded-[0.8125rem] border border-text-primary/[0.07] text-[0.9rem] leading-[1.25rem]"
+                className="mb-[2.1rem] flex w-full max-w-[33.4rem] flex-col overflow-hidden rounded-[0.8125rem] border border-text-primary/[0.07] text-[0.9rem] leading-[1.25rem]"
             >
                 {rows.map((q, idx) => {
                     const answer = answers.get(q.question);
