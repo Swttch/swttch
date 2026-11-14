@@ -1118,6 +1118,7 @@
       "editedFiles_other": "{{count}} فایل ویرایش شد",
       "createdFile": "{{name}} ایجاد شد",
       "editedFile": "{{name}} ویرایش شد",
+      "notApplied": "اعمال نشد",
       "updatedFile": "به‌روزرسانی شد {{name}}",
       "editingFile": "در حال ویرایش {{name}}",
       "creatingFile": "در حال ایجاد {{name}}",

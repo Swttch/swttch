@@ -8,6 +8,9 @@ import { DiffLineType, type DiffLine } from '../message-renderers/ToolRenderers/
 import { HighlightedCode } from '../message-renderers/ToolRenderers/Mcp/Generic/HighlightedCode';
 import type { ToolCall } from './buildSegments';
 import { diffLinesOf } from './fileDiff';
+import { hasFailed } from './toolSummary';
+import { toolResultText } from '../message-renderers/ToolRenderers/common/toolStatus';
+import type { LoadedMessageDto } from '@/types';
 import { markHunk, type MarkedLine } from '../diffMarks';
 import { pathOf } from './toolSummary';
 
@@ -178,31 +181,47 @@ function DiffRow({ line, marked, language }: { line: DiffLine; marked: MarkedLin
  * the changed lines in a box, each with its number, the changed ones tinted and marked at their left edge.
  * There is no title over it and no "modified" caption: the row it opens from already says what happened.
  */
-export function FileChangeDetail({ calls }: { calls: ToolCall[] }) {
+export function FileChangeDetail({ calls, inBox = false }: { calls: ToolCall[]; inBox?: boolean }) {
   return (
     <>
       {calls.map((call) => (
-        <OneChange key={call.toolUse.id} call={call} />
+        <OneChange key={call.toolUse.id} call={call} inBox={inBox} />
       ))}
     </>
   );
 }
 
+/** What the CLI answered a failed change with, without the tags it wraps an error in. */
+function errorTextOf(call: ToolCall): string {
+  const raw = toolResultText(call.toolUse.tool_result as LoadedMessageDto | undefined);
+  return raw.replace(/<\/?tool_use_error>/g, '').trim();
+}
+
 /** One call's path and changed lines. A file changed twice shows two of these, one after the other. */
-function OneChange({ call }: { call: ToolCall }) {
+function OneChange({ call, inBox }: { call: ToolCall; inBox: boolean }) {
+  const { t } = useTranslation('chat');
+  const failed = hasFailed(call);
+  const errorText = failed ? errorTextOf(call) : '';
   const path = pathOf(call);
   const lines = useMemo(() => diffLinesOf(call, MAX_SHOWN_LINES), [call]);
   const marks = useMemo(() => chipMarks(lines), [lines]);
   const language = languageOf(path);
-  // The path and the box sit in a card of their own: 12px in on the sides and above, 8px under (on screen).
+  // The path and the box sit in a card of their own: 12px in on the sides and above, 8px under (on screen). Inside a
+  // group's box they stand bare: the group's box is the card (measured on the desktop app's failed edit).
   return (
-    <div className="mb-3 mt-1 rounded-[0.8125rem] border border-text-primary/[0.05] px-[0.6625rem] pb-[0.8063rem] pt-[1.0375rem]">
+    <div className={inBox ? 'pb-3 pt-1' : 'mb-3 mt-1 rounded-[0.8125rem] border border-text-primary/[0.05] px-[0.6625rem] pb-[0.8063rem] pt-[1.0375rem]'}>
       <PathLine path={path} />
       {lines.length > 0 && (
         <div
           dir="ltr"
           className="max-h-[24rem] overflow-y-auto rounded-[0.5625rem] border border-text-primary/[0.04] py-[0.4169rem] font-mono text-[0.8461rem] leading-[1.3188rem] text-[var(--tr-text)]"
         >
+          {errorText !== '' && (
+            <div className="px-[0.875rem] pb-[0.75rem] pt-[0.3rem] leading-[1.1875rem]">
+              <div className="whitespace-pre-wrap break-words font-sans text-[0.9656rem] text-[rgb(214,85,105)]">{errorText}</div>
+              <div className="mt-[0.5rem] font-sans text-[0.9rem] text-text-secondary">{t('transcript.tools.notApplied')}</div>
+            </div>
+          )}
           {lines.map((line, index) => (
             <DiffRow key={index} line={line} marked={marks[index]} language={language} />
           ))}

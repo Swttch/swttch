@@ -1124,6 +1124,7 @@
       "editedFiles_other": "{{count}} archivos editados",
       "createdFile": "{{name}} creado",
       "editedFile": "{{name}} editado",
+      "notApplied": "No aplicado",
       "updatedFile": "Actualizado {{name}}",
       "editingFile": "Editando {{name}}",
       "creatingFile": "Creando {{name}}",

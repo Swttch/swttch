@@ -1104,6 +1104,7 @@
       "editedFiles_other": "{{count}}個のファイルを編集",
       "createdFile": "{{name}} を作成",
       "editedFile": "{{name}} を編集",
+      "notApplied": "未適用",
       "updatedFile": "{{name}}を更新しました",
       "editingFile": "{{name}}を編集中",
       "creatingFile": "{{name}}を作成中",

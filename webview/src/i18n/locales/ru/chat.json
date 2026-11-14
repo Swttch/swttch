@@ -1157,6 +1157,7 @@
       "editedFiles_other": "Изменено {{count}} файла",
       "createdFile": "Создан {{name}}",
       "editedFile": "Изменён {{name}}",
+      "notApplied": "Не применено",
       "updatedFile": "Обновлён {{name}}",
       "editingFile": "Редактирование {{name}}",
       "creatingFile": "Создание {{name}}",

@@ -1123,6 +1123,7 @@
       "editedFiles_other": "Edited {{count}} files",
       "createdFile": "Created {{name}}",
       "editedFile": "Edited {{name}}",
+      "notApplied": "Not applied",
       "updatedFile": "Updated {{name}}",
       "editingFile": "Editing {{name}}",
       "creatingFile": "Creating {{name}}",

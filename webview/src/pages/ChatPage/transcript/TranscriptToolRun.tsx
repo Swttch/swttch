@@ -556,7 +556,7 @@ function ToolDetail({ calls, withPictures = true }: { calls: ToolCall[]; withPic
   if (kind === 'toolLoad') return <InputDetail call={call} />;
   if (kind === 'skill' || kind === 'sessionRead') return <InputOutputDetail call={call} />;
   if (kind === 'messageSent') return <SentMessageDetail call={call} />;
-  if (call.toolUse.name === 'Edit' || call.toolUse.name === 'Write') return <FileChangeDetail calls={calls} />;
+  if (call.toolUse.name === 'Edit' || call.toolUse.name === 'Write') return <FileChangeDetail calls={calls} inBox={withPictures} />;
   if (browserToolOf(call.toolUse.name) !== '') return <PlainDetail call={call} />;
   if (kind === 'agent') return <AgentDetail call={call} withPictures={withPictures} />;
   // Every other call, as the desktop app draws the ones it has no design of their own for: what the call was given,

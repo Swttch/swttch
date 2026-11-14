@@ -1104,6 +1104,7 @@
       "editedFiles_other": "编辑了 {{count}} 个文件",
       "createdFile": "创建了 {{name}}",
       "editedFile": "编辑了 {{name}}",
+      "notApplied": "未应用",
       "updatedFile": "已更新 {{name}}",
       "editingFile": "正在编辑 {{name}}",
       "creatingFile": "正在创建 {{name}}",

@@ -94,7 +94,7 @@ export function TranscriptFileChanges({ body, hidden }: { body: LoadedMessageDto
     const [file] = files;
     return (
       <div className="pb-[0.25rem] pt-[1.8rem]" data-transcript-file-changes>
-        <div className={`flex h-[2.775rem] items-center gap-[0.625rem] px-[1.0625rem] text-[0.9656rem] text-text-primary ${border}`}>
+        <div className={`flex h-[2.775rem] items-center gap-[0.625rem] px-[1.0625rem] text-[0.9656rem] text-text-primary transition-colors hover:bg-text-primary/[0.065] ${border}`}>
           <DocumentIcon className="h-4 w-4 flex-shrink-0 text-text-secondary" />
           <span className="min-w-0 flex-1 truncate">{baseName(file.path)}</span>
           <UndoButton />
