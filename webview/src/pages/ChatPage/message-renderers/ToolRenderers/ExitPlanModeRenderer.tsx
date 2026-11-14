@@ -54,7 +54,7 @@ export function ExitPlanModeRenderer(props: RendererProps) {
                     type="button"
                     aria-expanded={open}
                     onClick={() => setOpen((value) => !value)}
-                    className="flex w-full items-center gap-[0.35rem] py-[0.625rem] text-start text-[0.9656rem] text-text-secondary transition-colors hover:text-text-primary"
+                    className="flex w-full items-center gap-[0.35rem] py-[0.625rem] text-start text-[0.9656rem] text-text-secondary"
                 >
                     {isError && !declined ? (
                         <span className="min-w-0 truncate">
