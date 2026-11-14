@@ -1109,6 +1109,10 @@
     "editHint": "按 Enter 保存 · 按 Esc 取消"
   },
   "transcript": {
+    "userMessage": {
+      "showMore": "展开",
+      "showLess": "收起"
+    },
     "fileChanges": {
       "title": "已更改 {{count}} 个文件",
       "title_other": "已更改 {{count}} 个文件",

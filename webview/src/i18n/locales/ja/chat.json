@@ -1109,6 +1109,10 @@
     "editHint": "Enterで保存 · Escでキャンセル"
   },
   "transcript": {
+    "userMessage": {
+      "showMore": "さらに表示",
+      "showLess": "表示を減らす"
+    },
     "fileChanges": {
       "title": "{{count}} 個のファイルが変更されました",
       "title_other": "{{count}} 個のファイルが変更されました",

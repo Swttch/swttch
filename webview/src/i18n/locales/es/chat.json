@@ -1118,6 +1118,10 @@
     "editHint": "Intro para guardar · Esc para cancelar"
   },
   "transcript": {
+    "userMessage": {
+      "showMore": "Mostrar más",
+      "showLess": "Mostrar menos"
+    },
     "fileChanges": {
       "title": "{{count}} archivos modificados",
       "title_one": "{{count}} archivo modificado",

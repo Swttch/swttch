@@ -1109,6 +1109,10 @@
     "editHint": "Enter로 저장 · Esc로 취소"
   },
   "transcript": {
+    "userMessage": {
+      "showMore": "더 보기",
+      "showLess": "간략히 보기"
+    },
     "fileChanges": {
       "title": "파일 {{count}}개 편집됨",
       "title_other": "파일 {{count}}개 편집됨",

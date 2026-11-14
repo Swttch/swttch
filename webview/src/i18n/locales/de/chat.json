@@ -1118,6 +1118,10 @@
     "editHint": "Enter zum Speichern · Esc zum Abbrechen"
   },
   "transcript": {
+    "userMessage": {
+      "showMore": "Mehr anzeigen",
+      "showLess": "Weniger anzeigen"
+    },
     "fileChanges": {
       "title": "{{count}} Dateien geändert",
       "title_one": "{{count}} Datei geändert",

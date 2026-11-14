@@ -1122,6 +1122,10 @@
     "editHint": "Enter to save · Esc to cancel"
   },
   "transcript": {
+    "userMessage": {
+      "showMore": "Show more",
+      "showLess": "Show less"
+    },
     "fileChanges": {
       "title": "{{count}} files changed",
       "title_one": "{{count}} file changed",

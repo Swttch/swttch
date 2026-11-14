@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useTranslation } from '@/i18n';
 import { LoadedMessageDto, getTextContent, isContentBlockArray } from '../../../types';
 import type { ImageBlockDto } from '../../../dto/message/ContentBlockDto';
 import { ContentBlockType } from '../../../dto/message/ContentBlockDto';
@@ -49,6 +50,53 @@ export function TranscriptUserMessage(props: Props) {
   // The call that was running says "Stopped" on its own line, so the notice the CLI writes after it is not drawn again.
   if (getTextContent(props.message).trim() === INTERRUPTED_FOR_TOOL_USE_TEXT) return null;
   return <SendBubble {...props} />;
+}
+
+/** How tall a long send is before it folds (measured on the desktop app: about eight lines, the last one fading out). */
+const FOLDED_HEIGHT = '13.3rem';
+
+/**
+ * The text of a send. One that runs past about eight lines is folded with its last line fading out and "Show more"
+ * under it, and unfolds to its full length with "Show less" (the desktop app does the same with a long send).
+ */
+function FoldedText({ className, children }: { className: string; children: ReactNode }) {
+  const { t } = useTranslation('chat');
+  const ref = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [overflows, setOverflows] = useState(false);
+
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (!node || open) return;
+    const measure = () => setOverflows(node.scrollHeight > node.clientHeight + 2);
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [open, children]);
+
+  const folded = !open;
+  return (
+    <>
+      <div
+        ref={ref}
+        className={`${className} ${folded ? 'overflow-hidden' : ''} ${folded && overflows ? '[mask-image:linear-gradient(to_bottom,black_calc(100%-2.2rem),transparent)]' : ''}`}
+        style={folded ? { maxHeight: FOLDED_HEIGHT } : undefined}
+      >
+        {children}
+      </div>
+      {(overflows || open) && (
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          className="mb-[0.3rem] mt-[1.2rem] block text-start text-[0.9rem] leading-[1.25rem] text-text-primary"
+        >
+          {open ? t('transcript.userMessage.showLess') : t('transcript.userMessage.showMore')}
+        </button>
+      )}
+    </>
+  );
 }
 
 function SendBubble({ message, sectionKey }: Props) {
@@ -123,7 +171,7 @@ function SendBubble({ message, sectionKey }: Props) {
         {hasBubble && (
           <div className={USER_BUBBLE_CLASS}>
             {parsed.replies.length > 0 && <ReplyQuotes replies={parsed.replies} followedByText={parsed.text !== ''} />}
-            <div className="text-text-primary/80 text-[1rem] leading-[1.5] whitespace-pre-wrap break-words">
+            <FoldedText className="text-text-primary/80 text-[1rem] leading-[1.5] whitespace-pre-wrap break-words">
               {isCommand ? (
                 <>
                   <span className="text-text-primary/50">{'/'}</span>
@@ -133,7 +181,7 @@ function SendBubble({ message, sectionKey }: Props) {
               ) : (
                 <UserMessageText text={parsed.text} />
               )}
-            </div>
+            </FoldedText>
           </div>
         )}
 

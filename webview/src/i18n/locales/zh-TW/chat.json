@@ -1109,6 +1109,10 @@
     "editHint": "按 Enter 儲存 · 按 Esc 取消"
   },
   "transcript": {
+    "userMessage": {
+      "showMore": "展開",
+      "showLess": "收合"
+    },
     "fileChanges": {
       "title": "已變更 {{count}} 個檔案",
       "title_other": "已變更 {{count}} 個檔案",

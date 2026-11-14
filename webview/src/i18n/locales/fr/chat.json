@@ -1118,6 +1118,10 @@
     "editHint": "Entrée pour enregistrer · Échap pour annuler"
   },
   "transcript": {
+    "userMessage": {
+      "showMore": "Afficher plus",
+      "showLess": "Afficher moins"
+    },
     "fileChanges": {
       "title": "{{count}} fichiers modifiés",
       "title_one": "{{count}} fichier modifié",

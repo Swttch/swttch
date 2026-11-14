@@ -1161,6 +1161,10 @@
     "editHint": "Enter للحفظ · Esc للإلغاء"
   },
   "transcript": {
+    "userMessage": {
+      "showMore": "عرض المزيد",
+      "showLess": "عرض أقل"
+    },
     "fileChanges": {
       "title": "تم تغيير {{count}} ملفات",
       "title_other": "تم تغيير {{count}} ملفات",

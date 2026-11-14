@@ -1144,6 +1144,10 @@
     "editHint": "Enter — сохранить · Esc — отмена"
   },
   "transcript": {
+    "userMessage": {
+      "showMore": "Показать больше",
+      "showLess": "Показать меньше"
+    },
     "fileChanges": {
       "title": "Изменено {{count}} файла",
       "title_one": "Изменён {{count}} файл",

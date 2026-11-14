@@ -1118,6 +1118,10 @@
     "editHint": "Enter برای ذخیره · Esc برای لغو"
   },
   "transcript": {
+    "userMessage": {
+      "showMore": "نمایش بیشتر",
+      "showLess": "نمایش کمتر"
+    },
     "fileChanges": {
       "title": "{{count}} فایل تغییر کرد",
       "title_other": "{{count}} فایل تغییر کرد",
