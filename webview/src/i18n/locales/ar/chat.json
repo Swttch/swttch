@@ -284,6 +284,9 @@
     "card": {
       "title": "اقترح Claude خطة",
       "openPlan": "فتح الخطة",
+      "revisePlaceholder": "ما الذي يجب تغييره؟ (اختياري)",
+      "back": "رجوع",
+      "reviseSubmit": "تعديل",
       "reject": "رفض",
       "revise": "تعديل…",
       "accept": "قبول",

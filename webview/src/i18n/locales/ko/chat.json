@@ -284,6 +284,9 @@
     "card": {
       "title": "Claude가 계획을 제안했습니다",
       "openPlan": "계획 열기",
+      "revisePlaceholder": "무엇을 변경해야 하나요? (선택사항)",
+      "back": "뒤로",
+      "reviseSubmit": "수정",
       "reject": "거부",
       "revise": "수정…",
       "accept": "수락",

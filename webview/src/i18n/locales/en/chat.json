@@ -284,6 +284,9 @@
     "card": {
       "title": "Claude proposed a plan",
       "openPlan": "Open plan",
+      "revisePlaceholder": "What should change? (optional)",
+      "back": "Back",
+      "reviseSubmit": "Revise",
       "reject": "Reject",
       "revise": "Revise…",
       "accept": "Accept",

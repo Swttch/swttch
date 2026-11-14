@@ -284,6 +284,9 @@
     "card": {
       "title": "Claude 提出了一个计划",
       "openPlan": "打开计划",
+      "revisePlaceholder": "需要更改什么？（可选）",
+      "back": "返回",
+      "reviseSubmit": "修改",
       "reject": "拒绝",
       "revise": "修改…",
       "accept": "接受",

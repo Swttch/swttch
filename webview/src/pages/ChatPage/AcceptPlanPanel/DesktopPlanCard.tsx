@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Tippy from '@tippyjs/react/headless';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import { useTranslation } from '@/i18n';
@@ -35,6 +35,18 @@ export function DesktopPlanCard({ pending, onApprove, onDeny }: Props) {
   const [planOpen, setPlanOpen] = useState(false);
   const [revising, setRevising] = useState(false);
   const [feedback, setFeedback] = useState('');
+  const cardRef = useRef<HTMLDivElement>(null);
+  // The desktop app stacks the four buttons one under another when the chat is narrow (its plan pane open beside it).
+  const [stacked, setStacked] = useState(false);
+  useEffect(() => {
+    const node = cardRef.current;
+    if (!node || typeof ResizeObserver === 'undefined') return;
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const zoom = parseFloat(document.documentElement.style.zoom) || 1;
+    const observer = new ResizeObserver(([entry]) => setStacked(entry.contentRect.width / zoom < rem * 30));
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
   const plan = typeof pending.input.plan === 'string' ? pending.input.plan : '';
   const title = useMemo(() => planTitle(pending.input.plan), [pending.input.plan]);
 
@@ -73,7 +85,7 @@ export function DesktopPlanCard({ pending, onApprove, onDeny }: Props) {
 
   return (
     <div className="w-full shrink-0 animate-[fadeIn_0.3s_ease-out] px-4 pb-2 pt-[0.375rem]" data-testid="desktop-plan-card">
-      <div className="flex w-full max-w-[33.4rem] flex-col overflow-hidden rounded-[0.8125rem] border border-text-primary/[0.05]">
+      <div ref={cardRef} className="flex w-full max-w-[33.4rem] flex-col overflow-hidden rounded-[0.8125rem] border border-text-primary/[0.05]">
         <div className="flex items-start justify-between gap-3 bg-text-primary/[0.04] px-[1.2188rem] pb-[0.84rem] pt-[0.84rem]">
           <div className="min-w-0">
             <div className="text-[0.9rem] leading-[1.25rem] text-text-primary">{t('acceptPlan.card.title')}</div>
@@ -94,25 +106,44 @@ export function DesktopPlanCard({ pending, onApprove, onDeny }: Props) {
             {plan}
           </pre>
         )}
-        {revising && (
-          <div className="border-t border-text-primary/[0.06] px-[1.0625rem] pt-[0.9rem]">
+        {revising ? (
+          <div className="flex flex-col gap-[0.6rem] px-[1.0625rem] pb-[1rem] pt-[0.97rem]">
             <textarea
               autoFocus
               rows={2}
               value={feedback}
               onChange={(event) => setFeedback(event.target.value)}
               onKeyDown={(event) => {
-                if (event.key === 'Enter' && !event.shiftKey && feedback.trim() !== '') {
+                if (event.key === 'Enter' && !event.shiftKey) {
                   event.preventDefault();
-                  onDeny(pending.controlRequestId, feedback.trim());
+                  onDeny(pending.controlRequestId, feedback.trim() || undefined);
                 }
               }}
-              placeholder={t('acceptPlan.textareaPlaceholder')}
-              className="block w-full resize-none rounded-[0.5rem] border border-[rgb(52,120,214)] bg-text-primary/[0.03] px-[0.9rem] py-[0.55rem] text-[0.9rem] leading-[1.25rem] text-text-primary placeholder:text-text-secondary focus:outline-none"
+              placeholder={t('acceptPlan.card.revisePlaceholder')}
+              className="block min-h-[4.2rem] w-full resize-none rounded-[0.5rem] border-2 border-[rgb(52,120,214)] bg-text-primary/[0.03] px-[0.9rem] py-[0.55rem] text-[0.9rem] leading-[1.25rem] text-text-primary placeholder:text-text-secondary focus:outline-none"
             />
+            <div className="flex items-center justify-between">
+              <button type="button" data-testid="plan-revise-back" onClick={() => setRevising(false)} className={GRAY}>
+                {t('acceptPlan.card.back')}
+              </button>
+              <button
+                type="button"
+                data-testid="plan-revise-submit"
+                onClick={() => onDeny(pending.controlRequestId, feedback.trim() || undefined)}
+                className={`${BUTTON} bg-text-primary/[0.92] text-text-inverse`}
+              >
+                {t('acceptPlan.card.reviseSubmit')}
+              </button>
+            </div>
           </div>
-        )}
-        <div className="flex flex-wrap items-center gap-[0.75rem] px-[1.0625rem] pb-[0.8rem] pt-[0.97rem]">
+        ) : (
+          <div
+            className={
+              stacked
+                ? 'flex flex-col gap-[0.6rem] px-[1.0625rem] pb-[1rem] pt-[0.97rem] [&>button]:w-full [&>div]:w-full [&>span]:hidden [&>div>button:first-child]:flex-1 [&>div>button:first-child]:justify-center'
+                : 'flex flex-wrap items-center gap-[0.75rem] px-[1.0625rem] pb-[0.8rem] pt-[0.97rem]'
+            }
+          >
           <button type="button" data-testid="plan-reject" onClick={() => onDeny(pending.controlRequestId)} className={GRAY}>
             {t('acceptPlan.card.reject')}
           </button>
@@ -139,7 +170,7 @@ export function DesktopPlanCard({ pending, onApprove, onDeny }: Props) {
             <Tippy
               visible={menuOpen}
               interactive
-              placement="bottom-end"
+              placement="top-end"
               offset={[0, 6]}
               appendTo={() => document.body}
               onClickOutside={() => setMenuOpen(false)}
@@ -178,6 +209,15 @@ export function DesktopPlanCard({ pending, onApprove, onDeny }: Props) {
             </Tippy>
           </div>
         </div>
+        )}
+      </div>
+      <div data-testid="plan-row-pending" className="flex items-center gap-[0.35rem] py-[0.625rem] ps-[0.2rem] text-[0.9656rem] text-text-secondary">
+        <span aria-hidden className="flex gap-[0.15rem] text-[rgb(217,92,76)]">
+          <span className="h-[0.25rem] w-[0.25rem] rounded-full bg-current" />
+          <span className="h-[0.25rem] w-[0.25rem] rounded-full bg-current" />
+          <span className="h-[0.25rem] w-[0.25rem] rounded-full bg-current" />
+        </span>
+        <span className="min-w-0 truncate">{t('acceptPlan.proposing', { title })}</span>
       </div>
     </div>
   );

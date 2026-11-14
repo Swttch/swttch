@@ -43,6 +43,8 @@ export function ExitPlanModeRenderer(props: RendererProps) {
     // In the views that follow the desktop app the plan is one line, "Proposing plan x" while it waits and "Proposed
     // plan x" after, that opens to the plan; the card under the chat is where it is answered.
     if (viewMode !== null) {
+        // While the plan waits, its line is drawn under the card that asks about it (DesktopPlanCard).
+        if (!toolResult) return <div hidden data-testid="plan-row" />;
         const title = (plan.split('\n').map((line) => line.trim()).find((line) => line !== '') ?? '').replace(/^#+\s*/, '');
         return (
             <div data-testid="plan-row">

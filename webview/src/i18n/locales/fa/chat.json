@@ -284,6 +284,9 @@
     "card": {
       "title": "Claude یک طرح پیشنهاد کرد",
       "openPlan": "باز کردن طرح",
+      "revisePlaceholder": "چه چیزی باید تغییر کند؟ (اختیاری)",
+      "back": "بازگشت",
+      "reviseSubmit": "ویرایش",
       "reject": "رد",
       "revise": "ویرایش…",
       "accept": "پذیرش",
