@@ -279,6 +279,18 @@
     }
   },
   "acceptPlan": {
+    "proposing": "計画を提案中 {{title}}",
+    "proposed": "計画を提案しました {{title}}",
+    "card": {
+      "title": "Claude が計画を提案しました",
+      "openPlan": "計画を開く",
+      "reject": "拒否する",
+      "revise": "修正…",
+      "accept": "承認",
+      "acceptAuto": "同意して自動モードを使用",
+      "acceptEdits": "承認して編集を許可する",
+      "acceptBypass": "権限を承認してバイパスする"
+    },
     "title": "このプランを承認しますか?",
     "subtitle": "プレビュー内のテキストを選択してコメントを追加",
     "textareaPlaceholder": "代わりにClaudeにしてほしいことを伝える",

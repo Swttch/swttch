@@ -279,6 +279,18 @@
     }
   },
   "acceptPlan": {
+    "proposing": "계획 제안 중 {{title}}",
+    "proposed": "계획 제안됨 {{title}}",
+    "card": {
+      "title": "Claude가 계획을 제안했습니다",
+      "openPlan": "계획 열기",
+      "reject": "거부",
+      "revise": "수정…",
+      "accept": "수락",
+      "acceptAuto": "수락 및 자동 모드 사용",
+      "acceptEdits": "수락 및 편집 허용",
+      "acceptBypass": "수락 및 권한 우회"
+    },
     "title": "이 계획을 승인하시겠습니까?",
     "subtitle": "미리보기에서 텍스트를 선택하면 댓글을 추가할 수 있습니다",
     "textareaPlaceholder": "대신 Claude가 무엇을 할지 알려주세요",

@@ -5,6 +5,9 @@ import {mermaid, MERMAID_CONTROLS, useMermaidOptions} from '@/utils/mermaidPlugi
 import {ToolUseBlockDto} from "@/dto";
 import {useTranslation} from "@/i18n";
 import {useChatStreamContextOrNull} from "@/contexts/ChatStreamContext";
+import {useState} from "react";
+import {ChevronRightIcon} from "@heroicons/react/20/solid";
+import {useTranscriptViewMode} from "../transcriptViewMode";
 import {findPlanFileContent} from "./planFromTranscript";
 import {Container, LabelValue, RendererProps, ToolHeader, ToolWrapper} from "./common";
 
@@ -33,6 +36,35 @@ export function ExitPlanModeRenderer(props: RendererProps) {
         : undefined;
 
     const headerName = plan ? t('exitPlanMode.title') : t('exitPlanMode.planModeTitle');
+    const viewMode = useTranscriptViewMode();
+    const [open, setOpen] = useState(false);
+    const { t: tChat } = useTranslation('chat');
+
+    // In the views that follow the desktop app the plan is one line, "Proposing plan x" while it waits and "Proposed
+    // plan x" after, that opens to the plan; the card under the chat is where it is answered.
+    if (viewMode !== null) {
+        const title = (plan.split('\n').map((line) => line.trim()).find((line) => line !== '') ?? '').replace(/^#+\s*/, '');
+        return (
+            <div data-testid="plan-row">
+                <button
+                    type="button"
+                    aria-expanded={open}
+                    onClick={() => setOpen((value) => !value)}
+                    className="flex w-full items-center gap-[0.35rem] py-[0.625rem] text-start text-[0.9656rem] text-text-secondary transition-colors hover:text-text-primary"
+                >
+                    <span className="min-w-0 truncate">{tChat(toolResult ? 'acceptPlan.proposed' : 'acceptPlan.proposing', { title })}</span>
+                    <ChevronRightIcon className={`h-4 w-4 shrink-0 transition-transform ${open ? 'rotate-90' : ''}`} />
+                </button>
+                {open && plan && (
+                    <div className="markdown-content mb-2 text-text-primary text-[1rem] leading-relaxed">
+                        <Streamdown mode="static" controls={{ code: true, table: true, mermaid: MERMAID_CONTROLS }} plugins={{ math, code, mermaid }} mermaid={mermaidOptions}>
+                            {plan}
+                        </Streamdown>
+                    </div>
+                )}
+            </div>
+        );
+    }
 
     return (
         <ToolWrapper message={props.message}>

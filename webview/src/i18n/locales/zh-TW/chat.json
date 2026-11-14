@@ -279,6 +279,18 @@
     }
   },
   "acceptPlan": {
+    "proposing": "正在提出計畫 {{title}}",
+    "proposed": "已提出計畫 {{title}}",
+    "card": {
+      "title": "Claude 提出了一個計畫",
+      "openPlan": "開啟計畫",
+      "reject": "拒絕",
+      "revise": "修改…",
+      "accept": "接受",
+      "acceptAuto": "接受並使用自動模式",
+      "acceptEdits": "接受並允許編輯",
+      "acceptBypass": "接受並略過權限"
+    },
     "title": "是否接受此計畫？",
     "subtitle": "在預覽中選取文字以新增註解",
     "textareaPlaceholder": "告訴 Claude 該做些什麼",

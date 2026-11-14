@@ -279,6 +279,18 @@
     }
   },
   "acceptPlan": {
+    "proposing": "جارٍ اقتراح الخطة {{title}}",
+    "proposed": "تم اقتراح الخطة {{title}}",
+    "card": {
+      "title": "اقترح Claude خطة",
+      "openPlan": "فتح الخطة",
+      "reject": "رفض",
+      "revise": "تعديل…",
+      "accept": "قبول",
+      "acceptAuto": "قبول واستخدام الوضع التلقائي",
+      "acceptEdits": "قبول والسماح بالتعديلات",
+      "acceptBypass": "قبول وتجاوز الأذونات"
+    },
     "title": "قبول هذه الخطة؟",
     "subtitle": "حدد نصًا في المعاينة لإضافة تعليقات",
     "textareaPlaceholder": "أخبر Claude بما يجب فعله بدلًا من ذلك",

@@ -279,6 +279,18 @@
     }
   },
   "acceptPlan": {
+    "proposing": "در حال پیشنهاد طرح {{title}}",
+    "proposed": "طرح پیشنهاد شد {{title}}",
+    "card": {
+      "title": "Claude یک طرح پیشنهاد کرد",
+      "openPlan": "باز کردن طرح",
+      "reject": "رد",
+      "revise": "ویرایش…",
+      "accept": "پذیرش",
+      "acceptAuto": "پذیرش و استفاده از حالت خودکار",
+      "acceptEdits": "پذیرش و اجازه ویرایش",
+      "acceptBypass": "پذیرش و دور زدن مجوزها"
+    },
     "title": "این برنامه پذیرفته شود؟",
     "subtitle": "برای افزودن نظر، متنی را در پیش‌نمایش انتخاب کنید",
     "textareaPlaceholder": "به Claude بگویید به‌جای آن چه کاری انجام دهد",

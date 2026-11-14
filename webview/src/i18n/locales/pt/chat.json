@@ -279,6 +279,18 @@
     }
   },
   "acceptPlan": {
+    "proposing": "Propondo plano {{title}}",
+    "proposed": "Plano proposto {{title}}",
+    "card": {
+      "title": "O Claude propôs um plano",
+      "openPlan": "Abrir plano",
+      "reject": "Rejeitar",
+      "revise": "Revisar…",
+      "accept": "Aceitar",
+      "acceptAuto": "Aceitar e usar o modo automático",
+      "acceptEdits": "Aceitar e permitir edições",
+      "acceptBypass": "Aceitar e ignorar permissões"
+    },
     "title": "Aceitar este plano?",
     "subtitle": "Selecione texto na pré-visualização para adicionar comentários",
     "textareaPlaceholder": "Diga ao Claude o que fazer em vez disso",

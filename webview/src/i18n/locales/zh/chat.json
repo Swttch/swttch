@@ -279,6 +279,18 @@
     }
   },
   "acceptPlan": {
+    "proposing": "正在提出计划 {{title}}",
+    "proposed": "已提出计划 {{title}}",
+    "card": {
+      "title": "Claude 提出了一个计划",
+      "openPlan": "打开计划",
+      "reject": "拒绝",
+      "revise": "修改…",
+      "accept": "接受",
+      "acceptAuto": "接受并使用自动模式",
+      "acceptEdits": "接受并允许编辑",
+      "acceptBypass": "接受并绕过权限"
+    },
     "title": "接受此计划?",
     "subtitle": "在预览中选择文本以添加批注",
     "textareaPlaceholder": "告诉 Claude 该做些什么",
