@@ -301,7 +301,13 @@
     "submit": "回答を送信",
     "next": "次へ",
     "other": "その他",
-    "otherPlaceholder": "回答を入力..."
+    "otherPlaceholder": "回答を入力...",
+    "card": {
+      "skip": "スキップ",
+      "submit": "送信",
+      "placeholder": "ここに独自の回答を入力してください",
+      "progress": "{{current}}/{{total}}"
+    }
   },
   "backgroundTasks": {
     "title": "バックグラウンドタスク",

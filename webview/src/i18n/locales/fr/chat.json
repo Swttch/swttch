@@ -301,7 +301,13 @@
     "submit": "Envoyer les réponses",
     "next": "Suivant",
     "other": "Autre",
-    "otherPlaceholder": "Saisissez votre réponse..."
+    "otherPlaceholder": "Saisissez votre réponse...",
+    "card": {
+      "skip": "Passer",
+      "submit": "Envoyer",
+      "placeholder": "Tapez votre propre réponse ici",
+      "progress": "{{current}} sur {{total}}"
+    }
   },
   "backgroundTasks": {
     "title": "Tâches en arrière-plan",

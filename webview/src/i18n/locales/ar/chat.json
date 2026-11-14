@@ -301,7 +301,13 @@
     "submit": "إرسال الإجابات",
     "next": "التالي",
     "other": "أخرى",
-    "otherPlaceholder": "اكتب إجابتك..."
+    "otherPlaceholder": "اكتب إجابتك...",
+    "card": {
+      "skip": "تخطي",
+      "submit": "إرسال",
+      "placeholder": "اكتب إجابتك هنا",
+      "progress": "{{current}} من {{total}}"
+    }
   },
   "backgroundTasks": {
     "title": "المهام الخلفية",

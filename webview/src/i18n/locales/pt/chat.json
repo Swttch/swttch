@@ -301,7 +301,13 @@
     "submit": "Enviar respostas",
     "next": "Próximo",
     "other": "Outro",
-    "otherPlaceholder": "Digite sua resposta..."
+    "otherPlaceholder": "Digite sua resposta...",
+    "card": {
+      "skip": "Pular",
+      "submit": "Enviar",
+      "placeholder": "Digite sua própria resposta aqui",
+      "progress": "{{current}} de {{total}}"
+    }
   },
   "backgroundTasks": {
     "title": "Tarefas em segundo plano",

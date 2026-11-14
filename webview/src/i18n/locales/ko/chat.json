@@ -301,7 +301,13 @@
     "submit": "답변 제출",
     "next": "다음",
     "other": "기타",
-    "otherPlaceholder": "답변을 입력하세요..."
+    "otherPlaceholder": "답변을 입력하세요...",
+    "card": {
+      "skip": "건너뛰기",
+      "submit": "제출",
+      "placeholder": "여기에 답변을 입력하세요",
+      "progress": "{{total}}개 중 {{current}}번째"
+    }
   },
   "backgroundTasks": {
     "title": "백그라운드 작업",

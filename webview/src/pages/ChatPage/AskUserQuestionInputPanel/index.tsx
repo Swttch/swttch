@@ -7,6 +7,8 @@ import { useFormState } from './useFormState';
 import { TabBar } from './TabBar';
 import { OptionList } from './OptionList';
 import { Footer } from './Footer';
+import { DesktopQuestionCard } from './DesktopQuestionCard';
+import { useTranscriptViewMode } from '../message-renderers/transcriptViewMode';
 import {
   CollapseToggle,
   CollapsedSummaryBar,
@@ -23,6 +25,7 @@ export const AskUserQuestionInputPanel = (props: Props) => {
   const { toolUse, controlRequestId, onDismiss } = props;
   const api = useApi();
   const { stop } = useChatStreamContext();
+  const viewMode = useTranscriptViewMode();
   const panelRef = useRef<HTMLDivElement>(null);
 
   const questions = toolUse.input.questions;
@@ -88,6 +91,19 @@ export const AskUserQuestionInputPanel = (props: Props) => {
   };
 
   const summaryTitle = form.currentQuestion.header || form.currentQuestion.question;
+
+  // In the views that follow the desktop app the question is drawn as its card; the answers go the same way.
+  if (viewMode !== null) {
+    return (
+      <DesktopQuestionCard
+        form={form}
+        total={questions.length}
+        onSubmit={handleSubmit}
+        onCancel={handleCancel}
+        onOtherKeyDown={handleOtherKeyDown}
+      />
+    );
+  }
 
   if (collapsed) {
     return (

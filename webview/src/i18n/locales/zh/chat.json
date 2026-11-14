@@ -301,7 +301,13 @@
     "submit": "提交答案",
     "next": "下一步",
     "other": "其他",
-    "otherPlaceholder": "输入您的答案..."
+    "otherPlaceholder": "输入您的答案...",
+    "card": {
+      "skip": "跳过",
+      "submit": "提交",
+      "placeholder": "在此输入你的答案",
+      "progress": "第 {{current}} 个，共 {{total}} 个"
+    }
   },
   "backgroundTasks": {
     "title": "后台任务",

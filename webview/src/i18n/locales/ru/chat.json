@@ -301,7 +301,13 @@
     "submit": "Отправить ответы",
     "next": "Далее",
     "other": "Другое",
-    "otherPlaceholder": "Введите свой ответ..."
+    "otherPlaceholder": "Введите свой ответ...",
+    "card": {
+      "skip": "Пропустить",
+      "submit": "Отправить",
+      "placeholder": "Введите свой ответ здесь",
+      "progress": "{{current}} из {{total}}"
+    }
   },
   "backgroundTasks": {
     "title": "Фоновые задачи",

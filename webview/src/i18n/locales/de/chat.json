@@ -301,7 +301,13 @@
     "submit": "Antworten senden",
     "next": "Weiter",
     "other": "Andere",
-    "otherPlaceholder": "Gib deine Antwort ein..."
+    "otherPlaceholder": "Gib deine Antwort ein...",
+    "card": {
+      "skip": "Überspringen",
+      "submit": "Übermitteln",
+      "placeholder": "Gib hier deine eigene Antwort ein",
+      "progress": "{{current}} von {{total}}"
+    }
   },
   "backgroundTasks": {
     "title": "Hintergrundaufgaben",

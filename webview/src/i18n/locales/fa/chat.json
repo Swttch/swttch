@@ -301,7 +301,13 @@
     "submit": "ارسال پاسخ‌ها",
     "next": "بعدی",
     "other": "سایر",
-    "otherPlaceholder": "پاسخ خود را بنویسید..."
+    "otherPlaceholder": "پاسخ خود را بنویسید...",
+    "card": {
+      "skip": "رد شدن",
+      "submit": "ارسال",
+      "placeholder": "پاسخ خود را اینجا بنویسید",
+      "progress": "{{current}} از {{total}}"
+    }
   },
   "backgroundTasks": {
     "title": "کارهای پس‌زمینه",

@@ -301,7 +301,13 @@
     "submit": "Submit answers",
     "next": "Next",
     "other": "Other",
-    "otherPlaceholder": "Type your answer..."
+    "otherPlaceholder": "Type your answer...",
+    "card": {
+      "skip": "Skip",
+      "submit": "Submit",
+      "placeholder": "Type your own answer here",
+      "progress": "{{current}} of {{total}}"
+    }
   },
   "backgroundTasks": {
     "title": "Background tasks",
