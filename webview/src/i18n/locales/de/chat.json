@@ -1098,7 +1098,8 @@
       "undo": "Rückgängig",
       "undoHint": "Claude bitten, die Dateiänderungen dieses Schritts rückgängig zu machen",
       "undoPrompt": "Mach alle Dateiänderungen aus diesem Schritt rückgängig.",
-      "total": "Gesamt"
+      "total": "Gesamt",
+      "viewAll": "Alle anzeigen"
     },
     "tools": {
       "ranCommand": "Befehl ausgeführt",
@@ -1117,6 +1118,7 @@
       "editedFiles_other": "{{count}} Dateien bearbeitet",
       "createdFile": "{{name}} erstellt",
       "editedFile": "{{name}} bearbeitet",
+      "updatedFile": "Aktualisiert {{name}}",
       "editingFile": "Bearbeite {{name}}",
       "creatingFile": "Erstelle {{name}}",
       "failed_one": "{{count}} fehlgeschlagen",

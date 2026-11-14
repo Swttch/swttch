@@ -1140,7 +1140,8 @@
       "undo": "تراجع",
       "undoHint": "اطلب من Claude التراجع عن تغييرات الملفات في هذه الجولة",
       "undoPrompt": "تراجع عن جميع تغييرات الملفات التي أجريتها في هذه الجولة.",
-      "total": "الإجمالي"
+      "total": "الإجمالي",
+      "viewAll": "عرض الكل"
     },
     "tools": {
       "ranCommand": "تم تنفيذ أمر",
@@ -1179,6 +1180,7 @@
       "editedFiles_other": "تم تعديل {{count}} ملف",
       "createdFile": "تم إنشاء {{name}}",
       "editedFile": "تم تعديل {{name}}",
+      "updatedFile": "تم تحديث {{name}}",
       "editingFile": "جارٍ تعديل {{name}}",
       "creatingFile": "جارٍ إنشاء {{name}}",
       "failed_zero": "فشل {{count}}",

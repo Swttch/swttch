@@ -1126,7 +1126,8 @@
       "undo": "Отменить",
       "undoHint": "Попросить Claude отменить изменения файлов в этом ходе",
       "undoPrompt": "Отмени все изменения файлов, которые ты сделал в этом ходе.",
-      "total": "Итого"
+      "total": "Итого",
+      "viewAll": "Показать все"
     },
     "tools": {
       "ranCommand": "Выполнена команда",
@@ -1155,6 +1156,7 @@
       "editedFiles_other": "Изменено {{count}} файла",
       "createdFile": "Создан {{name}}",
       "editedFile": "Изменён {{name}}",
+      "updatedFile": "Обновлён {{name}}",
       "editingFile": "Редактирование {{name}}",
       "creatingFile": "Создание {{name}}",
       "failed_one": "ошибок: {{count}}",

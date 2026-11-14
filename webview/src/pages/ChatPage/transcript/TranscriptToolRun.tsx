@@ -748,7 +748,9 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
   // A run of file edits and new files is open from the start, while it goes on and after it ends: the desktop app
   // keeps the line for each file under the summary (measured on its recording of an edit to two files at once).
   const fileChanges = calls.every((call) => call.toolUse.name === 'Edit' || call.toolUse.name === 'Write');
-  const startsOpen = verbose || fileChanges;
+  // While it goes on it is open; once it has ended it stays open when it is short and shuts when it is long (the desktop
+  // app left an edit to two files open and shut the one that wrote twenty).
+  const startsOpen = verbose || (fileChanges && (active || calls.length <= 3));
   const [open, setOpen] = useState(startsOpen);
   useEffect(() => setOpen(startsOpen), [startsOpen]);
   const toggle = () => setOpen((v) => !v);

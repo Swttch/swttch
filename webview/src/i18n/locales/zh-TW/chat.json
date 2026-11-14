@@ -1088,7 +1088,8 @@
       "undo": "復原",
       "undoHint": "請 Claude 復原本輪的檔案變更",
       "undoPrompt": "復原你在這一輪中做的所有檔案變更。",
-      "total": "總計"
+      "total": "總計",
+      "viewAll": "檢視全部"
     },
     "tools": {
       "ranCommand": "執行了指令",
@@ -1102,6 +1103,7 @@
       "editedFiles_other": "編輯了 {{count}} 個檔案",
       "createdFile": "建立了 {{name}}",
       "editedFile": "編輯了 {{name}}",
+      "updatedFile": "已更新 {{name}}",
       "editingFile": "正在編輯 {{name}}",
       "creatingFile": "正在建立 {{name}}",
       "failed_other": "{{count}} 個失敗",

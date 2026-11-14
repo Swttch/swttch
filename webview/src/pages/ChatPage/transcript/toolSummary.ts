@@ -76,6 +76,18 @@ function computerKind(action: unknown): ToolKind {
  */
 const SESSION_TOOL = /^mcp__(?:ccd|swttch)_session(?:_mgmt)?__(.+)$/;
 
+/**
+ * Whether a `Write` replaced a file that was already there. The CLI says so in its answer ("The file x has been
+ * updated" instead of "File created successfully") and in the entry's own result (`type: 'update'`). The desktop app
+ * calls such a row "Updated x" and counts it as an edit in the line over its group.
+ */
+export function wasUpdate(call: ToolCall): boolean {
+  if (call.toolUse.name !== 'Write' || !call.toolUse.tool_result) return false;
+  const result = call.toolUse.tool_result as unknown as { toolUseResult?: { type?: unknown } };
+  if (result.toolUseResult?.type === 'update') return true;
+  return /has been updated|updated successfully/i.test(toolResultText(call.toolUse.tool_result as LoadedMessageDto | undefined));
+}
+
 export function toolKindOf(call: ToolCall): ToolKind {
   switch (SESSION_TOOL.exec(call.toolUse.name)?.[1]) {
     case 'set_session_title':
@@ -480,7 +492,7 @@ export function rowLabel(call: ToolCall, t: TFunction): RowLabel {
     // A file change the user turned down, or that failed, stays at its running wording ("Editing x"): it is not reported
     // as done, and the desktop app leaves the line there with the stopped mark beside it.
     case 'write':
-      return withFile(unfinishedChange(call) ? 'transcript.tools.creatingFile' : 'transcript.tools.createdFile', call, t);
+      return withFile(unfinishedChange(call) ? 'transcript.tools.creatingFile' : wasUpdate(call) ? 'transcript.tools.updatedFile' : 'transcript.tools.createdFile', call, t);
     case 'edit':
       return withFile(unfinishedChange(call) ? 'transcript.tools.editingFile' : 'transcript.tools.editedFile', call, t);
     case 'searchCode':
@@ -569,7 +581,8 @@ export function groupLabelParts(calls: ToolCall[], t: TFunction): GroupLabelPart
   const keys = new Map<ToolKind, Set<string>>();
   const first = new Map<ToolKind, ToolCall>();
   for (const call of calls) {
-    const kind = toolKindOf(call);
+    // A file that was written over is counted as an edit in the line over the group ("Edited 20 files").
+    const kind = wasUpdate(call) ? 'edit' : toolKindOf(call);
     if (!keys.has(kind)) {
       order.push(kind);
       keys.set(kind, new Set());

@@ -9,7 +9,7 @@ import { MessageBubble } from '../MessageBubble';
 import { StreamingMessage } from '../StreamingMessage';
 import { ToolRenderer } from '../message-renderers/ToolRenderer';
 import { TranscriptReplyFooter } from './TranscriptReplyFooter';
-import { TranscriptFileChanges } from './TranscriptFileChanges';
+import { TranscriptFileChanges, changedFilesOf } from './TranscriptFileChanges';
 import { ContextUsageCard } from '../message-renderers/components/ContextUsageCard';
 import { parseContextUsage } from '@/utils/parseContextUsage';
 import { useSendActionsValue } from '../SendActionsContext';
@@ -31,12 +31,15 @@ function TranscriptBlocks({
   blocks,
   showFooter,
   summary,
+  summaryShown,
 }: {
   message: LoadedMessageDto;
   blocks: AnyContentBlockDto[];
   showFooter: boolean;
   /** What closes the turn, drawn between the text and the footer: the desktop app has its copy / fork row under it. */
   summary?: ReactNode;
+  /** The turn has a file summary under this text: the text's last paragraph or list gives up its own bottom margin to it. */
+  summaryShown?: boolean;
 }) {
   const sendActions = useSendActionsValue();
   const streaming = message.isStreaming ?? false;
@@ -74,7 +77,7 @@ function TranscriptBlocks({
               plain
               content={text}
               isStreaming={streaming}
-              className="text-[var(--tr-text)] text-[1.02rem] leading-[1.3]"
+              className={`text-[var(--tr-text)] text-[1.02rem] leading-[1.3]${summaryShown && showFooter && !streaming ? ' [&_.markdown-content>*:last-child]:mb-0 [&_.markdown-content>div>*:last-child]:mb-0 [&_.markdown-content>div>ul:last-child]:pb-0 [&_.markdown-content>div>ol:last-child]:pb-0 [&_.markdown-content>div>ul:last-child>li:last-child]:pb-0 [&_.markdown-content>div>ol:last-child>li:last-child]:pb-0' : ''}`}
               message={message}
               footer={
                 streaming || !showFooter ? undefined : (
@@ -99,7 +102,7 @@ function TranscriptBlocks({
   );
 }
 
-function SegmentView({ segment, endsTurn, onRetry, summary }: { segment: Segment; endsTurn: boolean; onRetry?: (messageId: string) => void; summary?: ReactNode }) {
+function SegmentView({ segment, endsTurn, onRetry, summary, summaryShown }: { segment: Segment; endsTurn: boolean; onRetry?: (messageId: string) => void; summary?: ReactNode; summaryShown?: boolean }) {
   switch (segment.kind) {
     case 'message':
       // What a compaction leaves in the record is drawn as the desktop app draws it: a line where it happened, the
@@ -111,7 +114,7 @@ function SegmentView({ segment, endsTurn, onRetry, summary }: { segment: Segment
     case 'blocks':
       return (
         <div className="group transcript-prose px-4 [&_.markdown-content_p:first-child]:mt-0">
-          <TranscriptBlocks message={segment.message} blocks={segment.blocks} showFooter={endsTurn} summary={summary} />
+          <TranscriptBlocks message={segment.message} blocks={segment.blocks} showFooter={endsTurn} summary={summary} summaryShown={summaryShown} />
         </div>
       );
     case 'tools':
@@ -193,6 +196,7 @@ export const TranscriptBody = memo(function TranscriptBody({ body, mergedMessage
   // done now (see TranscriptToolRun). The plan stands above it; otherwise it stands at the very end.
   const planBefore = turnRunning && segments.length > 0 && segments[segments.length - 1].kind === 'tools' ? segments[segments.length - 1].key : null;
   const plan = <TranscriptPlan body={body} running={turnRunning} />;
+  const hasFileSummary = useMemo(() => !turnRunning && changedFilesOf(body).length > 0, [body, turnRunning]);
 
   return (
     <>
@@ -208,7 +212,7 @@ export const TranscriptBody = memo(function TranscriptBody({ body, mergedMessage
             console.log(entry, mergedMessages.indexOf(entry), mergedMessages); // NEVER REMOVE THIS LINE
           }}
         >
-          <SegmentView segment={segment} endsTurn={turnEnds.has(segment.key)} onRetry={onRetry} summary={<TranscriptFileChanges body={body} sectionKey={sectionKey} hidden={turnRunning} />} />
+          <SegmentView segment={segment} endsTurn={turnEnds.has(segment.key)} onRetry={onRetry} summary={<TranscriptFileChanges body={body} sectionKey={sectionKey} hidden={turnRunning} />} summaryShown={hasFileSummary} />
         </div>
         </Fragment>
       ))}

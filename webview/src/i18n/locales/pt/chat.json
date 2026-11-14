@@ -1098,7 +1098,8 @@
       "undo": "Desfazer",
       "undoHint": "Pedir ao Claude para desfazer as alterações de arquivo desta rodada",
       "undoPrompt": "Desfaça todas as alterações de arquivos que você fez neste turno.",
-      "total": "Total"
+      "total": "Total",
+      "viewAll": "Ver todos"
     },
     "tools": {
       "ranCommand": "Comando executado",
@@ -1122,6 +1123,7 @@
       "editedFiles_other": "{{count}} arquivos editados",
       "createdFile": "{{name}} criado",
       "editedFile": "{{name}} editado",
+      "updatedFile": "Atualizado {{name}}",
       "editingFile": "Editando {{name}}",
       "creatingFile": "Criando {{name}}",
       "failed_one": "{{count}} falhou",

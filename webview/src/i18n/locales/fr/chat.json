@@ -1098,7 +1098,8 @@
       "undo": "Annuler",
       "undoHint": "Demander à Claude d’annuler les modifications de fichiers de ce tour",
       "undoPrompt": "Annule toutes les modifications de fichiers que tu as faites pendant ce tour.",
-      "total": "Total"
+      "total": "Total",
+      "viewAll": "Tout afficher"
     },
     "tools": {
       "ranCommand": "Commande exécutée",
@@ -1122,6 +1123,7 @@
       "editedFiles_other": "{{count}} fichiers modifiés",
       "createdFile": "{{name}} créé",
       "editedFile": "{{name}} modifié",
+      "updatedFile": "Mis à jour {{name}}",
       "editingFile": "Modification de {{name}}",
       "creatingFile": "Création de {{name}}",
       "failed_one": "{{count}} échec",

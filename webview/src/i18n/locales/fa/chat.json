@@ -1097,7 +1097,8 @@
       "undo": "واگرد",
       "undoHint": "از Claude بخواهید تغییرات فایل این نوبت را واگرد کند",
       "undoPrompt": "همه تغییرات فایل را که در این نوبت انجام دادی واگرد کن.",
-      "total": "مجموع"
+      "total": "مجموع",
+      "viewAll": "نمایش همه"
     },
     "tools": {
       "ranCommand": "دستور اجرا شد",
@@ -1116,6 +1117,7 @@
       "editedFiles_other": "{{count}} فایل ویرایش شد",
       "createdFile": "{{name}} ایجاد شد",
       "editedFile": "{{name}} ویرایش شد",
+      "updatedFile": "به‌روزرسانی شد {{name}}",
       "editingFile": "در حال ویرایش {{name}}",
       "creatingFile": "در حال ایجاد {{name}}",
       "failed_one": "{{count}} ناموفق",

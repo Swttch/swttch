@@ -1102,7 +1102,8 @@
       "undo": "Undo",
       "undoHint": "Ask Claude to undo this turn’s file changes",
       "undoPrompt": "Undo all the file changes you made in this turn.",
-      "total": "Total"
+      "total": "Total",
+      "viewAll": "View all"
     },
     "tools": {
       "ranCommand": "Ran command",
@@ -1121,6 +1122,7 @@
       "editedFiles_other": "Edited {{count}} files",
       "createdFile": "Created {{name}}",
       "editedFile": "Edited {{name}}",
+      "updatedFile": "Updated {{name}}",
       "editingFile": "Editing {{name}}",
       "creatingFile": "Creating {{name}}",
       "failed_one": "{{count}} failed",

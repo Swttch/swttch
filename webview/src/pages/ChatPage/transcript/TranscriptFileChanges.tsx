@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { DocumentIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '@/i18n';
 import { Tooltip } from '@/components/Tooltip';
@@ -35,7 +35,7 @@ export function changedFilesOfCalls(calls: ToolCall[]): FileTotal[] {
   return [...files.values()];
 }
 
-function changedFilesOf(body: LoadedMessageDto[]): FileTotal[] {
+export function changedFilesOf(body: LoadedMessageDto[]): FileTotal[] {
   const calls: ToolCall[] = [];
   for (const segment of buildSegments(body)) {
     if (segment.kind === 'tools') calls.push(...segment.calls);
@@ -46,8 +46,8 @@ function changedFilesOf(body: LoadedMessageDto[]): FileTotal[] {
 function Counts({ stats }: { stats: LineStats }) {
   return (
     <span className="flex flex-shrink-0 items-baseline gap-[8.8px] text-[0.9656rem]">
-      {stats.added > 0 && <span className="text-[rgb(98,190,102)]">+{stats.added}</span>}
-      {stats.removed > 0 && <span className="text-[rgb(214,69,96)]">−{stats.removed}</span>}
+      <span className="text-[rgb(98,190,102)]">+{stats.added}</span>
+      <span className="text-[rgb(214,69,96)]">−{stats.removed}</span>
     </span>
   );
 }
@@ -81,15 +81,19 @@ function UndoButton() {
  * "Undo" and the lines put in and taken out. Several are a card with the number of files and "Undo" over a line for
  * each file, and the totals under them. Measured on the desktop app's recordings.
  */
+/** Past this many files the card lists the first few and ends on "View all" (measured on a turn that wrote 20 files). */
+const SHOWN_FILES = 3;
+
 export function TranscriptFileChanges({ body, hidden }: { body: LoadedMessageDto[]; sectionKey?: string | null; hidden: boolean }) {
   const { t } = useTranslation('chat');
   const files = useMemo(() => changedFilesOf(body), [body]);
+  const [all, setAll] = useState(false);
   if (hidden || files.length < 1) return null;
   const border = 'rounded-[11px] border border-text-primary/[0.07]';
   if (files.length === 1) {
     const [file] = files;
     return (
-      <div className="pb-[4px] pt-[3px]" data-transcript-file-changes>
+      <div className="pb-[4px] pt-[28.8px]" data-transcript-file-changes>
         <div className={`flex h-[44.4px] items-center gap-[10px] px-[17px] text-[0.9656rem] text-text-primary ${border}`}>
           <DocumentIcon className="h-4 w-4 flex-shrink-0 text-text-secondary" />
           <span className="min-w-0 flex-1 truncate">{baseName(file.path)}</span>
@@ -104,24 +108,35 @@ export function TranscriptFileChanges({ body, hidden }: { body: LoadedMessageDto
     { added: 0, removed: 0 },
   );
   return (
-    <div className="pb-[4px] pt-[3px]" data-transcript-file-changes>
+    <div className="pb-[4px] pt-[28.8px]" data-transcript-file-changes>
       <div className={`overflow-hidden text-[0.9656rem] text-text-primary ${border}`}>
         <div className="flex h-[42px] items-center justify-between border-b border-text-primary/[0.07] px-[17px]">
           <span>{t('transcript.fileChanges.title', { count: files.length })}</span>
           <UndoButton />
         </div>
         <div className="flex flex-col py-[4.8px]">
-          {files.map((file) => (
+          {(files.length > SHOWN_FILES && !all ? files.slice(0, SHOWN_FILES) : files).map((file) => (
             <div key={file.path} className="flex h-[30.5px] items-center gap-[10px] px-[17px]">
               <DocumentIcon className="h-4 w-4 flex-shrink-0 text-text-secondary" />
               <span className="min-w-0 flex-1 truncate">{baseName(file.path)}</span>
               <Counts stats={file.stats} />
             </div>
           ))}
-          <div className="flex h-[30.5px] items-center justify-between px-[17px]">
-            <span>{t('transcript.fileChanges.total')}</span>
-            <Counts stats={total} />
-          </div>
+          {files.length > SHOWN_FILES && !all ? (
+            <button
+              type="button"
+              onClick={() => setAll(true)}
+              className="flex h-[30.5px] items-center justify-between px-[17px] text-start transition-colors hover:text-text-secondary"
+            >
+              <span>{t('transcript.fileChanges.viewAll')}</span>
+              <Counts stats={total} />
+            </button>
+          ) : (
+            <div className="flex h-[30.5px] items-center justify-between px-[17px]">
+              <span>{t('transcript.fileChanges.total')}</span>
+              <Counts stats={total} />
+            </div>
+          )}
         </div>
       </div>
     </div>

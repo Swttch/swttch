@@ -1088,7 +1088,8 @@
       "undo": "실행 취소",
       "undoHint": "Claude에게 이번 턴의 파일 변경 사항 취소 요청",
       "undoPrompt": "이번 턴에서 바꾼 파일 변경 사항을 모두 되돌려 줘.",
-      "total": "총계"
+      "total": "총계",
+      "viewAll": "모두 보기"
     },
     "tools": {
       "ranCommand": "실행함 명령어",
@@ -1102,6 +1103,7 @@
       "editedFiles_other": "편집함 파일 {{count}}개",
       "createdFile": "생성됨 {{name}}",
       "editedFile": "편집됨 {{name}}",
+      "updatedFile": "업데이트됨 {{name}}",
       "editingFile": "편집 중 {{name}}",
       "creatingFile": "생성 중 {{name}}",
       "failed_other": "{{count}}개 실패",

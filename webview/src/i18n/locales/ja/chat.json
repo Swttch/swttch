@@ -1088,7 +1088,8 @@
       "undo": "元に戻す",
       "undoHint": "このターンのファイル変更を元に戻すよう Claude に依頼する",
       "undoPrompt": "このターンで行ったファイルの変更をすべて元に戻して。",
-      "total": "合計"
+      "total": "合計",
+      "viewAll": "すべて表示"
     },
     "tools": {
       "ranCommand": "コマンドを実行",
@@ -1102,6 +1103,7 @@
       "editedFiles_other": "{{count}}個のファイルを編集",
       "createdFile": "{{name}} を作成",
       "editedFile": "{{name}} を編集",
+      "updatedFile": "{{name}}を更新しました",
       "editingFile": "{{name}}を編集中",
       "creatingFile": "{{name}}を作成中",
       "failed_other": "{{count}}件失敗",
