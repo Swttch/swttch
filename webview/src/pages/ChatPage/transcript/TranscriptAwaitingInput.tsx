@@ -9,7 +9,7 @@ import { ActivityGlyph } from './TranscriptActivity';
 export function TranscriptAwaitingInput() {
   const { t } = useTranslation('chat');
   return (
-    <div className="flex items-center gap-2.5 px-4 py-[17px] text-[0.9375rem]" role="status" data-transcript-awaiting-input>
+    <div className="flex items-center gap-2.5 px-4 py-[1.0625rem] text-[0.9375rem]" role="status" data-transcript-awaiting-input>
       <ActivityGlyph activity="blocked" />
       <span className="rounded-full bg-[#d99a2b]/15 px-3 py-1 text-[#d99a2b]">{t('chatPage.inputNeeded')}</span>
     </div>

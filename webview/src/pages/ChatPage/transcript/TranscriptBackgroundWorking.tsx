@@ -33,7 +33,7 @@ export function TranscriptBackgroundWorking({ hidden }: { hidden: boolean }) {
   if (!showing || started === null) return null;
 
   return (
-    <div className="flex items-center gap-2.5 px-4 py-[17px] text-[0.9375rem] text-[var(--tr-muted)]" role="status" data-transcript-background-working>
+    <div className="flex items-center gap-2.5 px-4 py-[1.0625rem] text-[0.9375rem] text-[var(--tr-muted)]" role="status" data-transcript-background-working>
       <ActivityGlyph />
       <span>{formatElapsed(Math.max(0, Math.floor((now - started) / 1000)))}</span>
     </div>

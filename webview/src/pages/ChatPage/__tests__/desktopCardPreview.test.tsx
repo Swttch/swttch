@@ -25,9 +25,9 @@ describe('desktopCardPreview', () => {
     expect(removed.map((row) => row.textContent)).toEqual(['l1', 'l2']);
     expect(added.map((row) => row.textContent)).toEqual(['L1', 'l2']);
     // "l1" -> "L1" is the change: marked on both sides. The "l2" both sides share stays plain.
-    expect(removed[0].querySelector('span.rounded-\\[3px\\]')).not.toBeNull();
-    expect(removed[1].querySelector('span.rounded-\\[3px\\]')).toBeNull();
-    expect(added[1].querySelector('span.rounded-\\[3px\\]')).toBeNull();
+    expect(removed[0].querySelector('[data-testid=permission-diff-chip]')).not.toBeNull();
+    expect(removed[1].querySelector('[data-testid=permission-diff-chip]')).toBeNull();
+    expect(added[1].querySelector('[data-testid=permission-diff-chip]')).toBeNull();
     expect(screen.queryByTestId('permission-input-rows')).not.toBeInTheDocument();
   });
 

@@ -117,7 +117,7 @@ function SendBubble({ message, sectionKey }: Props) {
     <IfVisible
       extra={imageBlocks.length > 0 || contexts.length > 0 || parsed.replies.length > 0 || parsed.excerpts.length > 0}
     >
-      <div className="group flex flex-col items-end gap-1.5 pt-2 pb-[35.5px] px-4" data-transcript-user>
+      <div className="group flex flex-col items-end gap-1.5 pt-2 pb-[2.2188rem] px-4" data-transcript-user>
         {parsed.excerpts.length > 0 && <ExcerptCards excerpts={parsed.excerpts} />}
 
         {hasBubble && (

@@ -211,7 +211,7 @@ export function TranscriptArea(props: TranscriptAreaProps) {
                 )}
                 {/* Sent while the card holds the turn: right after the latest message, above the calls still running, as in the desktop app. */}
                 {awaitingInput && sectionIndex === sections.length - 1 && <TranscriptHeldMessages />}
-                <div ref={sectionIndex === sections.length - 1 ? lastBodyRef : undefined} data-section-body data-after-send={section.head ? '' : undefined} className={`${section.body.length > 0 ? 'pt-[3px] ' : ''}${sectionIndex < sections.length - 1 ? (section.body.length > 0 ? 'pb-[35.5px]' : 'pb-[13px]') : isStreaming || awaitingInput || backgroundWorking ? 'pb-0' : 'pb-[54px]'}`}>
+                <div ref={sectionIndex === sections.length - 1 ? lastBodyRef : undefined} data-section-body data-after-send={section.head ? '' : undefined} className={`${section.body.length > 0 ? 'pt-[0.1875rem] ' : ''}${sectionIndex < sections.length - 1 ? (section.body.length > 0 ? 'pb-[2.2188rem]' : 'pb-[0.8125rem]') : isStreaming || awaitingInput || backgroundWorking ? 'pb-0' : 'pb-[3.375rem]'}`}>
                   <TranscriptBody body={section.body} mergedMessages={mergedMessages} onRetry={onRetry} turnRunning={isStreaming && sectionIndex === sections.length - 1} sectionKey={section.key} />
                   {/* The turn's wrap-up is drawn here, after its last message, not where its call sits: a recap as text until the closing message begins, then the question and its answers. */}
                   <TranscriptWrapUp body={section.body} next={sections[sectionIndex + 1]?.head ?? null} />

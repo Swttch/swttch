@@ -36,7 +36,7 @@ export function TranscriptStreamingIndicator({
   }
 
   return (
-    <div className={`flex items-center gap-2.5 px-4 py-[17px] text-[0.9375rem] text-[var(--tr-muted)]${afterBubble ? ' -mt-[17.4px]' : ''}`} role="status" data-transcript-streaming>
+    <div className={`flex items-center gap-2.5 px-4 py-[1.0625rem] text-[0.9375rem] text-[var(--tr-muted)]${afterBubble ? ' -mt-[1.0875rem]' : ''}`} role="status" data-transcript-streaming>
       <ActivityGlyph />
       <span>
         {turnOutputTokens > 0 ? (

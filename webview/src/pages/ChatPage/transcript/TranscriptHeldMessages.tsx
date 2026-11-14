@@ -18,11 +18,11 @@ export function TranscriptHeldMessages({ atEnd = false }: { atEnd?: boolean } = 
     // Under a card: 61px above and 41px below. After the card was answered they sit where a sent message sits.
     // (Measured on the desktop app's own screen: 57px from the call's line to the first bubble, 23px from "Send now" to
     // the next bubble, 35px from the last bubble to the working line under them.)
-    <div className={atEnd ? 'mt-[32.3px]' : 'mt-[61px] mb-[41px]'} data-transcript-held>
+    <div className={atEnd ? 'mt-[2.0187rem]' : 'mt-[3.8125rem] mb-[2.5625rem]'} data-transcript-held>
       {heldMessages.map((message, index) => (
         <div
           key={message.id}
-          className={`flex flex-col items-end gap-1.5 pt-2 px-4 ${atEnd ? (index === 0 && heldMessages.length > 1 ? 'pb-[24px]' : 'pb-[25.4px]') : 'pb-[24px]'}`}
+          className={`flex flex-col items-end gap-1.5 pt-2 px-4 ${atEnd ? (index === 0 && heldMessages.length > 1 ? 'pb-[1.5rem]' : 'pb-[1.5875rem]') : 'pb-[1.5rem]'}`}
           data-transcript-held-message
         >
           <div className={USER_BUBBLE_CLASS}>
@@ -34,7 +34,7 @@ export function TranscriptHeldMessages({ atEnd = false }: { atEnd?: boolean } = 
               type="button"
               data-testid="held-message-send-now"
               onClick={() => sendHeldMessage(message.id)}
-              className="mt-[8.7px] ps-1 pe-[10.5px] text-[0.9231rem] text-[var(--tr-muted)] hover:text-text-primary"
+              className="mt-[0.5437rem] ps-1 pe-[0.6562rem] text-[0.9231rem] text-[var(--tr-muted)] hover:text-text-primary"
             >
               {t('chatPage.sendHeldNow')}
             </button>

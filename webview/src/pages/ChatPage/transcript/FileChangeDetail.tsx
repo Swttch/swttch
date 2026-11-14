@@ -66,7 +66,7 @@ function PathLine({ path }: { path: string }) {
   const shown = withHomeAsTilde(path);
   const cut = shown.lastIndexOf('/') + 1;
   return (
-    <div dir="ltr" className="group mb-[12.2px] flex min-w-0 items-center gap-2 text-[0.9rem] text-text-primary">
+    <div dir="ltr" className="group mb-[0.7625rem] flex min-w-0 items-center gap-2 text-[0.9rem] text-text-primary">
       {/* The whole path is in the tooltip: the line itself may have cut the folders out of the middle. */}
       <Tooltip content={path} placement="top">
         <div role="link" tabIndex={0} onClick={() => void openChatFile(path)} className="flex min-w-0 cursor-pointer hover:underline">
@@ -143,7 +143,7 @@ function MarkedText({ marked, chip }: { marked: MarkedLine; chip: string }) {
     <>
       {marked.tokens.map((token, index) =>
         marked.marks[index] ? (
-          <span key={index} className={`rounded-[3px] px-[2px] ${chip}`}>
+          <span key={index} className={`rounded-[0.1875rem] px-[0.125rem] ${chip}`}>
             {token}
           </span>
         ) : (
@@ -160,9 +160,9 @@ function DiffRow({ line, marked, language }: { line: DiffLine; marked: MarkedLin
   const hasChip = marked !== null && marked.marks.some(Boolean);
   return (
     <div className={`flex ${ROW_TINT[line.type]}`}>
-      <span className={`w-[7px] flex-shrink-0 ${ROW_BAR[line.type]}`} />
-      <span className="w-[35.7px] flex-shrink-0 select-none text-end text-text-secondary">{line.newNo ?? line.oldNo}</span>
-      <span className="min-w-0 flex-1 whitespace-pre-wrap break-words ps-[16.8px] pe-3">
+      <span className={`w-[0.4375rem] flex-shrink-0 ${ROW_BAR[line.type]}`} />
+      <span className="w-[2.2313rem] flex-shrink-0 select-none text-end text-text-secondary">{line.newNo ?? line.oldNo}</span>
+      <span className="min-w-0 flex-1 whitespace-pre-wrap break-words ps-[1.05rem] pe-3">
         {hasChip ? (
           <MarkedText marked={marked} chip={CHIP[line.type]} />
         ) : (
@@ -196,12 +196,12 @@ function OneChange({ call }: { call: ToolCall }) {
   const language = languageOf(path);
   // The path and the box sit in a card of their own: 12px in on the sides and above, 8px under (on screen).
   return (
-    <div className="mb-3 mt-1 rounded-[13px] border border-text-primary/[0.05] px-[10.6px] pb-[12.9px] pt-[16.6px]">
+    <div className="mb-3 mt-1 rounded-[0.8125rem] border border-text-primary/[0.05] px-[0.6625rem] pb-[0.8063rem] pt-[1.0375rem]">
       <PathLine path={path} />
       {lines.length > 0 && (
         <div
           dir="ltr"
-          className="max-h-[24rem] overflow-y-auto rounded-[9px] border border-text-primary/[0.04] py-[6.67px] font-mono text-[0.8461rem] leading-[21.1px] text-[var(--tr-text)]"
+          className="max-h-[24rem] overflow-y-auto rounded-[0.5625rem] border border-text-primary/[0.04] py-[0.4169rem] font-mono text-[0.8461rem] leading-[1.3188rem] text-[var(--tr-text)]"
         >
           {lines.map((line, index) => (
             <DiffRow key={index} line={line} marked={marks[index]} language={language} />

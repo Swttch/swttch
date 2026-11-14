@@ -11,7 +11,7 @@ export function PendingSentMessages() {
   return (
     <>
       {sentWhileRunning.map((sent) => (
-        <div key={sent.id} className="flex flex-col items-end gap-1.5 pt-2 pb-[24px] px-4" data-pending-sent-message>
+        <div key={sent.id} className="flex flex-col items-end gap-1.5 pt-2 pb-[1.5rem] px-4" data-pending-sent-message>
           <div className={USER_BUBBLE_CLASS}>
             <div className="text-text-primary/80 text-[1rem] leading-[1.5] whitespace-pre-wrap break-words">{sent.content}</div>
           </div>

@@ -685,7 +685,7 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive }: { call
         type="button"
         aria-expanded={open}
         onClick={() => expandable && setOpen((v) => !v)}
-        className={`flex w-full items-center gap-2.5 ${inBox ? 'px-3' : ''} py-[10px] text-start text-[0.9656rem] transition-colors ${SUMMARY_TEXT} ${running ? 'animate-pulse' : ''}`}
+        className={`flex w-full items-center gap-2.5 ${inBox ? 'px-3' : ''} py-[0.625rem] text-start text-[0.9656rem] transition-colors ${SUMMARY_TEXT} ${running ? 'animate-pulse' : ''}`}
       >
         {live ? (
           <>

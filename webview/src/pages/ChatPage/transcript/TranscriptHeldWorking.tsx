@@ -13,7 +13,7 @@ export function TranscriptHeldWorking({ activity }: { activity: StreamingActivit
   const { t } = useTranslation('chat');
   const { turnOutputTokens } = useChatStreamContext();
   return (
-    <div className="flex items-center gap-2.5 px-4 py-[17px] text-[0.9375rem] text-[var(--tr-muted)]" role="status" data-transcript-held-working>
+    <div className="flex items-center gap-2.5 px-4 py-[1.0625rem] text-[0.9375rem] text-[var(--tr-muted)]" role="status" data-transcript-held-working>
       <ActivityGlyph activity={activity.mark} />
       <span className="min-w-0 truncate transcript-shimmer">
         {turnOutputTokens > 0 ? t('transcript.streaming.tokens', { count: formatTokenCount(turnOutputTokens) }) : t('transcript.streaming.thinking')}

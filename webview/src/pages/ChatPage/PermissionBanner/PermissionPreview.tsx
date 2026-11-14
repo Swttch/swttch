@@ -86,13 +86,13 @@ export function desktopCardPreview(toolName: string, rawInput: unknown): ReactNo
       <div
         dir="ltr"
         data-testid="permission-value"
-        className="flex min-h-[46.7px] items-center rounded-[10px] border border-border-subtle bg-[var(--md-code-block-bg)] px-[16.5px] py-[6.9px] font-mono text-[0.9rem] leading-[1.5] whitespace-pre-wrap break-words text-text-secondary"
+        className="flex min-h-[2.9188rem] items-center rounded-[0.625rem] border border-border-subtle bg-[var(--md-code-block-bg)] px-[1.0312rem] py-[0.4313rem] font-mono text-[0.9rem] leading-[1.5] whitespace-pre-wrap break-words text-text-secondary"
       >
         {main}
       </div>
       {change}
       {rest.length > 0 && (
-        <dl data-testid="permission-input-rows" className="mt-[14px] grid grid-cols-[178px_1fr] gap-y-[6px] text-[0.9rem] leading-[1.5]">
+        <dl data-testid="permission-input-rows" className="mt-[0.875rem] grid grid-cols-[11.125rem_1fr] gap-y-[0.375rem] text-[0.9rem] leading-[1.5]">
           {rest.map(([key, value]) => (
             <div key={key} className="contents">
               <dt className="text-text-secondary">{captionOf(key)}</dt>

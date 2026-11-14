@@ -172,50 +172,50 @@ export function DesktopPermissionCard(props: Props) {
   const question = questionFor(permission, t);
 
   return (
-    <div className="w-full px-4 pb-2 pt-[6px] shrink-0 flex flex-col">
+    <div className="w-full px-4 pb-2 pt-[0.375rem] shrink-0 flex flex-col">
       <div
         data-testid="desktop-permission-card"
         // 535px (482 on screen), a 1px border one faint step lighter than the page (0.05: the 2-row blur of a 1px line hid half of it in the recording), 13px corners.
-        className="w-full max-w-[535px] overflow-hidden rounded-[13px] border border-text-primary/[0.05] flex flex-col"
+        className="w-full max-w-[33.4375rem] overflow-hidden rounded-[0.8125rem] border border-text-primary/[0.05] flex flex-col"
       >
         {/* The heading band: 54px (49 on screen), one step lighter than the page, the text in one weight. */}
-        <div className="flex h-[54px] shrink-0 items-center bg-text-primary/[0.04] px-[19.5px] text-[0.9rem] text-text-primary">
+        <div className="flex h-[3.375rem] shrink-0 items-center bg-text-primary/[0.04] px-[1.2188rem] text-[0.9rem] text-text-primary">
           {question}
         </div>
 
         <div
           className={
-            'flex flex-col px-[18px] pt-[12px] ' +
+            'flex flex-col px-[1.125rem] pt-[0.75rem] ' +
             // The command box is drawn by the shared preview; here it keeps this app's own fill and takes the
             // desktop app's size: 15px by 6.9px inside, the command in 13px.
-            '[&_[data-testid=permission-command]]:rounded-[10px] [&_[data-testid=permission-command]]:px-[15px] ' +
-            '[&_[data-testid=permission-command]]:py-[6.9px] [&_[data-testid=permission-command]]:text-[0.9rem] ' +
+            '[&_[data-testid=permission-command]]:rounded-[0.625rem] [&_[data-testid=permission-command]]:px-[0.9375rem] ' +
+            '[&_[data-testid=permission-command]]:py-[0.4313rem] [&_[data-testid=permission-command]]:text-[0.9rem] ' +
             '[&_[data-testid=permission-command]]:leading-[1.5]'
           }
         >
-          {subtitle && <p className="pb-[10px] text-[0.9rem] leading-[1.5] text-text-secondary">{subtitle}</p>}
+          {subtitle && <p className="pb-[0.625rem] text-[0.9rem] leading-[1.5] text-text-secondary">{subtitle}</p>}
           {preview}
         </div>
 
         {/* 24px under a command's box; 5px more under the value box of a read or a web search (measured on the desktop app). */}
-        <div className={`relative flex items-center justify-end gap-[18px] px-[18px] pb-[18px] ${permission.toolName === 'Read' || permission.toolName === 'WebSearch' ? 'pt-[29.6px]' : permission.toolName === 'Edit' || permission.toolName === 'Write' ? 'pt-[26.7px]' : 'pt-[24px]'}`}>
+        <div className={`relative flex items-center justify-end gap-[1.125rem] px-[1.125rem] pb-[1.125rem] ${permission.toolName === 'Read' || permission.toolName === 'WebSearch' ? 'pt-[1.85rem]' : permission.toolName === 'Edit' || permission.toolName === 'Write' ? 'pt-[1.6687rem]' : 'pt-[1.5rem]'}`}>
           <button
             type="button"
             data-testid="permission-deny"
             onClick={onDeny}
-            className="h-[30.5px] rounded-[9px] bg-text-primary/[0.12] px-[9px] text-[1rem] text-text-primary transition-opacity hover:opacity-80"
+            className="h-[1.9062rem] rounded-[0.5625rem] bg-text-primary/[0.12] px-[0.5625rem] text-[1rem] text-text-primary transition-opacity hover:opacity-80"
           >
             {t('permissionBanner.card.deny')}
           </button>
 
           <Tooltip content={primaryTitle} desktop="large">
-          <div className="relative flex h-[30.5px] items-stretch rounded-[9px] bg-text-primary/[0.92] text-text-inverse">
+          <div className="relative flex h-[1.9062rem] items-stretch rounded-[0.5625rem] bg-text-primary/[0.92] text-text-inverse">
               <button
                 type="button"
                 data-testid="permission-primary"
                 onClick={primaryAction}
-                className={`px-[9px] text-[1rem] transition-colors hover:bg-black/[0.11] ${
-                  menuItems.length > 0 ? 'rounded-s-[9px]' : 'rounded-[9px]'
+                className={`px-[0.5625rem] text-[1rem] transition-colors hover:bg-black/[0.11] ${
+                  menuItems.length > 0 ? 'rounded-s-[9px]' : 'rounded-[0.5625rem]'
                 }`}
               >
                 {primaryLabel}
@@ -265,7 +265,7 @@ export function DesktopPermissionCard(props: Props) {
                   aria-haspopup="menu"
                   aria-expanded={menuOpen}
                   onClick={() => setMenuOpen((open) => !open)}
-                  className="flex items-center rounded-e-[9px] border-s border-black/20 px-[7.8px] transition-colors hover:bg-black/[0.11]"
+                  className="flex items-center rounded-e-[9px] border-s border-black/20 px-[0.4875rem] transition-colors hover:bg-black/[0.11]"
                 >
                   <ChevronDownIcon className="h-4 w-4" />
                 </button>
