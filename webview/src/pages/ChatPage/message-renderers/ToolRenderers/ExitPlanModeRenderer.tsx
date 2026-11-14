@@ -8,6 +8,7 @@ import {useChatStreamContextOrNull} from "@/contexts/ChatStreamContext";
 import {useState} from "react";
 import {ChevronRightIcon} from "@heroicons/react/20/solid";
 import {useTranscriptViewMode} from "../transcriptViewMode";
+import {isUserDeclined} from "./common/toolStatus";
 import {findPlanFileContent} from "./planFromTranscript";
 import {Container, LabelValue, RendererProps, ToolHeader, ToolWrapper} from "./common";
 
@@ -31,6 +32,7 @@ export function ExitPlanModeRenderer(props: RendererProps) {
     const resultBlock = toolResult?.message?.content?.[0];
     const isError = resultBlock?.is_error ?? false;
     const feedbackContent = resultBlock?.content;
+    const declined = isUserDeclined(props.toolResult);
     const statusText = toolResult
         ? (isError ? t('exitPlanMode.stayedInPlanMode') : t('exitPlanMode.approved'))
         : undefined;
@@ -54,7 +56,16 @@ export function ExitPlanModeRenderer(props: RendererProps) {
                     onClick={() => setOpen((value) => !value)}
                     className="flex w-full items-center gap-[0.35rem] py-[0.625rem] text-start text-[0.9656rem] text-text-secondary transition-colors hover:text-text-primary"
                 >
-                    <span className="min-w-0 truncate">{tChat(toolResult ? 'acceptPlan.proposed' : 'acceptPlan.proposing', { title })}</span>
+                    {isError && !declined ? (
+                        <span className="min-w-0 truncate">
+                            {tChat('acceptPlan.proposing', { title: '' }).trim()} <span className="text-[rgb(226,88,110)]">{tChat('acceptPlan.failed')}</span>
+                        </span>
+                    ) : (
+                        <span className="min-w-0 truncate">
+                            {tChat(toolResult ? 'acceptPlan.proposed' : 'acceptPlan.proposing', { title })}
+                            {isError && declined ? ` ${tChat('acceptPlan.notApproved')}` : ''}
+                        </span>
+                    )}
                     <ChevronRightIcon className={`h-4 w-4 shrink-0 transition-transform ${open ? 'rotate-90' : ''}`} />
                 </button>
                 {open && plan && (

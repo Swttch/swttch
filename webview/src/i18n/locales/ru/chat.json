@@ -279,6 +279,10 @@
     }
   },
   "acceptPlan": {
+    "started": "Планирование начато",
+    "starting": "Составляется план",
+    "notApproved": "Не утверждено",
+    "failed": "Ошибка",
     "proposing": "Предлагается план {{title}}",
     "proposed": "План предложен {{title}}",
     "card": {

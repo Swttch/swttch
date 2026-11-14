@@ -279,6 +279,10 @@
     }
   },
   "acceptPlan": {
+    "started": "已開始規劃",
+    "starting": "正在制定計畫",
+    "notApproved": "未獲核准",
+    "failed": "失敗",
     "proposing": "正在提出計畫 {{title}}",
     "proposed": "已提出計畫 {{title}}",
     "card": {

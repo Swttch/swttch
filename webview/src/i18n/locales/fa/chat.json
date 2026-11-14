@@ -279,6 +279,10 @@
     }
   },
   "acceptPlan": {
+    "started": "برنامه‌ریزی آغاز شد",
+    "starting": "در حال تهیه طرح",
+    "notApproved": "تأیید نشد",
+    "failed": "ناموفق",
     "proposing": "در حال پیشنهاد طرح {{title}}",
     "proposed": "طرح پیشنهاد شد {{title}}",
     "card": {

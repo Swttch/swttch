@@ -279,6 +279,10 @@
     }
   },
   "acceptPlan": {
+    "started": "계획 시작됨",
+    "starting": "계획 수립 중",
+    "notApproved": "승인되지 않음",
+    "failed": "실패",
     "proposing": "계획 제안 중 {{title}}",
     "proposed": "계획 제안됨 {{title}}",
     "card": {

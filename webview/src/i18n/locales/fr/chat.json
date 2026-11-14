@@ -279,6 +279,10 @@
     }
   },
   "acceptPlan": {
+    "started": "Planification démarrée",
+    "starting": "Élaboration d’un plan",
+    "notApproved": "Non approuvé",
+    "failed": "Échec",
     "proposing": "Proposition du plan {{title}}",
     "proposed": "Plan proposé {{title}}",
     "card": {

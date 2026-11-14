@@ -279,6 +279,10 @@
     }
   },
   "acceptPlan": {
+    "started": "計画を開始しました",
+    "starting": "計画を立てています",
+    "notApproved": "未承認",
+    "failed": "失敗",
     "proposing": "計画を提案中 {{title}}",
     "proposed": "計画を提案しました {{title}}",
     "card": {

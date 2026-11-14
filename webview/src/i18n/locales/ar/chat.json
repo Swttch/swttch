@@ -279,6 +279,10 @@
     }
   },
   "acceptPlan": {
+    "started": "بدأ التخطيط",
+    "starting": "جارٍ وضع خطة",
+    "notApproved": "لم تتم الموافقة",
+    "failed": "فشل",
     "proposing": "جارٍ اقتراح الخطة {{title}}",
     "proposed": "تم اقتراح الخطة {{title}}",
     "card": {
