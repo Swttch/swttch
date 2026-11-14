@@ -1088,9 +1088,9 @@
       "title_other": "已更改 {{count}} 个文件",
       "undo": "撤销",
       "undoHint": "请 Claude 撤销本轮的文件更改",
-      "undoPrompt": "撤销你在这一轮中做的所有文件更改。",
       "total": "总计",
-      "viewAll": "查看全部"
+      "viewAll": "查看全部",
+      "viewLess": "收起"
     },
     "tools": {
       "ranCommand": "运行了命令",

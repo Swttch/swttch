@@ -54,10 +54,18 @@ function Counts({ stats }: { stats: LineStats }) {
 
 /**
  * "Undo": asks Claude to take back what the turn changed, as the desktop app's does (its hover line says so: "Ask
- * Claude to undo this turn's file changes"). It sends a message; it does not restore the files by itself. It gets a
- * pill behind it while the pointer is on it. The words of the message are ours: the desktop app's are not in its files.
+ * Claude to undo this turn's file changes"). It sends a message with the files in it; it does not restore anything by
+ * itself. It gets a pill behind it while the pointer is on it.
  */
-function UndoButton() {
+function undoPromptOf(paths: string[]): string {
+  // The desktop app sends this sentence, in English whatever the interface language is, with a line for each file.
+  const list = paths.map((path) => `- ${path}`).join('\n');
+  return paths.length === 1
+    ? `Undo the changes you made to this file in your last turn and restore it to its previous state:\n${list}`
+    : `Undo the changes you made to these ${paths.length} files in your last turn and restore them to their previous state:\n${list}`;
+}
+
+function UndoButton({ paths }: { paths: string[] }) {
   const { t } = useTranslation('chat');
   const stream = useChatStreamContextOrNull();
   const inputMode = useSessionContextOrNull()?.inputMode;
@@ -67,7 +75,7 @@ function UndoButton() {
     <Tooltip content={t('transcript.fileChanges.undoHint')} desktop="large" maxWidth="10.5rem">
       <button
         type="button"
-        onClick={() => send(t('transcript.fileChanges.undoPrompt'), inputMode)}
+        onClick={() => send(undoPromptOf(paths), inputMode)}
         className="-my-1 rounded-[0.4375rem] px-[0.55rem] py-[0.2062rem] text-text-secondary transition-colors hover:bg-text-primary/[0.1] hover:text-text-primary"
       >
         {t('transcript.fileChanges.undo')}
@@ -97,7 +105,7 @@ export function TranscriptFileChanges({ body, hidden }: { body: LoadedMessageDto
         <div className={`flex h-[2.775rem] items-center gap-[0.625rem] px-[1.0625rem] text-[0.9656rem] text-text-primary transition-colors hover:bg-text-primary/[0.065] ${border}`}>
           <DocumentIcon className="h-4 w-4 flex-shrink-0 text-text-secondary" />
           <span className="min-w-0 flex-1 truncate">{baseName(file.path)}</span>
-          <UndoButton />
+          <UndoButton paths={[file.path]} />
           <Counts stats={file.stats} />
         </div>
       </div>
@@ -112,27 +120,27 @@ export function TranscriptFileChanges({ body, hidden }: { body: LoadedMessageDto
       <div className={`overflow-hidden text-[0.9656rem] text-text-primary ${border}`}>
         <div className="flex h-[2.625rem] items-center justify-between border-b border-text-primary/[0.07] px-[1.0625rem]">
           <span>{t('transcript.fileChanges.title', { count: files.length })}</span>
-          <UndoButton />
+          <UndoButton paths={files.map((file) => file.path)} />
         </div>
-        <div className="flex flex-col py-[0.3rem]">
+        <div className="flex flex-col px-[0.34rem] py-[0.3rem]">
           {(files.length > SHOWN_FILES && !all ? files.slice(0, SHOWN_FILES) : files).map((file) => (
-            <div key={file.path} className="flex h-[1.9062rem] items-center gap-[0.625rem] px-[1.0625rem]">
+            <div key={file.path} className="flex h-[1.9062rem] items-center gap-[0.625rem] rounded-[0.4rem] px-[0.72rem] transition-colors hover:bg-text-primary/[0.065]">
               <DocumentIcon className="h-4 w-4 flex-shrink-0 text-text-secondary" />
               <span className="min-w-0 flex-1 truncate">{baseName(file.path)}</span>
               <Counts stats={file.stats} />
             </div>
           ))}
-          {files.length > SHOWN_FILES && !all ? (
+          {files.length > SHOWN_FILES ? (
             <button
               type="button"
-              onClick={() => setAll(true)}
-              className="flex h-[1.9062rem] items-center justify-between px-[1.0625rem] text-start transition-colors hover:text-text-secondary"
+              onClick={() => setAll((open) => !open)}
+              className="flex h-[1.9062rem] items-center justify-between rounded-[0.4rem] px-[0.72rem] text-start transition-colors hover:bg-text-primary/[0.065]"
             >
-              <span>{t('transcript.fileChanges.viewAll')}</span>
+              <span>{t(all ? 'transcript.fileChanges.viewLess' : 'transcript.fileChanges.viewAll')}</span>
               <Counts stats={total} />
             </button>
           ) : (
-            <div className="flex h-[1.9062rem] items-center justify-between px-[1.0625rem]">
+            <div className="flex h-[1.9062rem] items-center justify-between rounded-[0.4rem] px-[0.72rem]">
               <span>{t('transcript.fileChanges.total')}</span>
               <Counts stats={total} />
             </div>

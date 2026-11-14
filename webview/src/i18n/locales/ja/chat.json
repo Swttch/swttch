@@ -1088,9 +1088,9 @@
       "title_other": "{{count}} 個のファイルが変更されました",
       "undo": "元に戻す",
       "undoHint": "このターンのファイル変更を元に戻すよう Claude に依頼する",
-      "undoPrompt": "このターンで行ったファイルの変更をすべて元に戻して。",
       "total": "合計",
-      "viewAll": "すべて表示"
+      "viewAll": "すべて表示",
+      "viewLess": "表示を減らす"
     },
     "tools": {
       "ranCommand": "コマンドを実行",

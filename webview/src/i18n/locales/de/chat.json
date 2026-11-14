@@ -1098,9 +1098,9 @@
       "title_other": "{{count}} Dateien geändert",
       "undo": "Rückgängig",
       "undoHint": "Claude bitten, die Dateiänderungen dieses Schritts rückgängig zu machen",
-      "undoPrompt": "Mach alle Dateiänderungen aus diesem Schritt rückgängig.",
       "total": "Gesamt",
-      "viewAll": "Alle anzeigen"
+      "viewAll": "Alle anzeigen",
+      "viewLess": "Weniger anzeigen"
     },
     "tools": {
       "ranCommand": "Befehl ausgeführt",

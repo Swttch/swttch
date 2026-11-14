@@ -1098,9 +1098,9 @@
       "title_other": "{{count}} arquivos alterados",
       "undo": "Desfazer",
       "undoHint": "Pedir ao Claude para desfazer as alterações de arquivo desta rodada",
-      "undoPrompt": "Desfaça todas as alterações de arquivos que você fez neste turno.",
       "total": "Total",
-      "viewAll": "Ver todos"
+      "viewAll": "Ver todos",
+      "viewLess": "Mostrar menos"
     },
     "tools": {
       "ranCommand": "Comando executado",
