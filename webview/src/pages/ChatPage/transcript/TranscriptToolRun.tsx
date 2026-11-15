@@ -660,7 +660,7 @@ export function useRunningAgentLive(calls: ToolCall[]): { label: string; elapsed
 }
 
 /** One call: a line that opens to its details. */
-function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive }: { calls: ToolCall[]; defaultOpen: boolean; inBox: boolean; live?: { label: string; elapsed: string; mark: WorkingActivity } }) {
+function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive, liveToolUseId }: { calls: ToolCall[]; defaultOpen: boolean; inBox: boolean; live?: { label: string; elapsed: string; mark: WorkingActivity }; liveToolUseId?: string }) {
   const { t } = useTranslation('chat');
   const call = calls[0];
   const runningAgentLive = useRunningAgentLive(calls);
@@ -669,6 +669,9 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive }: { call
   // A row already drawn follows the view it is drawn in: Verbose opens it, another view shuts it again.
   useEffect(() => setOpen(defaultOpen), [defaultOpen]);
   const running = !call.toolUse.tool_result && (call.message.isStreaming ?? false);
+  // The call the turn is waiting on, drawn as a line inside an opened run: the light moves across its words, as it
+  // does on the line over the run, so opening the run does not make the work look idle.
+  const waitedOn = liveToolUseId !== undefined && calls.some((c) => c.toolUse.id === liveToolUseId);
   const label = rowLabel(call, t);
   const path = pathOf(call);
   const workflowState = useOptionalWorkflowState();
@@ -685,7 +688,7 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive }: { call
         type="button"
         aria-expanded={open}
         onClick={() => expandable && setOpen((v) => !v)}
-        className={`flex w-full items-center gap-2.5 ${inBox ? 'px-3' : ''} py-[0.625rem] text-start text-[0.9656rem] transition-colors ${SUMMARY_TEXT} ${running ? 'animate-pulse' : ''}`}
+        className={`flex w-full items-center gap-2.5 ${inBox ? 'px-3' : ''} py-[0.625rem] text-start text-[0.9656rem] transition-colors ${SUMMARY_TEXT} ${running && !waitedOn ? 'animate-pulse' : ''}`}
       >
         {live ? (
           <>
@@ -694,7 +697,7 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive }: { call
             {live.elapsed && <span className="flex-shrink-0">{live.elapsed}</span>}
           </>
         ) : (
-        <span className={label.fileName ? 'flex min-w-0 items-baseline whitespace-nowrap' : 'min-w-0 truncate'}>
+        <span className={`${label.fileName ? 'flex min-w-0 items-baseline whitespace-nowrap' : 'min-w-0 truncate'}${waitedOn ? ' transcript-shimmer' : ''}`}>
           <span className={label.fileName ? 'me-2 flex-shrink-0' : undefined}>{label.before}</span>
           {label.fileName && (
             <span
@@ -822,7 +825,7 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
       {open && (
         <div className={`mt-3 rounded-lg border ${BOX_BORDER} divide-y divide-border-default/70 overflow-hidden`}>
           {groupIntoRows(calls).map((row) => (
-            <TranscriptToolRow key={row[0].toolUse.id} calls={row} defaultOpen={verbose} inBox />
+            <TranscriptToolRow key={row[0].toolUse.id} calls={row} defaultOpen={verbose} inBox liveToolUseId={active ? live?.toolUseId : undefined} />
           ))}
         </div>
       )}
