@@ -93,6 +93,15 @@ export interface UseChatStreamOptions {
   onStreamStart?: (messageId: string) => void;
   /** 스트림 종료 시 콜백 */
   onStreamEnd?: (messageId: string) => void;
+  /**
+   * Hand over the messages the user sent while this turn was running, once the CLI has taken them up (#693).
+   *
+   * The CLI reads what is waiting on its input at the next tool-result boundary, not at the end of the turn,
+   * and answers it from there. The stream carries no event for that read, so the first main-thread
+   * `tool_result` after the send is the moment: the bubble belongs right after it, and what Claude writes
+   * next belongs below it — the place a reload draws it. Returns the messages (and forgets them), or nothing.
+   */
+  takeSentWhileRunning?: () => Array<{ content: string; context?: Context[]; attachments?: Attachment[] }>;
   /** 에러 발생 시 콜백 */
   onError?: (error: Error) => void;
   /** 시스템 메시지 수신 시 콜백 */
@@ -166,7 +175,7 @@ export interface UseChatStreamReturn {
 
 
 export function useChatStream(options: UseChatStreamOptions): UseChatStreamReturn {
-  const { bridge, onStreamStart, onStreamEnd, onError, onSystemMessage, onToolUseStart, onControlRequestResult } = options;
+  const { bridge, onStreamStart, onStreamEnd, onError, onSystemMessage, onToolUseStart, onControlRequestResult, takeSentWhileRunning } = options;
 
   const [messages, setMessages] = useState<LoadedMessageDto[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -235,6 +244,8 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
   const controlRequestPendingRef = useRef(false);
   onStreamStartRef.current = onStreamStart;
   onStreamEndRef.current = onStreamEnd;
+  const takeSentWhileRunningRef = useRef(takeSentWhileRunning);
+  takeSentWhileRunningRef.current = takeSentWhileRunning;
   onErrorRef.current = onError;
   onSystemMessageRef.current = onSystemMessage;
   onControlRequestResultRef.current = onControlRequestResult;
@@ -1456,6 +1467,19 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
           // a row of their own and must not split the bubble.
           if (rendersAsOwnBubble(userMessage)) {
             sealStreamingAssistant();
+          }
+
+          // The CLI has just finished a tool call, which is where it reads what the user sent while the
+          // turn ran (#693). Put those messages in now, under the call that was running, and close off the
+          // open assistant message so the answer to them starts below the bubble instead of above it.
+          const readsQueuedInput = Array.isArray(msgContent)
+            && (msgContent as Array<Record<string, unknown>>).some(block => block.type === 'tool_result');
+          if (readsQueuedInput) {
+            const taken = takeSentWhileRunningRef.current?.() ?? [];
+            if (taken.length > 0) {
+              sealStreamingAssistant();
+              taken.forEach(sent => appendMessage(buildUserMessage(sent.content, sent.context, sent.attachments), true));
+            }
           }
         }
         return;
