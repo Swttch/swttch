@@ -141,6 +141,18 @@ function TestChatComponent() {
           .map(m => (typeof m.message?.content === 'string' ? m.message.content : ''))
           .join('|')}
       </div>
+      <div data-testid="thinking-texts">
+        {ctx.messages
+          .flatMap(m => (m.type === 'assistant' && Array.isArray(m.message?.content) ? m.message.content : []))
+          .filter((b: any) => b.type === 'thinking' && b.thinking)
+          .map((b: any) => b.thinking)
+          .join('|')}
+      </div>
+      <div data-testid="order">
+        {ctx.messages
+          .map(m => (m.type === 'user' ? (typeof m.message?.content === 'string' ? `user:${m.message.content}` : 'tool_result') : m.type))
+          .join('|')}
+      </div>
       <button data-testid="release-held" onClick={() => ctx.releaseHeldMessages()}>
         Release held
       </button>
@@ -302,6 +314,95 @@ describe('queued follow-up message integration', () => {
     await waitFor(() => expect(screen.getByTestId('is-streaming')).toHaveTextContent('false'));
     await waitFor(() => expect(screen.getByTestId('user-texts')).toHaveTextContent('sent mid-turn'));
     expect(screen.getByTestId('sent-pending')).toHaveTextContent('');
+  });
+
+  // #693: the CLI reads what was sent mid-turn right after a tool call finishes and answers it from there, so the bubble
+  // goes right after that tool result, and what Claude writes next goes below it. Waiting for the end of the turn put
+  // it under the whole answer; a reload put it after the call, and the two screens disagreed.
+  it('puts a message sent mid-turn right after the next finished tool call, with the reply below it', async () => {
+    composerFollowUpBehavior = null;
+    render(<TestWrapper><TestChatComponent /></TestWrapper>);
+    await startStreaming();
+
+    await act(async () => {
+      fireEvent.change(screen.getByTestId('input'), { target: { value: 'sent mid-turn' } });
+      fireEvent.click(screen.getByTestId('submit'));
+    });
+    expect(screen.getByTestId('sent-pending')).toHaveTextContent('sent mid-turn');
+
+    await act(async () => {
+      emitBridgeEvent(MessageType.CLI_EVENT, {
+        type: 'user',
+        uuid: 'tool-result-1',
+        timestamp: new Date().toISOString(),
+        message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_1', content: 'ok' }] },
+      });
+    });
+
+    // The turn is still running, and the bubble is already in the chat, under the finished call.
+    expect(screen.getByTestId('is-streaming')).toHaveTextContent('true');
+    expect(screen.getByTestId('sent-pending')).toHaveTextContent('');
+    expect(screen.getByTestId('order')).toHaveTextContent('assistant|tool_result|user:sent mid-turn');
+
+    await act(async () => {
+      emitBridgeEvent(MessageType.CLI_EVENT, { type: 'stream_event', event: { type: 'message_start', message: { id: 'msg-2' } } });
+      emitBridgeEvent(MessageType.CLI_EVENT, {
+        type: 'stream_event',
+        event: { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } },
+      });
+      emitBridgeEvent(MessageType.CLI_EVENT, {
+        type: 'stream_event',
+        event: { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'the answer' } },
+      });
+    });
+
+    // What Claude writes after reading it starts a new bubble below, never inside the one above.
+    await waitFor(() => {
+      expect(screen.getByTestId('order')).toHaveTextContent('assistant|tool_result|user:sent mid-turn|assistant');
+    });
+  });
+
+  // The reply the CLI writes after reading the message may open with a thinking summary: an empty thinking block, then
+  // one with the text, then the tool call, each arriving as its own `assistant` entry of one response. The summary
+  // must still be in the chat once the bubble has closed off the message above it (#693).
+  it('keeps the thinking summary of the reply that follows a mid-turn message', async () => {
+    composerFollowUpBehavior = null;
+    render(<TestWrapper><TestChatComponent /></TestWrapper>);
+    await startStreaming();
+
+    await act(async () => {
+      fireEvent.change(screen.getByTestId('input'), { target: { value: 'sent mid-turn' } });
+      fireEvent.click(screen.getByTestId('submit'));
+    });
+    await act(async () => {
+      emitBridgeEvent(MessageType.CLI_EVENT, {
+        type: 'user',
+        uuid: 'tool-result-1',
+        timestamp: new Date().toISOString(),
+        message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_1', content: 'ok' }] },
+      });
+    });
+
+    const stream = (event: Record<string, unknown>) => emitBridgeEvent(MessageType.CLI_EVENT, { type: 'stream_event', event });
+    const assistant = (block: Record<string, unknown>) => emitBridgeEvent(MessageType.CLI_EVENT, {
+      type: 'assistant',
+      uuid: `a-${Math.random()}`,
+      timestamp: new Date().toISOString(),
+      message: { id: 'msg-2', role: 'assistant', content: [block] },
+    });
+    await act(async () => { stream({ type: 'message_start', message: { id: 'msg-2' } }); });
+    await act(async () => { stream({ type: 'content_block_start', index: 0, content_block: { type: 'thinking', thinking: '' } }); });
+    await act(async () => { assistant({ type: 'thinking', thinking: '' }); });
+    await act(async () => { stream({ type: 'content_block_stop', index: 0 }); });
+    await act(async () => { stream({ type: 'content_block_start', index: 1, content_block: { type: 'thinking', thinking: '' } }); });
+    await act(async () => { stream({ type: 'content_block_delta', index: 1, delta: { type: 'thinking_delta', thinking: 'summary of the plan' } }); });
+    await act(async () => { assistant({ type: 'thinking', thinking: 'summary of the plan' }); });
+    await act(async () => { stream({ type: 'content_block_stop', index: 1 }); });
+    await act(async () => { stream({ type: 'content_block_start', index: 2, content_block: { type: 'tool_use', id: 'toolu_2', name: 'Bash', input: {} } }); });
+    await act(async () => { assistant({ type: 'tool_use', id: 'toolu_2', name: 'Bash', input: { command: 'ls' } }); });
+
+    await waitFor(() => expect(screen.getByTestId('thinking-texts')).toHaveTextContent('summary of the plan'));
+    expect(screen.getByTestId('order')).toHaveTextContent('assistant|tool_result|user:sent mid-turn|assistant');
   });
 
   // The setting's description promises a key that does the opposite for one

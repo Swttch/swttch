@@ -309,6 +309,15 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
       console.log('[ChatStreamContext] Stream ended:', messageId);
       session.setSessionState(SessionState.Idle);
     },
+    // The CLI reads what was sent mid-turn right after a tool call finishes, so that is where its bubble goes (#693).
+    // Drawn below the chat until then, and from the turn's end if no tool call ever finishes.
+    takeSentWhileRunning: () => {
+      const pending = sentWhileRunningRef.current;
+      if (pending.length === 0) return [];
+      sentWhileRunningRef.current = [];
+      setSentWhileRunning([]);
+      return pending;
+    },
     onError: (error: Error) => {
       console.error('[ChatStreamContext] Stream error:', error);
       session.setSessionState(SessionState.Error);
@@ -672,9 +681,10 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
       }
 
       // Add to local chat state (항상 — UI에는 즉시 표시).
-      // Sent while a turn is running, it waits after what that turn has written and enters the chat when the
-      // turn ends: the CLI answers it after the turn, so a bubble put in now would stand above the answer to
-      // the message sent before it (#673).
+      // Sent while a turn is running, it waits after what that turn has written until the CLI takes it up: the
+      // CLI reads it right after the tool call that is running finishes (takeSentWhileRunning, #693), or answers
+      // it after the turn when no call finishes before then, which is when it enters the chat instead. A bubble
+      // put in now would stand above the answer to the message sent before it (#673).
       if (skipEcho) {
         // Drawn by the held list until the call has finished; entered into the chat then.
       } else if (inChatNow && isStreamingRef.current && !isNewSession) {
@@ -682,7 +692,9 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
         // it stands here, above whatever the turn writes next, without beginning a turn of its own.
         appendSentMessage(content, context, attachments);
       } else if (isStreamingRef.current && !isNewSession) {
-        setSentWhileRunning((all) => [...all, { id: crypto.randomUUID(), content, context, attachments }]);
+        // The ref moves with the state, not after the next render: a tool call can finish before this one.
+        sentWhileRunningRef.current = [...sentWhileRunningRef.current, { id: crypto.randomUUID(), content, context, attachments }];
+        setSentWhileRunning(sentWhileRunningRef.current);
       } else {
         addUserMessage(content, context, attachments);
       }
