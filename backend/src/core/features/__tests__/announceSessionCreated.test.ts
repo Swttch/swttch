@@ -1,10 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../getSessionEntry', () => ({ getSessionEntry: vi.fn() }));
 
 import { announceSessionCreated } from '../announceSessionCreated';
-import { getSessionEntry } from '../getSessionEntry';
 import { nextSessionEventTs } from '../sessionsUpdated';
+import { getSessionEntry } from '../getSessionEntry';
 import { MessageType } from '../../../shared';
 import type { ConnectionManager } from '../../../ws/connection-manager';
 
@@ -64,13 +64,49 @@ describe('announceSessionCreated', () => {
     expect(broadcastToListsHolding.mock.calls[0][3]).toBe('conn-1');
   });
 
-  it('says nothing for a session the lists do not show', async () => {
-    mockEntry.mockResolvedValue(null);
+  describe('a transcript that has not held a conversation yet', () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
 
-    await announceSessionCreated(connections, 's1', '/repo');
+    it('is read again until it does, and handed over as soon as it does', async () => {
+      mockEntry.mockResolvedValueOnce(null).mockResolvedValueOnce(null).mockResolvedValueOnce(row as never);
 
-    expect(broadcastToListsHolding).not.toHaveBeenCalled();
-    expect(broadcastToAll).not.toHaveBeenCalled();
+      const done = announceSessionCreated(connections, 's1', '/repo');
+      await vi.advanceTimersByTimeAsync(2_000);
+      await done;
+
+      expect(mockEntry).toHaveBeenCalledTimes(3);
+      expect(broadcastToListsHolding).toHaveBeenCalledTimes(1);
+      expect(broadcastToListsHolding.mock.calls[0][1]).toMatchObject({ action: 'create', session: row });
+    });
+
+    it('is stamped with when the read that found the row began, not the first one', async () => {
+      let first = 0;
+      mockEntry.mockImplementationOnce(async () => {
+        first = nextSessionEventTs();
+        return null;
+      });
+      mockEntry.mockResolvedValueOnce(row as never);
+
+      const done = announceSessionCreated(connections, 's1', '/repo');
+      await vi.advanceTimersByTimeAsync(2_000);
+      await done;
+
+      expect((broadcastToListsHolding.mock.calls[0][1] as { ts: number }).ts).toBeGreaterThan(first);
+    });
+
+    it('is given up on after a while, so a session the lists never show is not read for ever', async () => {
+      mockEntry.mockResolvedValue(null);
+
+      const done = announceSessionCreated(connections, 's1', '/repo');
+      await vi.advanceTimersByTimeAsync(60_000);
+      await done;
+
+      expect(broadcastToListsHolding).not.toHaveBeenCalled();
+      expect(broadcastToAll).not.toHaveBeenCalled();
+      expect(mockEntry.mock.calls.length).toBeGreaterThan(3);
+      expect(mockEntry.mock.calls.length).toBeLessThan(40);
+    });
   });
 
   it('asks every screen to read its list when the row cannot be read', async () => {
