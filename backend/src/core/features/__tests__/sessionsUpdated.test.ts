@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { announceSessionsUpdated, nextSessionEventTs, resetSessionEventClock } from '../sessionsUpdated';
+import { announceSessionsUpdated, nextSessionEventTs, resetSessionEventClock, sessionNewsCount } from '../sessionsUpdated';
 import { MessageType } from '../../../shared';
 import type { ConnectionManager } from '../../../ws/connection-manager';
 
@@ -32,6 +32,29 @@ describe('nextSessionEventTs', () => {
     expect(nextSessionEventTs()).toBe(5_000);
     vi.setSystemTime(1_000);
     expect(nextSessionEventTs()).toBe(5_001);
+  });
+});
+
+describe('sessionNewsCount', () => {
+  beforeEach(() => resetSessionEventClock());
+
+  it('rises with each piece of news announced', () => {
+    const connections = { broadcastToAll: vi.fn() } as unknown as ConnectionManager;
+    const before = sessionNewsCount();
+
+    announceSessionsUpdated(connections, { action: 'refresh' });
+    announceSessionsUpdated(connections, { action: 'update', session: { sessionId: 's1' } });
+
+    expect(sessionNewsCount()).toBe(before + 2);
+  });
+
+  it('does not rise when a number is only taken for a read', () => {
+    const before = sessionNewsCount();
+
+    nextSessionEventTs();
+    nextSessionEventTs();
+
+    expect(sessionNewsCount()).toBe(before);
   });
 });
 

@@ -13,26 +13,33 @@
  * what the request was sent to find out about (a session archived a moment ago).
  * The next read starts after the request arrived, so it cannot be old.
  *
+ * [versionOf], when given, says whether anything that the answer depends on changed: a number that rises with each
+ * change. A request that comes while a read runs shares that read, instead of waiting for the next one, when the
+ * number is what it was when that read began, because the read then cannot have missed anything.
+ *
  * Reads are told apart by [key]; reads of different keys never wait on each other.
  */
 
 interface Slot {
   /** The read that is running. */
   running: Promise<unknown>;
+  /** What [versionOf] said when [running] began, to tell whether anything it could have missed was said since. */
+  version: number | undefined;
   /** The read that starts when [running] ends, shared by every request that came while it ran. */
   queued: Promise<unknown> | null;
 }
 
 const slots = new Map<string, Slot>();
 
-function start<T>(key: string, read: () => Promise<T>): Promise<T> {
+function start<T>(key: string, read: () => Promise<T>, versionOf?: () => number): Promise<T> {
   let running: Promise<T>;
   try {
     running = read();
   } catch (err) {
     running = Promise.reject(err);
   }
-  const slot: Slot = { running, queued: null };
+  // Taken after the read was called, so what the read does as it begins is not counted as a change.
+  const slot: Slot = { running, version: versionOf?.(), queued: null };
   slots.set(key, slot);
   const finished = () => {
     // Left in place when a read is waiting behind it: that read replaces it when it starts.
@@ -44,11 +51,16 @@ function start<T>(key: string, read: () => Promise<T>): Promise<T> {
 
 const ignore = () => undefined;
 
-export function coalesceReads<T>(key: string, read: () => Promise<T>): Promise<T> {
+export function coalesceReads<T>(key: string, read: () => Promise<T>, versionOf?: () => number): Promise<T> {
   const slot = slots.get(key);
-  if (!slot) return start(key, read);
+  if (!slot) return start(key, read, versionOf);
+  // A read that began before this request is still right for it when nothing it could have missed was said
+  // since it began: the request shares that read instead of waiting for the one behind it.
+  if (slot.queued === null && versionOf && slot.version !== undefined && slot.version === versionOf()) {
+    return slot.running as Promise<T>;
+  }
   if (slot.queued === null) {
-    slot.queued = slot.running.then(ignore, ignore).then(() => start(key, read));
+    slot.queued = slot.running.then(ignore, ignore).then(() => start(key, read, versionOf));
   }
   return slot.queued as Promise<T>;
 }

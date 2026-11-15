@@ -22,9 +22,21 @@ export function nextSessionEventTs(): number {
   return lastTs;
 }
 
-/** Forget the last number given. For tests. */
+/**
+ * How many pieces of news were announced, a number that rises with each. A list read that began at one value
+ * of it has missed nothing the screens were told since while the value is still the same, which is what lets a
+ * request share a read that is already running instead of waiting for the next one.
+ */
+let newsCount = 0;
+
+export function sessionNewsCount(): number {
+  return newsCount;
+}
+
+/** Forget the last number given and the news counted. For tests. */
 export function resetSessionEventClock(): void {
   lastTs = 0;
+  newsCount = 0;
 }
 
 /**
@@ -67,6 +79,7 @@ export function announceSessionsUpdated(
   body: SessionsUpdatedBody,
   audience: SessionsUpdatedAudience = {},
 ): number {
+  newsCount++;
   const ts = audience.ts ?? nextSessionEventTs();
   const payload = { ...body, ts };
   const dirs = (audience.sessionDirs ?? []).filter((dir) => dir !== '');

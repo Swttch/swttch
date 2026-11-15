@@ -4,7 +4,7 @@ import type { IPCMessage } from '../types';
 import { getSessionsList } from '../features/getSessionsList';
 import { getNestedSessionsList } from '../features/getNestedSessionsList';
 import { coalesceReads } from '../features/coalesceReads';
-import { nextSessionEventTs } from '../features/sessionsUpdated';
+import { nextSessionEventTs, sessionNewsCount } from '../features/sessionsUpdated';
 import { isWslUncPath } from '../wsl-path';
 import { MessageType } from '../../shared';
 
@@ -71,11 +71,17 @@ export async function getSessionsHandler(
   const key = JSON.stringify([workingDir, includeNested, offset ?? null, limit ?? null]);
   // The answer says when its read began (`ts`): everything the session news said before that is already
   // in it, and what the news says after it is not, which is how a screen puts the two together.
-  const { page, ts } = await coalesceReads(key, async () => {
-    const ts = nextSessionEventTs();
-    const page = await (includeNested ? getNestedSessionsList(workingDir, options) : getSessionsList(workingDir, options));
-    return { page, ts };
-  });
+  // A screen asking while a read runs shares it when nothing was announced since it began (it cannot have
+  // missed anything); otherwise it gets the read after it.
+  const { page, ts } = await coalesceReads(
+    key,
+    async () => {
+      const ts = nextSessionEventTs();
+      const page = await (includeNested ? getNestedSessionsList(workingDir, options) : getSessionsList(workingDir, options));
+      return { page, ts };
+    },
+    sessionNewsCount,
+  );
 
   console.error(
     '[getSessions]',

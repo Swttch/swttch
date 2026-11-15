@@ -132,4 +132,72 @@ describe('coalesceReads', () => {
     await expect(b).rejects.toThrow('disk');
     await expect(coalesceReads('a', read)).resolves.toBe('fine');
   });
+
+  /**
+   * A read that began before a request arrived is still right for it if nothing that the read could have
+   * missed was said since it began. What a read can miss is what the backend announces, so the backend gives a
+   * number that rises with each announcement, and a request joins the running read while the number is as it was
+   * when that read began.
+   */
+  describe('when it is told what changes the answer', () => {
+    it('lets a request that comes while a read runs share that read when nothing changed since it began', async () => {
+      const gate = deferred<string>();
+      const read = vi.fn().mockReturnValueOnce(gate.promise);
+      const version = () => 7;
+
+      const a = coalesceReads('a', read, version);
+      const b = coalesceReads('a', read, version);
+      const c = coalesceReads('a', read, version);
+      gate.resolve('only');
+
+      await expect(Promise.all([a, b, c])).resolves.toEqual(['only', 'only', 'only']);
+      expect(read).toHaveBeenCalledTimes(1);
+    });
+
+    it('gives a request the read after it when something changed since the running read began', async () => {
+      const first = deferred<string>();
+      const second = deferred<string>();
+      const read = vi.fn().mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+      let changes = 0;
+
+      const a = coalesceReads('a', read, () => changes);
+      changes++; // said while the read runs
+      const b = coalesceReads('a', read, () => changes);
+      first.resolve('old');
+      await a;
+      await Promise.resolve();
+      second.resolve('new');
+
+      await expect(b).resolves.toBe('new');
+      expect(read).toHaveBeenCalledTimes(2);
+    });
+
+    it('counts from when the read behind began, for the requests that come after it', async () => {
+      const gates = [deferred<string>(), deferred<string>()];
+      const read = vi.fn().mockReturnValueOnce(gates[0].promise).mockReturnValueOnce(gates[1].promise);
+      let changes = 0;
+
+      const a = coalesceReads('a', read, () => changes);
+      changes++;
+      const b = coalesceReads('a', read, () => changes); // waits for the read behind
+      gates[0].resolve('1');
+      await a;
+      await Promise.resolve();
+      expect(read).toHaveBeenCalledTimes(2);
+
+      // The read behind began after the change, so nothing was said since it began.
+      const c = coalesceReads('a', read, () => changes);
+      gates[1].resolve('2');
+
+      await expect(Promise.all([b, c])).resolves.toEqual(['2', '2']);
+      expect(read).toHaveBeenCalledTimes(2);
+    });
+
+    it('starts a read of its own when none is running, whatever the number is', async () => {
+      const read = vi.fn().mockResolvedValueOnce('one').mockResolvedValueOnce('two');
+
+      await expect(coalesceReads('a', read, () => 1)).resolves.toBe('one');
+      await expect(coalesceReads('a', read, () => 1)).resolves.toBe('two');
+    });
+  });
 });
