@@ -41,13 +41,29 @@ const MARK_OF: Partial<Record<ToolKind, WorkingActivity>> = {
 const LOOK_BACK = 6;
 
 /**
+ * Whether an entry is what a person sent, where the calls before it belong to an earlier turn and no longer wait on
+ * anything. A send of plain text has a string for its content; one that carries a picture has a list of blocks (the
+ * text and the pictures), so the content's shape cannot tell a send from the CLI writing a call's result. What can: a
+ * result has a `tool_result` block, and a send has text or a picture and was not written by the CLI itself (a skill's
+ * prompt, a note under a picture, a hook's feedback).
+ */
+function isASend(message: LoadedMessageDto): boolean {
+  if (message.type !== 'user') return false;
+  const content = message.message?.content;
+  if (!isContentBlockArray(content)) return true;
+  if (message.isSynthetic || message.isMeta || message.sourceToolUseID) return false;
+  if (content.some((block) => block.type === ContentBlockType.ToolResult)) return false;
+  return content.some((block) => block.type === ContentBlockType.Text || block.type === ContentBlockType.Image);
+}
+
+/**
  * The call the running turn is waiting on, read from the newest entries: the last tool call that has no result yet.
  * Null when nothing is being waited on, which is when the model is thinking or writing.
  */
 export function runningActivity(messages: LoadedMessageDto[]): StreamingActivity | null {
   for (let index = messages.length - 1, seen = 0; index >= 0 && seen < LOOK_BACK; index--, seen++) {
     const message = messages[index];
-    if (message.type === 'user' && !isContentBlockArray(message.message?.content)) return null;
+    if (isASend(message)) return null;
     const content = message.message?.content;
     if (!isContentBlockArray(content)) continue;
     for (let at = content.length - 1; at >= 0; at--) {
