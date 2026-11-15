@@ -45,6 +45,34 @@ describe('runningActivity', () => {
   });
 });
 
+describe('runningActivity across a send', () => {
+  const user = (content: unknown): LoadedMessageDto =>
+    ({ type: 'user', uuid: 'u', message: { role: 'user', content } }) as unknown as LoadedMessageDto;
+  const oldCallWithNoResult = assistant([call('old', 'Bash', { description: 'a call that never came back', command: 'x' })]);
+
+  it('does not look past a send of plain text, where the model is thinking about it', () => {
+    expect(runningActivity([oldCallWithNoResult, user('next question')])).toBeNull();
+  });
+
+  it('does not look past a send that carries a picture either: its content is a list of blocks, but it is still a send', () => {
+    const withPicture = user([
+      { type: 'text', text: 'what is in this picture?' },
+      { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'AAAA' } },
+    ]);
+    expect(runningActivity([oldCallWithNoResult, withPicture])).toBeNull();
+  });
+
+  it('does not look past a send of a picture alone', () => {
+    const pictureOnly = user([{ type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'AAAA' } }]);
+    expect(runningActivity([oldCallWithNoResult, pictureOnly])).toBeNull();
+  });
+
+  it('still looks past what the CLI wrote for the call: its result, which is not a send', () => {
+    const result = user([{ type: 'tool_result', tool_use_id: 'x', content: 'ok' }]);
+    expect(runningActivity([oldCallWithNoResult, result])?.toolUseId).toBe('old');
+  });
+});
+
 describe('formatTokenCount', () => {
   it('keeps small counts and shortens thousands to one decimal', () => {
     expect(formatTokenCount(725)).toBe('725');
