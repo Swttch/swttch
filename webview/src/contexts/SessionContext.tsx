@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useCallback, useEffect, useMemo, u
 import { instanceToPlain, plainToInstance } from 'class-transformer';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { SessionState } from '../types';
-import { SessionMetaDto } from '../dto';
+import { SessionMarkDto, SessionMetaDto } from '../dto';
 import type { SessionServiceError } from '../api/modules/SessionsApi';
 import { useBridgeContext } from './BridgeContext';
 import { useApi } from './ApiContext';
@@ -531,7 +531,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
     const unsubscribe = subscribe(MessageType.SESSIONS_UPDATED, (message) => {
       const { action, session } = message.payload as {
         action: string;
-        session: { sessionId: string; title?: string; generated?: boolean };
+        session: { sessionId: string; title?: string; generated?: boolean; sessionMark?: unknown };
       };
       if (action === 'started') {
         // Another window just created a session and sent the row it drew.
@@ -549,6 +549,21 @@ export function SessionProvider({ children }: SessionProviderProps) {
         // was moved under or out from under another, archived, or renamed by a
         // tool of the session-management MCP. The list is read again.
         void loadSessions();
+        return;
+      }
+      if (action === 'mark') {
+        // The backend hands over the new mark of ONE session (it was archived, or
+        // brought back, through the session-management MCP), so the row turns to
+        // it at once. The list is not read for this: that read is slow with
+        // several screens open, and a chat showing the session must not wait for it.
+        const mark = session?.sessionMark;
+        if (!session?.sessionId || !mark || typeof mark !== 'object') return;
+        const sessionMark = plainToInstance(SessionMarkDto, mark);
+        setSessions(prev => prev.map(s =>
+          s.id === session.sessionId
+            ? Object.assign(Object.create(Object.getPrototypeOf(s)), s, { sessionMark })
+            : s
+        ));
         return;
       }
       if (action === 'rename' && session?.sessionId && session.title) {

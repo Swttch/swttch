@@ -1318,6 +1318,67 @@ describe('SessionContext', () => {
 
       await waitFor(() => expect(mockSessionsIndex).toHaveBeenCalledTimes(1));
     });
+
+    it('turns one row to the mark the backend hands over, without reading the list again', async () => {
+      // What the backend sends the moment a session was archived through the
+      // session-management MCP: the new mark of that one session.
+      mockSessionsIndex.mockResolvedValue({ sessions: mockSessionDtos });
+      let capturedCtx = null as ReturnType<typeof useSessionContext> | null;
+      render(
+        <SessionProvider>
+          <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+        </SessionProvider>
+      );
+      await act(async () => {
+        await capturedCtx?.loadSessions();
+      });
+      await waitFor(() => expect(capturedCtx?.sessions).toHaveLength(2));
+      await waitFor(() => {
+        expect(mockSubscribe.mock.calls.some(([type]) => type === MessageType.SESSIONS_UPDATED)).toBe(true);
+      });
+      const calls = mockSubscribe.mock.calls.filter(([type]) => type === MessageType.SESSIONS_UPDATED);
+      const handler = calls[calls.length - 1][1];
+      mockSessionsIndex.mockClear();
+
+      await act(async () => {
+        handler({ payload: { action: 'mark', session: { sessionId: 'session-2', sessionMark: { id: 'session-2', archivedAt: 1700 } } } });
+      });
+
+      await waitFor(() => {
+        expect(capturedCtx?.sessions.find((s) => s.id === 'session-2')?.sessionMark?.archivedAt).toBe(1700);
+      });
+      expect(capturedCtx?.sessions.find((s) => s.id === 'session-1')?.sessionMark).toBeUndefined();
+      expect(capturedCtx?.sessions.find((s) => s.id === 'session-2')?.title).toBe('Chat 2');
+      expect(mockSessionsIndex).not.toHaveBeenCalled();
+    });
+
+    it('leaves the list alone for a mark of a session it does not hold', async () => {
+      mockSessionsIndex.mockResolvedValue({ sessions: mockSessionDtos });
+      let capturedCtx = null as ReturnType<typeof useSessionContext> | null;
+      render(
+        <SessionProvider>
+          <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+        </SessionProvider>
+      );
+      await act(async () => {
+        await capturedCtx?.loadSessions();
+      });
+      await waitFor(() => expect(capturedCtx?.sessions).toHaveLength(2));
+      await waitFor(() => {
+        expect(mockSubscribe.mock.calls.some(([type]) => type === MessageType.SESSIONS_UPDATED)).toBe(true);
+      });
+      const calls = mockSubscribe.mock.calls.filter(([type]) => type === MessageType.SESSIONS_UPDATED);
+      const handler = calls[calls.length - 1][1];
+      mockSessionsIndex.mockClear();
+
+      await act(async () => {
+        handler({ payload: { action: 'mark', session: { sessionId: 'elsewhere', sessionMark: { id: 'elsewhere', archivedAt: 1700 } } } });
+      });
+
+      expect(capturedCtx?.sessions).toHaveLength(2);
+      expect(capturedCtx?.sessions.every((s) => s.sessionMark === undefined)).toBe(true);
+      expect(mockSessionsIndex).not.toHaveBeenCalled();
+    });
   });
 
   describe('inputMode - 사용자가 고른 모드를 CLI에 전달 (#393)', () => {

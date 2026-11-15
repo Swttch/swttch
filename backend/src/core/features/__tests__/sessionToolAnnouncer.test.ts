@@ -4,16 +4,30 @@ vi.mock('../awaitSessionTranscript', () => ({
   awaitSessionTranscript: vi.fn(),
 }));
 
+vi.mock('../sessionMarks', () => ({
+  readSessionMarksToShow: vi.fn(),
+}));
+
 import { announceSessionToolChanges, resetSessionToolAnnouncer } from '../sessionToolAnnouncer';
 import { awaitSessionTranscript } from '../awaitSessionTranscript';
+import { readSessionMarksToShow, type SessionMark } from '../sessionMarks';
 import { MessageType } from '../../../shared';
 import type { ConnectionManager } from '../../../ws/connection-manager';
 
 const mockAwait = vi.mocked(awaitSessionTranscript);
+const mockMarks = vi.mocked(readSessionMarksToShow);
 
-function toolUse(id: string, name: string): Record<string, unknown> {
-  return { type: 'assistant', message: { content: [{ type: 'tool_use', id, name, input: {} }] } };
+function toolUse(id: string, name: string, input: Record<string, unknown> = {}): Record<string, unknown> {
+  return { type: 'assistant', message: { content: [{ type: 'tool_use', id, name, input }] } };
 }
+
+/** A mark as the list reads it: the row of the package's table, kept whole. */
+function markOf(row: Record<string, unknown>): SessionMark {
+  return { row, sessionId: String(row.id), toJSON: () => row } as unknown as SessionMark;
+}
+
+/** Lets the announcement that reads the marks first finish. */
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 function toolResult(id: string, content: unknown, isError = false): Record<string, unknown> {
   return {
@@ -36,6 +50,7 @@ describe('announceSessionToolChanges', () => {
     resetSessionToolAnnouncer();
     broadcastToAll = vi.fn();
     connections = { broadcastToAll } as unknown as ConnectionManager;
+    mockMarks.mockResolvedValue(new Map());
   });
 
   it('waits for the transcript of a started session, then announces that session', () => {
@@ -68,7 +83,7 @@ describe('announceSessionToolChanges', () => {
     expect(mockAwait).toHaveBeenCalledWith('child', '/work', expect.any(Function));
   });
 
-  it.each(['detach_session', 'archive_session', 'unarchive_session', 'delete_session', 'set_session_title'])(
+  it.each(['detach_session', 'delete_session', 'set_session_title'])(
     'asks the lists to read again right after %s answers',
     (tool) => {
       announceSessionToolChanges(toolUse('call-1', `mcp__swttch_session_mgmt__${tool}`), connections);
@@ -79,6 +94,62 @@ describe('announceSessionToolChanges', () => {
       expect(mockAwait).not.toHaveBeenCalled();
     },
   );
+
+  describe.each(['archive_session', 'unarchive_session'])('right after %s answers', (tool) => {
+    const call = (input: Record<string, unknown>, caller: string | undefined = 'caller-id') => {
+      announceSessionToolChanges(toolUse('call-1', `mcp__swttch_session_mgmt__${tool}`, input), connections, caller);
+      announceSessionToolChanges(toolResult('call-1', 'ok'), connections, caller);
+    };
+
+    it('hands the lists the new mark of that session before asking them to read again', async () => {
+      mockMarks.mockResolvedValue(new Map([['target', markOf({ id: 'target', archivedAt: 1700 })]]));
+
+      call({ session_id: 'target' });
+      await settle();
+
+      expect(broadcastToAll.mock.calls).toEqual([
+        [MessageType.SESSIONS_UPDATED, { action: 'mark', session: { sessionId: 'target', sessionMark: { id: 'target', archivedAt: 1700 } } }],
+        [MessageType.SESSIONS_UPDATED, { action: 'refresh' }],
+      ]);
+    });
+
+    it('takes "self" to be the session whose stream carried the call', async () => {
+      mockMarks.mockResolvedValue(new Map([['caller-id', markOf({ id: 'caller-id', archivedAt: 1700 })]]));
+
+      call({ session_id: 'self' });
+      await settle();
+
+      expect(broadcastToAll.mock.calls[0]).toEqual([
+        MessageType.SESSIONS_UPDATED,
+        { action: 'mark', session: { sessionId: 'caller-id', sessionMark: { id: 'caller-id', archivedAt: 1700 } } },
+      ]);
+    });
+
+    it('only asks the lists to read again when no mark is kept for that session', async () => {
+      call({ session_id: 'target' });
+      await settle();
+
+      expect(broadcastToAll.mock.calls).toEqual([[MessageType.SESSIONS_UPDATED, { action: 'refresh' }]]);
+    });
+
+    it('still asks the lists to read again when the marks cannot be read', async () => {
+      mockMarks.mockRejectedValue(new Error('disk'));
+
+      call({ session_id: 'target' });
+      await settle();
+
+      expect(broadcastToAll.mock.calls).toEqual([[MessageType.SESSIONS_UPDATED, { action: 'refresh' }]]);
+    });
+
+    it('says nothing when the tool refused', async () => {
+      announceSessionToolChanges(toolUse('call-1', `mcp__swttch_session_mgmt__${tool}`, { session_id: 'target' }), connections, 'caller-id');
+      announceSessionToolChanges(toolResult('call-1', 'unavailable', true), connections, 'caller-id');
+      await settle();
+
+      expect(broadcastToAll).not.toHaveBeenCalled();
+      expect(mockMarks).not.toHaveBeenCalled();
+    });
+  });
 
   it('says nothing when the tool refused', () => {
     announceSessionToolChanges(toolUse('call-1', 'mcp__swttch_session_mgmt__detach_session'), connections);

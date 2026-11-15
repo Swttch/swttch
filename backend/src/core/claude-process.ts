@@ -1642,7 +1642,7 @@ function handleStreamEvent(
 
   // A session started, moved or archived through the session-management MCP:
   // the session lists are told, because nothing else passes through here.
-  announceSessionToolChanges(event, connections);
+  announceSessionToolChanges(event, connections, targetSessionId);
 
   if (eventType === 'result') {
     sessionsWithResult.add(targetSessionId);
