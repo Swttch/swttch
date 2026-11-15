@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdtemp, rm, writeFile } from 'fs/promises';
+import { appendFile, mkdtemp, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { extractSessionInfo } from '../extractSessionInfo';
@@ -20,6 +20,47 @@ describe('extractSessionInfo', () => {
     await writeFile(filePath, lines.join('\n'));
     return filePath;
   }
+
+  describe('reading the same transcript again', () => {
+    const entry = (type: string, uuid: string, timestamp: string, text: string) =>
+      JSON.stringify({ uuid, parentUuid: null, type, timestamp, message: { content: [{ type: 'text', text }] } });
+
+    it('gives the same answer for a transcript that did not change', async () => {
+      const filePath = await writeJsonl([entry('user', 'u1', '2025-01-01T00:00:00Z', 'Hello'), entry('assistant', 'a1', '2025-01-01T00:01:00Z', 'Hi')]);
+
+      const first = await extractSessionInfo(filePath);
+      const second = await extractSessionInfo(filePath);
+
+      expect(second).toEqual(first);
+      expect(second.title).toBe('Hello');
+    });
+
+    it('reads a transcript again once it grew, and shows what was added', async () => {
+      const filePath = await writeJsonl([entry('user', 'u1', '2025-01-01T00:00:00Z', 'Hello'), entry('assistant', 'a1', '2025-01-01T00:01:00Z', 'Hi')]);
+      expect((await extractSessionInfo(filePath)).lastTimestamp).toBe('2025-01-01T00:01:00Z');
+
+      await appendFile(filePath, '\n' + entry('assistant', 'a2', '2025-01-01T09:00:00Z', 'Later'));
+
+      expect((await extractSessionInfo(filePath)).lastTimestamp).toBe('2025-01-01T09:00:00Z');
+    });
+
+    it('takes a name the transcript was given after it was first read', async () => {
+      const filePath = await writeJsonl([entry('user', 'u1', '2025-01-01T00:00:00Z', 'Hello'), entry('assistant', 'a1', '2025-01-01T00:01:00Z', 'Hi')]);
+      expect((await extractSessionInfo(filePath)).title).toBe('Hello');
+
+      await appendFile(filePath, '\n' + JSON.stringify({ type: 'custom-title', customTitle: 'My name', sessionId: 's1' }));
+
+      expect((await extractSessionInfo(filePath)).title).toBe('My name');
+    });
+
+    it('still lets a name typed in this app win, without reading the transcript again', async () => {
+      const filePath = await writeJsonl([entry('user', 'u1', '2025-01-01T00:00:00Z', 'Hello'), entry('assistant', 'a1', '2025-01-01T00:01:00Z', 'Hi')]);
+      await extractSessionInfo(filePath);
+
+      expect((await extractSessionInfo(filePath, { override: 'Typed here' })).title).toBe('Typed here');
+      expect((await extractSessionInfo(filePath)).title).toBe('Hello');
+    });
+  });
 
   describe('extractSessionInfo()', () => {
     it('should extract title from summary entry', async () => {

@@ -1,7 +1,8 @@
 import type { WebSocket } from 'ws';
 import type { ChildProcess } from 'child_process';
 import type { IPCMessage, NativeDropEntry } from '../core/types';
-import { ClientEnv, MessageType, SessionActivity, type SessionActivityMap } from '../shared';
+import { ClientEnv, MessageType, SessionActivity, isSameWorkingDir, type SessionActivityMap } from '../shared';
+import { listsHold, type ListScope } from '../core/features/sessionListScope';
 import { disableIdleShutdown } from '../config/environment';
 import { Claude } from '../core/claude';
 
@@ -526,6 +527,63 @@ export class ConnectionManager {
     return null;
   }
 
+  // ─── What each screen's list is made of ────────────────────────────────────
+
+  /**
+   * The lists each connection asked for, by the folder at the root of each. A screen shows one list
+   * at a time, but a later ask for another folder must not make it forget the first, and a later ask
+   * for the same folder replaces the earlier one (the setting that takes in the folders below may
+   * have changed).
+   */
+  private listScopes = new Map<string, ListScope[]>();
+
+  /** Enough for any screen: it asks for the list of one folder, and rarely for a second. */
+  private static readonly MAX_LIST_SCOPES_PER_CONNECTION = 8;
+
+  /**
+   * Note that [connectionId] asked for the list [scope] describes. Called when the ask arrives,
+   * before the list is read, so news that comes while it is read is not missed.
+   */
+  registerListScope(connectionId: string, scope: ListScope): void {
+    if (!this.connectionMap.has(connectionId)) return;
+    const held = (this.listScopes.get(connectionId) ?? []).filter(
+      (other) => !isSameWorkingDir(other.rootDir, scope.rootDir),
+    );
+    held.push({ rootDir: scope.rootDir, includeNested: scope.includeNested });
+    while (held.length > ConnectionManager.MAX_LIST_SCOPES_PER_CONNECTION) held.shift();
+    this.listScopes.set(connectionId, held);
+  }
+
+  /**
+   * Send to the connections whose list can hold a session that lives in [sessionDirs], optionally
+   * skipping one.
+   *
+   * A connection that has not said what its list is gets it too, since there is no telling it from one
+   * that holds the session; and so does every connection when the folders are not known. Sending too
+   * much only costs a screen the work of finding out the session is not in its list.
+   */
+  broadcastToListsHolding(
+    type: string,
+    payload: Record<string, unknown>,
+    sessionDirs: string[],
+    excludeConnectionId?: string,
+  ): void {
+    const message: IPCMessage = { type, payload, timestamp: Date.now() };
+    const data = JSON.stringify(message);
+    for (const [connId, ws] of this.connectionMap) {
+      if (connId === excludeConnectionId) continue;
+      const scopes = this.listScopes.get(connId);
+      const wanted =
+        sessionDirs.length === 0 || scopes === undefined || scopes.some((scope) => listsHold(scope, sessionDirs));
+      if (!wanted) continue;
+      try {
+        if (ws.readyState === 1 /* WebSocket.OPEN */) ws.send(data);
+      } catch {
+        // send failure — will be cleaned up on disconnect
+      }
+    }
+  }
+
   removeConnection(connectionId: string): void {
     this.unsubscribe(connectionId);
     const record = this.clientMap.get(connectionId);
@@ -538,6 +596,7 @@ export class ConnectionManager {
     }
     this.connectionMap.delete(connectionId);
     this.clientMap.delete(connectionId);
+    this.listScopes.delete(connectionId);
     console.error('[node-backend]', `Connection removed: ${connectionId}`);
 
     if (this.connectionMap.size === 0) {

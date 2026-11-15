@@ -6,6 +6,9 @@ import { join } from 'path';
 vi.mock('../../features/getProjectSessionsPath', () => ({
   getProjectSessionsPath: vi.fn(),
 }));
+vi.mock('../../features/announceSessionCreated', () => ({
+  announceSessionCreated: vi.fn(),
+}));
 
 import { forkSessionHandler } from '../forkSession';
 import { getProjectSessionsPath } from '../../features/getProjectSessionsPath';
@@ -13,6 +16,7 @@ import type { ConnectionManager } from '../../../ws/connection-manager';
 import type { Bridge } from '../../../bridge/bridge-interface';
 import type { IPCMessage } from '../../types';
 import { MessageType } from '../../../shared';
+import { announceSessionCreated } from '../../features/announceSessionCreated';
 
 const mockGetPath = vi.mocked(getProjectSessionsPath);
 const mockBridge = {} as Bridge;
@@ -176,10 +180,7 @@ describe('forkSessionHandler', () => {
 
     await fork(connections, { sessionId: 'origin', sendUuid: 'u2', workingDir: '/repo' });
 
-    expect(vi.mocked(connections.broadcastToAll)).toHaveBeenCalledWith(
-      MessageType.SESSIONS_UPDATED,
-      { action: 'upsert', session: { sessionId: ackOf(connections)!.sessionId } },
-    );
+    expect(announceSessionCreated).toHaveBeenCalledWith(connections, ackOf(connections)!.sessionId, '/repo');
   });
 
   it('leaves the session it branched from untouched', async () => {

@@ -1,6 +1,11 @@
 import type { ConnectionManager } from '../../ws/connection-manager';
 import { MessageType } from '../../shared';
 import { awaitSessionTranscript } from './awaitSessionTranscript';
+import { announceSessionMark } from './announceSessionMark';
+import { announceSessionCreated } from './announceSessionCreated';
+import { announceSessionStarting } from './announceSessionStarting';
+import { normalizeSessionName } from './cli-rename';
+import { announceSessionsUpdated } from './sessionsUpdated';
 
 /**
  * The tools of the session-management MCP whose success changes what a session
@@ -10,8 +15,16 @@ import { awaitSessionTranscript } from './awaitSessionTranscript';
 const LIST_CHANGING_TOOL =
   /^mcp__swttch_session(?:_mgmt)?__(start_session|detach_session|archive_session|unarchive_session|delete_session|set_session_title)$/;
 
-/** Calls seen and not answered yet: the id of the call, to the tool it names. */
-const pendingCalls = new Map<string, string>();
+/** What a call named, kept until its answer is seen: the tool, and the session it was aimed at when it names one. */
+interface PendingCall {
+  tool: string;
+  sessionId?: string;
+  /** The name a `set_session_title` call asked for. */
+  title?: string;
+}
+
+/** Calls seen and not answered yet, by the id of the call. */
+const pendingCalls = new Map<string, PendingCall>();
 
 /** A call that is never answered (an interrupted turn) must not stay here for good. */
 const MAX_PENDING_CALLS = 200;
@@ -20,6 +33,7 @@ interface ContentBlock {
   type?: unknown;
   id?: unknown;
   name?: unknown;
+  input?: unknown;
   tool_use_id?: unknown;
   is_error?: unknown;
   content?: unknown;
@@ -63,18 +77,28 @@ function startedSessionOf(content: unknown): { sessionId: string; cwd: string } 
  * the tool call and its answer in the CLI's stream, so this reads those two. It
  * is given every stream event of every session this backend runs.
  *
- * A started session cannot be listed at once: the list is read from the
- * transcripts and the new session's transcript appears a few seconds after the
- * tool answers. The announcement for a start therefore waits for that file, the
- * same wait a session started in a tab uses. Every other change is on disk by
- * the time the tool answers and is announced right away.
+ * A started session cannot be listed from its transcript at once: the list is read from the
+ * transcripts and the new session's transcript appears many seconds after the tool answers. The
+ * screens are therefore told at once with a row made of what is known (a provisional one), and again
+ * with the row of the transcript when the file exists, the same wait a session started in a tab
+ * uses. Every other change is on disk by the time the tool answers and is announced right away.
+ *
+ * Archiving or bringing a session back is announced as an `update` carrying the new mark of
+ * that one session, so a screen that shows the session turns to its archived state at once,
+ * without reading the list. Reading every list again is slow when several screens are open.
  *
  * A session the MCP changes from somewhere this backend does not run (a `claude`
  * in a terminal) is not seen here; the lists pick that up on their next refresh.
+ *
+ * [callerSessionId] is the session whose stream carried the event, and [callerWorkingDir] the folder it
+ * works in. A call that names `self` means that session. The folder is what tells which screens the news is
+ * for (the ones whose list can hold the session).
  */
 export function announceSessionToolChanges(
   event: Record<string, unknown>,
   connections: ConnectionManager,
+  callerSessionId?: string,
+  callerWorkingDir?: string,
 ): void {
   if (event.type === 'assistant') {
     for (const block of contentBlocksOf(event)) {
@@ -82,7 +106,12 @@ export function announceSessionToolChanges(
       const tool = LIST_CHANGING_TOOL.exec(block.name)?.[1];
       if (!tool) continue;
       if (pendingCalls.size >= MAX_PENDING_CALLS) pendingCalls.clear();
-      pendingCalls.set(block.id, tool);
+      const title = (block.input as { title?: unknown } | undefined)?.title;
+      pendingCalls.set(block.id, {
+        tool,
+        sessionId: sessionIdOfInput(block.input, callerSessionId),
+        ...(typeof title === 'string' ? { title } : {}),
+      });
     }
     return;
   }
@@ -90,8 +119,9 @@ export function announceSessionToolChanges(
   if (event.type !== 'user') return;
   for (const block of contentBlocksOf(event)) {
     if (block.type !== 'tool_result' || typeof block.tool_use_id !== 'string') continue;
-    const tool = pendingCalls.get(block.tool_use_id);
-    if (tool === undefined) continue;
+    const call = pendingCalls.get(block.tool_use_id);
+    if (call === undefined) continue;
+    const { tool } = call;
     pendingCalls.delete(block.tool_use_id);
     // A refused or failed call changed nothing.
     if (block.is_error === true) continue;
@@ -99,17 +129,64 @@ export function announceSessionToolChanges(
     if (tool === 'start_session') {
       const started = startedSessionOf(block.content);
       if (!started) continue;
-      void awaitSessionTranscript(started.sessionId, started.cwd, () => {
-        connections.broadcastToAll(MessageType.SESSIONS_UPDATED, {
-          action: 'upsert',
-          session: { sessionId: started.sessionId },
-        });
-      });
+      // The screens are told the session is there at once, with a row made of what is known, because the CLI
+      // writes its transcript a long while later. The row the transcript gives replaces it when the file
+      // exists; and when no file ever comes (the session could not start) the screens are told it is not there.
+      void announceSessionStarting(connections, started, call.title);
+      void awaitSessionTranscript(
+        started.sessionId,
+        started.cwd,
+        () => {
+          void announceSessionCreated(connections, started.sessionId, started.cwd);
+        },
+        () => {
+          announceSessionsUpdated(
+            connections,
+            { action: 'delete', session: { sessionId: started.sessionId } },
+            { sessionDirs: [started.cwd] },
+          );
+        },
+      );
       continue;
     }
 
-    connections.broadcastToAll(MessageType.SESSIONS_UPDATED, { action: 'refresh' });
+    if ((tool === 'archive_session' || tool === 'unarchive_session') && call.sessionId) {
+      void announceSessionMark(call.sessionId, connections, dirOfCaller(call.sessionId, callerSessionId, callerWorkingDir));
+      continue;
+    }
+
+    if (tool === 'set_session_title') {
+      // The name as the CLI will keep it, which is what the list shows once it is read again.
+      const title = call.title === undefined ? '' : normalizeSessionName(call.title);
+      if (call.sessionId && title !== '') {
+        const dir = dirOfCaller(call.sessionId, callerSessionId, callerWorkingDir);
+        announceSessionsUpdated(
+          connections,
+          { action: 'update', session: { sessionId: call.sessionId, title } },
+          { sessionDirs: dir ? [dir] : [] },
+        );
+        continue;
+      }
+    }
+
+    announceSessionsUpdated(connections, { action: 'refresh' });
   }
+}
+
+/** The folder a session works in when it is the one whose stream carried the call, which is the one folder known. */
+function dirOfCaller(
+  sessionId: string,
+  callerSessionId: string | undefined,
+  callerWorkingDir: string | undefined,
+): string | undefined {
+  return sessionId === callerSessionId ? callerWorkingDir : undefined;
+}
+
+/** The session a call was aimed at: the id it named, or the calling session for `self`. */
+function sessionIdOfInput(input: unknown, callerSessionId: string | undefined): string | undefined {
+  const named = (input as { session_id?: unknown } | undefined)?.session_id;
+  if (typeof named !== 'string' || named === '') return undefined;
+  return named === 'self' ? callerSessionId : named;
 }
 
 /** Forget every call seen. For tests. */

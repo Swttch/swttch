@@ -7,6 +7,7 @@ import { getProjectSessionsPath } from '../features/getProjectSessionsPath';
 import { removeSessionTitleOverride } from '../features/sessionTitleOverrides';
 import { normalizeSessionName, renameSessionThroughCli } from '../features/cli-rename';
 import { MessageType } from '../../shared';
+import { announceSessionsUpdated } from '../features/sessionsUpdated';
 
 export async function renameSessionHandler(
   connectionId: string,
@@ -59,10 +60,10 @@ export async function renameSessionHandler(
     await removeSessionTitleOverride(sessionsDir, sessionId);
 
     const shownTitle = normalizeSessionName(title);
-    connections.broadcastToAll(MessageType.SESSIONS_UPDATED, {
-      action: 'rename',
+    announceSessionsUpdated(connections, {
+      action: 'update',
       session: { sessionId, title: shownTitle },
-    });
+    }, { sessionDirs: [workingDir] });
 
     connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId, status: 'ok' });
   } catch (err) {

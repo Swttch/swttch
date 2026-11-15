@@ -7,6 +7,7 @@ import { getProjectSessionsPath } from '../features/getProjectSessionsPath';
 import { removeSessionTitleOverride } from '../features/sessionTitleOverrides';
 import { cancelSchedulesForSession } from '../features/scheduled-messages';
 import { MessageType } from '../../shared';
+import { announceSessionsUpdated } from '../features/sessionsUpdated';
 
 export async function deleteSessionHandler(
   connectionId: string,
@@ -72,10 +73,10 @@ export async function deleteSessionHandler(
     // pending "send later" would fire into a conversation that no longer exists.
     await cancelSchedulesForSession(sessionId, connections);
 
-    connections.broadcastToAll(MessageType.SESSIONS_UPDATED, {
+    announceSessionsUpdated(connections, {
       action: 'delete',
       session: { sessionId },
-    });
+    }, { sessionDirs: [workingDir] });
 
     connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId, status: 'ok' });
   } catch (err) {

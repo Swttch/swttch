@@ -76,6 +76,12 @@ export class SessionMetaDto {
    */
   @Type(() => SessionMarkDto)
   sessionMark?: SessionMarkDto;
+  /**
+   * The session was just started and its transcript does not exist yet (the CLI writes it many seconds
+   * later), so this row is made of what was known when it started. There is nothing to open until the row
+   * of the transcript replaces it. Never part of a list a read gives.
+   */
+  provisional?: boolean;
 }
 
 /**

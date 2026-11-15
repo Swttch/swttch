@@ -293,7 +293,8 @@ export function SessionList(props: Props) {
                   }
                   activity={activityOf(activity, session.id)}
                   isOpen={reportsState(session.id)}
-                  onSelect={() => onSelectSession(session.id)}
+                  // Nothing to open until the transcript exists: opening it would load a session that is not on disk.
+                  onSelect={() => { if (session.provisional !== true) onSelectSession(session.id); }}
                   onDelete={() => onDeleteSession(session.id)}
                   onRename={(title) => onRenameSession(session.id, title)}
                   isArchived={isArchivedMark(session.sessionMark)}

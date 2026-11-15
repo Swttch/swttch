@@ -31,6 +31,7 @@ import {
 } from '../control-response-waiter';
 import { generateSessionTitlesEnabled } from './sessionTitleSettings';
 import { announceGeneratedTitle, watchSessionTitle } from './session-title-watcher';
+import { announceSessionsUpdated } from './sessionsUpdated';
 
 /** Naming is a model call, so the answer takes seconds; this only bounds a CLI that never answers. */
 const GENERATE_TIMEOUT_MS = 30_000;
@@ -159,10 +160,10 @@ async function requestSessionTitle(
     // the CLI has just written the title to. A CLI that answers with a title without
     // recording it leaves nothing there to resolve, so the answer itself is shown.
     if (await announceGeneratedTitle(connections, sessionId, workingDir)) return;
-    connections.broadcastToAll(MessageType.SESSIONS_UPDATED, {
-      action: 'rename',
+    announceSessionsUpdated(connections, {
+      action: 'update',
       session: { sessionId, title, generated: true },
-    });
+    }, { sessionDirs: [workingDir] });
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     if (UNSUPPORTED_REQUEST.test(reason)) {

@@ -29,6 +29,7 @@ function createMockConnections() {
   return {
     sendTo: vi.fn(),
     broadcastToAll: vi.fn(),
+    broadcastToListsHolding: vi.fn(),
   } as unknown as ConnectionManager;
 }
 
@@ -118,10 +119,10 @@ describe('deleteSessionHandler', () => {
 
     expect(mockUnlink).toHaveBeenCalled();
     expect(mockRemoveOverride).toHaveBeenCalledWith('/home/user/.claude/projects/-test', 'abc123');
-    expect(connections.broadcastToAll).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, {
+    expect(connections.broadcastToListsHolding).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, {
       action: 'delete',
-      session: { sessionId: 'abc123' },
-    });
+      session: { sessionId: 'abc123' }, ts: expect.any(Number),
+    }, ['/test'], undefined);
     expect(connections.sendTo).toHaveBeenCalledWith('conn-1', MessageType.ACK, expect.objectContaining({
       status: 'ok',
     }));

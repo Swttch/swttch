@@ -3,6 +3,7 @@ import { instanceToPlain, plainToInstance } from 'class-transformer';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { SessionState } from '../types';
 import { SessionMetaDto } from '../dto';
+import { SessionNewsJournal, applyUpdate, putNewsOnto } from '../utils/sessionUpdates';
 import type { SessionServiceError } from '../api/modules/SessionsApi';
 import { useBridgeContext } from './BridgeContext';
 import { useApi } from './ApiContext';
@@ -126,6 +127,9 @@ interface SessionContextValue {
  */
 export const SESSION_PAGE_SIZE = 30;
 
+/** How long the news about a session the list does not hold must stay quiet before the list is read again. */
+const UNKNOWN_SESSION_REFRESH_MS = 5_000;
+
 /** How the CLI's reply to `/rename` begins; the reply is English whatever the UI language. */
 const SESSION_RENAMED_REPLY_PREFIX = 'Session renamed to:';
 
@@ -214,8 +218,8 @@ export function SessionProvider({ children }: SessionProviderProps) {
 
 
   const [sessions, setSessions] = useState<SessionMetaDto[]>([]);
-  // The rows as of the latest render, for the one thing that needs them outside a
-  // render: putting a title back when a rename fails.
+  // The rows as of the latest render, for what needs them outside a render: putting a title
+  // back when a rename fails, and asking whether the list holds a session the news speaks of.
   const sessionsRef = useRef(sessions);
   sessionsRef.current = sessions;
 
@@ -253,6 +257,14 @@ export function SessionProvider({ children }: SessionProviderProps) {
   // before the first lands. A ref, not state, because nothing renders from it
   // and a re-render would defeat the point.
   const loadingMoreRef = useRef(false);
+  // The session news that reached this screen lately, and the time the newest list it holds was
+  // read, so a list read before some news can have that news put back onto it.
+  const newsJournalRef = useRef(new SessionNewsJournal());
+  const lastReadAtRef = useRef(0);
+  // Sessions the news spoke of that the list does not hold, and the wait before the list is read
+  // again to find out whether they exist.
+  const unknownSessionIdsRef = useRef(new Set<string>());
+  const unknownRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /**
    * How many directories the current list spans, as reported by the backend.
    *
@@ -429,6 +441,15 @@ export function SessionProvider({ children }: SessionProviderProps) {
       const result = await api.sessions.index(rootDir, includeNested, {
         limit: SESSION_PAGE_SIZE,
       });
+      // A list read before the one already held says less than it does, so it is not shown.
+      if (result.ts !== undefined) {
+        if (result.ts < lastReadAtRef.current) return;
+        lastReadAtRef.current = result.ts;
+      }
+      // What the news said after the list was read is not in it, and goes onto it.
+      const listed = result.ts === undefined
+        ? result.sessions
+        : putNewsOnto(result.sessions, result.ts, newsJournalRef.current);
       // A refresh replaces the rows — except the open session's. That row can
       // only have come from the session carrying it in (#434), because the
       // fetched page does not reach far enough to hold it; dropping it would
@@ -437,7 +458,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
       // row cannot outlive the reason it is here.
       const openSessionId = currentSessionIdRef.current;
       setSessions(prev => {
-        const fresh = sortSessions(result.sessions);
+        const fresh = sortSessions(listed);
         if (!openSessionId || fresh.some(s => s.id === openSessionId)) return fresh;
         const openRow = prev.find(s => s.id === openSessionId);
         return openRow ? mergeSessions(fresh, [openRow]) : fresh;
@@ -477,7 +498,10 @@ export function SessionProvider({ children }: SessionProviderProps) {
       // Merged rather than concatenated: a page is newest-first within itself
       // but the ranges only line up once they are put together, and a row the
       // list already holds must not appear twice.
-      setSessions(prev => mergeSessions(prev, result.sessions));
+      const listed = result.ts === undefined
+        ? result.sessions
+        : putNewsOnto(result.sessions, result.ts, newsJournalRef.current);
+      setSessions(prev => mergeSessions(prev, listed));
       setNextSessionOffset(result.hasMore ? result.nextOffset : null);
     } catch (error) {
       console.error('[SessionContext] Failed to load more sessions:', error);
@@ -501,10 +525,17 @@ export function SessionProvider({ children }: SessionProviderProps) {
    * list does, so a merged row and a listed row cannot describe the same
    * session differently.
    */
-  const mergeSession = useCallback((raw: unknown) => {
+  const mergeSession = useCallback((raw: unknown, readAt = 0) => {
     if (!raw || typeof raw !== 'object') return;
     const session = plainToInstance(SessionMetaDto, raw);
-    setSessions(prev => mergeSessions(prev, [session]));
+    // The row holds what the news said up to the time it was read; what the news said after goes onto it.
+    const held = putNewsOnto([session], readAt, newsJournalRef.current);
+    // A row made before the transcript exists never takes the place of a row the list holds.
+    const provisional = session.provisional === true;
+    // A row the news since deleted is not put into the list.
+    if (held.length > 0) {
+      setSessions(prev => (provisional && prev.some(s => s.id === session.id) ? prev : mergeSessions(prev, held)));
+    }
   }, []);
 
   const loadMoreSessions = useCallback(
@@ -526,61 +557,81 @@ export function SessionProvider({ children }: SessionProviderProps) {
     return unsubscribe;
   }, [subscribe]);
 
+  /**
+   * News spoke of a session this list does not hold (one past the page read, or one that has
+   * just come to exist). Several pieces of news about it usually follow one another, so the list
+   * is read again once they have stopped for a while, rather than once for each. A session the
+   * list still does not hold after that is not one this screen shows, and what was said of it is
+   * not needed: when it is shown, the list that shows it is newer than the news.
+   */
+  const scheduleUnknownSessionRefresh = useCallback((sessionId: string) => {
+    unknownSessionIdsRef.current.add(sessionId);
+    if (unknownRefreshTimerRef.current) clearTimeout(unknownRefreshTimerRef.current);
+    unknownRefreshTimerRef.current = setTimeout(() => {
+      unknownRefreshTimerRef.current = null;
+      const stillUnknown = [...unknownSessionIdsRef.current].some(id => !sessionsRef.current.some(s => s.id === id));
+      unknownSessionIdsRef.current.clear();
+      if (stillUnknown) void loadSessions();
+    }, UNKNOWN_SESSION_REFRESH_MS);
+  }, [loadSessions]);
+
+  useEffect(() => () => {
+    if (unknownRefreshTimerRef.current) clearTimeout(unknownRefreshTimerRef.current);
+  }, []);
+
   // Subscribe to SESSIONS_UPDATED for cross-tab session list sync
   useEffect(() => {
     const unsubscribe = subscribe(MessageType.SESSIONS_UPDATED, (message) => {
-      const { action, session } = message.payload as {
+      const { action, session, ts } = message.payload as {
         action: string;
-        session: { sessionId: string; title?: string; generated?: boolean };
+        session: { sessionId: string; title?: string; generated?: boolean; sessionMark?: unknown };
+        /** Where this news stands among the others. Missing from a backend that does not say. */
+        ts?: number;
       };
-      if (action === 'started') {
-        // Another window just created a session and sent the row it drew.
-        //
-        // Merged rather than reloaded because there is nothing to reload yet:
-        // the transcript this session will be listed from does not exist for a
-        // few seconds, so asking the backend now returns a list without it. The
-        // refresh comes on its own once the file lands, and replaces this row
-        // with the recorded one.
-        mergeSession(session);
-        return;
-      }
       if (action === 'refresh') {
-        // Something about the rows changed that no single row names: a session
-        // was moved under or out from under another, archived, or renamed by a
-        // tool of the session-management MCP. The list is read again.
+        // Something changed that no single row names. The list is read again.
         void loadSessions();
         return;
       }
-      if (action === 'rename' && session?.sessionId && session.title) {
-        // A title Claude Code just generated arrives with the flag; one a user typed does not.
-        if (session.generated === true) {
-          setGeneratedTitle({ sessionId: session.sessionId, title: session.title, arrivedAt: Date.now() });
+      if (action === 'create') {
+        // A session came to exist, and the news carries its row (the one the creating tab drew, or the one
+        // read from its transcript, which replaces the drawn one). The row holds what the news said up to
+        // `ts`; what was said after goes onto it.
+        if (typeof ts === 'number' && session?.sessionId) {
+          newsJournalRef.current.record({ kind: 'create', ts, sessionId: session.sessionId, row: session });
         }
-        setSessions(prev => prev.map(s =>
-          s.id === session.sessionId
-            ? Object.assign(Object.create(Object.getPrototypeOf(s)), s, { title: session.title })
-            : s
-        ));
-      } else if (action === 'upsert' && session?.sessionId) {
-        setSessions(prev => {
-          const exists = prev.find(s => s.id === session.sessionId);
-          if (exists) {
-            return prev.map(s =>
-              s.id === session.sessionId
-                ? { ...s, updatedAt: new Date() }
-                : s
-            );
-          }
-          // 다른 탭에서 생성된 세션 — loadSessions로 전체 갱신
-          loadSessions();
-          return prev;
-        });
-      } else if (action === 'delete' && session?.sessionId) {
+        mergeSession(session, ts ?? 0);
+        return;
+      }
+      if (action === 'delete') {
+        if (!session?.sessionId) return;
+        if (typeof ts === 'number') newsJournalRef.current.record({ kind: 'delete', ts, sessionId: session.sessionId });
         setSessions(prev => prev.filter(s => s.id !== session.sessionId));
+        return;
+      }
+      if (action === 'update') {
+        // Some items of ONE session changed. The row turns to them at once, and the list is not
+        // read for it: that read is slow with several screens open, and a chat showing the session
+        // must not wait for it. A list read before this news is put right when it arrives, by `ts`.
+        const { sessionId, generated, ...fields } = session ?? ({} as typeof session);
+        if (!sessionId) return;
+        // A title Claude Code just generated arrives with the flag, which is about how it is shown
+        // (letter by letter) and not an item of the session; one a user typed does not.
+        if (generated === true && typeof fields.title === 'string') {
+          setGeneratedTitle({ sessionId, title: fields.title, arrivedAt: Date.now() });
+        }
+        if (typeof ts === 'number') newsJournalRef.current.record({ kind: 'update', ts, sessionId, fields });
+        setSessions(prev => {
+          const next = prev.map(s => (s.id === sessionId ? applyUpdate(s, fields) : s));
+          // A row is placed by the time of its last activity, so a row whose time changed moves, as it would
+          // in the list a read gives.
+          return 'lastTimestamp' in fields ? sortSessions(next) : next;
+        });
+        if (!sessionsRef.current.some(s => s.id === sessionId)) scheduleUnknownSessionRefresh(sessionId);
       }
     });
     return unsubscribe;
-  }, [subscribe, loadSessions, mergeSession]);
+  }, [subscribe, loadSessions, mergeSession, scheduleUnknownSessionRefresh]);
 
   // `/rename` ends with the CLI saying "Session renamed to: <name>" as a reply.
   // That reply is the proof the name was recorded, so it is the moment to ask for

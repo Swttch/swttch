@@ -2,6 +2,7 @@ import { createReadStream } from 'fs';
 import { open } from 'fs/promises';
 import { createInterface } from 'readline';
 import { resolveSessionTitle } from './resolveSessionTitle';
+import { scanFileCached } from './fileScanCache';
 
 /**
  * Extract session info from a JSONL file (Cursor-compatible)
@@ -145,7 +146,15 @@ interface HeadScan {
  * Reaching the end without stopping is the ordinary outcome for a short
  * session, and it is what makes messageCount trustworthy for those files.
  */
+/**
+ * The start of the transcript, read again only when the transcript changed. A list asks for hundreds of
+ * them each time it is read and nearly none changed since the last time (see fileScanCache).
+ */
 function scanHead(file: string): Promise<HeadScan> {
+  return scanFileCached('head', file, () => readHead(file));
+}
+
+function readHead(file: string): Promise<HeadScan> {
   return new Promise((resolve, reject) => {
     let messageCount = 0;
     let firstTimestamp: string | null = null;
@@ -326,7 +335,11 @@ const EMPTY_TAIL: TailScan = {
  * title and the CLI appends it, so stopping the forward scan early must not be
  * able to lose one that sits at the end of the file.
  */
-export async function scanTail(file: string): Promise<TailScan> {
+export function scanTail(file: string): Promise<TailScan> {
+  return scanFileCached('tail', file, () => readTail(file));
+}
+
+async function readTail(file: string): Promise<TailScan> {
   const handle = await open(file, 'r');
   try {
     const { size } = await handle.stat();

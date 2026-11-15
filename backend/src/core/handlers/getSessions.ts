@@ -3,6 +3,8 @@ import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { getSessionsList } from '../features/getSessionsList';
 import { getNestedSessionsList } from '../features/getNestedSessionsList';
+import { coalesceReads } from '../features/coalesceReads';
+import { nextSessionEventTs, sessionNewsCount } from '../features/sessionsUpdated';
 import { isWslUncPath } from '../wsl-path';
 import { MessageType } from '../../shared';
 
@@ -59,9 +61,27 @@ export async function getSessionsHandler(
   const limit = typeof message.payload?.limit === 'number' ? message.payload.limit : undefined;
   const options = { offset, limit };
 
-  const page = includeNested
-    ? await getNestedSessionsList(workingDir, options)
-    : await getSessionsList(workingDir, options);
+  // The list this screen asks for decides which session news is for it. Noted before the list is
+  // read, so news that comes while it is read is not missed.
+  connections.registerListScope(connectionId, { rootDir: workingDir, includeNested });
+
+  // Every screen asks for its list on its own, and a change to a session makes all
+  // of them ask at once. The reads of one list (same folder, same page) are kept to
+  // the one running and one more behind it, see coalesceReads.
+  const key = JSON.stringify([workingDir, includeNested, offset ?? null, limit ?? null]);
+  // The answer says when its read began (`ts`): everything the session news said before that is already
+  // in it, and what the news says after it is not, which is how a screen puts the two together.
+  // A screen asking while a read runs shares it when nothing was announced since it began (it cannot have
+  // missed anything); otherwise it gets the read after it.
+  const { page, ts } = await coalesceReads(
+    key,
+    async () => {
+      const ts = nextSessionEventTs();
+      const page = await (includeNested ? getNestedSessionsList(workingDir, options) : getSessionsList(workingDir, options));
+      return { page, ts };
+    },
+    sessionNewsCount,
+  );
 
   console.error(
     '[getSessions]',
@@ -88,5 +108,6 @@ export async function getSessionsHandler(
     hasMore: page.hasMore,
     nextOffset: page.nextOffset,
     scopeDirCount: page.scopeDirCount,
+    ts,
   });
 }

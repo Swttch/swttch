@@ -4,7 +4,10 @@ const mocks = vi.hoisted(() => ({
   run: vi.fn(),
   entry: vi.fn(),
   version: vi.fn(),
+  marks: vi.fn(),
 }));
+
+vi.mock('../../features/sessionMarks', () => ({ readSessionMarksToShow: mocks.marks }));
 
 vi.mock('../../run-launcher', () => ({ runLauncher: mocks.run }));
 vi.mock('../../session-mcp', () => ({
@@ -37,9 +40,10 @@ describe('setSessionParentHandler', () => {
     vi.clearAllMocks();
     mocks.entry.mockResolvedValue('/g/node_modules/@swttch/session-manager-mcp/src/cli.js');
     mocks.version.mockResolvedValue('0.4.0');
+    mocks.marks.mockResolvedValue(new Map([['child', { row: { id: 'child', parentSessionUid: 'parent' }, sessionId: 'child' }]]));
   });
 
-  it('runs the package command with the session and the new parent, then tells every list to refresh', async () => {
+  it('runs the package command with the session and the new parent, then hands every screen the new mark', async () => {
     mocks.run.mockResolvedValue({ ok: true, output: '', stderr: '', stdout: '{"ok":true,"changed":true}\n' });
 
     await setSessionParentHandler('c1', message({ sessionId: 'child', parentSessionId: 'parent' }), connections, {} as never);
@@ -50,7 +54,13 @@ describe('setSessionParentHandler', () => {
       expect.anything(),
     );
     expect(ackOf()).toMatchObject({ requestId: 'r1', status: 'ok', changed: true });
-    expect(broadcastToAll).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, { action: 'refresh' });
+    expect(broadcastToAll.mock.calls).toEqual([
+      [
+        MessageType.SESSIONS_UPDATED,
+        { action: 'update', session: { sessionId: 'child', sessionMark: { id: 'child', parentSessionUid: 'parent' } }, ts: expect.any(Number) },
+        undefined,
+      ],
+    ]);
   });
 
   it('takes the session to the top level when no parent is given', async () => {
@@ -134,14 +144,31 @@ describe('setSessionArchivedHandler', () => {
     mocks.entry.mockResolvedValue('/g/node_modules/@swttch/session-manager-mcp/src/cli.js');
     mocks.version.mockResolvedValue('0.4.0');
     mocks.run.mockResolvedValue({ ok: true, output: '', stderr: '', stdout: '{"ok":true,"changed":true}\n' });
+    mocks.marks.mockResolvedValue(new Map());
   });
 
-  it('archives a session and tells every list to refresh', async () => {
+  it('archives a session and hands every screen its new mark as an update', async () => {
+    mocks.marks.mockResolvedValue(new Map([['s', { row: { id: 's', archivedAt: 1700 } }]]));
+
     await setSessionArchivedHandler('c1', message({ sessionId: 's', archived: true }), connections, {} as never);
 
     expect(lastArgs()).toEqual(['set-archived', 's', 'archived']);
     expect(ackOf()).toMatchObject({ status: 'ok', changed: true });
-    expect(broadcastToAll).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, { action: 'refresh' });
+    expect(broadcastToAll.mock.calls).toEqual([
+      [
+        MessageType.SESSIONS_UPDATED,
+        { action: 'update', session: { sessionId: 's', sessionMark: { id: 's', archivedAt: 1700 } }, ts: expect.any(Number) },
+        undefined,
+      ],
+    ]);
+  });
+
+  it('asks every list to read again when the package keeps no mark to hand over', async () => {
+    mocks.marks.mockResolvedValue(new Map());
+
+    await setSessionArchivedHandler('c1', message({ sessionId: 's', archived: true }), connections, {} as never);
+
+    expect(broadcastToAll.mock.calls).toEqual([[MessageType.SESSIONS_UPDATED, { action: 'refresh', ts: expect.any(Number) }, undefined]]);
   });
 
   it('brings a session back, or forgets what was chosen when asked to inherit', async () => {
