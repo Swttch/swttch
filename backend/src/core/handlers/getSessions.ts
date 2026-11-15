@@ -3,6 +3,7 @@ import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { getSessionsList } from '../features/getSessionsList';
 import { getNestedSessionsList } from '../features/getNestedSessionsList';
+import { coalesceReads } from '../features/coalesceReads';
 import { isWslUncPath } from '../wsl-path';
 import { MessageType } from '../../shared';
 
@@ -59,9 +60,13 @@ export async function getSessionsHandler(
   const limit = typeof message.payload?.limit === 'number' ? message.payload.limit : undefined;
   const options = { offset, limit };
 
-  const page = includeNested
-    ? await getNestedSessionsList(workingDir, options)
-    : await getSessionsList(workingDir, options);
+  // Every screen asks for its list on its own, and a change to a session makes all
+  // of them ask at once. The reads of one list (same folder, same page) are kept to
+  // the one running and one more behind it, see coalesceReads.
+  const key = JSON.stringify([workingDir, includeNested, offset ?? null, limit ?? null]);
+  const page = await coalesceReads(key, () =>
+    includeNested ? getNestedSessionsList(workingDir, options) : getSessionsList(workingDir, options),
+  );
 
   console.error(
     '[getSessions]',

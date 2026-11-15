@@ -124,4 +124,58 @@ describe('getSessionsHandler', () => {
     expect(payload.serviceError).toBeUndefined();
     expect(mockGetSessionsList).toHaveBeenCalled();
   });
+
+  describe('when several screens ask for the same list at once', () => {
+    const page = (id: string) => ({ sessions: [{ sessionId: id }], total: 1, hasMore: false, nextOffset: 1, scopeDirCount: 1 }) as never;
+    const asking = (requestId: string, payload: Record<string, unknown> = {}): IPCMessage => ({
+      type: MessageType.GET_SESSIONS,
+      payload: { workingDir: '/work', limit: 30, ...payload },
+      timestamp: 0,
+      requestId,
+    });
+
+    it('reads once for the ones that came while a read ran, and answers each on its own request', async () => {
+      let finishFirst!: (value: never) => void;
+      mockGetSessionsList
+        .mockReturnValueOnce(new Promise((resolve) => { finishFirst = resolve as typeof finishFirst; }))
+        .mockResolvedValueOnce(page('fresh'));
+      const conns = mockConns();
+
+      const answered = [
+        getSessionsHandler('c1', asking('r1'), conns, bridge),
+        getSessionsHandler('c2', asking('r2'), conns, bridge),
+        getSessionsHandler('c3', asking('r3'), conns, bridge),
+        getSessionsHandler('c4', asking('r4'), conns, bridge),
+      ];
+      expect(mockGetSessionsList).toHaveBeenCalledTimes(1);
+
+      finishFirst(page('older'));
+      await Promise.all(answered);
+
+      expect(mockGetSessionsList).toHaveBeenCalledTimes(2);
+      const sent = (conns.sendTo as ReturnType<typeof vi.fn>).mock.calls as Array<[string, string, Record<string, unknown>]>;
+      expect(sent.map(([connId, , payload]) => [connId, payload.requestId]).sort()).toEqual([
+        ['c1', 'r1'], ['c2', 'r2'], ['c3', 'r3'], ['c4', 'r4'],
+      ]);
+      const byRequest = Object.fromEntries(sent.map(([, , payload]) => [payload.requestId as string, (payload.sessions as Array<{ sessionId: string }>)[0].sessionId]));
+      expect(byRequest).toEqual({ r1: 'older', r2: 'fresh', r3: 'fresh', r4: 'fresh' });
+    });
+
+    it('does not make a screen asking for another folder or another page wait for them', async () => {
+      let finishFirst!: (value: never) => void;
+      mockGetSessionsList
+        .mockReturnValueOnce(new Promise((resolve) => { finishFirst = resolve as typeof finishFirst; }))
+        .mockResolvedValueOnce(page('other-folder'))
+        .mockResolvedValueOnce(page('other-page'));
+      const conns = mockConns();
+
+      const first = getSessionsHandler('c1', asking('r1'), conns, bridge);
+      await getSessionsHandler('c2', asking('r2', { workingDir: '/elsewhere' }), conns, bridge);
+      await getSessionsHandler('c3', asking('r3', { offset: 30 }), conns, bridge);
+
+      expect(mockGetSessionsList).toHaveBeenCalledTimes(3);
+      finishFirst(page('first'));
+      await first;
+    });
+  });
 });
