@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { useTranslation } from '@/i18n';
 import { useOptionalSideQuestions } from '@/contexts/SideQuestionContext';
+import { useChatInputFocus } from '@/contexts/ChatInputFocusContext';
 import { addReplyToComposer } from '@/utils/composerReplies';
 import { quoteLines } from '../message-renderers/utils/replyBlocks';
 import { ReplyComposerCard } from './ReplyComposerCard';
@@ -67,6 +68,7 @@ function isEditable(node: Node | null): boolean {
 export function SelectionReplyLayer({ containerRef }: Props) {
   const { t } = useTranslation('chat');
   const sideQuestions = useOptionalSideQuestions();
+  const { focus: focusComposer } = useChatInputFocus();
   const [picked, setPicked] = useState<Picked | null>(null);
   const [anchor, setAnchor] = useState<Anchor | null>(null);
   const [composing, setComposing] = useState(false);
@@ -223,6 +225,9 @@ export function SelectionReplyLayer({ containerRef }: Props) {
         onSubmit={(comment, send) => {
           addReplyToComposer(picked.text, comment, send);
           clearSelection();
+          // The card was where the caret was, and it goes with this; the reader goes on in the message box, where
+          // the reply now stands. After the card has left, or the focus falls to the page and stays there.
+          window.setTimeout(focusComposer, 0);
         }}
       />
     );
