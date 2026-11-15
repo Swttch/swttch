@@ -33,6 +33,20 @@ describe('hideCliNotes', () => {
     expect(hideCliNotes(list).map((m) => m.uuid)).toEqual(['m1', 'm2', 'm3']);
   });
 
+  it('drops the same note while it streams: no isMeta, isSynthetic, a text block (what the live event carries)', () => {
+    const live = {
+      type: LoadedMessageType.User,
+      uuid: 'l1',
+      isSynthetic: true,
+      message: { role: 'user', content: [{ type: 'text', text: '[Image: original 3200x2400, displayed at 2000x1500. Multiply coordinates by 1.60 to map to original image.]' }] },
+    } as unknown as LoadedMessageDto;
+    expect(hideCliNotes([user('u1', 'look'), live]).map((m) => m.uuid)).toEqual(['u1']);
+  });
+
+  it('keeps a synthetic entry that is not that note', () => {
+    expect(hideCliNotes([user('s1', 'Stop hook feedback: …', { isSynthetic: true })])).toHaveLength(1);
+  });
+
   it('leaves an entry that is not isMeta alone, even if it begins like a note', () => {
     expect(hideCliNotes([user('u1', '[Image: mine]')])).toHaveLength(1);
   });
