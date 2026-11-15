@@ -21,8 +21,13 @@ export function hideCliNotes(messages: LoadedMessageDto[]): LoadedMessageDto[] {
     }
   }
   return messages.filter((message) => {
-    if (message.type !== LoadedMessageType.User || message.isMeta !== true || message.sourceToolUseID) return true;
+    if (message.type !== LoadedMessageType.User || message.sourceToolUseID) return true;
+    // The saved session marks the scale note `isMeta`; the same note on the live stream has no `isMeta`
+    // and arrives as `isSynthetic`, so a note still drawn while it streams would vanish on a reload.
+    const isCliEntry = message.isMeta === true || message.isSynthetic === true;
+    if (!isCliEntry) return true;
     if (getTextContent(message).trimStart().startsWith('[Image: ')) return false;
+    if (message.isMeta !== true) return true;
     if (message.parentUuid && commandEntries.has(message.parentUuid)) return false;
     return true;
   });

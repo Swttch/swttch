@@ -296,7 +296,7 @@ function ResultPictures({ call }: { call: ToolCall }) {
     <>
       {images.map((src, index) => (
         <button key={index} type="button" onClick={() => setViewing(index)} className="mt-2 block max-w-full cursor-zoom-in">
-          <img src={src} alt="" className="block max-w-full rounded-md" />
+          <img src={src} alt="" className="block h-auto max-w-md rounded-md" />
         </button>
       ))}
       {viewing !== null && (
