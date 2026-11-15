@@ -161,6 +161,30 @@ describe('getSessionsHandler', () => {
       expect(byRequest).toEqual({ r1: 'older', r2: 'fresh', r3: 'fresh', r4: 'fresh' });
     });
 
+    it('stamps each answer with when its read began, so a screen can tell what the answer already holds', async () => {
+      let finishFirst!: (value: never) => void;
+      mockGetSessionsList
+        .mockReturnValueOnce(new Promise((resolve) => { finishFirst = resolve as typeof finishFirst; }))
+        .mockResolvedValueOnce(page('fresh'));
+      const conns = mockConns();
+
+      const answered = [
+        getSessionsHandler('c1', asking('r1'), conns, bridge),
+        getSessionsHandler('c2', asking('r2'), conns, bridge),
+        getSessionsHandler('c3', asking('r3'), conns, bridge),
+      ];
+      finishFirst(page('older'));
+      await Promise.all(answered);
+
+      const sent = (conns.sendTo as ReturnType<typeof vi.fn>).mock.calls as Array<[string, string, Record<string, unknown>]>;
+      const tsOf = Object.fromEntries(sent.map(([, , payload]) => [payload.requestId as string, payload.ts as number]));
+      expect(typeof tsOf.r1).toBe('number');
+      // The request that waited was answered by a read that began after the first one.
+      expect(tsOf.r2).toBeGreaterThan(tsOf.r1);
+      // Requests that shared one read share its ts.
+      expect(tsOf.r3).toBe(tsOf.r2);
+    });
+
     it('does not make a screen asking for another folder or another page wait for them', async () => {
       let finishFirst!: (value: never) => void;
       mockGetSessionsList

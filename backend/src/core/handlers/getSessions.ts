@@ -4,6 +4,7 @@ import type { IPCMessage } from '../types';
 import { getSessionsList } from '../features/getSessionsList';
 import { getNestedSessionsList } from '../features/getNestedSessionsList';
 import { coalesceReads } from '../features/coalesceReads';
+import { nextSessionEventTs } from '../features/sessionsUpdated';
 import { isWslUncPath } from '../wsl-path';
 import { MessageType } from '../../shared';
 
@@ -64,9 +65,13 @@ export async function getSessionsHandler(
   // of them ask at once. The reads of one list (same folder, same page) are kept to
   // the one running and one more behind it, see coalesceReads.
   const key = JSON.stringify([workingDir, includeNested, offset ?? null, limit ?? null]);
-  const page = await coalesceReads(key, () =>
-    includeNested ? getNestedSessionsList(workingDir, options) : getSessionsList(workingDir, options),
-  );
+  // The answer says when its read began (`ts`): everything the session news said before that is already
+  // in it, and what the news says after it is not, which is how a screen puts the two together.
+  const { page, ts } = await coalesceReads(key, async () => {
+    const ts = nextSessionEventTs();
+    const page = await (includeNested ? getNestedSessionsList(workingDir, options) : getSessionsList(workingDir, options));
+    return { page, ts };
+  });
 
   console.error(
     '[getSessions]',
@@ -93,5 +98,6 @@ export async function getSessionsHandler(
     hasMore: page.hasMore,
     nextOffset: page.nextOffset,
     scopeDirCount: page.scopeDirCount,
+    ts,
   });
 }

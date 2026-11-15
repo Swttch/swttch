@@ -70,7 +70,8 @@ describe('announceSessionToolChanges', () => {
     expect(broadcastToAll).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, {
       action: 'upsert',
       session: { sessionId: 'child' },
-    });
+      ts: expect.any(Number),
+    }, undefined);
   });
 
   it('reads an answer handed over as a plain string too', () => {
@@ -83,14 +84,14 @@ describe('announceSessionToolChanges', () => {
     expect(mockAwait).toHaveBeenCalledWith('child', '/work', expect.any(Function));
   });
 
-  it.each(['detach_session', 'delete_session', 'set_session_title'])(
+  it.each(['detach_session', 'delete_session'])(
     'asks the lists to read again right after %s answers',
     (tool) => {
       announceSessionToolChanges(toolUse('call-1', `mcp__swttch_session_mgmt__${tool}`), connections);
       announceSessionToolChanges(toolResult('call-1', '{"detached":true}'), connections);
 
       expect(broadcastToAll).toHaveBeenCalledTimes(1);
-      expect(broadcastToAll).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, { action: 'refresh' });
+      expect(broadcastToAll).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, { action: 'refresh', ts: expect.any(Number) }, undefined);
       expect(mockAwait).not.toHaveBeenCalled();
     },
   );
@@ -100,16 +101,20 @@ describe('announceSessionToolChanges', () => {
       announceSessionToolChanges(toolUse('call-1', `mcp__swttch_session_mgmt__${tool}`, input), connections, caller);
       announceSessionToolChanges(toolResult('call-1', 'ok'), connections, caller);
     };
+    const refresh = [MessageType.SESSIONS_UPDATED, { action: 'refresh', ts: expect.any(Number) }, undefined];
 
-    it('hands the lists the new mark of that session before asking them to read again', async () => {
+    it('hands the screens the new mark of that session as an update, and nothing else', async () => {
       mockMarks.mockResolvedValue(new Map([['target', markOf({ id: 'target', archivedAt: 1700 })]]));
 
       call({ session_id: 'target' });
       await settle();
 
       expect(broadcastToAll.mock.calls).toEqual([
-        [MessageType.SESSIONS_UPDATED, { action: 'mark', session: { sessionId: 'target', sessionMark: { id: 'target', archivedAt: 1700 } } }],
-        [MessageType.SESSIONS_UPDATED, { action: 'refresh' }],
+        [
+          MessageType.SESSIONS_UPDATED,
+          { action: 'update', session: { sessionId: 'target', sessionMark: { id: 'target', archivedAt: 1700 } }, ts: expect.any(Number) },
+          undefined,
+        ],
       ]);
     });
 
@@ -119,26 +124,27 @@ describe('announceSessionToolChanges', () => {
       call({ session_id: 'self' });
       await settle();
 
-      expect(broadcastToAll.mock.calls[0]).toEqual([
-        MessageType.SESSIONS_UPDATED,
-        { action: 'mark', session: { sessionId: 'caller-id', sessionMark: { id: 'caller-id', archivedAt: 1700 } } },
-      ]);
+      expect(broadcastToAll.mock.calls[0][1]).toEqual({
+        action: 'update',
+        session: { sessionId: 'caller-id', sessionMark: { id: 'caller-id', archivedAt: 1700 } },
+        ts: expect.any(Number),
+      });
     });
 
-    it('only asks the lists to read again when no mark is kept for that session', async () => {
+    it('asks the screens to read again when no mark is kept for that session', async () => {
       call({ session_id: 'target' });
       await settle();
 
-      expect(broadcastToAll.mock.calls).toEqual([[MessageType.SESSIONS_UPDATED, { action: 'refresh' }]]);
+      expect(broadcastToAll.mock.calls).toEqual([refresh]);
     });
 
-    it('still asks the lists to read again when the marks cannot be read', async () => {
+    it('asks the screens to read again when the marks cannot be read', async () => {
       mockMarks.mockRejectedValue(new Error('disk'));
 
       call({ session_id: 'target' });
       await settle();
 
-      expect(broadcastToAll.mock.calls).toEqual([[MessageType.SESSIONS_UPDATED, { action: 'refresh' }]]);
+      expect(broadcastToAll.mock.calls).toEqual([refresh]);
     });
 
     it('says nothing when the tool refused', async () => {
@@ -148,6 +154,50 @@ describe('announceSessionToolChanges', () => {
 
       expect(broadcastToAll).not.toHaveBeenCalled();
       expect(mockMarks).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('right after set_session_title answers', () => {
+    const call = (input: Record<string, unknown>, caller: string | undefined = 'caller-id') => {
+      announceSessionToolChanges(toolUse('call-1', 'mcp__swttch_session_mgmt__set_session_title', input), connections, caller);
+      announceSessionToolChanges(toolResult('call-1', 'ok'), connections, caller);
+    };
+    const refresh = [MessageType.SESSIONS_UPDATED, { action: 'refresh', ts: expect.any(Number) }, undefined];
+
+    it('hands the screens the new name as an update of that session, as the CLI will keep it', () => {
+      call({ session_id: 'target', title: '  New\n  name  ' });
+
+      expect(broadcastToAll.mock.calls).toEqual([
+        [MessageType.SESSIONS_UPDATED, { action: 'update', session: { sessionId: 'target', title: 'New name' }, ts: expect.any(Number) }, undefined],
+      ]);
+    });
+
+    it('takes "self" to be the session whose stream carried the call', () => {
+      call({ session_id: 'self', title: 'Mine' });
+
+      expect(broadcastToAll.mock.calls[0][1]).toEqual({
+        action: 'update',
+        session: { sessionId: 'caller-id', title: 'Mine' },
+        ts: expect.any(Number),
+      });
+    });
+
+    it('asks the screens to read again when the call names no session or no name', () => {
+      call({ title: 'No session' });
+      call({ session_id: 'target', title: '   ' });
+
+      expect(broadcastToAll.mock.calls).toEqual([refresh, refresh]);
+    });
+
+    it('says nothing when the tool refused', () => {
+      announceSessionToolChanges(
+        toolUse('call-1', 'mcp__swttch_session_mgmt__set_session_title', { session_id: 'target', title: 'X' }),
+        connections,
+        'caller-id',
+      );
+      announceSessionToolChanges(toolResult('call-1', 'unavailable', true), connections, 'caller-id');
+
+      expect(broadcastToAll).not.toHaveBeenCalled();
     });
   });
 

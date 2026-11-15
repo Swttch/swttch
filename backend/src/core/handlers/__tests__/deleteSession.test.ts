@@ -120,8 +120,8 @@ describe('deleteSessionHandler', () => {
     expect(mockRemoveOverride).toHaveBeenCalledWith('/home/user/.claude/projects/-test', 'abc123');
     expect(connections.broadcastToAll).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, {
       action: 'delete',
-      session: { sessionId: 'abc123' },
-    });
+      session: { sessionId: 'abc123' }, ts: expect.any(Number),
+    }, undefined);
     expect(connections.sendTo).toHaveBeenCalledWith('conn-1', MessageType.ACK, expect.objectContaining({
       status: 'ok',
     }));

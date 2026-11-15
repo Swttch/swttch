@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, act, waitFor } from '@testing-library/react';
 import React from 'react';
 import { SessionProvider, useSessionContext, SESSION_PAGE_SIZE } from '../SessionContext';
@@ -1319,10 +1319,10 @@ describe('SessionContext', () => {
       await waitFor(() => expect(mockSessionsIndex).toHaveBeenCalledTimes(1));
     });
 
-    it('turns one row to the mark the backend hands over, without reading the list again', async () => {
-      // What the backend sends the moment a session was archived through the
-      // session-management MCP: the new mark of that one session.
-      mockSessionsIndex.mockResolvedValue({ sessions: mockSessionDtos });
+    // The screen is rendered with a list of two sessions, and the handler it gave
+    // to the backend's session news is returned with the context.
+    async function renderWithList(sessions: unknown[] = mockSessionDtos, readAt?: number) {
+      mockSessionsIndex.mockResolvedValue({ sessions, ...(readAt !== undefined ? { ts: readAt } : {}) });
       let capturedCtx = null as ReturnType<typeof useSessionContext> | null;
       render(
         <SessionProvider>
@@ -1332,52 +1332,108 @@ describe('SessionContext', () => {
       await act(async () => {
         await capturedCtx?.loadSessions();
       });
-      await waitFor(() => expect(capturedCtx?.sessions).toHaveLength(2));
+      await waitFor(() => expect(capturedCtx?.sessions).toHaveLength(sessions.length));
       await waitFor(() => {
         expect(mockSubscribe.mock.calls.some(([type]) => type === MessageType.SESSIONS_UPDATED)).toBe(true);
       });
       const calls = mockSubscribe.mock.calls.filter(([type]) => type === MessageType.SESSIONS_UPDATED);
-      const handler = calls[calls.length - 1][1];
+      return { ctx: () => capturedCtx!, handler: calls[calls.length - 1][1] as SubscribedHandler };
+    }
+
+    const updateOf = (sessionId: string, fields: Record<string, unknown>, ts: number) => ({
+      payload: { action: 'update', session: { sessionId, ...fields }, ts },
+    });
+
+    it('turns one row to the mark an update carries, without reading the list again', async () => {
+      const { ctx, handler } = await renderWithList();
       mockSessionsIndex.mockClear();
 
       await act(async () => {
-        handler({ payload: { action: 'mark', session: { sessionId: 'session-2', sessionMark: { id: 'session-2', archivedAt: 1700 } } } });
+        handler(updateOf('session-2', { sessionMark: { id: 'session-2', archivedAt: 1700 } }, 100));
       });
 
       await waitFor(() => {
-        expect(capturedCtx?.sessions.find((s) => s.id === 'session-2')?.sessionMark?.archivedAt).toBe(1700);
+        expect(ctx().sessions.find((s) => s.id === 'session-2')?.sessionMark?.archivedAt).toBe(1700);
       });
-      expect(capturedCtx?.sessions.find((s) => s.id === 'session-1')?.sessionMark).toBeUndefined();
-      expect(capturedCtx?.sessions.find((s) => s.id === 'session-2')?.title).toBe('Chat 2');
+      expect(ctx().sessions.find((s) => s.id === 'session-1')?.sessionMark).toBeUndefined();
+      expect(ctx().sessions.find((s) => s.id === 'session-2')?.title).toBe('Chat 2');
       expect(mockSessionsIndex).not.toHaveBeenCalled();
     });
 
-    it('leaves the list alone for a mark of a session it does not hold', async () => {
-      mockSessionsIndex.mockResolvedValue({ sessions: mockSessionDtos });
-      let capturedCtx = null as ReturnType<typeof useSessionContext> | null;
-      render(
-        <SessionProvider>
-          <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
-        </SessionProvider>
-      );
+    it('puts an update that came before the list onto it, when the list was read before the update', async () => {
+      const { ctx, handler } = await renderWithList([], 100);
       await act(async () => {
-        await capturedCtx?.loadSessions();
-      });
-      await waitFor(() => expect(capturedCtx?.sessions).toHaveLength(2));
-      await waitFor(() => {
-        expect(mockSubscribe.mock.calls.some(([type]) => type === MessageType.SESSIONS_UPDATED)).toBe(true);
-      });
-      const calls = mockSubscribe.mock.calls.filter(([type]) => type === MessageType.SESSIONS_UPDATED);
-      const handler = calls[calls.length - 1][1];
-      mockSessionsIndex.mockClear();
-
-      await act(async () => {
-        handler({ payload: { action: 'mark', session: { sessionId: 'elsewhere', sessionMark: { id: 'elsewhere', archivedAt: 1700 } } } });
+        handler(updateOf('session-1', { title: 'renamed' }, 150));
       });
 
-      expect(capturedCtx?.sessions).toHaveLength(2);
-      expect(capturedCtx?.sessions.every((s) => s.sessionMark === undefined)).toBe(true);
-      expect(mockSessionsIndex).not.toHaveBeenCalled();
+      mockSessionsIndex.mockResolvedValue({ sessions: mockSessionDtos, ts: 120 });
+      await act(async () => {
+        await ctx().loadSessions();
+      });
+
+      await waitFor(() => expect(ctx().sessions.find((s) => s.id === 'session-1')?.title).toBe('renamed'));
+    });
+
+    it('does not put on an update the list was read after', async () => {
+      const { ctx, handler } = await renderWithList([], 100);
+      await act(async () => {
+        handler(updateOf('session-1', { title: 'renamed before the read' }, 150));
+      });
+
+      mockSessionsIndex.mockResolvedValue({ sessions: mockSessionDtos, ts: 200 });
+      await act(async () => {
+        await ctx().loadSessions();
+      });
+
+      await waitFor(() => expect(ctx().sessions).toHaveLength(2));
+      expect(ctx().sessions.find((s) => s.id === 'session-1')?.title).toBe('Chat 1');
+    });
+
+    it('ignores a list that was read before the one it already holds', async () => {
+      const { ctx } = await renderWithList(mockSessionDtos, 200);
+
+      mockSessionsIndex.mockResolvedValue({ sessions: [mockSessionDtos[0]], ts: 100 });
+      await act(async () => {
+        await ctx().loadSessions();
+      });
+
+      expect(ctx().sessions).toHaveLength(2);
+    });
+
+    describe('an update for a session the list does not hold', () => {
+      beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }));
+      afterEach(() => vi.useRealTimers());
+
+      it('reads the list again once the updates stop for five seconds', async () => {
+        const { handler } = await renderWithList();
+        mockSessionsIndex.mockClear();
+
+        await act(async () => {
+          handler(updateOf('elsewhere', { title: 'a' }, 100));
+          vi.advanceTimersByTime(3000);
+          handler(updateOf('elsewhere', { title: 'b' }, 101));
+          vi.advanceTimersByTime(4000);
+        });
+        // Seven seconds in, but only four since the last update.
+        expect(mockSessionsIndex).not.toHaveBeenCalled();
+
+        await act(async () => {
+          vi.advanceTimersByTime(1500);
+        });
+        await waitFor(() => expect(mockSessionsIndex).toHaveBeenCalledTimes(1));
+      });
+
+      it('does not read the list again for an update of a session the list holds', async () => {
+        const { handler } = await renderWithList();
+        mockSessionsIndex.mockClear();
+
+        await act(async () => {
+          handler(updateOf('session-1', { title: 'x' }, 100));
+          vi.advanceTimersByTime(10_000);
+        });
+
+        expect(mockSessionsIndex).not.toHaveBeenCalled();
+      });
     });
   });
 

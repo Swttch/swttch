@@ -2,6 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const state = vi.hoisted(() => ({ setting: false as unknown, sponsor: false, installed: true }));
 
+// The marks the package keeps are what a test says they are; no test reads the real table.
+const marksNow = vi.hoisted(() => ({ rows: [] as Array<Record<string, unknown>> }));
+vi.mock('../sessionMarks', () => ({
+  readSessionMarksToShow: vi.fn(async () => new Map(marksNow.rows.map((row) => [String(row.id), { row, sessionId: String(row.id) }]))),
+}));
+
 vi.mock('../settings', () => ({
   readMergedSettings: vi.fn(async () => ({ settings: { desktopSessionSync: state.setting }, overrides: [] })),
 }));
@@ -35,6 +41,7 @@ import {
   rememberDesktopState,
   resetDesktopSyncCache,
 } from '../desktopSync';
+import { resetKnownMarks } from '../sessionMarksKnown';
 import type { DesktopSessionState } from '../desktopSessions';
 
 function connectionsFake() {
@@ -57,6 +64,8 @@ describe('reflecting the Claude desktop app', () => {
     state.installed = true;
     desktop.read = undefined;
     desktop.watched.length = 0;
+    marksNow.rows = [];
+    resetKnownMarks();
   });
 
   it('is off until the switch is on', async () => {
@@ -104,7 +113,7 @@ describe('reflecting the Claude desktop app', () => {
     await desktopSyncSettingChanged(connections as never);
 
     expect([...connections.setDesktopRunning.mock.calls[1][0]]).toEqual(['a']);
-    expect(connections.broadcastToAll).toHaveBeenCalledWith(expect.any(String), { action: 'refresh' });
+    expect(connections.broadcastToAll).toHaveBeenCalledWith(expect.any(String), { action: 'refresh', ts: expect.any(Number) }, undefined);
   });
 
   describe('watching through the package', () => {
@@ -147,15 +156,65 @@ describe('reflecting the Claude desktop app', () => {
       expect([...connections.setDesktopRunning.mock.calls.at(-1)![0]]).toEqual([]);
     });
 
-    it('tells every screen to read its list again when the desktop app changes a list, and hands over what runs when that changes', async () => {
+    it('tells every screen to read its list again when the desktop app changes what it titles its sessions, and hands over what runs', async () => {
       state.setting = true;
       state.sponsor = true;
       const connections = connectionsFake();
       await syncDesktopWatch(connections as never);
-      desktop.watched[0].emit(running('a'), { list: true, running: true });
+      desktop.watched[0].emit({ ...running('a'), titles: new Map([['a', 'Boss']]) }, { list: true, running: true });
       await new Promise((resolve) => setTimeout(resolve, 0));
-      expect(connections.broadcastToAll).toHaveBeenCalledWith(expect.any(String), { action: 'refresh' });
+      expect(connections.broadcastToAll).toHaveBeenCalledWith(expect.any(String), { action: 'refresh', ts: expect.any(Number) }, undefined);
       expect([...connections.setDesktopRunning.mock.calls.at(-1)![0]]).toEqual(['a']);
+    });
+
+    describe('when the marks of the package change', () => {
+      const updatesOf = (connections: ReturnType<typeof connectionsFake>) =>
+        connections.broadcastToAll.mock.calls.map(([, body]) => body);
+
+      it('tells every screen the new mark of each session that changed, as updates, and does not ask them to read the list', async () => {
+        state.setting = true;
+        state.sponsor = true;
+        marksNow.rows = [{ id: 'a', archivedAt: 0 }, { id: 'b', archivedAt: 0 }];
+        const connections = connectionsFake();
+        await syncDesktopWatch(connections as never);
+
+        marksNow.rows = [{ id: 'a', archivedAt: 1700 }, { id: 'b', archivedAt: 0 }];
+        desktop.watched[0].emit(running(), { list: true, running: false });
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(updatesOf(connections)).toEqual([
+          { action: 'update', session: { sessionId: 'a', sessionMark: { id: 'a', archivedAt: 1700 } }, ts: expect.any(Number) },
+        ]);
+      });
+
+      it('says a session whose mark is gone has none', async () => {
+        state.setting = true;
+        state.sponsor = true;
+        marksNow.rows = [{ id: 'a', archivedAt: 5 }];
+        const connections = connectionsFake();
+        await syncDesktopWatch(connections as never);
+
+        marksNow.rows = [];
+        desktop.watched[0].emit(running(), { list: true, running: false });
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(updatesOf(connections)).toEqual([
+          { action: 'update', session: { sessionId: 'a', sessionMark: null }, ts: expect.any(Number) },
+        ]);
+      });
+
+      it('says nothing when no mark differs from what the screens were told', async () => {
+        state.setting = true;
+        state.sponsor = true;
+        marksNow.rows = [{ id: 'a', archivedAt: 0 }];
+        const connections = connectionsFake();
+        await syncDesktopWatch(connections as never);
+
+        desktop.watched[0].emit(running(), { list: true, running: false });
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(connections.broadcastToAll).not.toHaveBeenCalled();
+      });
     });
 
     it('answers the lists from what the watching last said, and nothing while the sync is off', async () => {

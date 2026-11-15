@@ -174,8 +174,8 @@ describe('renameSessionHandler', () => {
     expect(mockRemoveOverride).toHaveBeenCalledWith('/home/user/.claude/projects/-test', 'abc123');
     expect(connections.broadcastToAll).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, {
       action: 'rename',
-      session: { sessionId: 'abc123', title: 'My Renamed Session' },
-    });
+      session: { sessionId: 'abc123', title: 'My Renamed Session' }, ts: expect.any(Number),
+    }, undefined);
     expect(connections.sendTo).toHaveBeenCalledWith('conn-1', MessageType.ACK, expect.objectContaining({
       status: 'ok',
     }));
@@ -194,8 +194,8 @@ describe('renameSessionHandler', () => {
 
     expect(connections.broadcastToAll).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, {
       action: 'rename',
-      session: { sessionId: 'abc123', title: 'two lines' },
-    });
+      session: { sessionId: 'abc123', title: 'two lines' }, ts: expect.any(Number),
+    }, undefined);
   });
 
   it('returns an error, and leaves any legacy override alone, when the CLI does not rename', async () => {

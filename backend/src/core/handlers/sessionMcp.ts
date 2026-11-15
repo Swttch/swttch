@@ -16,6 +16,8 @@ import {
 } from '../global-install-target';
 import { getSessionMcpVersion, resolveSessionMcpEntry, resetSessionMcpCache } from '../session-mcp';
 import { syncDesktopWatch } from '../features/desktopSync';
+import { announceSessionsUpdated } from '../features/sessionsUpdated';
+import { announceSessionMark } from '../features/announceSessionMark';
 
 /**
  * The session-management MCP (`@swttch/session-manager-mcp`) is installed the way the extend kit
@@ -209,7 +211,7 @@ export async function setSessionParentHandler(
     ack(connections, connectionId, message, { status: 'error', error: answer?.error ?? (result.output || 'The set-parent command failed.') });
     return;
   }
-  connections.broadcastToAll(MessageType.SESSIONS_UPDATED, { action: 'refresh' });
+  announceSessionsUpdated(connections, { action: 'refresh' });
   ack(connections, connectionId, message, { status: 'ok', changed: answer.changed === true });
 }
 
@@ -218,8 +220,8 @@ export async function setSessionParentHandler(
  * Claude desktop app's record of it shows again.
  *
  * Like the parent, the record belongs to the session-management MCP and is edited by its own `set-archived` command.
- * Only the record is edited: no process is stopped and no worktree is touched. Every screen is told to read its
- * session list again afterwards.
+ * Only the record is edited: no process is stopped and no worktree is touched. Every screen is handed the new
+ * mark of the session afterwards.
  */
 export async function setSessionArchivedHandler(
   connectionId: string,
@@ -264,7 +266,8 @@ export async function setSessionArchivedHandler(
     ack(connections, connectionId, message, { status: 'error', error: answer?.error ?? (result.output || 'The set-archived command failed.') });
     return;
   }
-  connections.broadcastToAll(MessageType.SESSIONS_UPDATED, { action: 'refresh' });
+  // Every screen is handed the new mark of the session, so none has to read its list again.
+  await announceSessionMark(sessionId, connections);
   ack(connections, connectionId, message, { status: 'ok', changed: answer.changed === true });
 }
 

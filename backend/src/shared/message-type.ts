@@ -845,7 +845,15 @@ export enum MessageType {
   // -- Session push --
   /** Full session history payload in response to LOAD_SESSION. */
   SESSION_LOADED = 'SESSION_LOADED',
-  /** The session list changed and clients should refresh. */
+  /**
+   * News about sessions, for every connected screen: `{ action, session?, ts }`.
+   * `ts` is where the news stands among the others, from the backend's clock, and a list answer
+   * (GET_SESSIONS) carries the `ts` of when its read began, so a screen can tell what the answer
+   * already holds. `action` is `update` (some items of `session` changed; `session` is `sessionId`
+   * and the changed items), `refresh` (read the list again), or one of the older `started`,
+   * `upsert`, `rename`, `delete`, until each is moved to `create`, `update`, `delete`.
+   * outbound backend→webview
+   */
   SESSIONS_UPDATED = 'SESSIONS_UPDATED',
   /**
    * A session was just created, carrying the row the creating tab drew for it.

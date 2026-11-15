@@ -48,6 +48,12 @@ export interface SessionServiceError {
 /** Result of listing sessions: the sessions plus an optional non-fatal notice. */
 export interface SessionListResult {
   sessions: SessionMetaDto[];
+  /**
+   * When the backend began reading this list. The list is the state of the sessions as of that
+   * time: session news up to it is already in the rows, and news after it is not. Missing from
+   * a backend that does not say.
+   */
+  ts?: number;
   serviceError?: SessionServiceError;
   /**
    * Sessions exist past the ones returned. False for an unpaged request, which
@@ -79,6 +85,8 @@ export interface SessionListRange {
 }
 
 interface GetSessionsResponse {
+  /** When the backend began reading the list. See SessionListResult. */
+  ts?: number;
   sessions: {
     sessionId: string;
     title: string;
@@ -148,9 +156,10 @@ export class SessionsApi {
     // fall back on what it can see for itself, and pretending it said "one"
     // would state the opposite of what a merged list needs.
     const scopeDirCount = typeof response.scopeDirCount === 'number' ? response.scopeDirCount : null;
+    const readAt = typeof response.ts === 'number' ? { ts: response.ts } : {};
     return response.serviceError
-      ? { sessions, hasMore, nextOffset, scopeDirCount, serviceError: response.serviceError }
-      : { sessions, hasMore, nextOffset, scopeDirCount };
+      ? { sessions, hasMore, nextOffset, scopeDirCount, ...readAt, serviceError: response.serviceError }
+      : { sessions, hasMore, nextOffset, scopeDirCount, ...readAt };
   }
 
   /**

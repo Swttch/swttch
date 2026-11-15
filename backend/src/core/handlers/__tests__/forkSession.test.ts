@@ -178,7 +178,7 @@ describe('forkSessionHandler', () => {
 
     expect(vi.mocked(connections.broadcastToAll)).toHaveBeenCalledWith(
       MessageType.SESSIONS_UPDATED,
-      { action: 'upsert', session: { sessionId: ackOf(connections)!.sessionId } },
+      { action: 'upsert', session: { sessionId: ackOf(connections)!.sessionId }, ts: expect.any(Number) }, undefined
     );
   });
 

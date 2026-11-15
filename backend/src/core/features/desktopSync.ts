@@ -4,6 +4,9 @@ import { EMPTY_DESKTOP_STATE, readDesktopState, watchDesktopState, type DesktopS
 import { getSponsorStatus } from './license';
 import { readMergedSettings } from './settings';
 import { isSessionMcpInstalled } from '../session-mcp';
+import { announceSessionsUpdated } from './sessionsUpdated';
+import { readSessionMarksToShow } from './sessionMarks';
+import { seedKnownMarks, takeMarkChanges } from './sessionMarksKnown';
 
 /**
  * Whether what the Claude desktop app records about its sessions is reflected here.
@@ -74,11 +77,62 @@ async function syncNow(connections: ConnectionManager, restart: boolean): Promis
   const seeded = await readDesktopState();
   if (seeded !== EMPTY_DESKTOP_STATE) lastState = seeded;
   await applyDesktopRunning(connections);
+  // The marks as they are when the watching starts are the ones the screens have, so a change that comes
+  // after is told as the sessions it is about.
+  try {
+    seedKnownMarks(await readSessionMarksToShow());
+  } catch {
+    // Not seeded: the first change is told as a read of the list, which finds out what it was.
+  }
   stopWatching = watchDesktopState((state, change) => {
+    const before = lastState;
     rememberDesktopState(state);
-    if (change.list) connections.broadcastToAll(MessageType.SESSIONS_UPDATED, { action: 'refresh' });
+    if (change.list) void announceListChange(connections, before, state);
     if (change.running) void applyDesktopRunning(connections);
   });
+}
+
+/** Whether two maps hold the same entries. */
+function sameEntries(a: Map<string, string>, b: Map<string, string>): boolean {
+  if (a.size !== b.size) return false;
+  for (const [key, value] of a) if (b.get(key) !== value) return false;
+  return true;
+}
+
+/**
+ * The watching said a list changed: the desktop app's records, the package's marks, or both.
+ *
+ * What the desktop app titles its sessions cannot be told session by session from here, so a change
+ * of that has every screen read its list again. Everything else (who a session was put under, what
+ * was archived, by the desktop app or by hand) is in the marks the lists show, so each session whose
+ * mark differs from what the screens were told is told as an update of that session, and no screen
+ * reads its list.
+ */
+async function announceListChange(
+  connections: ConnectionManager,
+  before: DesktopSessionState | null,
+  after: DesktopSessionState,
+): Promise<void> {
+  if (!sameEntries(before?.titles ?? new Map(), after.titles)) {
+    announceSessionsUpdated(connections, { action: 'refresh' });
+    return;
+  }
+  try {
+    const changes = takeMarkChanges(await readSessionMarksToShow());
+    if (changes === null) {
+      announceSessionsUpdated(connections, { action: 'refresh' });
+      return;
+    }
+    for (const { sessionId, mark } of changes) {
+      announceSessionsUpdated(connections, {
+        action: 'update',
+        session: { sessionId, sessionMark: mark ? mark.row : null },
+      });
+    }
+  } catch (err) {
+    console.error('[node-backend]', 'Failed to find which marks changed:', err);
+    announceSessionsUpdated(connections, { action: 'refresh' });
+  }
 }
 
 /**
@@ -103,5 +157,5 @@ export async function desktopSyncSettingChanged(connections: ConnectionManager):
   resetDesktopSyncCache();
   await syncDesktopWatch(connections);
   await applyDesktopRunning(connections);
-  connections.broadcastToAll(MessageType.SESSIONS_UPDATED, { action: 'refresh' });
+  announceSessionsUpdated(connections, { action: 'refresh' });
 }

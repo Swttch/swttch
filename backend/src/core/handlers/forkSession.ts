@@ -6,6 +6,7 @@ import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { MessageType } from '../../shared';
+import { announceSessionsUpdated } from '../features/sessionsUpdated';
 
 /**
  * The transcript a branch of `sendUuid` starts from, copied from the original.
@@ -149,7 +150,7 @@ export async function forkSessionHandler(
     });
 
     // The session list is what the user checks to see the branch exists.
-    connections.broadcastToAll(MessageType.SESSIONS_UPDATED, {
+    announceSessionsUpdated(connections, {
       action: 'upsert',
       session: { sessionId: forkedSessionId },
     });

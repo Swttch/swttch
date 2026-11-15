@@ -21,6 +21,7 @@ import { MessageType } from '../../shared';
 import { scanTail } from './extractSessionInfo';
 import { getProjectSessionsPath } from './getProjectSessionsPath';
 import { getSessionEntry } from './getSessionEntry';
+import { announceSessionsUpdated } from './sessionsUpdated';
 
 /** A burst of writes (the CLI appends several lines at once) is read once. */
 const DEBOUNCE_MS = 200;
@@ -78,7 +79,7 @@ export async function announceGeneratedTitle(
   // `generated` is this app's own flag, not the CLI's: it tells the screen that the
   // title just arrived by itself, which is when it is drawn letter by letter. A name
   // the user typed, or chose with `/rename`, arrives without it.
-  connections.broadcastToAll(MessageType.SESSIONS_UPDATED, {
+  announceSessionsUpdated(connections, {
     action: 'rename',
     session: {
       sessionId,

@@ -33,6 +33,7 @@ import { swttchEntrypointName } from './features/sessionEntrypoint';
 import { MessageType, SessionActivity, type WorkflowTask } from '../shared';
 import { ingestRateLimitWindows } from './handlers/getUsage';
 import { SESSION_MCP_AREAS, resolveInstalledSessionMcp, type InstalledSessionMcp } from './session-mcp';
+import { announceSessionsUpdated } from './features/sessionsUpdated';
 
 // Tracks files Claude edits so the IDE can be told to reload them once the
 // edit completes on disk. Shared across sessions — tool_use ids are unique.
@@ -1630,7 +1631,7 @@ function handleStreamEvent(
       .then((sessionsDir) => removeSessionTitleOverride(sessionsDir, targetSessionId))
       .then(() => {
         // The CLI rename is newer than any GUI rename, so the GUI override goes.
-        connections.broadcastToAll(MessageType.SESSIONS_UPDATED, {
+        announceSessionsUpdated(connections, {
           action: 'rename',
           session: { sessionId: targetSessionId, title: renamedTitle },
         });
@@ -1652,7 +1653,7 @@ function handleStreamEvent(
     // knows when a turn STARTS without us asking for it. Keeping both left the
     // list and the transcript disagreeing in one direction (issue #456). See
     // REPORT_SESSION_ACTIVITY.
-    connections.broadcastToAll(MessageType.SESSIONS_UPDATED, {
+    announceSessionsUpdated(connections, {
       action: 'upsert',
       session: {
         sessionId: event.session_id ?? targetSessionId,

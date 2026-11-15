@@ -3,6 +3,7 @@ import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { MessageType } from '../../shared';
 import { awaitSessionTranscript } from '../features/awaitSessionTranscript';
+import { announceSessionsUpdated } from '../features/sessionsUpdated';
 
 /**
  * SESSION_STARTED — a tab created a session and is telling everyone else.
@@ -40,16 +41,12 @@ export function sessionStartedHandler(
 
   // Everyone EXCEPT the tab that sent it: that tab already has the row, and
   // handing it back would ask it to merge what it just drew.
-  connections.broadcastToAll(
-    MessageType.SESSIONS_UPDATED,
-    { action: 'started', session: payload?.session },
-    connectionId,
-  );
+  announceSessionsUpdated(connections, { action: 'started', session: payload?.session as Record<string, unknown> | undefined }, connectionId);
 
   if (!workingDir) return;
   void awaitSessionTranscript(sessionId, workingDir, () => {
     console.error('[node-backend]', `Transcript appeared for session ${sessionId} — refreshing lists`);
-    connections.broadcastToAll(MessageType.SESSIONS_UPDATED, {
+    announceSessionsUpdated(connections, {
       action: 'upsert',
       session: { sessionId },
     });

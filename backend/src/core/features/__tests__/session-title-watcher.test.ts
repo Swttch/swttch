@@ -64,8 +64,8 @@ describe('watchSessionTitle', () => {
     await vi.waitFor(() => expect(broadcastToAll).toHaveBeenCalledTimes(1), { timeout: 4000 });
     expect(broadcastToAll).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, {
       action: 'rename',
-      session: { sessionId: 's1', title: 'Login bug', generated: true },
-    });
+      session: { sessionId: 's1', title: 'Login bug', generated: true }, ts: expect.any(Number),
+    }, undefined);
     expect(onAnnounced).toHaveBeenCalledTimes(1);
   });
 
@@ -96,8 +96,8 @@ describe('watchSessionTitle', () => {
     await vi.waitFor(() => expect(broadcastToAll).toHaveBeenCalledTimes(1), { timeout: 4000 });
     expect(broadcastToAll).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, {
       action: 'rename',
-      session: { sessionId: 's1', title: 'My name' },
-    });
+      session: { sessionId: 's1', title: 'My name' }, ts: expect.any(Number),
+    }, undefined);
   });
 
   it('announces once and then stops watching', async () => {

@@ -64,8 +64,8 @@ describe('requestSessionTitleAfterSend', () => {
     );
     expect(broadcastToAll).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, {
       action: 'rename',
-      session: { sessionId: 's1', title: 'Generated name', generated: true },
-    });
+      session: { sessionId: 's1', title: 'Generated name', generated: true }, ts: expect.any(Number),
+    }, undefined);
   });
 
   it('names a session after what the user wrote, not the file open in the IDE', async () => {
