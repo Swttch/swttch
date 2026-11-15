@@ -4,6 +4,7 @@ import type { IPCMessage } from '../types';
 import { generateSessionId } from '../features/generateSessionId';
 import { ensureClaudeProcess, sendMessageToProcess, restartClaudeSessionProcess } from '../claude-process';
 import { trackEvent } from '../features/telemetry';
+import { isMessageUuid } from '../features/pending-message';
 import { requestSessionTitleAfterSend } from '../features/session-title-runtime';
 import { MessageType, ACCOUNT_POOL_CONTINUE_REMINDER } from '../../shared';
 import { withAccount } from '../features/account-manager';
@@ -34,6 +35,8 @@ export async function sendMessageHandler(
   const inputMode = message.payload?.inputMode as string | undefined;
   const model = message.payload?.model as string | undefined;
   const accountId = message.payload?.accountId as string | undefined;
+  // The id the webview gave this message, so "send now" and "cancel" can name it to the CLI.
+  const messageUuid = isMessageUuid(message.payload?.messageUuid) ? message.payload.messageUuid : undefined;
   // 새 세션 여부는 webview가 판정해 payload로 알려준다. webview가 새 세션에도 sessionId를
   // 미리 생성해 보내므로(ChatStreamContext), 백엔드에서 sessionId 유무로는 판정할 수 없다.
   const isNewSession = message.payload?.isNewSession === true;
@@ -60,7 +63,7 @@ export async function sendMessageHandler(
       connections.subscribe(connectionId, resolvedSessionId, workingDir);
       const send = async () => {
         await ensureClaudeProcess(connections, connectionId, workingDir, resolvedSessionId, inputMode, bridge, model);
-        sendMessageToProcess(connections, resolvedSessionId, content, attachments);
+        sendMessageToProcess(connections, resolvedSessionId, content, attachments, messageUuid);
       };
       if (accountId) {
         // Re-establish the reservation's account at actual delivery, even if the

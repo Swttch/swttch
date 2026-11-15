@@ -44,6 +44,12 @@ export function addElementToComposer(token: string, element: ComposerElement): v
   elementListeners.forEach((listener) => listener(token, element, imageName));
 }
 
+/** Puts chips back in the row as they were (a message taken back from the line of unsent ones), keeping the ones already there. */
+export function restorePendingElements(entries: readonly PendingElement[]): void {
+  const back = entries.filter((entry) => !pending.some((current) => current.token === entry.token));
+  if (back.length > 0) setPending([...back, ...pending]);
+}
+
 /** Takes one chip out of the row. */
 export function removePendingElement(token: string): void {
   setPending(pending.filter((entry) => entry.token !== token));

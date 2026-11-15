@@ -85,6 +85,8 @@ export interface UseAttachmentsReturn {
   /** Stop an upload in flight and drop its chip. */
   cancelUpload: (id: string) => void;
   clearAttachments: () => void;
+  /** Put attachments back as they were (a message taken back from the line of unsent ones), ahead of any already there. */
+  restoreAttachments: (restored: Attachment[]) => void;
   error: string | null;
   isDragOver: boolean;
   setIsDragOver: (v: boolean) => void;
@@ -178,6 +180,10 @@ export function useAttachments(): UseAttachmentsReturn {
   const clearAttachments = useCallback(() => {
     setAttachments([]);
     setError(null);
+  }, []);
+
+  const restoreAttachments = useCallback((restored: Attachment[]) => {
+    setAttachments((prev) => [...restored.filter((back) => !prev.some((att) => att.id === back.id)), ...prev]);
   }, []);
 
   /**
@@ -293,10 +299,11 @@ export function useAttachments(): UseAttachmentsReturn {
     reorderAttachments,
     cancelUpload,
     clearAttachments,
+    restoreAttachments,
     error,
     isDragOver,
     setIsDragOver,
     handlePaste,
     handleDrop,
-  }), [attachments, uploads, addImageAttachment, addFileAttachment, addFolderAttachment, removeAttachment, reorderAttachments, cancelUpload, clearAttachments, error, isDragOver, setIsDragOver, handlePaste, handleDrop]);
+  }), [attachments, uploads, addImageAttachment, addFileAttachment, addFolderAttachment, removeAttachment, reorderAttachments, cancelUpload, clearAttachments, restoreAttachments, error, isDragOver, setIsDragOver, handlePaste, handleDrop]);
 }

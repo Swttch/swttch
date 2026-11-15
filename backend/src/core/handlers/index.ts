@@ -11,6 +11,7 @@ import {
   mergeQueuedMessagesHandler,
   moveQueuedMessageHandler,
   steerQueuedMessageHandler,
+  cancelPendingMessageHandler,
 } from './queueMessage';
 import { stopGenerationHandler } from './stopGeneration';
 import { stopSessionHandler } from './stopSession';
@@ -631,6 +632,9 @@ export async function handleMessage(
       break;
     case MessageType.STEER_QUEUED_MESSAGE:
       await steerQueuedMessageHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.CANCEL_PENDING_MESSAGE:
+      await cancelPendingMessageHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.SCHEDULE_MESSAGE:
       await scheduleMessageHandler(connectionId, message, connections, bridge);

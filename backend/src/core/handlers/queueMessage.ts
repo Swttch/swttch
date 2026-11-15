@@ -5,6 +5,7 @@ import type { IPCMessage } from '../types';
 import { MessageType } from '../../shared';
 import type { QueuedMessage } from '../../shared';
 import { sendMessageToProcess } from '../claude-process';
+import { cancelPendingMessage, isMessageUuid } from '../features/pending-message';
 import {
   enqueueMessage,
   removeQueuedMessage,
@@ -192,4 +193,20 @@ export async function steerQueuedMessageHandler(
   }
 
   connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId });
+}
+
+/**
+ * CANCEL_PENDING_MESSAGE — take the message the webview wrote to the CLI (named by uuid) back before the CLI reads it.
+ * `cancelled` is the only answer that lets the webview drop its bubble.
+ */
+export async function cancelPendingMessageHandler(
+  connectionId: string,
+  message: IPCMessage,
+  connections: ConnectionManager,
+  _bridge: Bridge,
+): Promise<void> {
+  const sessionId = message.payload?.sessionId as string | undefined;
+  const messageUuid = message.payload?.messageUuid;
+  const result = sessionId && isMessageUuid(messageUuid) ? await cancelPendingMessage(connections, sessionId, messageUuid) : 'not_running';
+  connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId, result });
 }

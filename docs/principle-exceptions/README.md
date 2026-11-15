@@ -55,3 +55,5 @@ NNN-짧은-주제.md      NNN = 이슈 또는 PR 번호
   CLI를 띄울 때 문서화되지 않은 환경변수 `CLAUDE_CODE_ENTRYPOINT`에 우리 이름을 주어, 데스크탑의 "Claude Code CLI 세션 가져오기"가 플러그인 세션을 잡게 한다. 이미 쌓인 세션 기록의 `sdk-cli`도 사용자가 누를 때만 같은 이름으로 바꾼다
 - [608-read-aloud-speech-endpoint.md](./608-read-aloud-speech-endpoint.md) —
   답변을 소리로 읽을 때 미문서화 음성 합성 엔드포인트 `wss://api.anthropic.com/api/ws/text_to_speech/text_stream`을 확장킷(`swttch-ext tts`)으로 부른다. 토큰은 확장킷 안에서만 쓰이고 플러그인은 소리만 받는다
+- [697-cancel-async-message.md](./697-cancel-async-message.md) —
+  아직 CLI가 읽지 않은 메시지의 「취소」에 `control_request{subtype:"cancel_async_message", message_uuid}`를 쓴다. 이미 CLI의 대기열에 있는 메시지를 뺄 공식 방법이 없어 폴백이 없고, CLI가 모르면 취소 아이콘만 거둔다

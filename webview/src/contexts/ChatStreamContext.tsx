@@ -1,5 +1,5 @@
-import { expandElementTokens, getPendingElements } from '@/utils/composerElements';
-import { expandReplyCards, getPendingReplies } from '@/utils/composerReplies';
+import { expandElementTokens, getPendingElements, restorePendingElements, type PendingElement } from '@/utils/composerElements';
+import { expandReplyCards, getPendingReplies, restorePendingReplies, type PendingReply } from '@/utils/composerReplies';
 import { createContext, useContext, ReactNode, useEffect, useCallback, useState, useRef, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useChatStream } from '../hooks/useChatStream';
@@ -63,9 +63,33 @@ interface SendMessagePayload {
 /** A message sent while a turn was running, waiting for that turn to end before it enters the chat. */
 export interface SentWhileRunning {
   id: string;
+  /** The id the message was written to the CLI under: "send now" and "cancel" name it. */
+  uuid: string;
+  /** What the message box held when it was sent, so a message withdrawn puts it there as it was. */
+  restore?: HeldRestore;
   content: string;
   context?: Context[];
   attachments?: Attachment[];
+}
+
+/** What the message box held for one send: the text as typed, and the chips and cards that were in its row. */
+export interface HeldRestore {
+  input: string;
+  elements: PendingElement[];
+  replies: PendingReply[];
+  pathTokens: string[];
+}
+
+/** What the message box takes back from a message the CLI had not read, withdrawn before it did. */
+export interface ComposerRestore {
+  id: string;
+  attachments: Attachment[];
+  pathTokens: string[];
+}
+
+/** What only the message box knows about a send, which a message taken back needs to put it there as it was. */
+export interface ComposerSnapshot {
+  pathTokens: string[];
 }
 
 /** A message written while a permission card holds the turn, not yet sent (see ChatStreamContextType.heldMessages). */
@@ -93,7 +117,7 @@ interface ChatStreamContextType {
    * this one message — the derived key described in {@link invertedOf}. The
    * setting is not touched, so the next message follows it again.
    */
-  handleSubmit: (e: React.FormEvent | undefined, inputMode: InputMode, attachments?: Attachment[], invertFollowUp?: boolean, forceQueue?: boolean) => void;
+  handleSubmit: (e: React.FormEvent | undefined, inputMode: InputMode, attachments?: Attachment[], invertFollowUp?: boolean, forceQueue?: boolean, composer?: ComposerSnapshot) => void;
   /** Run a slash command the CLI only accepts as a control_request (#270). */
   runControlRequestCommand: (command: string, inputMode: InputMode) => void;
   stop: () => void;
@@ -138,6 +162,13 @@ interface ChatStreamContextType {
   dropReleasedHeldMessages: () => void;
   /** Send one held message now, ahead of the card's answer. */
   sendHeldMessage: (id: string) => void;
+  /** Take one message the CLI has not read back: its bubble goes and its text, attachments and chips return to the message box. */
+  cancelPendingMessage: (id: string) => void;
+  /** False once a CLI has said it does not know how to take a message back, so the cross is no longer offered. */
+  pendingCancelSupported: boolean;
+  /** What the message box has yet to take back from {@link cancelPendingMessage}; it takes it and calls {@link takeComposerRestore}. */
+  composerRestore: ComposerRestore | null;
+  takeComposerRestore: (id: string) => void;
 
   resetStreamState: () => void;
   // From useChatStream (message manipulation)
@@ -650,7 +681,9 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   }, [chatStream.isStreaming, appendSentMessage]);
 
   const sendMessage = useCallback(
-    (content: string, inputMode: InputMode, context?: Context[], attachments?: Attachment[], accountId?: string, inChatNow = false, skipEcho = false) => {
+    (content: string, inputMode: InputMode, context?: Context[], attachments?: Attachment[], accountId?: string, inChatNow = false, skipEcho = false, restore?: HeldRestore) => {
+      // The CLI records the message under this id, which is how a request about it (send now, cancel) names it.
+      const messageUuid = crypto.randomUUID();
       // Prepend the IDE-context tag (open file / selection) when the toggle is on
       // and a selection is available. parseUserContent() turns the tag back into a
       // context chip in the UI bubble, while the CLI sees the same hint. Gated on
@@ -693,7 +726,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
         appendSentMessage(content, context, attachments);
       } else if (isStreamingRef.current && !isNewSession) {
         // The ref moves with the state, not after the next render: a tool call can finish before this one.
-        sentWhileRunningRef.current = [...sentWhileRunningRef.current, { id: crypto.randomUUID(), content, context, attachments }];
+        sentWhileRunningRef.current = [...sentWhileRunningRef.current, { id: crypto.randomUUID(), uuid: messageUuid, restore, content, context, attachments }];
         setSentWhileRunning(sentWhileRunningRef.current);
       } else {
         addUserMessage(content, context, attachments);
@@ -706,6 +739,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
         sessionId,
         isNewSession,
         content,
+        messageUuid,
         attachments: attachments?.map(a => ({ ...a.toPayload() })),
         context: context || [],
         workingDir: session.workingDirectory ?? '',
@@ -931,6 +965,46 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     [sendMessage]
   );
 
+  const [composerRestore, setComposerRestore] = useState<ComposerRestore | null>(null);
+  const takeComposerRestore = useCallback((id: string) => {
+    setComposerRestore((current) => (current?.id === id ? null : current));
+  }, []);
+
+  const [pendingCancelSupported, setPendingCancelSupported] = useState(true);
+
+  // Taking a message back before the CLI read it: it is the CLI that withdraws it from its input, and only when that
+  // answers `cancelled` does the bubble go and the message box have what it had, the text as typed (ahead of whatever
+  // was typed since), the attachments, the chips and the cards. Anything else leaves the bubble where it is.
+  const cancelPendingMessage = useCallback(
+    (id: string) => {
+      const sessionId = session.currentSessionId;
+      const sent = sentWhileRunningRef.current.find((entry) => entry.id === id);
+      if (!sessionId || !sent) return;
+      bridge
+        .send(MessageType.CANCEL_PENDING_MESSAGE, { sessionId, messageUuid: sent.uuid })
+        .then((response: { result?: string } | undefined) => {
+          const result = response?.result;
+          if (result === 'unsupported') setPendingCancelSupported(false);
+          if (result !== 'cancelled') return;
+          sentWhileRunningRef.current = sentWhileRunningRef.current.filter((entry) => entry.id !== id);
+          setSentWhileRunning(sentWhileRunningRef.current);
+          const restore = sent.restore;
+          const typed = restore?.input ?? sent.content;
+          const current = inputRef.current;
+          setInput(current.trim() ? `${typed}\n${current}` : typed);
+          if (restore) {
+            restorePendingElements(restore.elements);
+            restorePendingReplies(restore.replies);
+          }
+          setComposerRestore({ id, attachments: sent.attachments ?? [], pathTokens: restore?.pathTokens ?? [] });
+        })
+        .catch((error) => {
+          console.error('[ChatStreamContext] Failed to take a waiting message back:', error);
+        });
+    },
+    [bridge, inputRef, session, setInput]
+  );
+
   const releaseHeldMessages = useCallback(
     async (keepShown = false) => {
       const all = heldMessagesRef.current.filter((held) => !held.released);
@@ -958,10 +1032,18 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   // Reads input via inputRef so this callback stays stable across keystrokes
   // — otherwise every key press would invalidate contextValue.
   const handleSubmit = useCallback(
-    (e: React.FormEvent | undefined, inputMode: InputMode, attachments?: Attachment[], invertFollowUp = false, forceQueue = false) => {
+    (e: React.FormEvent | undefined, inputMode: InputMode, attachments?: Attachment[], invertFollowUp = false, forceQueue = false, composer?: ComposerSnapshot) => {
       if (e) e.preventDefault();
       const typedInput = inputRef.current.trim();
       if (!typedInput && (!attachments || attachments.length === 0) && getPendingElements().length === 0 && getPendingReplies().length === 0) return;
+      // What the message box holds, before the chips and cards are written out and emptied: a message taken back
+      // before the CLI read it puts all of it where it was.
+      const restore: HeldRestore = {
+        input: inputRef.current,
+        elements: [...getPendingElements()],
+        replies: [...getPendingReplies()],
+        pathTokens: composer?.pathTokens ?? [],
+      };
       const trimmedInput = expandReplyCards(expandElementTokens(typedInput));
       // `/usage` (alone, or followed by a space and anything) opens the usage
       // modal instead of being sent to the CLI, matching the /usage slash-command
@@ -1008,7 +1090,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
         setInput('');
         return;
       }
-      sendMessage(trimmedInput, inputMode, undefined, attachments);
+      sendMessage(trimmedInput, inputMode, undefined, attachments, undefined, false, false, restore);
       setInput('');
     },
     [inputRef, runControlRequestCommand, sendMessage, setInput, chatStream.isStreaming, appSettings, queueMessage]
@@ -1073,6 +1155,10 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     releaseHeldMessages,
     dropReleasedHeldMessages,
     sendHeldMessage,
+    cancelPendingMessage,
+    pendingCancelSupported,
+    composerRestore,
+    takeComposerRestore,
     restartTurnClock,
 
     resetStreamState: chatStreamResetStreamState,
@@ -1156,6 +1242,10 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     releaseHeldMessages,
     dropReleasedHeldMessages,
     sendHeldMessage,
+    cancelPendingMessage,
+    pendingCancelSupported,
+    composerRestore,
+    takeComposerRestore,
     restartTurnClock,
     tools,
     diffs,

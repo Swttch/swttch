@@ -1147,6 +1147,8 @@ export function sendMessageToProcess(
     | { type: 'file'; fileName: string; absolutePath: string }
     | { type: 'folder'; folderName: string; absolutePath: string }
   >,
+  /** The id the message is recorded under, so a request about it (send now, cancel) can name it. */
+  messageUuid?: string,
 ): boolean {
   const session = connections.getSession(sessionId);
   if (!session?.process?.stdin?.writable) {
@@ -1188,6 +1190,7 @@ export function sendMessageToProcess(
     JSON.stringify({
       type: 'user',
       message: { role: 'user', content: messageContent },
+      ...(messageUuid ? { uuid: messageUuid } : {}),
     }) + '\n';
 
   // The size is the part worth keeping by default: it says a turn started and how
