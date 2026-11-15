@@ -155,6 +155,40 @@ describe('awaitSessionTranscript', () => {
     expect(isAwaitingTranscript('session-1')).toBe(false);
   });
 
+  it('says so when it gives up, to a caller that asked to be told', async () => {
+    const dir = '/tmp/project-a';
+    const onAppear = vi.fn();
+    const onGiveUp = vi.fn();
+
+    await awaitSessionTranscript('session-1', dir, onAppear, onGiveUp);
+    await vi.advanceTimersByTimeAsync(130_000);
+
+    expect(onAppear).not.toHaveBeenCalled();
+    expect(onGiveUp).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not say it gave up when the transcript came', async () => {
+    const dir = '/tmp/project-a';
+    const onGiveUp = vi.fn();
+
+    await awaitSessionTranscript('session-1', dir, vi.fn(), onGiveUp);
+    await writeTranscript(dir, 'session-1');
+    await vi.advanceTimersByTimeAsync(130_000);
+
+    expect(onGiveUp).not.toHaveBeenCalled();
+  });
+
+  it('does not say it gave up when it was cancelled', async () => {
+    const dir = '/tmp/project-a';
+    const onGiveUp = vi.fn();
+
+    await awaitSessionTranscript('session-1', dir, vi.fn(), onGiveUp);
+    cancelTranscriptWait('session-1');
+    await vi.advanceTimersByTimeAsync(130_000);
+
+    expect(onGiveUp).not.toHaveBeenCalled();
+  });
+
   it('stops when cancelled', async () => {
     const dir = '/tmp/project-a';
     const onAppear = vi.fn();

@@ -3,6 +3,7 @@ import { MessageType } from '../../shared';
 import { awaitSessionTranscript } from './awaitSessionTranscript';
 import { announceSessionMark } from './announceSessionMark';
 import { announceSessionCreated } from './announceSessionCreated';
+import { announceSessionStarting } from './announceSessionStarting';
 import { normalizeSessionName } from './cli-rename';
 import { announceSessionsUpdated } from './sessionsUpdated';
 
@@ -76,11 +77,11 @@ function startedSessionOf(content: unknown): { sessionId: string; cwd: string } 
  * the tool call and its answer in the CLI's stream, so this reads those two. It
  * is given every stream event of every session this backend runs.
  *
- * A started session cannot be listed at once: the list is read from the
- * transcripts and the new session's transcript appears a few seconds after the
- * tool answers. The announcement for a start therefore waits for that file, the
- * same wait a session started in a tab uses. Every other change is on disk by
- * the time the tool answers and is announced right away.
+ * A started session cannot be listed from its transcript at once: the list is read from the
+ * transcripts and the new session's transcript appears many seconds after the tool answers. The
+ * screens are therefore told at once with a row made of what is known (a provisional one), and again
+ * with the row of the transcript when the file exists, the same wait a session started in a tab
+ * uses. Every other change is on disk by the time the tool answers and is announced right away.
  *
  * Archiving or bringing a session back is announced as an `update` carrying the new mark of
  * that one session, so a screen that shows the session turns to its archived state at once,
@@ -128,11 +129,24 @@ export function announceSessionToolChanges(
     if (tool === 'start_session') {
       const started = startedSessionOf(block.content);
       if (!started) continue;
-      // The row of the new session is handed over once its transcript exists, to every screen whose list
-      // can hold it, so none has to read its list to find it.
-      void awaitSessionTranscript(started.sessionId, started.cwd, () => {
-        void announceSessionCreated(connections, started.sessionId, started.cwd);
-      });
+      // The screens are told the session is there at once, with a row made of what is known, because the CLI
+      // writes its transcript a long while later. The row the transcript gives replaces it when the file
+      // exists; and when no file ever comes (the session could not start) the screens are told it is not there.
+      void announceSessionStarting(connections, started, call.title);
+      void awaitSessionTranscript(
+        started.sessionId,
+        started.cwd,
+        () => {
+          void announceSessionCreated(connections, started.sessionId, started.cwd);
+        },
+        () => {
+          announceSessionsUpdated(
+            connections,
+            { action: 'delete', session: { sessionId: started.sessionId } },
+            { sessionDirs: [started.cwd] },
+          );
+        },
+      );
       continue;
     }
 

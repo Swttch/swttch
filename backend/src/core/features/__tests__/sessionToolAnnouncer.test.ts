@@ -12,10 +12,15 @@ vi.mock('../announceSessionCreated', () => ({
   announceSessionCreated: vi.fn(),
 }));
 
+vi.mock('../announceSessionStarting', () => ({
+  announceSessionStarting: vi.fn(),
+}));
+
 import { announceSessionToolChanges, resetSessionToolAnnouncer } from '../sessionToolAnnouncer';
 import { awaitSessionTranscript } from '../awaitSessionTranscript';
 import { readSessionMarksToShow, type SessionMark } from '../sessionMarks';
 import { announceSessionCreated } from '../announceSessionCreated';
+import { announceSessionStarting } from '../announceSessionStarting';
 import { MessageType } from '../../../shared';
 import type { ConnectionManager } from '../../../ws/connection-manager';
 
@@ -58,7 +63,20 @@ describe('announceSessionToolChanges', () => {
     mockMarks.mockResolvedValue(new Map());
   });
 
-  it('waits for the transcript of a started session, then hands over its row', () => {
+  it('tells the screens a started session is there at once, with the name it was given, before its transcript exists', () => {
+    announceSessionToolChanges(toolUse('call-1', 'mcp__swttch_session__start_session', { title: '* Review env' }), connections);
+    announceSessionToolChanges(
+      toolResult('call-1', [
+        { type: 'text', text: JSON.stringify({ session_id: 'child', name: 'deploy', cwd: '/work' }) },
+      ]),
+      connections,
+    );
+
+    expect(announceSessionStarting).toHaveBeenCalledWith(connections, { sessionId: 'child', cwd: '/work' }, '* Review env');
+    expect(announceSessionCreated).not.toHaveBeenCalled();
+  });
+
+  it('then waits for the transcript of the started session, and hands over its row', () => {
     announceSessionToolChanges(toolUse('call-1', 'mcp__swttch_session__start_session'), connections);
     announceSessionToolChanges(
       toolResult('call-1', [
@@ -69,11 +87,30 @@ describe('announceSessionToolChanges', () => {
 
     // Nothing yet: the row is read from the transcript and this one is not written.
     expect(announceSessionCreated).not.toHaveBeenCalled();
-    expect(mockAwait).toHaveBeenCalledWith('child', '/work', expect.any(Function));
+    expect(mockAwait).toHaveBeenCalledWith('child', '/work', expect.any(Function), expect.any(Function));
 
     mockAwait.mock.calls[0][2]();
     expect(announceSessionCreated).toHaveBeenCalledWith(connections, 'child', '/work');
     expect(broadcastToAll).not.toHaveBeenCalled();
+  });
+
+  it('takes back the session it told the screens about when no transcript ever comes', () => {
+    const broadcastToListsHolding = vi.fn();
+    connections = { broadcastToAll, broadcastToListsHolding } as unknown as ConnectionManager;
+    announceSessionToolChanges(toolUse('call-1', 'mcp__swttch_session__start_session'), connections);
+    announceSessionToolChanges(
+      toolResult('call-1', [{ type: 'text', text: JSON.stringify({ session_id: 'child', cwd: '/work' }) }]),
+      connections,
+    );
+
+    mockAwait.mock.calls[0][3]?.();
+
+    expect(broadcastToListsHolding).toHaveBeenCalledWith(
+      MessageType.SESSIONS_UPDATED,
+      { action: 'delete', session: { sessionId: 'child' }, ts: expect.any(Number) },
+      ['/work'],
+      undefined,
+    );
   });
 
   it('reads an answer handed over as a plain string too', () => {
@@ -83,7 +120,7 @@ describe('announceSessionToolChanges', () => {
       connections,
     );
 
-    expect(mockAwait).toHaveBeenCalledWith('child', '/work', expect.any(Function));
+    expect(mockAwait).toHaveBeenCalledWith('child', '/work', expect.any(Function), expect.any(Function));
   });
 
   it.each(['detach_session', 'delete_session'])(

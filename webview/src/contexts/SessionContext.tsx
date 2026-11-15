@@ -530,8 +530,12 @@ export function SessionProvider({ children }: SessionProviderProps) {
     const session = plainToInstance(SessionMetaDto, raw);
     // The row holds what the news said up to the time it was read; what the news said after goes onto it.
     const held = putNewsOnto([session], readAt, newsJournalRef.current);
+    // A row made before the transcript exists never takes the place of a row the list holds.
+    const provisional = session.provisional === true;
     // A row the news since deleted is not put into the list.
-    if (held.length > 0) setSessions(prev => mergeSessions(prev, held));
+    if (held.length > 0) {
+      setSessions(prev => (provisional && prev.some(s => s.id === session.id) ? prev : mergeSessions(prev, held)));
+    }
   }, []);
 
   const loadMoreSessions = useCallback(

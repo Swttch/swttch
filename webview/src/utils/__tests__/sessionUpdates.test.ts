@@ -186,6 +186,51 @@ describe('putNewsOnto', () => {
     expect(rows.map((r) => [r.id, r.title])).toEqual([['s2', 'renamed']]);
   });
 
+  describe('a row made before the transcript exists (provisional)', () => {
+    const starting = (ts: number, sessionId: string) => create(ts, sessionId, listed(sessionId, { provisional: true }));
+
+    it('stays on a list that was read after it was made, because that list cannot hold the session yet', () => {
+      const journal = new SessionNewsJournal();
+      journal.record(starting(30, 's2'));
+
+      const rows = putNewsOnto([row('s1')], 40, journal);
+
+      expect(rows.map((r) => r.id)).toEqual(['s1', 's2']);
+      expect(rows[1].provisional).toBe(true);
+    });
+
+    it('does not take the place of the row a list holds for the session', () => {
+      const journal = new SessionNewsJournal();
+      journal.record(starting(30, 's2'));
+
+      const rows = putNewsOnto([row('s1'), row('s2', { title: 'recorded' })], 40, journal);
+
+      expect(rows.find((r) => r.id === 's2')?.title).toBe('recorded');
+      expect(rows.find((r) => r.id === 's2')?.provisional).toBeUndefined();
+    });
+
+    it('is replaced by the row of the transcript that comes after it', () => {
+      const journal = new SessionNewsJournal();
+      journal.record(starting(30, 's2'));
+      journal.record(create(50, 's2', listed('s2', { title: 'recorded' })));
+
+      const rows = putNewsOnto([row('s1')], 10, journal);
+
+      expect(rows.find((r) => r.id === 's2')?.title).toBe('recorded');
+      expect(rows.find((r) => r.id === 's2')?.provisional).toBeUndefined();
+    });
+
+    it('is not brought back after the session was said to be gone', () => {
+      const journal = new SessionNewsJournal();
+      journal.record(starting(30, 's2'));
+      journal.record(remove(50, 's2'));
+
+      const rows = putNewsOnto([row('s1')], 60, journal);
+
+      expect(rows.map((r) => r.id)).toEqual(['s1']);
+    });
+  });
+
   it('hands back the same rows when there is nothing to put on', () => {
     const rows = [row('s1')];
 

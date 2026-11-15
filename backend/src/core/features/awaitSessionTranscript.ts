@@ -72,11 +72,15 @@ export function cancelAllTranscriptWaits(): void {
  *
  * Idempotent per session — a second call while one is pending is ignored rather
  * than starting a second timer for the same path.
+ *
+ * [onGiveUp], when given, is called if the wait ends without the file: a caller that already told the screens
+ * about the session needs to take that back.
  */
 export async function awaitSessionTranscript(
   sessionId: string,
   workingDir: string,
   onAppear: () => void,
+  onGiveUp?: () => void,
 ): Promise<void> {
   if (waits.has(sessionId)) return;
 
@@ -101,6 +105,7 @@ export async function awaitSessionTranscript(
         `Gave up waiting for transcript of session ${sessionId} after ${TIMEOUT_MS}ms`,
       );
       cancelTranscriptWait(sessionId);
+      onGiveUp?.();
     }
   }, POLL_MS);
   // Never hold the process open for a file that may never arrive.

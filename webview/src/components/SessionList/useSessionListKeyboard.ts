@@ -72,7 +72,8 @@ export function useSessionListKeyboard(params: Params): Result {
       setHighlightedIndex((i) => Math.max(i - 1, -1));
     } else if (e.key === 'Enter') {
       const session = orderedSessions[highlightedIndex];
-      if (session) {
+      // Nothing to open until the transcript of a session that was just started exists.
+      if (session && session.provisional !== true) {
         e.preventDefault();
         onSelect(session.id);
       }

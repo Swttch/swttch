@@ -93,6 +93,30 @@ export class SessionNewsJournal {
   after(ts: number): SessionNews[] {
     return this.news.filter((item) => item.ts > ts);
   }
+
+  /**
+   * The news after [ts], and also the rows made before the transcript of their session exists (provisional) that
+   * no news since has taken away, whatever their `ts`: a list read after such a row was made cannot hold the
+   * session yet, and must not take the row away.
+   */
+  afterAndProvisional(ts: number): SessionNews[] {
+    return this.news.filter((item) => item.ts > ts || this.isStillProvisional(item));
+  }
+
+  private isStillProvisional(item: SessionNews): boolean {
+    if (item.kind !== 'create' || !isProvisionalRow(item.row)) return false;
+    // Replaced by a row of the transcript, or the session was said to be gone: nothing to keep.
+    return !this.news.some(
+      (later) =>
+        later.sessionId === item.sessionId &&
+        later.ts > item.ts &&
+        (later.kind === 'delete' || (later.kind === 'create' && !isProvisionalRow(later.row))),
+    );
+  }
+}
+
+function isProvisionalRow(row: unknown): boolean {
+  return !!row && typeof row === 'object' && (row as { provisional?: unknown }).provisional === true;
 }
 
 /**
@@ -109,13 +133,15 @@ export function putNewsOnto(
   readAt: number,
   journal: SessionNewsJournal,
 ): SessionMetaDto[] {
-  const later = journal.after(readAt);
+  const later = journal.afterAndProvisional(readAt);
   if (later.length === 0) return rows;
   const byId = new Map(rows.map((row) => [row.id, row]));
   let touched = false;
   for (const item of later) {
     if (item.kind === 'create') {
       if (item.row && typeof item.row === 'object') {
+        // A row made before the transcript exists never takes the place of a row that is there.
+        if (isProvisionalRow(item.row) && byId.has(item.sessionId)) continue;
         byId.set(item.sessionId, plainToInstance(SessionMetaDto, item.row));
         touched = true;
       }

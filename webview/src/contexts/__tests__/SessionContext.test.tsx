@@ -1483,6 +1483,71 @@ describe('SessionContext', () => {
       await waitFor(() => expect(ctx().sessions.map((s) => s.id)).toEqual(['session-2']));
     });
 
+    describe('a session started whose transcript does not exist yet', () => {
+      it('is in the list at once, marked as not ready to open', async () => {
+        const { ctx, handler } = await renderWithList();
+
+        await act(async () => {
+          handler(createOf(row('session-new', { provisional: true }), 100));
+        });
+
+        await waitFor(() => expect(ctx().sessions.map((s) => s.id)).toContain('session-new'));
+        expect(ctx().sessions.find((s) => s.id === 'session-new')?.provisional).toBe(true);
+      });
+
+      it('is kept when a list read after it, which cannot hold the session yet, arrives', async () => {
+        const { ctx, handler } = await renderWithList();
+        await act(async () => {
+          handler(createOf(row('session-new', { provisional: true }), 100));
+        });
+
+        mockSessionsIndex.mockResolvedValue({ sessions: mockSessionDtos, ts: 200 });
+        await act(async () => {
+          await ctx().loadSessions();
+        });
+
+        await waitFor(() => expect(ctx().sessions.map((s) => s.id).sort()).toEqual(['session-1', 'session-2', 'session-new']));
+      });
+
+      it('is replaced by the row of its transcript, which is then ready to open', async () => {
+        const { ctx, handler } = await renderWithList();
+        await act(async () => {
+          handler(createOf(row('session-new', { provisional: true }), 100));
+        });
+
+        await act(async () => {
+          handler(createOf(row('session-new', { title: 'recorded' }), 150));
+        });
+
+        await waitFor(() => expect(ctx().sessions.find((s) => s.id === 'session-new')?.title).toBe('recorded'));
+        expect(ctx().sessions.find((s) => s.id === 'session-new')?.provisional).toBeUndefined();
+        expect(ctx().sessions).toHaveLength(3);
+      });
+
+      it('does not take the place of the row the screen already holds for the session', async () => {
+        const { ctx, handler } = await renderWithList();
+        await act(async () => {
+          handler(createOf(row('session-2', { title: 'recorded', provisional: true }), 150));
+        });
+
+        expect(ctx().sessions.find((s) => s.id === 'session-2')?.title).toBe('Chat 2');
+        expect(ctx().sessions.find((s) => s.id === 'session-2')?.provisional).toBeUndefined();
+      });
+
+      it('goes when the session is said to be gone', async () => {
+        const { ctx, handler } = await renderWithList();
+        await act(async () => {
+          handler(createOf(row('session-new', { provisional: true }), 100));
+        });
+
+        await act(async () => {
+          handler({ payload: { action: 'delete', session: { sessionId: 'session-new' }, ts: 200 } });
+        });
+
+        await waitFor(() => expect(ctx().sessions.map((s) => s.id)).not.toContain('session-new'));
+      });
+    });
+
     it('takes a session out of the list when it is deleted', async () => {
       const { ctx, handler } = await renderWithList();
 
