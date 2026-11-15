@@ -850,8 +850,8 @@ export enum MessageType {
    * `ts` is where the news stands among the others, from the backend's clock, and a list answer
    * (GET_SESSIONS) carries the `ts` of when its read began, so a screen can tell what the answer
    * already holds. `action` is `update` (some items of `session` changed; `session` is `sessionId`
-   * and the changed items), `refresh` (read the list again), or one of the older `started`,
-   * `upsert`, `rename`, `delete`, until each is moved to `create`, `update`, `delete`.
+   * and the changed items), `create` (a session came to exist; `session` is its row), `delete`, or
+   * `refresh` (read the list again). A session's news goes only to the screens whose list can hold it.
    * outbound backend→webview
    */
   SESSIONS_UPDATED = 'SESSIONS_UPDATED',

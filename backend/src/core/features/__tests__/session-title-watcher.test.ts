@@ -25,8 +25,8 @@ import { stopAllSessionTitleWatchers, watchSessionTitle } from '../session-title
 import { MessageType } from '../../../shared';
 import type { ConnectionManager } from '../../../ws/connection-manager';
 
-const broadcastToAll = vi.fn();
-const connections = { broadcastToAll } as unknown as ConnectionManager;
+const broadcastToListsHolding = vi.fn();
+const connections = { broadcastToListsHolding } as unknown as ConnectionManager;
 
 const user = JSON.stringify({
   uuid: 'u1',
@@ -57,15 +57,15 @@ describe('watchSessionTitle', () => {
 
     watchSessionTitle(connections, 's1', '/proj', onAnnounced);
     await new Promise((resolve) => setTimeout(resolve, 600));
-    expect(broadcastToAll).not.toHaveBeenCalled();
+    expect(broadcastToListsHolding).not.toHaveBeenCalled();
 
     await appendFile(transcript(), `${aiTitle('Login bug')}\n`);
 
-    await vi.waitFor(() => expect(broadcastToAll).toHaveBeenCalledTimes(1), { timeout: 4000 });
-    expect(broadcastToAll).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, {
-      action: 'rename',
+    await vi.waitFor(() => expect(broadcastToListsHolding).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    expect(broadcastToListsHolding).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, {
+      action: 'update',
       session: { sessionId: 's1', title: 'Login bug', generated: true }, ts: expect.any(Number),
-    }, undefined);
+    }, ['/proj'], undefined);
     expect(onAnnounced).toHaveBeenCalledTimes(1);
   });
 
@@ -74,7 +74,7 @@ describe('watchSessionTitle', () => {
 
     watchSessionTitle(connections, 's1', '/proj', vi.fn());
 
-    await vi.waitFor(() => expect(broadcastToAll).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    await vi.waitFor(() => expect(broadcastToListsHolding).toHaveBeenCalledTimes(1), { timeout: 4000 });
   });
 
   it('waits for a transcript that does not exist yet', async () => {
@@ -83,7 +83,7 @@ describe('watchSessionTitle', () => {
 
     await writeFile(transcript(), `${user}\n${aiTitle('Login bug')}\n`);
 
-    await vi.waitFor(() => expect(broadcastToAll).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    await vi.waitFor(() => expect(broadcastToListsHolding).toHaveBeenCalledTimes(1), { timeout: 4000 });
   });
 
   it('names the session by resolveSessionTitle: a name chosen with /rename still wins, and is not drawn as generated', async () => {
@@ -93,21 +93,21 @@ describe('watchSessionTitle', () => {
 
     await appendFile(transcript(), `${aiTitle('Login bug')}\n`);
 
-    await vi.waitFor(() => expect(broadcastToAll).toHaveBeenCalledTimes(1), { timeout: 4000 });
-    expect(broadcastToAll).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, {
-      action: 'rename',
+    await vi.waitFor(() => expect(broadcastToListsHolding).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    expect(broadcastToListsHolding).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, {
+      action: 'update',
       session: { sessionId: 's1', title: 'My name' }, ts: expect.any(Number),
-    }, undefined);
+    }, ['/proj'], undefined);
   });
 
   it('announces once and then stops watching', async () => {
     await writeFile(transcript(), `${user}\n${aiTitle('Login bug')}\n`);
     watchSessionTitle(connections, 's1', '/proj', vi.fn());
-    await vi.waitFor(() => expect(broadcastToAll).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    await vi.waitFor(() => expect(broadcastToListsHolding).toHaveBeenCalledTimes(1), { timeout: 4000 });
 
     await appendFile(transcript(), `${aiTitle('Another')}\n`);
     await new Promise((resolve) => setTimeout(resolve, 700));
 
-    expect(broadcastToAll).toHaveBeenCalledTimes(1);
+    expect(broadcastToListsHolding).toHaveBeenCalledTimes(1);
   });
 });

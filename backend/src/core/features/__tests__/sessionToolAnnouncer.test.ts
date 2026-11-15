@@ -8,9 +8,14 @@ vi.mock('../sessionMarks', () => ({
   readSessionMarksToShow: vi.fn(),
 }));
 
+vi.mock('../announceSessionCreated', () => ({
+  announceSessionCreated: vi.fn(),
+}));
+
 import { announceSessionToolChanges, resetSessionToolAnnouncer } from '../sessionToolAnnouncer';
 import { awaitSessionTranscript } from '../awaitSessionTranscript';
 import { readSessionMarksToShow, type SessionMark } from '../sessionMarks';
+import { announceSessionCreated } from '../announceSessionCreated';
 import { MessageType } from '../../../shared';
 import type { ConnectionManager } from '../../../ws/connection-manager';
 
@@ -53,7 +58,7 @@ describe('announceSessionToolChanges', () => {
     mockMarks.mockResolvedValue(new Map());
   });
 
-  it('waits for the transcript of a started session, then announces that session', () => {
+  it('waits for the transcript of a started session, then hands over its row', () => {
     announceSessionToolChanges(toolUse('call-1', 'mcp__swttch_session__start_session'), connections);
     announceSessionToolChanges(
       toolResult('call-1', [
@@ -62,16 +67,13 @@ describe('announceSessionToolChanges', () => {
       connections,
     );
 
-    // Nothing yet: the list is read from transcripts and this one is not written.
-    expect(broadcastToAll).not.toHaveBeenCalled();
+    // Nothing yet: the row is read from the transcript and this one is not written.
+    expect(announceSessionCreated).not.toHaveBeenCalled();
     expect(mockAwait).toHaveBeenCalledWith('child', '/work', expect.any(Function));
 
     mockAwait.mock.calls[0][2]();
-    expect(broadcastToAll).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, {
-      action: 'upsert',
-      session: { sessionId: 'child' },
-      ts: expect.any(Number),
-    }, undefined);
+    expect(announceSessionCreated).toHaveBeenCalledWith(connections, 'child', '/work');
+    expect(broadcastToAll).not.toHaveBeenCalled();
   });
 
   it('reads an answer handed over as a plain string too', () => {
@@ -129,6 +131,36 @@ describe('announceSessionToolChanges', () => {
         session: { sessionId: 'caller-id', sessionMark: { id: 'caller-id', archivedAt: 1700 } },
         ts: expect.any(Number),
       });
+    });
+
+    it('sends the update only to the screens whose list can hold the session, when the caller is the session and its folder is known', async () => {
+      mockMarks.mockResolvedValue(new Map([['caller-id', markOf({ id: 'caller-id', archivedAt: 1700 })]]));
+      const broadcastToListsHolding = vi.fn();
+      connections = { broadcastToAll, broadcastToListsHolding } as unknown as ConnectionManager;
+
+      announceSessionToolChanges(toolUse('call-1', `mcp__swttch_session_mgmt__${tool}`, { session_id: 'self' }), connections, 'caller-id', '/repo');
+      announceSessionToolChanges(toolResult('call-1', 'ok'), connections, 'caller-id', '/repo');
+      await settle();
+
+      expect(broadcastToAll).not.toHaveBeenCalled();
+      expect(broadcastToListsHolding).toHaveBeenCalledWith(
+        MessageType.SESSIONS_UPDATED,
+        { action: 'update', session: { sessionId: 'caller-id', sessionMark: { id: 'caller-id', archivedAt: 1700 } }, ts: expect.any(Number) },
+        ['/repo'],
+        undefined,
+      );
+    });
+
+    it('takes the folder from the mark when the session is not the caller', async () => {
+      mockMarks.mockResolvedValue(new Map([['target', markOf({ id: 'target', archivedAt: 1700, cwd: '/elsewhere' })]]));
+      const broadcastToListsHolding = vi.fn();
+      connections = { broadcastToAll, broadcastToListsHolding } as unknown as ConnectionManager;
+
+      announceSessionToolChanges(toolUse('call-1', `mcp__swttch_session_mgmt__${tool}`, { session_id: 'target' }), connections, 'caller-id', '/repo');
+      announceSessionToolChanges(toolResult('call-1', 'ok'), connections, 'caller-id', '/repo');
+      await settle();
+
+      expect(broadcastToListsHolding.mock.calls[0][2]).toEqual(['/elsewhere']);
     });
 
     it('asks the screens to read again when no mark is kept for that session', async () => {

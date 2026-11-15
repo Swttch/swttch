@@ -34,8 +34,8 @@ import { requestSessionTitleAfterSend, resetSessionTitleStates } from '../sessio
 import { ACCOUNT_POOL_CONTINUE_REMINDER, MessageType } from '../../../shared';
 import type { ConnectionManager } from '../../../ws/connection-manager';
 
-const broadcastToAll = vi.fn();
-const connections = { broadcastToAll } as unknown as ConnectionManager;
+const broadcastToListsHolding = vi.fn();
+const connections = { broadcastToListsHolding } as unknown as ConnectionManager;
 
 /** The request is fired and forgotten, so a test waits for it to have run its course. */
 async function settle(): Promise<void> {
@@ -62,10 +62,10 @@ describe('requestSessionTitleAfterSend', () => {
       'generate_session_title-1',
       { subtype: 'generate_session_title', description: 'Fix the login bug', persist: true },
     );
-    expect(broadcastToAll).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, {
-      action: 'rename',
+    expect(broadcastToListsHolding).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, {
+      action: 'update',
       session: { sessionId: 's1', title: 'Generated name', generated: true }, ts: expect.any(Number),
-    }, undefined);
+    }, ['/proj'], undefined);
   });
 
   it('names a session after what the user wrote, not the file open in the IDE', async () => {
@@ -110,7 +110,7 @@ describe('requestSessionTitleAfterSend', () => {
     await settle();
 
     expect(sendControlRequestToProcess).not.toHaveBeenCalled();
-    expect(broadcastToAll).not.toHaveBeenCalled();
+    expect(broadcastToListsHolding).not.toHaveBeenCalled();
   });
 
   it('does not name a session after a command or a reminder the app sent', async () => {
@@ -141,7 +141,7 @@ describe('requestSessionTitleAfterSend', () => {
     await settle();
 
     expect(sendControlRequestToProcess).toHaveBeenCalledTimes(3);
-    expect(broadcastToAll).not.toHaveBeenCalled();
+    expect(broadcastToListsHolding).not.toHaveBeenCalled();
   });
 
   it('stops asking once a title came back', async () => {
@@ -171,7 +171,7 @@ describe('requestSessionTitleAfterSend', () => {
     await settle();
 
     expect(sendControlRequestToProcess).toHaveBeenCalledTimes(1);
-    expect(broadcastToAll).not.toHaveBeenCalled();
+    expect(broadcastToListsHolding).not.toHaveBeenCalled();
   });
 
   it('leaves the session as it is when the request could not be written', async () => {
@@ -182,7 +182,7 @@ describe('requestSessionTitleAfterSend', () => {
     await settle();
 
     expect(cancelControlResponse).toHaveBeenCalledWith('generate_session_title-1');
-    expect(broadcastToAll).not.toHaveBeenCalled();
+    expect(broadcastToListsHolding).not.toHaveBeenCalled();
   });
 
   it('ignores an answer without a title', async () => {
@@ -192,7 +192,7 @@ describe('requestSessionTitleAfterSend', () => {
     requestSessionTitleAfterSend(connections, 's1', 'first prompt', true, '/proj');
     await settle();
 
-    expect(broadcastToAll).not.toHaveBeenCalled();
+    expect(broadcastToListsHolding).not.toHaveBeenCalled();
   });
 
   it('says in the log that the CLI answered without a title (#638)', async () => {
@@ -206,7 +206,7 @@ describe('requestSessionTitleAfterSend', () => {
       '[node-backend]',
       expect.stringContaining('generate_session_title answered without a title for s1 (request 1 of 3): {"title":null}'),
     );
-    expect(broadcastToAll).not.toHaveBeenCalled();
+    expect(broadcastToListsHolding).not.toHaveBeenCalled();
   });
 
   describe('the transcript, not the answer, shows the title (#638)', () => {
@@ -224,7 +224,7 @@ describe('requestSessionTitleAfterSend', () => {
       await settle();
 
       expect(announceGeneratedTitle).toHaveBeenCalledWith(connections, 's1', '/proj');
-      expect(broadcastToAll).not.toHaveBeenCalled();
+      expect(broadcastToListsHolding).not.toHaveBeenCalled();
     });
 
     it('keeps asking only until the watch has announced a title', async () => {

@@ -76,7 +76,7 @@ export async function deleteSessionHandler(
     announceSessionsUpdated(connections, {
       action: 'delete',
       session: { sessionId },
-    });
+    }, { sessionDirs: [workingDir] });
 
     connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId, status: 'ok' });
   } catch (err) {

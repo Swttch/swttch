@@ -161,9 +161,9 @@ async function requestSessionTitle(
     // recording it leaves nothing there to resolve, so the answer itself is shown.
     if (await announceGeneratedTitle(connections, sessionId, workingDir)) return;
     announceSessionsUpdated(connections, {
-      action: 'rename',
+      action: 'update',
       session: { sessionId, title, generated: true },
-    });
+    }, { sessionDirs: [workingDir] });
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     if (UNSUPPORTED_REQUEST.test(reason)) {

@@ -3,26 +3,24 @@ import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { MessageType } from '../../shared';
 import { awaitSessionTranscript } from '../features/awaitSessionTranscript';
+import { announceSessionCreated } from '../features/announceSessionCreated';
 import { announceSessionsUpdated } from '../features/sessionsUpdated';
 
 /**
- * SESSION_STARTED — a tab created a session and is telling everyone else.
+ * SESSION_STARTED: a tab created a session and is telling everyone else.
  *
  * Two things follow from one message, because both answer the same question at
- * different moments: what the other lists should show NOW, and when they can
- * stop showing a locally-built row and read the real one.
+ * different moments: what the other lists should show NOW, and what the real row is.
  *
- *  1. The row the creating tab drew is relayed to every other connection, so a
- *     session list in another window, another tab, or the IDE's side panel
- *     shows it at the same moment the creating tab's dropdown does.
- *  2. A wait starts for that session's transcript. When the file appears, the
- *     ordinary SESSIONS_UPDATED refresh goes out and each list re-reads from
- *     disk, replacing the relayed row with the recorded one.
+ *  1. The row the creating tab drew is handed to every other screen whose list can hold the
+ *     session, as a `create`, so a session list in another window, another tab, or the IDE's
+ *     side panel shows it at the same moment the creating tab's dropdown does.
+ *  2. A wait starts for that session's transcript. When the file exists, the row it gives is
+ *     handed to every screen, the creating tab included, as another `create`, which replaces the
+ *     drawn row with the recorded one. No screen reads its list for it.
  *
- * The row is taken as the webview sent it and passed through untouched. This
- * backend does not build session rows — the one place that does is the list
- * reader, and it reads transcripts. A row invented here would be a second
- * author for the same thing, free to disagree with both.
+ * The drawn row is taken as the webview sent it and passed through untouched. This
+ * backend does not build session rows: the only places that do read transcripts.
  */
 export function sessionStartedHandler(
   connectionId: string,
@@ -41,14 +39,17 @@ export function sessionStartedHandler(
 
   // Everyone EXCEPT the tab that sent it: that tab already has the row, and
   // handing it back would ask it to merge what it just drew.
-  announceSessionsUpdated(connections, { action: 'started', session: payload?.session as Record<string, unknown> | undefined }, { exceptConnectionId: connectionId });
+  if (payload?.session) {
+    announceSessionsUpdated(
+      connections,
+      { action: 'create', session: payload.session as Record<string, unknown> },
+      { exceptConnectionId: connectionId, sessionDirs: workingDir ? [workingDir] : [] },
+    );
+  }
 
   if (!workingDir) return;
   void awaitSessionTranscript(sessionId, workingDir, () => {
-    console.error('[node-backend]', `Transcript appeared for session ${sessionId} — refreshing lists`);
-    announceSessionsUpdated(connections, {
-      action: 'upsert',
-      session: { sessionId },
-    });
+    console.error('[node-backend]', `Transcript appeared for session ${sessionId}: handing over its row`);
+    void announceSessionCreated(connections, sessionId, workingDir);
   });
 }

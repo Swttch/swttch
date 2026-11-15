@@ -16,7 +16,6 @@ import {
 } from '../global-install-target';
 import { getSessionMcpVersion, resolveSessionMcpEntry, resetSessionMcpCache } from '../session-mcp';
 import { syncDesktopWatch } from '../features/desktopSync';
-import { announceSessionsUpdated } from '../features/sessionsUpdated';
 import { announceSessionMark } from '../features/announceSessionMark';
 
 /**
@@ -167,7 +166,7 @@ const SET_PARENT_TO_SESSION_SINCE = '0.3.0';
  * The command is run with this process's Node and the package's entry script, like the server the
  * CLI is handed, and is never imported.
  *
- * Every screen is told to read its session list again afterwards.
+ * Every screen is handed the new mark of the session afterwards.
  */
 export async function setSessionParentHandler(
   connectionId: string,
@@ -211,7 +210,7 @@ export async function setSessionParentHandler(
     ack(connections, connectionId, message, { status: 'error', error: answer?.error ?? (result.output || 'The set-parent command failed.') });
     return;
   }
-  announceSessionsUpdated(connections, { action: 'refresh' });
+  await announceSessionMark(sessionId, connections);
   ack(connections, connectionId, message, { status: 'ok', changed: answer.changed === true });
 }
 

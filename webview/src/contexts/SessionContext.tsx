@@ -3,7 +3,7 @@ import { instanceToPlain, plainToInstance } from 'class-transformer';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { SessionState } from '../types';
 import { SessionMetaDto } from '../dto';
-import { SessionUpdateJournal, applyUpdate, putUpdatesOnto } from '../utils/sessionUpdates';
+import { SessionNewsJournal, applyUpdate, putNewsOnto } from '../utils/sessionUpdates';
 import type { SessionServiceError } from '../api/modules/SessionsApi';
 import { useBridgeContext } from './BridgeContext';
 import { useApi } from './ApiContext';
@@ -259,7 +259,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
   const loadingMoreRef = useRef(false);
   // The session news that reached this screen lately, and the time the newest list it holds was
   // read, so a list read before some news can have that news put back onto it.
-  const updateJournalRef = useRef(new SessionUpdateJournal());
+  const newsJournalRef = useRef(new SessionNewsJournal());
   const lastReadAtRef = useRef(0);
   // Sessions the news spoke of that the list does not hold, and the wait before the list is read
   // again to find out whether they exist.
@@ -449,7 +449,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
       // What the news said after the list was read is not in it, and goes onto it.
       const listed = result.ts === undefined
         ? result.sessions
-        : putUpdatesOnto(result.sessions, result.ts, updateJournalRef.current);
+        : putNewsOnto(result.sessions, result.ts, newsJournalRef.current);
       // A refresh replaces the rows — except the open session's. That row can
       // only have come from the session carrying it in (#434), because the
       // fetched page does not reach far enough to hold it; dropping it would
@@ -500,7 +500,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
       // list already holds must not appear twice.
       const listed = result.ts === undefined
         ? result.sessions
-        : putUpdatesOnto(result.sessions, result.ts, updateJournalRef.current);
+        : putNewsOnto(result.sessions, result.ts, newsJournalRef.current);
       setSessions(prev => mergeSessions(prev, listed));
       setNextSessionOffset(result.hasMore ? result.nextOffset : null);
     } catch (error) {
@@ -525,12 +525,13 @@ export function SessionProvider({ children }: SessionProviderProps) {
    * list does, so a merged row and a listed row cannot describe the same
    * session differently.
    */
-  const mergeSession = useCallback((raw: unknown) => {
+  const mergeSession = useCallback((raw: unknown, readAt = 0) => {
     if (!raw || typeof raw !== 'object') return;
     const session = plainToInstance(SessionMetaDto, raw);
-    // The row was drawn before any news about the session; what the news said since goes onto it.
-    const [held] = putUpdatesOnto([session], 0, updateJournalRef.current);
-    setSessions(prev => mergeSessions(prev, [held]));
+    // The row holds what the news said up to the time it was read; what the news said after goes onto it.
+    const held = putNewsOnto([session], readAt, newsJournalRef.current);
+    // A row the news since deleted is not put into the list.
+    if (held.length > 0) setSessions(prev => mergeSessions(prev, held));
   }, []);
 
   const loadMoreSessions = useCallback(
@@ -583,61 +584,46 @@ export function SessionProvider({ children }: SessionProviderProps) {
         /** Where this news stands among the others. Missing from a backend that does not say. */
         ts?: number;
       };
-      if (action === 'started') {
-        // Another window just created a session and sent the row it drew.
-        //
-        // Merged rather than reloaded because there is nothing to reload yet:
-        // the transcript this session will be listed from does not exist for a
-        // few seconds, so asking the backend now returns a list without it. The
-        // refresh comes on its own once the file lands, and replaces this row
-        // with the recorded one.
-        mergeSession(session);
+      if (action === 'refresh') {
+        // Something changed that no single row names. The list is read again.
+        void loadSessions();
         return;
       }
-      if (action === 'refresh') {
-        // Something about the rows changed that no single row names: a session
-        // was moved under or out from under another, archived, or renamed by a
-        // tool of the session-management MCP. The list is read again.
-        void loadSessions();
+      if (action === 'create') {
+        // A session came to exist, and the news carries its row (the one the creating tab drew, or the one
+        // read from its transcript, which replaces the drawn one). The row holds what the news said up to
+        // `ts`; what was said after goes onto it.
+        if (typeof ts === 'number' && session?.sessionId) {
+          newsJournalRef.current.record({ kind: 'create', ts, sessionId: session.sessionId, row: session });
+        }
+        mergeSession(session, ts ?? 0);
+        return;
+      }
+      if (action === 'delete') {
+        if (!session?.sessionId) return;
+        if (typeof ts === 'number') newsJournalRef.current.record({ kind: 'delete', ts, sessionId: session.sessionId });
+        setSessions(prev => prev.filter(s => s.id !== session.sessionId));
         return;
       }
       if (action === 'update') {
         // Some items of ONE session changed. The row turns to them at once, and the list is not
         // read for it: that read is slow with several screens open, and a chat showing the session
         // must not wait for it. A list read before this news is put right when it arrives, by `ts`.
-        const { sessionId, ...fields } = session ?? ({} as typeof session);
+        const { sessionId, generated, ...fields } = session ?? ({} as typeof session);
         if (!sessionId) return;
-        if (typeof ts === 'number') updateJournalRef.current.record({ ts, sessionId, fields });
-        setSessions(prev => prev.map(s => (s.id === sessionId ? applyUpdate(s, fields) : s)));
-        if (!sessionsRef.current.some(s => s.id === sessionId)) scheduleUnknownSessionRefresh(sessionId);
-        return;
-      }
-      if (action === 'rename' && session?.sessionId && session.title) {
-        // A title Claude Code just generated arrives with the flag; one a user typed does not.
-        if (session.generated === true) {
-          setGeneratedTitle({ sessionId: session.sessionId, title: session.title, arrivedAt: Date.now() });
+        // A title Claude Code just generated arrives with the flag, which is about how it is shown
+        // (letter by letter) and not an item of the session; one a user typed does not.
+        if (generated === true && typeof fields.title === 'string') {
+          setGeneratedTitle({ sessionId, title: fields.title, arrivedAt: Date.now() });
         }
-        setSessions(prev => prev.map(s =>
-          s.id === session.sessionId
-            ? Object.assign(Object.create(Object.getPrototypeOf(s)), s, { title: session.title })
-            : s
-        ));
-      } else if (action === 'upsert' && session?.sessionId) {
+        if (typeof ts === 'number') newsJournalRef.current.record({ kind: 'update', ts, sessionId, fields });
         setSessions(prev => {
-          const exists = prev.find(s => s.id === session.sessionId);
-          if (exists) {
-            return prev.map(s =>
-              s.id === session.sessionId
-                ? { ...s, updatedAt: new Date() }
-                : s
-            );
-          }
-          // 다른 탭에서 생성된 세션 — loadSessions로 전체 갱신
-          loadSessions();
-          return prev;
+          const next = prev.map(s => (s.id === sessionId ? applyUpdate(s, fields) : s));
+          // A row is placed by the time of its last activity, so a row whose time changed moves, as it would
+          // in the list a read gives.
+          return 'lastTimestamp' in fields ? sortSessions(next) : next;
         });
-      } else if (action === 'delete' && session?.sessionId) {
-        setSessions(prev => prev.filter(s => s.id !== session.sessionId));
+        if (!sessionsRef.current.some(s => s.id === sessionId)) scheduleUnknownSessionRefresh(sessionId);
       }
     });
     return unsubscribe;

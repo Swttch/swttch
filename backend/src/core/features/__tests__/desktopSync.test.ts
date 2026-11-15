@@ -45,7 +45,7 @@ import { resetKnownMarks } from '../sessionMarksKnown';
 import type { DesktopSessionState } from '../desktopSessions';
 
 function connectionsFake() {
-  return { setDesktopRunning: vi.fn(), broadcastToAll: vi.fn() };
+  return { setDesktopRunning: vi.fn(), broadcastToAll: vi.fn(), broadcastToListsHolding: vi.fn() };
 }
 
 function running(...ids: string[]): DesktopSessionState {
@@ -185,6 +185,21 @@ describe('reflecting the Claude desktop app', () => {
         expect(updatesOf(connections)).toEqual([
           { action: 'update', session: { sessionId: 'a', sessionMark: { id: 'a', archivedAt: 1700 } }, ts: expect.any(Number) },
         ]);
+      });
+
+      it('tells only the screens whose list can hold the session when the mark says where it lives', async () => {
+        state.setting = true;
+        state.sponsor = true;
+        marksNow.rows = [{ id: 'a', archivedAt: 0, cwd: '/repo' }];
+        const connections = connectionsFake();
+        await syncDesktopWatch(connections as never);
+
+        marksNow.rows = [{ id: 'a', archivedAt: 1700, cwd: '/repo' }];
+        desktop.watched[0].emit(running(), { list: true, running: false });
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(connections.broadcastToAll).not.toHaveBeenCalled();
+        expect(connections.broadcastToListsHolding.mock.calls[0][2]).toEqual(['/repo']);
       });
 
       it('says a session whose mark is gone has none', async () => {

@@ -50,6 +50,11 @@ export interface SessionsUpdatedBody {
 export interface SessionsUpdatedAudience {
   exceptConnectionId?: string;
   sessionDirs?: string[];
+  /**
+   * The `ts` to send, for news that is a picture of the sessions as of a time before it is sent (a row read from
+   * a transcript): it carries the time the read began, so what was said while it was read still goes onto it.
+   */
+  ts?: number;
 }
 
 /**
@@ -62,7 +67,7 @@ export function announceSessionsUpdated(
   body: SessionsUpdatedBody,
   audience: SessionsUpdatedAudience = {},
 ): number {
-  const ts = nextSessionEventTs();
+  const ts = audience.ts ?? nextSessionEventTs();
   const payload = { ...body, ts };
   const dirs = (audience.sessionDirs ?? []).filter((dir) => dir !== '');
   if (dirs.length > 0) {

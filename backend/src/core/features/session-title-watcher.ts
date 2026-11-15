@@ -80,13 +80,13 @@ export async function announceGeneratedTitle(
   // title just arrived by itself, which is when it is drawn letter by letter. A name
   // the user typed, or chose with `/rename`, arrives without it.
   announceSessionsUpdated(connections, {
-    action: 'rename',
+    action: 'update',
     session: {
       sessionId,
       title: entry.title,
       ...(entry.title === aiTitle ? { generated: true } : {}),
     },
-  });
+  }, { sessionDirs: [workingDir] });
   stopWatchingSessionTitle(sessionId);
   return true;
 }

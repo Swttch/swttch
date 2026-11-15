@@ -1400,6 +1400,122 @@ describe('SessionContext', () => {
       expect(ctx().sessions).toHaveLength(2);
     });
 
+    const row = (sessionId: string, extra: Record<string, unknown> = {}) => ({
+      sessionId,
+      title: `title of ${sessionId}`,
+      createdAt: '2026-02-03T10:00:00Z',
+      lastTimestamp: '2026-02-03T11:00:00Z',
+      messageCount: null,
+      isSidechain: false,
+      ...extra,
+    });
+    const createOf = (session: Record<string, unknown>, ts: number) => ({ payload: { action: 'create', session, ts } });
+
+    it('puts the row a create carries into the list, newest first, without reading the list', async () => {
+      const { ctx, handler } = await renderWithList();
+      mockSessionsIndex.mockClear();
+
+      await act(async () => {
+        handler(createOf(row('session-new'), 100));
+      });
+
+      await waitFor(() => expect(ctx().sessions.map((s) => s.id)).toEqual(['session-new', 'session-1', 'session-2']));
+      expect(ctx().sessions[0].title).toBe('title of session-new');
+      expect(mockSessionsIndex).not.toHaveBeenCalled();
+    });
+
+    it('replaces the row the screen holds with the one a create carries', async () => {
+      const { ctx, handler } = await renderWithList();
+
+      await act(async () => {
+        handler(createOf(row('session-2', { title: 'recorded title' }), 100));
+      });
+
+      await waitFor(() => expect(ctx().sessions.find((s) => s.id === 'session-2')?.title).toBe('recorded title'));
+      expect(ctx().sessions).toHaveLength(2);
+    });
+
+    it('puts what was said after the read of a created row onto it, but not what the row already holds', async () => {
+      const { ctx, handler } = await renderWithList();
+      // Said before the row came, one after the time it was read and one before.
+      await act(async () => {
+        handler(updateOf('session-new', { title: 'after the read' }, 150));
+        handler(updateOf('session-new', { sessionMark: { id: 'session-new', archivedAt: 50 } }, 90));
+      });
+
+      await act(async () => {
+        handler(createOf(row('session-new'), 120));
+      });
+
+      await waitFor(() => expect(ctx().sessions.find((s) => s.id === 'session-new')?.title).toBe('after the read'));
+      expect(ctx().sessions.find((s) => s.id === 'session-new')?.sessionMark).toBeUndefined();
+    });
+
+    it('keeps a created row when a list that was read before it arrives after it', async () => {
+      const { ctx, handler } = await renderWithList([], 100);
+      await act(async () => {
+        handler(createOf(row('session-new'), 200));
+      });
+      await waitFor(() => expect(ctx().sessions.map((s) => s.id)).toEqual(['session-new']));
+
+      // Asked for before the session existed, so the list does not hold it.
+      mockSessionsIndex.mockResolvedValue({ sessions: mockSessionDtos, ts: 150 });
+      await act(async () => {
+        await ctx().loadSessions();
+      });
+
+      await waitFor(() => expect(ctx().sessions).toHaveLength(3));
+      expect(ctx().sessions.map((s) => s.id).sort()).toEqual(['session-1', 'session-2', 'session-new']);
+    });
+
+    it('does not bring back a deleted row when a list that was read before the delete arrives after it', async () => {
+      const { ctx, handler } = await renderWithList(mockSessionDtos, 100);
+      await act(async () => {
+        handler({ payload: { action: 'delete', session: { sessionId: 'session-1' }, ts: 200 } });
+      });
+      await waitFor(() => expect(ctx().sessions.map((s) => s.id)).toEqual(['session-2']));
+
+      mockSessionsIndex.mockResolvedValue({ sessions: mockSessionDtos, ts: 150 });
+      await act(async () => {
+        await ctx().loadSessions();
+      });
+
+      await waitFor(() => expect(ctx().sessions.map((s) => s.id)).toEqual(['session-2']));
+    });
+
+    it('takes a session out of the list when it is deleted', async () => {
+      const { ctx, handler } = await renderWithList();
+
+      await act(async () => {
+        handler({ payload: { action: 'delete', session: { sessionId: 'session-1' }, ts: 100 } });
+      });
+
+      await waitFor(() => expect(ctx().sessions.map((s) => s.id)).toEqual(['session-2']));
+    });
+
+    it('turns the time of last activity of a session to the one an update carries', async () => {
+      const { ctx, handler } = await renderWithList();
+
+      await act(async () => {
+        handler(updateOf('session-2', { lastTimestamp: '2030-01-01T00:00:00.000Z' }, 100));
+      });
+
+      await waitFor(() => expect(ctx().sessions.map((s) => s.id)).toEqual(['session-2', 'session-1']));
+      expect(ctx().sessions[0].updatedAt.toISOString()).toBe('2030-01-01T00:00:00.000Z');
+    });
+
+    it('tells the screen a title arrived by itself when the update says so, and shows it', async () => {
+      const { ctx, handler } = await renderWithList();
+
+      await act(async () => {
+        handler(updateOf('session-1', { title: 'Generated name', generated: true }, 100));
+      });
+
+      await waitFor(() => expect(ctx().sessions.find((s) => s.id === 'session-1')?.title).toBe('Generated name'));
+      expect(ctx().generatedTitle).toMatchObject({ sessionId: 'session-1', title: 'Generated name' });
+      expect((ctx().sessions.find((s) => s.id === 'session-1') as unknown as Record<string, unknown>).generated).toBeUndefined();
+    });
+
     describe('an update for a session the list does not hold', () => {
       beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }));
       afterEach(() => vi.useRealTimers());

@@ -40,9 +40,10 @@ describe('setSessionParentHandler', () => {
     vi.clearAllMocks();
     mocks.entry.mockResolvedValue('/g/node_modules/@swttch/session-manager-mcp/src/cli.js');
     mocks.version.mockResolvedValue('0.4.0');
+    mocks.marks.mockResolvedValue(new Map([['child', { row: { id: 'child', parentSessionUid: 'parent' }, sessionId: 'child' }]]));
   });
 
-  it('runs the package command with the session and the new parent, then tells every list to refresh', async () => {
+  it('runs the package command with the session and the new parent, then hands every screen the new mark', async () => {
     mocks.run.mockResolvedValue({ ok: true, output: '', stderr: '', stdout: '{"ok":true,"changed":true}\n' });
 
     await setSessionParentHandler('c1', message({ sessionId: 'child', parentSessionId: 'parent' }), connections, {} as never);
@@ -53,7 +54,13 @@ describe('setSessionParentHandler', () => {
       expect.anything(),
     );
     expect(ackOf()).toMatchObject({ requestId: 'r1', status: 'ok', changed: true });
-    expect(broadcastToAll).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, { action: 'refresh', ts: expect.any(Number) }, undefined);
+    expect(broadcastToAll.mock.calls).toEqual([
+      [
+        MessageType.SESSIONS_UPDATED,
+        { action: 'update', session: { sessionId: 'child', sessionMark: { id: 'child', parentSessionUid: 'parent' } }, ts: expect.any(Number) },
+        undefined,
+      ],
+    ]);
   });
 
   it('takes the session to the top level when no parent is given', async () => {

@@ -2,6 +2,7 @@ import type { ConnectionManager } from '../../ws/connection-manager';
 import { MessageType } from '../../shared';
 import { awaitSessionTranscript } from './awaitSessionTranscript';
 import { announceSessionMark } from './announceSessionMark';
+import { announceSessionCreated } from './announceSessionCreated';
 import { normalizeSessionName } from './cli-rename';
 import { announceSessionsUpdated } from './sessionsUpdated';
 
@@ -88,13 +89,15 @@ function startedSessionOf(content: unknown): { sessionId: string; cwd: string } 
  * A session the MCP changes from somewhere this backend does not run (a `claude`
  * in a terminal) is not seen here; the lists pick that up on their next refresh.
  *
- * [callerSessionId] is the session whose stream carried the event. A call that
- * names `self` means that session.
+ * [callerSessionId] is the session whose stream carried the event, and [callerWorkingDir] the folder it
+ * works in. A call that names `self` means that session. The folder is what tells which screens the news is
+ * for (the ones whose list can hold the session).
  */
 export function announceSessionToolChanges(
   event: Record<string, unknown>,
   connections: ConnectionManager,
   callerSessionId?: string,
+  callerWorkingDir?: string,
 ): void {
   if (event.type === 'assistant') {
     for (const block of contentBlocksOf(event)) {
@@ -125,17 +128,16 @@ export function announceSessionToolChanges(
     if (tool === 'start_session') {
       const started = startedSessionOf(block.content);
       if (!started) continue;
+      // The row of the new session is handed over once its transcript exists, to every screen whose list
+      // can hold it, so none has to read its list to find it.
       void awaitSessionTranscript(started.sessionId, started.cwd, () => {
-        announceSessionsUpdated(connections, {
-          action: 'upsert',
-          session: { sessionId: started.sessionId },
-        });
+        void announceSessionCreated(connections, started.sessionId, started.cwd);
       });
       continue;
     }
 
     if ((tool === 'archive_session' || tool === 'unarchive_session') && call.sessionId) {
-      void announceSessionMark(call.sessionId, connections);
+      void announceSessionMark(call.sessionId, connections, dirOfCaller(call.sessionId, callerSessionId, callerWorkingDir));
       continue;
     }
 
@@ -143,13 +145,27 @@ export function announceSessionToolChanges(
       // The name as the CLI will keep it, which is what the list shows once it is read again.
       const title = call.title === undefined ? '' : normalizeSessionName(call.title);
       if (call.sessionId && title !== '') {
-        announceSessionsUpdated(connections, { action: 'update', session: { sessionId: call.sessionId, title } });
+        const dir = dirOfCaller(call.sessionId, callerSessionId, callerWorkingDir);
+        announceSessionsUpdated(
+          connections,
+          { action: 'update', session: { sessionId: call.sessionId, title } },
+          { sessionDirs: dir ? [dir] : [] },
+        );
         continue;
       }
     }
 
     announceSessionsUpdated(connections, { action: 'refresh' });
   }
+}
+
+/** The folder a session works in when it is the one whose stream carried the call, which is the one folder known. */
+function dirOfCaller(
+  sessionId: string,
+  callerSessionId: string | undefined,
+  callerWorkingDir: string | undefined,
+): string | undefined {
+  return sessionId === callerSessionId ? callerWorkingDir : undefined;
 }
 
 /** The session a call was aimed at: the id it named, or the calling session for `self`. */

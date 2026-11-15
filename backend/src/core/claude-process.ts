@@ -1632,9 +1632,9 @@ function handleStreamEvent(
       .then(() => {
         // The CLI rename is newer than any GUI rename, so the GUI override goes.
         announceSessionsUpdated(connections, {
-          action: 'rename',
+          action: 'update',
           session: { sessionId: targetSessionId, title: renamedTitle },
-        });
+        }, { sessionDirs: [workingDir] });
       })
       .catch((err) => {
         console.error('[node-backend]', 'Failed to apply CLI session rename:', err);
@@ -1643,7 +1643,7 @@ function handleStreamEvent(
 
   // A session started, moved or archived through the session-management MCP:
   // the session lists are told, because nothing else passes through here.
-  announceSessionToolChanges(event, connections, targetSessionId);
+  announceSessionToolChanges(event, connections, targetSessionId, workingDir);
 
   if (eventType === 'result') {
     sessionsWithResult.add(targetSessionId);
@@ -1653,12 +1653,14 @@ function handleStreamEvent(
     // knows when a turn STARTS without us asking for it. Keeping both left the
     // list and the transcript disagreeing in one direction (issue #456). See
     // REPORT_SESSION_ACTIVITY.
+    // The turn ended, so the session is the newest of its list: its time of last activity is now.
     announceSessionsUpdated(connections, {
-      action: 'upsert',
+      action: 'update',
       session: {
         sessionId: event.session_id ?? targetSessionId,
+        lastTimestamp: new Date().toISOString(),
       },
-    });
+    }, { sessionDirs: [workingDir] });
 
     /*
      * Hand the webview the uuid the CLI just recorded for this send (#356).

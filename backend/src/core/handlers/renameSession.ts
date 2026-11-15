@@ -61,9 +61,9 @@ export async function renameSessionHandler(
 
     const shownTitle = normalizeSessionName(title);
     announceSessionsUpdated(connections, {
-      action: 'rename',
+      action: 'update',
       session: { sessionId, title: shownTitle },
-    });
+    }, { sessionDirs: [workingDir] });
 
     connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId, status: 'ok' });
   } catch (err) {

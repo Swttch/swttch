@@ -124,10 +124,13 @@ async function announceListChange(
       return;
     }
     for (const { sessionId, mark } of changes) {
-      announceSessionsUpdated(connections, {
-        action: 'update',
-        session: { sessionId, sessionMark: mark ? mark.row : null },
-      });
+      // Where the package started the session is the one folder the mark says; without it, every screen is told.
+      const dir = mark && typeof mark.row.cwd === 'string' ? mark.row.cwd : undefined;
+      announceSessionsUpdated(
+        connections,
+        { action: 'update', session: { sessionId, sessionMark: mark ? mark.row : null } },
+        { sessionDirs: dir ? [dir] : [] },
+      );
     }
   } catch (err) {
     console.error('[node-backend]', 'Failed to find which marks changed:', err);

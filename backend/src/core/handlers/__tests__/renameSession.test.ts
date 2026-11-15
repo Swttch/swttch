@@ -36,6 +36,7 @@ function createMockConnections() {
   return {
     sendTo: vi.fn(),
     broadcastToAll: vi.fn(),
+    broadcastToListsHolding: vi.fn(),
   } as unknown as ConnectionManager;
 }
 
@@ -172,10 +173,10 @@ describe('renameSessionHandler', () => {
 
     expect(mockRenameThroughCli).toHaveBeenCalledWith(connections, 'abc123', 'My Renamed Session', '/test');
     expect(mockRemoveOverride).toHaveBeenCalledWith('/home/user/.claude/projects/-test', 'abc123');
-    expect(connections.broadcastToAll).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, {
-      action: 'rename',
+    expect(connections.broadcastToListsHolding).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, {
+      action: 'update',
       session: { sessionId: 'abc123', title: 'My Renamed Session' }, ts: expect.any(Number),
-    }, undefined);
+    }, ['/test'], undefined);
     expect(connections.sendTo).toHaveBeenCalledWith('conn-1', MessageType.ACK, expect.objectContaining({
       status: 'ok',
     }));
@@ -192,10 +193,10 @@ describe('renameSessionHandler', () => {
       mockBridge,
     );
 
-    expect(connections.broadcastToAll).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, {
-      action: 'rename',
+    expect(connections.broadcastToListsHolding).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, {
+      action: 'update',
       session: { sessionId: 'abc123', title: 'two lines' }, ts: expect.any(Number),
-    }, undefined);
+    }, ['/test'], undefined);
   });
 
   it('returns an error, and leaves any legacy override alone, when the CLI does not rename', async () => {
