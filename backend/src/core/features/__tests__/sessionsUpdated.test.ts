@@ -56,9 +56,40 @@ describe('announceSessionsUpdated', () => {
     const broadcastToAll = vi.fn();
     const connections = { broadcastToAll } as unknown as ConnectionManager;
 
-    announceSessionsUpdated(connections, { action: 'started' }, 'conn-1');
+    announceSessionsUpdated(connections, { action: 'create' }, { exceptConnectionId: 'conn-1' });
 
     expect(broadcastToAll.mock.calls[0][2]).toBe('conn-1');
+  });
+
+  it('sends news about a session only to the screens whose list can hold it, when it is told where the session lives', () => {
+    const broadcastToAll = vi.fn();
+    const broadcastToListsHolding = vi.fn();
+    const connections = { broadcastToAll, broadcastToListsHolding } as unknown as ConnectionManager;
+
+    const ts = announceSessionsUpdated(
+      connections,
+      { action: 'update', session: { sessionId: 's1' } },
+      { sessionDirs: ['/repo'], exceptConnectionId: 'conn-1' },
+    );
+
+    expect(broadcastToAll).not.toHaveBeenCalled();
+    expect(broadcastToListsHolding).toHaveBeenCalledWith(
+      MessageType.SESSIONS_UPDATED,
+      { action: 'update', session: { sessionId: 's1' }, ts },
+      ['/repo'],
+      'conn-1',
+    );
+  });
+
+  it('sends to every screen when the folders of the session are empty', () => {
+    const broadcastToAll = vi.fn();
+    const broadcastToListsHolding = vi.fn();
+    const connections = { broadcastToAll, broadcastToListsHolding } as unknown as ConnectionManager;
+
+    announceSessionsUpdated(connections, { action: 'update' }, { sessionDirs: ['', ''] });
+
+    expect(broadcastToListsHolding).not.toHaveBeenCalled();
+    expect(broadcastToAll).toHaveBeenCalledTimes(1);
   });
 
   it('gives news sent one after another rising numbers', () => {

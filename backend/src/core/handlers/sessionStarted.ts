@@ -41,7 +41,7 @@ export function sessionStartedHandler(
 
   // Everyone EXCEPT the tab that sent it: that tab already has the row, and
   // handing it back would ask it to merge what it just drew.
-  announceSessionsUpdated(connections, { action: 'started', session: payload?.session as Record<string, unknown> | undefined }, connectionId);
+  announceSessionsUpdated(connections, { action: 'started', session: payload?.session as Record<string, unknown> | undefined }, { exceptConnectionId: connectionId });
 
   if (!workingDir) return;
   void awaitSessionTranscript(sessionId, workingDir, () => {

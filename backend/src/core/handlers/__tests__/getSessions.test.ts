@@ -5,6 +5,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 vi.mock('../../features/getSessionsList', () => ({
   getSessionsList: vi.fn(),
 }));
+vi.mock('../../features/getNestedSessionsList', () => ({
+  getNestedSessionsList: vi.fn(async () => ({ sessions: [], total: 0, hasMore: false })),
+}));
 
 import { getSessionsHandler } from '../getSessions';
 import { getSessionsList } from '../../features/getSessionsList';
@@ -17,7 +20,7 @@ const mockGetSessionsList = vi.mocked(getSessionsList);
 const bridge = {} as Bridge;
 
 function mockConns() {
-  return { sendTo: vi.fn() } as unknown as ConnectionManager;
+  return { sendTo: vi.fn(), registerListScope: vi.fn() } as unknown as ConnectionManager;
 }
 
 function lastSend(conns: ConnectionManager): [string, string, Record<string, unknown>] {
@@ -123,6 +126,27 @@ describe('getSessionsHandler', () => {
     expect(type).toBe(MessageType.ACK);
     expect(payload.serviceError).toBeUndefined();
     expect(mockGetSessionsList).toHaveBeenCalled();
+  });
+
+  it('notes the list the screen asked for, before reading it, so the news that comes meanwhile is not missed', async () => {
+    mockGetSessionsList.mockImplementation(async () => {
+      expect(conns.registerListScope).toHaveBeenCalled();
+      return { sessions: [], total: 0, hasMore: false } as never;
+    });
+    const conns = mockConns();
+
+    await getSessionsHandler('c1', { ...msg('/work'), payload: { workingDir: '/work', includeNested: false } }, conns, bridge);
+
+    expect(conns.registerListScope).toHaveBeenCalledWith('c1', { rootDir: '/work', includeNested: false });
+  });
+
+  it('notes whether the list takes the folders below', async () => {
+    mockGetSessionsList.mockResolvedValue({ sessions: [], total: 0, hasMore: false } as never);
+    const conns = mockConns();
+
+    await getSessionsHandler('c1', { ...msg('/work'), payload: { workingDir: '/work', includeNested: true } }, conns, bridge);
+
+    expect(conns.registerListScope).toHaveBeenCalledWith('c1', { rootDir: '/work', includeNested: true });
   });
 
   describe('when several screens ask for the same list at once', () => {

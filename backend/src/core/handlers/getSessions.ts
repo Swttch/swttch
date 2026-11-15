@@ -61,6 +61,10 @@ export async function getSessionsHandler(
   const limit = typeof message.payload?.limit === 'number' ? message.payload.limit : undefined;
   const options = { offset, limit };
 
+  // The list this screen asks for decides which session news is for it. Noted before the list is
+  // read, so news that comes while it is read is not missed.
+  connections.registerListScope(connectionId, { rootDir: workingDir, includeNested });
+
   // Every screen asks for its list on its own, and a change to a session makes all
   // of them ask at once. The reads of one list (same folder, same page) are kept to
   // the one running and one more behind it, see coalesceReads.

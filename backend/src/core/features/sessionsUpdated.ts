@@ -31,12 +31,9 @@ export function resetSessionEventClock(): void {
  * What can be told about a session, besides the `ts` that [announceSessionsUpdated] adds.
  *
  * - `create`: a session came to exist (`session` is its whole row).
- * - `update`: some of a session's items changed (`session` is `sessionId` and the items).
- * - `delete`: a session is gone.
+ * - `update`: some of a session's items changed (`session` is `sessionId` and the changed items).
+ * - `delete`: a session is gone (`session` is its `sessionId`).
  * - `refresh`: something changed that the others cannot say; read the list again.
- *
- * The actions the screens already knew (`started`, `upsert`, `rename`, `mark`) are still
- * accepted, until each is moved to one of these.
  */
 export interface SessionsUpdatedBody {
   action: string;
@@ -44,17 +41,34 @@ export interface SessionsUpdatedBody {
 }
 
 /**
- * Tell every connection (but [exceptConnectionId]) that sessions changed, with the
- * `ts` of the news. Returns that `ts`.
+ * Who gets the news, besides being told to skip one connection.
+ *
+ * News about one session is for the screens whose list can hold it, which [sessionDirs] (the folders the
+ * session lives in) decides; a screen that lists another folder has no use for it. Without [sessionDirs]
+ * every screen gets it.
+ */
+export interface SessionsUpdatedAudience {
+  exceptConnectionId?: string;
+  sessionDirs?: string[];
+}
+
+/**
+ * Tell the screens that sessions changed, with the `ts` of the news. Returns that `ts`.
  *
  * The one place session news leaves this backend, so none leaves without a number.
  */
 export function announceSessionsUpdated(
   connections: ConnectionManager,
   body: SessionsUpdatedBody,
-  exceptConnectionId?: string,
+  audience: SessionsUpdatedAudience = {},
 ): number {
   const ts = nextSessionEventTs();
-  connections.broadcastToAll(MessageType.SESSIONS_UPDATED, { ...body, ts }, exceptConnectionId);
+  const payload = { ...body, ts };
+  const dirs = (audience.sessionDirs ?? []).filter((dir) => dir !== '');
+  if (dirs.length > 0) {
+    connections.broadcastToListsHolding(MessageType.SESSIONS_UPDATED, payload, dirs, audience.exceptConnectionId);
+  } else {
+    connections.broadcastToAll(MessageType.SESSIONS_UPDATED, payload, audience.exceptConnectionId);
+  }
   return ts;
 }
