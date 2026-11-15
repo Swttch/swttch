@@ -48,6 +48,12 @@ export function updatePendingReply(id: string, comment: string): void {
   setPending(pending.map((entry) => (entry.id === id ? { ...entry, comment: comment.trim() } : entry)));
 }
 
+/** Puts cards back in the row as they were (a message taken back from the line of unsent ones), keeping the ones already there. */
+export function restorePendingReplies(entries: readonly PendingReply[]): void {
+  const back = entries.filter((entry) => !pending.some((current) => current.id === entry.id));
+  if (back.length > 0) setPending([...back, ...pending]);
+}
+
 export function removePendingReply(id: string): void {
   setPending(pending.filter((entry) => entry.id !== id));
 }

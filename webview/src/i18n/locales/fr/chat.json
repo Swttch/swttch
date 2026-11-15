@@ -736,7 +736,8 @@
   "chatPage": {
     "scrollToBottom": "Défiler vers le bas",
     "inputNeeded": "Saisie requise",
-    "sendHeldNow": "Envoyer maintenant"
+    "sendHeldNow": "Envoyer maintenant",
+    "cancelHeld": "Annuler et modifier le message"
   },
   "contextUsage": {
     "heading": "Utilisation du contexte",

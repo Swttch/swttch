@@ -170,10 +170,12 @@ interface Props {
   turnRunning?: boolean;
   /** The send this reply answers: the turn's file summary offers to undo what the turn changed through it. */
   sectionKey?: string | null;
+  /** Messages written while the turn runs: they stand above the line saying what is being done, at the end otherwise. */
+  waiting?: ReactNode;
 }
 
 /** One send's reply, drawn as the transcript's segments: text, gathered tool calls, cards. */
-export const TranscriptBody = memo(function TranscriptBody({ body, mergedMessages, onRetry, turnRunning = false, sectionKey = null }: Props) {
+export const TranscriptBody = memo(function TranscriptBody({ body, mergedMessages, onRetry, turnRunning = false, sectionKey = null, waiting = null }: Props) {
   const segments = useMemo(() => buildSegments(body), [body]);
   // The copy / fork / time line is under the text a turn ends on, and only there. A turn is what the model does
   // from the moment someone else speaks (the user, another session, the app) to the moment it is done, with any
@@ -202,7 +204,7 @@ export const TranscriptBody = memo(function TranscriptBody({ body, mergedMessage
     <>
       {segments.map((segment) => (
         <Fragment key={segment.key}>
-          {segment.key === planBefore && plan}
+          {segment.key === planBefore && <>{plan}{waiting}</>}
         <div
           // What kind of segment this is, for prose.css: some entries draw nothing and leave an empty
           // wrapper, so "the first thing under the bubble" cannot be read off the position in this list.
@@ -216,7 +218,7 @@ export const TranscriptBody = memo(function TranscriptBody({ body, mergedMessage
         </div>
         </Fragment>
       ))}
-      {planBefore === null && plan}
+      {planBefore === null && <>{plan}{waiting}</>}
     </>
   );
 });

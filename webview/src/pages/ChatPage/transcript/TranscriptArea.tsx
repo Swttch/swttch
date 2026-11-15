@@ -13,7 +13,7 @@ import { TranscriptHeldMessages } from './TranscriptHeldMessages';
 import { TranscriptHeldWorking } from './TranscriptHeldWorking';
 import { useReleaseHeldMessages } from '../../../hooks/useReleaseHeldMessages';
 import { TranscriptBackgroundWorking, useBackgroundTaskStart } from './TranscriptBackgroundWorking';
-import { PendingSentMessages } from '../PendingSentMessages';
+import { TranscriptPendingMessages } from './TranscriptPendingMessages';
 import { runningActivity } from './streamingActivity';
 import { EmptyState } from '../EmptyState';
 import { isJetBrains } from '@/config/environment';
@@ -214,7 +214,7 @@ export function TranscriptArea(props: TranscriptAreaProps) {
                 {/* Sent while the card holds the turn: right after the latest message, above the calls still running, as in the desktop app. */}
                 {awaitingInput && sectionIndex === sections.length - 1 && <TranscriptHeldMessages />}
                 <div ref={sectionIndex === sections.length - 1 ? lastBodyRef : undefined} data-section-body data-after-send={section.head ? '' : undefined} className={`${section.body.length > 0 ? 'pt-[0.1875rem] ' : ''}${sectionIndex < sections.length - 1 ? (section.body.length > 0 ? 'pb-[2.2188rem]' : 'pb-[0.8125rem]') : isStreaming || awaitingInput || backgroundWorking ? 'pb-0' : 'pb-[3.375rem]'}`}>
-                  <TranscriptBody body={section.body} mergedMessages={mergedMessages} onRetry={onRetry} turnRunning={isStreaming && sectionIndex === sections.length - 1} sectionKey={section.key} />
+                  <TranscriptBody body={section.body} mergedMessages={mergedMessages} onRetry={onRetry} turnRunning={isStreaming && sectionIndex === sections.length - 1} sectionKey={section.key} waiting={sectionIndex === sections.length - 1 ? <TranscriptPendingMessages /> : undefined} />
                   {/* The turn's wrap-up is drawn here, after its last message, not where its call sits: a recap as text until the closing message begins, then the question and its answers. */}
                   <TranscriptWrapUp body={section.body} next={sections[sectionIndex + 1]?.head ?? null} />
                 </div>
@@ -230,7 +230,6 @@ export function TranscriptArea(props: TranscriptAreaProps) {
           <TranscriptHeldWorking activity={waitedCall} />
         </div>
       )}
-      <PendingSentMessages />
       {!isStreaming && <TranscriptBackgroundWorking hidden={awaitingInput} />}
       {/* While a call is being waited on, the run of calls that holds it is the working indicator (see TranscriptToolRun); this line is for the rest of the turn, when the model thinks or writes. A dropped connection and the CLI's retries still say so here. */}
       {isStreaming && (waitedCall === null || disconnectCountdown !== null || apiRetry !== null) && (

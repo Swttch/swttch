@@ -198,6 +198,7 @@ export function ChatInput({ cardWaiting = false }: ChatInputProps = {}) {
     reorderAttachments,
     cancelUpload,
     clearAttachments,
+    restoreAttachments,
     error: attachmentError,
     isDragOver,
     handlePaste,
@@ -688,7 +689,7 @@ export function ChatInput({ cardWaiting = false }: ChatInputProps = {}) {
 
     pushToHistory(value);
 
-    onSubmit(undefined, mode, attachments.length > 0 ? attachments : undefined, invertFollowUp, queueWhileWaiting);
+    onSubmit(undefined, mode, attachments.length > 0 ? attachments : undefined, invertFollowUp, queueWhileWaiting, { pathTokens });
     clearAttachments();
     setPathTokens([]);
   }, [
@@ -706,8 +707,18 @@ export function ChatInput({ cardWaiting = false }: ChatInputProps = {}) {
     onChange,
     onSubmit,
     queueWhileWaiting,
+    pathTokens,
     clearAttachments,
   ]);
+
+  // A message taken back before the CLI read it: what it had attached and the paths it named come back with its text.
+  const { composerRestore, takeComposerRestore } = chatStream;
+  useEffect(() => {
+    if (!composerRestore) return;
+    restoreAttachments(composerRestore.attachments);
+    setPathTokens((prev) => [...composerRestore.pathTokens.filter((token) => !prev.includes(token)), ...prev]);
+    takeComposerRestore(composerRestore.id);
+  }, [composerRestore, restoreAttachments, takeComposerRestore]);
 
   // A reply card added with ⌘↵ asks for the message to go out as soon as the card is in the box. This waits for
   // the card to show up in `pendingReplies`, so the send sees it.

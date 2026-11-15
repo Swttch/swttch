@@ -744,7 +744,8 @@
   "chatPage": {
     "scrollToBottom": "Прокрутить вниз",
     "inputNeeded": "Требуется ввод",
-    "sendHeldNow": "Отправить сейчас"
+    "sendHeldNow": "Отправить сейчас",
+    "cancelHeld": "Отменить и изменить сообщение"
   },
   "contextUsage": {
     "heading": "Использование контекста",

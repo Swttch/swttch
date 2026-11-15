@@ -740,7 +740,8 @@
   "chatPage": {
     "scrollToBottom": "Scroll to bottom",
     "inputNeeded": "Input needed",
-    "sendHeldNow": "Send now"
+    "sendHeldNow": "Send now",
+    "cancelHeld": "Cancel and edit message"
   },
   "contextUsage": {
     "heading": "Context Usage",

@@ -736,7 +736,8 @@
   "chatPage": {
     "scrollToBottom": "一番下までスクロール",
     "inputNeeded": "入力が必要です",
-    "sendHeldNow": "今すぐ送信"
+    "sendHeldNow": "今すぐ送信",
+    "cancelHeld": "キャンセルしてメッセージを編集"
   },
   "contextUsage": {
     "heading": "コンテキスト使用状況",

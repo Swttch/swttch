@@ -736,7 +736,8 @@
   "chatPage": {
     "scrollToBottom": "پیمایش به پایین",
     "inputNeeded": "ورودی لازم است",
-    "sendHeldNow": "همین حالا ارسال کن"
+    "sendHeldNow": "همین حالا ارسال کن",
+    "cancelHeld": "لغو و ویرایش پیام"
   },
   "contextUsage": {
     "heading": "استفاده از بافت",

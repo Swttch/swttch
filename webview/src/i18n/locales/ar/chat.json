@@ -752,7 +752,8 @@
   "chatPage": {
     "scrollToBottom": "التمرير إلى الأسفل",
     "inputNeeded": "مطلوب إدخال",
-    "sendHeldNow": "أرسل الآن"
+    "sendHeldNow": "أرسل الآن",
+    "cancelHeld": "إلغاء وتعديل الرسالة"
   },
   "contextUsage": {
     "heading": "استخدام السياق",

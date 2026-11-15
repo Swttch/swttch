@@ -67,6 +67,29 @@ The chat shows that a turn is running in the same way the desktop app does:
 
 While a turn runs, the input placeholder names both keys: `↵ to send, ⌘↵ to queue for later` (on Windows and Linux, `Ctrl+↵`). Which key sends and which queues follows your send-key setting. This text now appears in the Classic view too.
 
+### Writing to Claude while it works
+
+You can send a message while a turn is running. It is written to Claude at once: Claude reads it where the step it is on ends (a command that is running finishes first), and nothing is stopped. Until Claude has read it, the message stands in the chat as a bubble above the working line, and the working line stays under it.
+
+![A message sent while a turn runs: the bubble "Also keep the output short." with four small icons under it (copy, rewind, fork and a cross), and the working line "Sleep 8 seconds, print 4" under the bubble.](./assets/waiting-message.png)
+
+Point at the bubble and four icons appear under it, as in the desktop app:
+
+- **Copy** copies the message.
+- **Rewind** and **Fork** are drawn dimmed. There is nothing to rewind or fork from until Claude has read the message.
+- **Cancel and edit message** (the cross) takes the message back before Claude reads it.
+
+Pressing the cross removes the bubble and puts everything the message had back in the input box, as it was: the text as you typed it (bold, code and the rest), the pictures and files you attached, the elements and replies you added, and the files you named with `@`. If you have already typed something new in the box, the taken-back text goes in front of it. Edit the message and send it again.
+
+![The message taken back: the bubble is gone and the input box holds "Please finish with one short sentence." again, while the working line "Thinking" goes on.](./assets/message-taken-back.png)
+
+**What it does not do**
+
+- Once Claude has read the message the bubble moves into the chat where Claude read it, and the cross is gone. A cross pressed a moment too late does nothing: the bubble stays, because Claude already has the message.
+- There is no **Send now** on these bubbles. The message is already written to Claude, and the only way to make Claude read it sooner is to stop the step that is running, which would end the command you are waiting for. If you do want to stop, use the stop button.
+- Taking a message back needs a Claude Code version that understands the request (an undocumented one; see `docs/principle-exceptions/697-cancel-async-message.md`). With an older version the cross is not shown, and everything else works as before.
+- This is drawn in the Normal, Thinking and Verbose views. The Classic view draws such a message in its own box, with no icons.
+
 ## Reading a reply aloud
 
 Under a reply, next to **Copy**, there is a speaker button that reads the reply aloud in Claude's voice, as in the Claude desktop app. While it loads the button shows a spinner; while it plays it is a **Pause** button, and while paused it is **Resume**. Press it on another reply and the reading moves there; leaving the page stops it. Code blocks are not spelled out: the voice says "code block" instead.
