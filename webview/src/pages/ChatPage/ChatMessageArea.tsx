@@ -236,8 +236,10 @@ export function ChatMessageArea(props: Props) {
               // position inside the section stands in. It holds still while a
               // reply streams in at the end. Loading an older page in front of
               // the opening section moves it, which only costs those rows a
-              // remount.
-              <div key={message.uuid ?? `${section.key}-body-${index}`} onClick={() => {
+              // remount. A streamed reply is keyed by the id it was first drawn
+              // under: its `uuid` changes with each block it finishes (see
+              // `rowKey`).
+              <div key={message.rowKey ?? message.uuid ?? `${section.key}-body-${index}`} onClick={() => {
                 console.log(message, mergedMessages.indexOf(message), mergedMessages); // NEVER REMOVE THIS LINE
               }}>
                 <MessageBubble message={message} onRetry={onRetry} />
