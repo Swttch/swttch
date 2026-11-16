@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { memo, useRef, type RefObject } from 'react';
 import { MessageBubble } from './MessageBubble';
 import type { SendSection } from './groupIntoSendSections';
 import type { SessionSend } from '@/shared';
@@ -15,7 +15,7 @@ import { isJetBrains } from '@/config/environment';
 import { LoadedMessageDto } from '../../types';
 import { StickySendHeader } from './StickySendHeader';
 import { TurnWrapUp } from './TurnWrapUp';
-import { SectionFoldContext, SectionKeyContext } from './SectionFoldContext';
+import { SectionFoldContext, SectionKeyContext, useSectionFoldValue } from './SectionFoldContext';
 import { SendActionsContext } from './SendActionsContext';
 import { LastEntryContext, lastEntryUuid } from './LastEntryContext';
 import { useSendActions } from './useSendActions';
@@ -25,6 +25,8 @@ import { useTranslation } from '@/i18n';
 import { ChatSearchBar } from './chatSearch/ChatSearchBar';
 import { SelectionReplyLayer } from './SelectionReply/SelectionReplyLayer';
 import { useChatSearch, type ChatSearchSource } from './chatSearch/useChatSearch';
+import { WindowGapRow } from './WindowGapRow';
+import { entryMarker } from './useScrollAnchor';
 
 /** The find bar's source when the page offers none: it counts what is loaded. */
 const LOADED_ONLY: ChatSearchSource = {
@@ -59,6 +61,10 @@ interface Props {
   hasMore: boolean;
   isLoadingMore: boolean;
   onLoadMore: () => void;
+  /** The index of the section the window's gap stands in front of; null when what is held is one run. */
+  gapSectionIndex?: number | null;
+  /** The page the gap is waiting for is on its way. */
+  isLoadingGap?: boolean;
   /**
    * How the find bar reaches the part of the session that is not on the screen.
    * Without it the bar searches only what is loaded.
@@ -66,12 +72,140 @@ interface Props {
   findInChat?: ChatSearchSource;
 }
 
+/**
+ * One send and its reply, drawn as the classic chat draws it.
+ *
+ * Its own component, and a memoised one, because a long conversation is hundreds of these and each word of a
+ * streaming reply used to draw every one of them again; only the last section has anything new (#680). What it is
+ * given is what the section is made of, so a section whose messages did not change is not drawn at all.
+ */
+const ClassicSendSection = memo(function ClassicSendSection({
+  section,
+  nextHead,
+  carriedUuid,
+  carriedPreview,
+  showGap,
+  isLoadingGap,
+  mergedMessagesRef,
+  onRetry,
+}: {
+  section: SendSection;
+  /** The send after this section, whose text tells whether a wrap-up question was answered. */
+  nextHead: LoadedMessageDto | null;
+  /** The uuid of the send this headless opening run answers, when its own send is older than the page reaches. */
+  carriedUuid: string | null;
+  carriedPreview: string;
+  /** The window's gap stands in front of this section. */
+  showGap: boolean;
+  isLoadingGap: boolean;
+  /** All the messages drawn, read only when an entry is clicked, for the console line. */
+  mergedMessagesRef: RefObject<LoadedMessageDto[]>;
+  onRetry: (messageId: string) => void;
+}) {
+  const fold = useSectionFoldValue();
+  const collapsed = fold?.isCollapsed(section.key) ?? false;
+  return (
+        <div data-send-section={carriedUuid ?? section.key}>
+          {showGap && <WindowGapRow isLoading={isLoadingGap} />}
+          {carriedUuid !== null && <CarriedSendHeader preview={carriedPreview} />}
+          {/*
+            The send is pinned to the top of the viewport for as long as its
+            own reply is on screen, so the instruction that produced a long
+            run of tool calls stays readable while scrolling through them
+            (issue #274).
+
+            The section wrapper is what makes the headers hand off instead of
+            pile up: a sticky element cannot be pinned outside its parent, so
+            the next section scrolling into place pushes this header out —
+            the behaviour a flat list of siblings at `top: 0` cannot produce.
+
+            `top-0` pins to the inner edge of the scroll container's top
+            padding, which lines up with the bottom of the fixed top bar only
+            because the bar and the padding are given the same height in
+            `ChatPage` (`topBarHeight`). It used to size itself from its
+            contents — 34px, six short of the padding — and those six pixels
+            read as a slot of earlier content sliding above the pinned message.
+            Change one of the two and the gap comes back.
+          */}
+          {section.head && (
+            <StickySendHeader
+              onClick={() => {
+                const mergedMessages = mergedMessagesRef.current ?? [];
+                console.log(section.head, mergedMessages.indexOf(section.head!), mergedMessages); // NEVER REMOVE THIS LINE
+              }}
+            >
+              {/*
+                Only the head carries a section key, so only the head draws the
+                collapse menu. The body holds `type: "user"` entries too — every
+                unmerged tool result is one — and they reach the same renderer.
+              */}
+              <SectionKeyContext.Provider value={section.key}>
+                <div {...entryMarker(section.head.uuid)}>
+                  <MessageBubble message={section.head} onRetry={onRetry} />
+                </div>
+              </SectionKeyContext.Provider>
+            </StickySendHeader>
+          )}
+          {/*
+            A collapsed section hides its reply with CSS and keeps it mounted.
+
+            That is what lets the notice say how many messages are hidden and
+            stay right about it: the bullets are still in the document, so they
+            can be counted at any moment — including while the reply is still
+            streaming into a section that is already folded. Dropping the body
+            from the tree leaves nothing to count, and a number captured at the
+            moment of folding drifts away from the reply behind it.
+
+            `display: none` costs the layout and paint of the hidden subtree,
+            which is the part that makes scrolling a long session expensive.
+            What it keeps alive is React reconciliation over entries nobody is
+            looking at, and that is the price of the count being true.
+
+            A section with no head is never collapsible: it has no control to
+            fold it with, so its `isCollapsed` can only ever be false.
+
+            `body.length` gates the notice. An empty body has certainly nothing
+            to fold, which is all that test claims — the converse does not hold,
+            since plenty of entries draw nothing.
+          */}
+          <div data-section-body style={{ display: collapsed ? 'none' : undefined }}>
+            {section.body.map((message, index) => (
+              // `uuid` is optional on an entry, and some entries of the session
+              // file have none. Without a key React warns on every render; the
+              // position inside the section stands in. It holds still while a
+              // reply streams in at the end. Loading an older page in front of
+              // the opening section moves it, which only costs those rows a
+              // remount. A streamed reply is keyed by the id it was first drawn
+              // under: its `uuid` changes with each block it finishes (see
+              // `rowKey`).
+              <div key={message.rowKey ?? message.uuid ?? `${section.key}-body-${index}`} {...entryMarker(message.uuid)} onClick={() => {
+                const mergedMessages = mergedMessagesRef.current ?? [];
+                console.log(message, mergedMessages.indexOf(message), mergedMessages); // NEVER REMOVE THIS LINE
+              }}>
+                <MessageBubble message={message} onRetry={onRetry} />
+              </div>
+            ))}
+            {/* The turn's wrap-up is drawn here, after its last message, not where its call sits. */}
+            <TurnWrapUp body={section.body} next={nextHead} />
+          </div>
+          {collapsed && section.body.length > 0 && (
+            <CollapsedReplyNotice
+              sectionKey={section.key}
+              onExpand={() => fold?.toggle(section.key)}
+            />
+          )}
+        </div>
+  );
+});
+
 export function ChatMessageArea(props: Props) {
   const { t } = useTranslation('chat');
-  const { isStreaming, disconnectCountdown = null, apiRetry = null, mergedMessages, sections, carriedSend, hasMore, isLoadingMore, onLoadMore, findInChat = LOADED_ONLY } = props;
+  const { isStreaming, disconnectCountdown = null, apiRetry = null, mergedMessages, sections, carriedSend, hasMore, isLoadingMore, onLoadMore, gapSectionIndex = null, isLoadingGap = false, findInChat = LOADED_ONLY } = props;
   const { workingDirectory } = useSessionContext();
   const { retry: onRetry } = useChatStreamContext();
   const containerRef = useRef<HTMLDivElement>(null);
+  const mergedMessagesRef = useRef(mergedMessages);
+  mergedMessagesRef.current = mergedMessages;
 
   // Auto-scroll is driven entirely by ChatPage's single poll loop, which scrolls
   // the container directly — this component only renders the messages.
@@ -154,107 +288,22 @@ export function ChatMessageArea(props: Props) {
       <SendActionsContext.Provider value={sendActions}>
       <LastEntryContext.Provider value={lastEntryUuid(mergedMessages)}>
       {sections.map((section, sectionIndex) => {
-        /*
-          A headless opening section takes its header from the send index. The
-          key on the wrapper becomes that send's uuid so a jump from the rail
-          finds this section — the rail names sends by uuid, and this one has
-          no loaded entry to supply it.
-        */
+        // A headless opening section takes its header from the send index. The key on the wrapper becomes that
+        // send's uuid so a jump from the rail finds this section: the rail names sends by uuid, and this one has
+        // no loaded entry to supply it.
         const carried = section.head === null ? carriedSend : null;
-
         return (
-        /*
-          `data-send-section` is how the fold measures this section's reply
-          before dropping it — see `useSectionFold`. It has to be an attribute
-          rather than a ref because the two controls that collapse a section
-          (the gutter arrow and the ⋮ menu) sit several memoised layers below
-          this list and reach the fold only through context.
-        */
-        <div key={section.key} data-send-section={carried ? carried.uuid : section.key}>
-          {carried && <CarriedSendHeader preview={carried.preview} />}
-          {/*
-            The send is pinned to the top of the viewport for as long as its
-            own reply is on screen, so the instruction that produced a long
-            run of tool calls stays readable while scrolling through them
-            (issue #274).
-
-            The section wrapper is what makes the headers hand off instead of
-            pile up: a sticky element cannot be pinned outside its parent, so
-            the next section scrolling into place pushes this header out —
-            the behaviour a flat list of siblings at `top: 0` cannot produce.
-
-            `top-0` pins to the inner edge of the scroll container's top
-            padding, which lines up with the bottom of the fixed top bar only
-            because the bar and the padding are given the same height in
-            `ChatPage` (`topBarHeight`). It used to size itself from its
-            contents — 34px, six short of the padding — and those six pixels
-            read as a slot of earlier content sliding above the pinned message.
-            Change one of the two and the gap comes back.
-          */}
-          {section.head && (
-            <StickySendHeader
-              onClick={() => {
-                console.log(section.head, mergedMessages.indexOf(section.head!), mergedMessages); // NEVER REMOVE THIS LINE
-              }}
-            >
-              {/*
-                Only the head carries a section key, so only the head draws the
-                collapse menu. The body holds `type: "user"` entries too — every
-                unmerged tool result is one — and they reach the same renderer.
-              */}
-              <SectionKeyContext.Provider value={section.key}>
-                <MessageBubble message={section.head} onRetry={onRetry} />
-              </SectionKeyContext.Provider>
-            </StickySendHeader>
-          )}
-          {/*
-            A collapsed section hides its reply with CSS and keeps it mounted.
-
-            That is what lets the notice say how many messages are hidden and
-            stay right about it: the bullets are still in the document, so they
-            can be counted at any moment — including while the reply is still
-            streaming into a section that is already folded. Dropping the body
-            from the tree leaves nothing to count, and a number captured at the
-            moment of folding drifts away from the reply behind it.
-
-            `display: none` costs the layout and paint of the hidden subtree,
-            which is the part that makes scrolling a long session expensive.
-            What it keeps alive is React reconciliation over entries nobody is
-            looking at, and that is the price of the count being true.
-
-            A section with no head is never collapsible: it has no control to
-            fold it with, so its `isCollapsed` can only ever be false.
-
-            `body.length` gates the notice. An empty body has certainly nothing
-            to fold, which is all that test claims — the converse does not hold,
-            since plenty of entries draw nothing.
-          */}
-          <div data-section-body style={{ display: fold.isCollapsed(section.key) ? 'none' : undefined }}>
-            {section.body.map((message, index) => (
-              // `uuid` is optional on an entry, and some entries of the session
-              // file have none. Without a key React warns on every render; the
-              // position inside the section stands in. It holds still while a
-              // reply streams in at the end. Loading an older page in front of
-              // the opening section moves it, which only costs those rows a
-              // remount. A streamed reply is keyed by the id it was first drawn
-              // under: its `uuid` changes with each block it finishes (see
-              // `rowKey`).
-              <div key={message.rowKey ?? message.uuid ?? `${section.key}-body-${index}`} onClick={() => {
-                console.log(message, mergedMessages.indexOf(message), mergedMessages); // NEVER REMOVE THIS LINE
-              }}>
-                <MessageBubble message={message} onRetry={onRetry} />
-              </div>
-            ))}
-            {/* The turn's wrap-up is drawn here, after its last message, not where its call sits. */}
-            <TurnWrapUp body={section.body} next={sections[sectionIndex + 1]?.head ?? null} />
-          </div>
-          {fold.isCollapsed(section.key) && section.body.length > 0 && (
-            <CollapsedReplyNotice
-              sectionKey={section.key}
-              onExpand={() => fold.toggle(section.key)}
-            />
-          )}
-        </div>
+          <ClassicSendSection
+            key={section.key}
+            section={section}
+            nextHead={sections[sectionIndex + 1]?.head ?? null}
+            carriedUuid={carried ? carried.uuid : null}
+            carriedPreview={carried ? carried.preview : ''}
+            showGap={gapSectionIndex === sectionIndex}
+            isLoadingGap={isLoadingGap}
+            mergedMessagesRef={mergedMessagesRef}
+            onRetry={onRetry}
+          />
         );
       })}
       </LastEntryContext.Provider>

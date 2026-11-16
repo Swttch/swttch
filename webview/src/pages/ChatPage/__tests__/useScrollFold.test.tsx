@@ -246,6 +246,29 @@ describe('useScrollFold', () => {
     expect(result.current).toBe(FOLD_MAX_HEIGHT - 100);
   });
 
+  it('does not render again for scrolling that leaves the drawn height where it is (#680)', () => {
+    // Every send scrolled past the top counts as pinned, and a streaming reply moves scrollTop on every word. A send
+    // folded shut far above must not redraw for that.
+    const h = harness();
+    let renders = 0;
+    const { result } = renderHook(() => {
+      renders++;
+      return useScrollFold(h.root, true, h.bubbleRef, h.sentinelRef).height;
+    });
+
+    h.scrollBy(FOLD_MAX_HEIGHT + 500);
+    const shut = renders;
+    for (let i = 0; i < 20; i++) h.scrollBy(30);
+    // React may call the component once to find the state unchanged before it stops; it does not go on doing so.
+    expect(renders).toBeLessThanOrEqual(shut + 1);
+
+    // Scrolling back still unfolds where the fold closed: the distance was never forgotten.
+    // 780 down, 600 more, then back up to 180 below where it pinned.
+    h.scrollBy(-1200);
+    expect(result.current).toBe(FOLD_MAX_HEIGHT - 180);
+    expect(renders).toBeGreaterThan(shut);
+  });
+
   it('drops its listener when the send unpins', () => {
     const h = harness();
     const remove = vi.spyOn(h.root, 'removeEventListener');

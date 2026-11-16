@@ -1,4 +1,4 @@
-import { Fragment, memo, useMemo, type ReactNode } from 'react';
+import { Fragment, memo, useMemo, type ReactNode, type RefObject } from 'react';
 import type { LoadedMessageDto } from '../../../types';
 import {
   ContentBlockType,
@@ -19,6 +19,7 @@ import { CliNotice, CompactDivider } from './CompactNotices';
 import { PlanBox } from '../message-renderers/ToolRenderers/Mcp/CcdTurn';
 import { planOfTurn } from '../message-renderers/ToolRenderers/Mcp/CcdTurn/planState';
 import { isCliNotice, isCompactBoundary, isCompactSummaryEntry } from './compact';
+import { entryMarker } from '../useScrollAnchor';
 
 /** The text and thinking of an assistant entry that also called tools, around where the calls are gathered. */
 /**
@@ -167,7 +168,12 @@ function TranscriptPlan({ body, running }: { body: LoadedMessageDto[]; running: 
 
 interface Props {
   body: LoadedMessageDto[];
-  mergedMessages: LoadedMessageDto[];
+  /**
+   * All the messages drawn, read only when an entry is clicked, for the console line. A ref and not the list: the
+   * list is a new one for every word of a streaming reply, and handing it to each section made every section draw
+   * again for it (#680).
+   */
+  mergedMessagesRef: RefObject<LoadedMessageDto[]>;
   onRetry?: (messageId: string) => void;
   /** The model is still working on this reply, so no text in it ends the turn yet. */
   turnRunning?: boolean;
@@ -178,7 +184,7 @@ interface Props {
 }
 
 /** One send's reply, drawn as the transcript's segments: text, gathered tool calls, cards. */
-export const TranscriptBody = memo(function TranscriptBody({ body, mergedMessages, onRetry, turnRunning = false, sectionKey = null, waiting = null }: Props) {
+export const TranscriptBody = memo(function TranscriptBody({ body, mergedMessagesRef, onRetry, turnRunning = false, sectionKey = null, waiting = null }: Props) {
   const segments = useMemo(() => buildSegments(body), [body]);
   // The copy / fork / time line is under the text a turn ends on, and only there. A turn is what the model does
   // from the moment someone else speaks (the user, another session, the app) to the moment it is done, with any
@@ -212,8 +218,10 @@ export const TranscriptBody = memo(function TranscriptBody({ body, mergedMessage
           // What kind of segment this is, for prose.css: some entries draw nothing and leave an empty
           // wrapper, so "the first thing under the bubble" cannot be read off the position in this list.
           data-seg={segment.kind}
+          {...entryMarker(entryOf(segment).uuid)}
           onClick={() => {
             const entry = entryOf(segment);
+            const mergedMessages = mergedMessagesRef.current ?? [];
             console.log(entry, mergedMessages.indexOf(entry), mergedMessages); // NEVER REMOVE THIS LINE
           }}
         >

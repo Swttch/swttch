@@ -180,9 +180,28 @@
       "overlay": "Superposición",
       "newTab": "Nueva pestaña"
     },
-    "chatPagination": {
-      "label": "Paginar historial de chat",
-      "description": "Carga mensajes antiguos a medida que te desplazas. Desactivado carga toda la conversación de una vez."
+    "chatLoading": {
+      "title": "Carga de conversaciones",
+      "description": "Cuánto de una conversación larga mantiene el chat en memoria a la vez. Lo que dejas atrás al desplazarte se libera y se vuelve a cargar cuando regresas.",
+      "windowing": {
+        "label": "Liberar la conversación de la que te has alejado",
+        "description": "Al activarla, las páginas de una conversación larga de las que te has alejado se liberan de la memoria y se cargan de nuevo cuando vuelves. Al desactivarla, todos los mensajes cargados permanecen en memoria, como antes."
+      },
+      "pageSize": {
+        "label": "Mensajes cargados cada vez",
+        "description": "Una conversación se carga en páginas de esta cantidad de mensajes ({{min}} a {{max}}). Cuanto mayor es la página, más se mantiene en memoria a la vez."
+      },
+      "notRecommended": "No recomendado",
+      "latestPages": {
+        "label": "Páginas más recientes siempre conservadas",
+        "description": "La conversación más reciente siempre se mantiene en memoria con esta cantidad de páginas ({{min}} a {{max}}), así que ir al final nunca tiene que esperar."
+      },
+      "historyPages": {
+        "label": "Páginas conservadas al leer el historial",
+        "description": "Mientras te desplazas hacia atrás por mensajes anteriores, se mantienen en memoria estas páginas ({{min}} a {{max}}). Las páginas de las que te alejas se liberan y se vuelven a cargar cuando regresas."
+      },
+      "total": "Se mantienen en memoria hasta {{count}} mensajes a la vez.",
+      "totalHeavy": "Se mantendrían en memoria hasta {{count}} mensajes a la vez. En conversaciones largas, el chat puede volverse lento."
     },
     "configDir": {
       "description": "Directorio base para la configuración de Claude.\nvariable de entorno env",

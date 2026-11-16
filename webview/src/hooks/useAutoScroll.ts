@@ -52,6 +52,14 @@ export interface UseAutoScrollOptions {
   repositionOnRemount?: boolean;
 }
 
+export interface ScrollToBottomOptions {
+  /**
+   * Go straight to the bottom instead of gliding. For a screen whose content is not all drawn, where a glide
+   * would cross stretches that are not held and stutter while they come in (the main chat, #680).
+   */
+  instant?: boolean;
+}
+
 export interface UseAutoScroll {
   /** Attach to the scrolling element. */
   scrollRef: RefObject<HTMLDivElement>;
@@ -63,7 +71,7 @@ export interface UseAutoScroll {
    * Glide to the bottom and follow again. What the "Scroll to bottom" button
    * does. Jumps instead when the system asks for reduced motion.
    */
-  scrollToBottom: () => void;
+  scrollToBottom: (options?: ScrollToBottomOptions) => void;
   /**
    * Stop following, for a control about to move the view away from the bottom
    * with a smooth scroll of the browser's own (a jump to a send). The follow
@@ -217,15 +225,21 @@ export function useAutoScroll(options: UseAutoScrollOptions): UseAutoScroll {
         } else {
           // 2. Normal auto-scroll follow
           const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
-          const delta = el.scrollTop - prevScrollTopRef.current;
+          const grew = el.scrollHeight !== lastScrollHeightRef.current;
+          const contentShrank = el.scrollHeight < lastScrollHeightRef.current;
+          const moved = el.scrollTop - prevScrollTopRef.current;
+          // The browser lowers scrollTop by itself when content goes away (a page of a long conversation let
+          // go of, a block collapsing), and a glide under way crosses such frames often. A frame in which
+          // the content got shorter is the content moving, never the reader, so a move down in it still
+          // counts but a move up does not: read as the reader it would end following and cut the glide
+          // short, and the button would stop part of the way down (#680).
+          const delta = contentShrank && moved < 0 ? 0 : moved;
           const next = nextAutoFollow(autoFollowRef.current, delta, dist, autoScrollThreshold);
           autoFollowRef.current = next;
 
           const show = shouldShowScrollToBottom(next, hasContentRef.current, dist, autoScrollThreshold);
           setShowScrollButton(prev => (prev === show ? prev : show));
 
-          const grew = el.scrollHeight !== lastScrollHeightRef.current;
-          const contentShrank = el.scrollHeight < lastScrollHeightRef.current;
           if (isReaderMovingUp(delta, contentShrank)) {
             lastReaderUpAtRef.current = now;
             // The reader took the view: a glide under way gives it up at once.
@@ -280,7 +294,7 @@ export function useAutoScroll(options: UseAutoScrollOptions): UseAutoScroll {
     }
   }, [storageKey]);
 
-  const scrollToBottom = useCallback(() => {
+  const scrollToBottom = useCallback((options?: ScrollToBottomOptions) => {
     const el = scrollRef.current;
     if (!el) return;
     // Pressing the button is the user asking to follow the bottom again, so
@@ -289,7 +303,7 @@ export function useAutoScroll(options: UseAutoScrollOptions): UseAutoScroll {
     // own (#701): during a reply it carries straight on into following it.
     autoFollowRef.current = true;
     lastReaderUpAtRef.current = -Infinity;
-    if (prefersReducedMotion()) {
+    if (options?.instant || prefersReducedMotion()) {
       glidingRef.current = false;
       el.scrollTo({ top: el.scrollHeight, behavior: 'auto' });
       return;

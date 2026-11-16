@@ -1,4 +1,4 @@
-import type { FC } from 'react';
+import { memo, type FC } from 'react';
 import { getTextContent, type LoadedMessageDto } from '@/types';
 import { useChatInputState } from '@/contexts/ChatInputStateContext';
 import { useChatStreamContextOrNull } from '@/contexts/ChatStreamContext';
@@ -70,8 +70,8 @@ const Closing: FC<{ next: LoadedMessageDto | null; wrapUp: Record<string, unknow
  *
  * Most turns made no wrap-up call, and they touch no context at all: the check comes before anything mounts.
  */
-export function TranscriptWrapUp({ body, next }: Props) {
+export const TranscriptWrapUp = memo(function TranscriptWrapUp({ body, next }: Props) {
   const wrapUp = findWrapUpInput(body);
   if (!wrapUp) return null;
   return <Closing next={next} wrapUp={wrapUp} showRecap={!hasTextAfterWrapUp(body)} />;
-}
+});

@@ -180,9 +180,28 @@
       "overlay": "覆盖层",
       "newTab": "新标签页"
     },
-    "chatPagination": {
-      "label": "分页加载聊天记录",
-      "description": "滚动时加载更早的消息。关闭时会一次性加载整个对话。"
+    "chatLoading": {
+      "title": "加载对话",
+      "description": "聊天在长对话中一次保留在内存里的量。滚动离开的部分会被释放，回来时再重新加载。",
+      "windowing": {
+        "label": "释放已滚动离开的对话",
+        "description": "开启后，长对话中滚动离开的页面会从内存中释放，返回时再次加载。关闭后，已加载的消息会像以前一样全部保留在内存中。"
+      },
+      "pageSize": {
+        "label": "每次加载的消息数",
+        "description": "对话按这个数量分页加载（{{min}}–{{max}}）。页越大，一次放进内存的内容越多。"
+      },
+      "notRecommended": "不推荐",
+      "latestPages": {
+        "label": "始终保留的最新页数",
+        "description": "最新的对话始终保留这么多页（{{min}}–{{max}}）在内存中，因此回到底部时无需等待。"
+      },
+      "historyPages": {
+        "label": "查看历史时保留的页数",
+        "description": "向上滚动查看以前的消息时，内存中保留这么多页（{{min}}–{{max}}）。离开的页会被释放，回来时再加载。"
+      },
+      "total": "内存中最多保留 {{count}} 条消息。",
+      "totalHeavy": "内存中最多会保留 {{count}} 条消息。对话很长时，聊天可能会变慢。"
     },
     "configDir": {
       "description": "Claude 配置的主目录。\nenv 环境变量",

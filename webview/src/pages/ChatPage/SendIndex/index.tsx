@@ -593,14 +593,13 @@ export function SendIndex(props: Props) {
     */
     if (scrollToSend(entry.key, releaseFollow)) return;
     /*
-      The send is further back than the transcript has loaded. Ask for a page
-      that reaches it — the backend widens back to the entry rather than
-      windowing around it, so the transcript stays contiguous — and scroll once
-      it lands.
+      The send is further back than the transcript holds. Ask for the page
+      around it — it takes the place of the history held, and the newest pages
+      stay — and scroll once it lands.
     */
     if (!currentSessionId) return;
     setPendingJump(entry.key);
-    void api.sessions.load(currentSessionId, workingDirectory ?? undefined, undefined, entry.key);
+    void api.sessions.loadAround(currentSessionId, entry.key, workingDirectory ?? undefined);
   };
 
   /*

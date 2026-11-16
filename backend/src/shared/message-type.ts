@@ -87,6 +87,19 @@ export enum MessageType {
   /** Load older messages before a specific message cursor (paging). */
   LOAD_OLDER_MESSAGES = 'LOAD_OLDER_MESSAGES',
   /**
+   * Load the page of messages AFTER a message cursor (`afterUuid`), toward the
+   * newest. The transcript window lets go of pages that are far from the reader,
+   * so the reader scrolling back toward the newest entries asks for them again.
+   * Answered with SESSION_LOADED carrying `append: true`. inbound webview→backend
+   */
+  LOAD_NEWER_MESSAGES = 'LOAD_NEWER_MESSAGES',
+  /**
+   * Load the page of messages centred on one entry (`aroundUuid`), for the find
+   * bar or the send index jumping to an entry the webview does not hold. Answered
+   * with SESSION_LOADED carrying `around: true`. inbound webview→backend
+   */
+  LOAD_MESSAGES_AROUND = 'LOAD_MESSAGES_AROUND',
+  /**
    * Load the prompts the user typed in one session, newest page first, for the
    * composer's up/down-arrow history. Optional `beforeUuid` cursor pages further
    * back exactly like LOAD_OLDER_MESSAGES does for the transcript.
@@ -751,7 +764,7 @@ export enum MessageType {
   GET_DESKTOP_SESSION = 'GET_DESKTOP_SESSION',
 
   // -- Session search --
-  /** Search one session's whole history for a piece of text, as {workingDir, sessionId, query}. The reply lists, newest entry first, which entries contain the text and how many times each does — {uuid, count} rows and a total, never the entries. The find bar uses it so that looking for something does not mean loading the whole transcript: the count is known at once, and the transcript is only loaded back as far as the match the person moves to (LOAD_OLDER_MESSAGES with includeUuid). inbound webview→backend */
+  /** Search one session's whole history for a piece of text, as {workingDir, sessionId, query}. The reply lists, newest entry first, which entries contain the text and how many times each does — {uuid, count} rows and a total, never the entries. The find bar uses it so that looking for something does not mean loading the whole transcript: the count is known at once, and the transcript is only loaded back as far as the match the person moves to (LOAD_MESSAGES_AROUND). inbound webview→backend */
   SEARCH_SESSION = 'SEARCH_SESSION',
 
   // -- Assets telemetry --

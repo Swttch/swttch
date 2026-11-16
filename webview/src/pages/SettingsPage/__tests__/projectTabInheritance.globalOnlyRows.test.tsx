@@ -56,7 +56,9 @@ vi.mock('@/config/environment', async (importOriginal) => ({
   isJetBrains: () => true,
 }));
 
-import { ChatPaginationRow } from '../General/Basics/ChatPaginationRow';
+import { SettingKey } from '@/types/settings';
+import { ChatLoadingNumberRow } from '../General/ChatLoading/ChatLoadingNumberRow';
+import { ChatWindowingRow } from '../General/ChatLoading/ChatWindowingRow';
 import { HostModeRow } from '../General/Basics/HostModeRow';
 import { OpenSettingsRow } from '../General/Basics/OpenSettingsRow';
 import { UiDirectionRow } from '../General/Basics/UiDirectionRow';
@@ -86,12 +88,36 @@ interface GlobalOnlyRow {
 
 const GLOBAL_ONLY_ROWS: GlobalOnlyRow[] = [
   {
-    name: 'ChatPaginationRow',
-    Row: ChatPaginationRow,
-    control: () => screen.getByRole('switch', { name: label('general.chatPagination.label') }),
-    key: 'chatPagination',
+    name: 'ChatLoading page size row',
+    Row: () => <ChatLoadingNumberRow settingKey={SettingKey.CHAT_PAGE_SIZE} textKey="pageSize" min={50} max={1000} />,
+    control: () => screen.getByRole('spinbutton', { name: label('general.chatLoading.pageSize.label') }),
+    key: 'chatPageSize',
+    value: 120,
+    expectShows: (c) => expect(c).toHaveValue(120),
+  },
+  {
+    name: 'ChatWindowingRow',
+    Row: ChatWindowingRow,
+    control: () => screen.getByRole('switch'),
+    key: 'chatWindowing',
     value: false,
     expectShows: (c) => expect(c).toHaveAttribute('aria-checked', 'false'),
+  },
+  {
+    name: 'ChatLoading newest pages row',
+    Row: () => <ChatLoadingNumberRow settingKey={SettingKey.CHAT_LATEST_PAGES} textKey="latestPages" min={2} max={20} />,
+    control: () => screen.getByRole('spinbutton', { name: label('general.chatLoading.latestPages.label') }),
+    key: 'chatLatestPages',
+    value: 7,
+    expectShows: (c) => expect(c).toHaveValue(7),
+  },
+  {
+    name: 'ChatLoading history pages row',
+    Row: () => <ChatLoadingNumberRow settingKey={SettingKey.CHAT_HISTORY_PAGES} textKey="historyPages" min={2} max={20} />,
+    control: () => screen.getByRole('spinbutton', { name: label('general.chatLoading.historyPages.label') }),
+    key: 'chatHistoryPages',
+    value: 9,
+    expectShows: (c) => expect(c).toHaveValue(9),
   },
   {
     name: 'UiDirectionRow',

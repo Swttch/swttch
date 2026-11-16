@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { memo, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from '@/i18n';
 import { LoadedMessageDto, getTextContent, isContentBlockArray } from '../../../types';
 import type { ImageBlockDto } from '../../../dto/message/ContentBlockDto';
@@ -44,13 +44,13 @@ interface Props {
  * change, a tool result that could not be folded into its card), and those are
  * the classic renderer's to draw: they are not bubbles on either side.
  */
-export function TranscriptUserMessage(props: Props) {
+export const TranscriptUserMessage = memo(function TranscriptUserMessage(props: Props) {
   // The summary a compaction hands the model is not something the user sent, and it is not drawn.
   if (isCompactSummaryEntry(props.message)) return null;
   // The call that was running says "Stopped" on its own line, so the notice the CLI writes after it is not drawn again.
   if (getTextContent(props.message).trim() === INTERRUPTED_FOR_TOOL_USE_TEXT) return null;
   return <SendBubble {...props} />;
-}
+});
 
 /** How tall a long send is before it folds (measured on the desktop app: about eight lines, the last one fading out). */
 const FOLDED_HEIGHT = '13.3rem';

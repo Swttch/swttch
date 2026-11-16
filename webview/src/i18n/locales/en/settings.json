@@ -180,9 +180,28 @@
       "overlay": "Overlay",
       "newTab": "New tab"
     },
-    "chatPagination": {
-      "label": "Paginate chat history",
-      "description": "Load older messages as you scroll. Off loads the whole conversation at once."
+    "chatLoading": {
+      "title": "Loading conversations",
+      "description": "How much of a long conversation the chat keeps in memory. Parts you scroll away from are let go and loaded again when you come back.",
+      "windowing": {
+        "label": "Release conversation you scrolled away from",
+        "description": "When on, pages of a long conversation you have scrolled away from are released from memory and loaded again when you return. When off, every message that has been loaded stays in memory, as before."
+      },
+      "pageSize": {
+        "label": "Messages loaded at a time",
+        "description": "A conversation is loaded in pages of this many messages ({{min}} to {{max}}). The larger the page, the more is held in memory at once."
+      },
+      "notRecommended": "Not recommended",
+      "latestPages": {
+        "label": "Newest pages always kept",
+        "description": "The newest part of the conversation always stays in memory, this many pages of it ({{min}} to {{max}}), so going to the bottom never has to wait."
+      },
+      "historyPages": {
+        "label": "Pages kept while reading history",
+        "description": "While you scroll back through older messages, this many pages ({{min}} to {{max}}) are kept in memory. Pages you move away from are let go and loaded again when you return."
+      },
+      "total": "Up to {{count}} messages are kept in memory at once.",
+      "totalHeavy": "Up to {{count}} messages would be kept in memory at once. Long conversations can make the chat slow."
     },
     "configDir": {
       "description": "Home directory for Claude's config.\nenv environment variable",

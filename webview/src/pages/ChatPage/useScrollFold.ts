@@ -23,6 +23,17 @@ export const FOLD_MAX_HEIGHT = 280;
 export const FOLD_MIN_HEIGHT = 38;
 
 /**
+ * The height a fold is drawn at: the raw height held between the floor and the bubble's own resting height.
+ *
+ * Everything that draws a fold goes through these bounds (`MessageBox`, `SessionBriefCard`, and the spacer
+ * `StickySendHeader` leaves behind, which is `restingHeight` minus this). Two raw heights with the same drawn height
+ * look the same on screen.
+ */
+export function drawnFoldHeight(height: number, restingHeight: number): number {
+  return Math.min(Math.max(height, FOLD_MIN_HEIGHT), restingHeight);
+}
+
+/**
  * Where the top edge of the chat actually is, measured down from the scroll
  * container's own top.
  *
@@ -60,14 +71,20 @@ export const PINNED_TOP_INSET = TOP_BAR_HEIGHT;
  * the same distance, and that only works while the overshoot is still in the
  * number.
  *
- * Cost: no listener of its own. The scroll container is the one element every
- * section shares, and only the pinned section — there is at most one — reads
- * from it. A listener per section, firing every frame across a transcript of
- * thousands, is the cost `StickySendHeader` avoids with its sentinel, and this
- * keeps to the same rule.
+ * Cost: the scroll container is the one element every section shares, and only
+ * pinned sections read from it. That is not one section: every send scrolled
+ * past the top edge counts as pinned (its sentinel is above the line), though
+ * only the latest is stuck to the top where it can be seen. So a scroll
+ * produces a new state only when the drawn height moves (`drawnFoldHeight`);
+ * the sends far above are folded shut and stay put while the transcript
+ * scrolls or a reply streams in (#680).
  */
 export interface ScrollFold {
-  /** Raw folded height; runs negative past the floor. `null` when at rest. */
+  /**
+   * Raw folded height; runs negative past the floor. `null` when at rest.
+   * Refreshed when the drawn height changes, so past the floor it keeps the
+   * reading that first reached it.
+   */
   height: number | null;
   /** The bubble's height as it pinned — what the fold counts down from. */
   restingHeight: number;
@@ -155,7 +172,21 @@ export function useScrollFold(
     let frame = 0;
     const measure = () => {
       frame = 0;
-      setFold(prev => ({ height: start - (root.scrollTop - origin), restingHeight: start, wrapLoss: prev.wrapLoss }));
+      const height = start - (root.scrollTop - origin);
+      // A scroll that does not change what is drawn keeps the state it had.
+      //
+      // "Pinned" is read off an observer as "my sentinel is above the top edge", and that holds for every send the
+      // reader has scrolled past, not only the one stuck to the top. Each of those listens here and is folded shut far
+      // past the floor. A reply streaming in moves scrollTop on every word, and a new state each time redrew every
+      // one of them and every bubble under them (#680) for a height that, clamped, had not moved.
+      //
+      // The overshoot is not lost by skipping: the height is worked out from scrollTop on every frame, never from the
+      // state, so scrolling back still unfolds at the same point.
+      setFold(prev => (
+        prev.height !== null && prev.restingHeight === start && drawnFoldHeight(prev.height, start) === drawnFoldHeight(height, start)
+          ? prev
+          : { height, restingHeight: start, wrapLoss: prev.wrapLoss }
+      ));
     };
 
     // Coalesce to one measurement per frame: a trackpad fires scroll events

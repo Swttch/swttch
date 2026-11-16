@@ -180,9 +180,28 @@
       "overlay": "覆蓋層",
       "newTab": "新分頁"
     },
-    "chatPagination": {
-      "label": "分頁載入聊天記錄",
-      "description": "捲動時載入較舊的訊息。關閉時會一次載入整個對話。"
+    "chatLoading": {
+      "title": "載入對話",
+      "description": "聊天在長對話中一次保留在記憶體裡的量。捲動離開的部分會被釋放，回來時再重新載入。",
+      "windowing": {
+        "label": "釋放已捲動離開的對話",
+        "description": "開啟後，長對話中捲動離開的頁面會從記憶體釋放，返回時再次載入。關閉後，已載入的訊息會像以前一樣全部保留在記憶體中。"
+      },
+      "pageSize": {
+        "label": "每次載入的訊息數",
+        "description": "對話依這個數量分頁載入（{{min}}–{{max}}）。頁面越大，一次放進記憶體的內容越多。"
+      },
+      "notRecommended": "不建議",
+      "latestPages": {
+        "label": "始終保留的最新頁數",
+        "description": "最新的對話始終保留這麼多頁（{{min}}–{{max}}）在記憶體中，因此回到底部時不必等待。"
+      },
+      "historyPages": {
+        "label": "檢視歷史時保留的頁數",
+        "description": "向上捲動查看先前的訊息時，記憶體中保留這麼多頁（{{min}}–{{max}}）。離開的頁面會被釋放，回來時再載入。"
+      },
+      "total": "記憶體中最多保留 {{count}} 則訊息。",
+      "totalHeavy": "記憶體中最多會保留 {{count}} 則訊息。對話很長時，聊天可能會變慢。"
     },
     "configDir": {
       "description": "Claude 設定所在的主目錄。\nenv 環境變數",

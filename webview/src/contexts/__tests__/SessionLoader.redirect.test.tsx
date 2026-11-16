@@ -73,7 +73,8 @@ vi.mock('../ChatStreamContext', () => ({
   useChatStreamContext: () => ({
     loadMessages: mockLoadMessages,
     prependOlderMessages: vi.fn(),
-    setPaginationState: vi.fn(),
+    appendNewerMessages: vi.fn(),
+    jumpToMessages: vi.fn(),
     resetForSessionSwitch: vi.fn(),
   }),
 }));
@@ -81,6 +82,7 @@ vi.mock('../ChatStreamContext', () => ({
 vi.mock('../SettingsContext', () => ({
   SettingsProvider: ({ children }: { children: React.ReactNode }) => children,
   useSettings: () => ({ settings: {} }),
+  useSettingsOrNull: () => ({ settings: {} }),
 }));
 
 vi.mock('../WorkingDirContext', () => ({
@@ -117,7 +119,7 @@ describe('SessionLoader — redirecting a session URL', () => {
     });
 
     expect(mockNavigateToNewSession).not.toHaveBeenCalled();
-    expect(mockLoadMessages).toHaveBeenCalledWith([{ type: 'user', uuid: 'u1' }]);
+    expect(mockLoadMessages).toHaveBeenCalledWith([{ type: 'user', uuid: 'u1' }], false);
   });
 
   it('leaves a session the backend reports as not on disk', () => {

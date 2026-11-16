@@ -29,16 +29,25 @@ export async function loadSessionHandler(
     
     const beforeUuid = message.payload?.beforeUuid as string | undefined;
     const limit = message.payload?.limit as number | undefined;
-    // Set when the send index jumps to a send that is not loaded: the page has
-    // to reach back far enough to include it. See loadSessionMessages.
-    const includeUuid = message.payload?.includeUuid as string | undefined;
+    // The page after this entry (LOAD_NEWER_MESSAGES), or the page centred on this
+    // one (LOAD_MESSAGES_AROUND). See loadSessionMessages for the cursor rules.
+    const afterUuid = message.payload?.afterUuid as string | undefined;
+    const aroundUuid = message.payload?.aroundUuid as string | undefined;
+    // The entry the client holds on the far side of the page, where it should stop.
+    const untilUuid = message.payload?.untilUuid as string | undefined;
     const isOlderPage = message.type === MessageType.LOAD_OLDER_MESSAGES;
+    const isNewerPage = message.type === MessageType.LOAD_NEWER_MESSAGES;
+    const isAroundPage = message.type === MessageType.LOAD_MESSAGES_AROUND;
 
     await loadAndSendSession(connectionId, connections, workingDir, sessionId, {
       beforeUuid,
       limit,
-      includeUuid,
+      afterUuid,
+      aroundUuid,
+      untilUuid,
       isOlderPage,
+      isNewerPage,
+      isAroundPage,
     });
   }
   connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId });

@@ -101,6 +101,48 @@ describe('settings', () => {
       expect(tooLarge.status).toBe('error');
     });
 
+    // #680: the on/off switch is gone; the transcript window is sized by three numbers.
+    it('rejects a page size outside 50..1000 and accepts the ends', async () => {
+      for (const bad of [49, 1001, 75.5, 'x']) {
+        const result = await saveSettingToFile('chatPageSize', bad);
+        expect(result.status).toBe('error');
+        expect(result.error).toContain('chatPageSize must be an integer between 50 and 1000');
+      }
+      for (const good of [50, 200, 1000]) {
+        expect((await saveSettingToFile('chatPageSize', good)).status).toBe('ok');
+      }
+    });
+
+    it('takes a boolean for chatWindowing and nothing else', async () => {
+      for (const bad of ['yes', 1, null]) {
+        const result = await saveSettingToFile('chatWindowing', bad);
+        expect(result.status).toBe('error');
+        expect(result.error).toContain('chatWindowing must be a boolean');
+      }
+      for (const good of [true, false]) {
+        expect((await saveSettingToFile('chatWindowing', good)).status).toBe('ok');
+      }
+    });
+
+    it('rejects a page count outside 2..20 and accepts the ends', async () => {
+      for (const key of ['chatLatestPages', 'chatHistoryPages']) {
+        for (const bad of [1, 21, 2.5]) {
+          const result = await saveSettingToFile(key, bad);
+          expect(result.status).toBe('error');
+          expect(result.error).toContain(`${key} must be an integer between 2 and 20`);
+        }
+        for (const good of [2, 5, 20]) {
+          expect((await saveSettingToFile(key, good)).status).toBe('ok');
+        }
+      }
+    });
+
+    it('no longer knows the old on/off switch', async () => {
+      const result = await saveSettingToFile('chatPagination', true);
+      expect(result.status).toBe('error');
+      expect(result.error).toContain('Unknown settings key');
+    });
+
     it('should reject non-integer fontSize', async () => {
       const result = await saveSettingToFile('fontSize', 12.5);
       expect(result.status).toBe('error');
@@ -762,7 +804,10 @@ describe('settings', () => {
         openFilesWithCustom: null,
         hostMode: 'editor-tab',
         openSettingsAs: 'overlay',
-        chatPagination: true,
+        chatWindowing: true,
+        chatPageSize: 50,
+        chatLatestPages: 5,
+        chatHistoryPages: 5,
         hideToolCalls: false,
         transcriptViewMode: 'normal',
         transcriptViewModeBySession: {},
@@ -910,7 +955,10 @@ export default {
         openFilesWithCustom: null,
         hostMode: 'editor-tab',
         openSettingsAs: 'overlay',
-        chatPagination: true,
+        chatWindowing: true,
+        chatPageSize: 50,
+        chatLatestPages: 5,
+        chatHistoryPages: 5,
         hideToolCalls: false,
         transcriptViewMode: 'normal',
         transcriptViewModeBySession: {},

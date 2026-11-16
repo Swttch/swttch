@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS, NO_PAGINATION_LIMIT, SettingKey } from '@/types/settings';
+import { DEFAULT_SETTINGS, SettingKey } from '@/types/settings';
 import {
-  TRANSCRIPT_PAGE_SIZE,
   applyUrlOverridesToSettings,
   mirrorSettingsForOverrides,
   parseUrlOverrides,
@@ -40,20 +39,20 @@ describe('with the URL carrying values', () => {
     expect(applyUrlOverridesToSettings(settings)[SettingKey.FONT_SIZE]).toBe(18);
   });
 
-  it('forces the page size over the caller and over the view mode', () => {
-    mirrorSettingsForOverrides({ ...DEFAULT_SETTINGS, [SettingKey.TRANSCRIPT_VIEW_MODE]: 'normal' });
-    expect(resolveMessagePageSize('s1')).toBe(100);
-    expect(resolveMessagePageSize('s1', 30)).toBe(100);
-  });
-
-  it('leaves alone the load-everything size used when pagination is off', () => {
-    expect(resolveMessagePageSize('s1', NO_PAGINATION_LIMIT)).toBe(NO_PAGINATION_LIMIT);
+  it('forces the page size over what the settings hold', () => {
+    const settings = { ...DEFAULT_SETTINGS, [SettingKey.CHAT_PAGE_SIZE]: 200 };
+    const applied = applyUrlOverridesToSettings(settings);
+    expect(applied[SettingKey.CHAT_PAGE_SIZE]).toBe(100);
+    // The page size the backend is asked for is read from the same settings.
+    mirrorSettingsForOverrides(applied);
+    expect(resolveMessagePageSize()).toBe(100);
   });
 
   it('keeps the value after the query has gone from the address', () => {
-    expect(resolveMessagePageSize('s1')).toBe(100);
+    const applied = () => applyUrlOverridesToSettings(DEFAULT_SETTINGS)[SettingKey.CHAT_PAGE_SIZE];
+    expect(applied()).toBe(100);
     window.history.replaceState({}, '', '/sessions/s1');
-    expect(resolveMessagePageSize('s1')).toBe(100);
+    expect(applied()).toBe(100);
   });
 });
 
@@ -65,29 +64,13 @@ describe('without the URL carrying values', () => {
     expect(applyUrlOverridesToSettings(settings)).toBe(settings);
   });
 
-  it('leaves the classic chat to the backend default', () => {
-    mirrorSettingsForOverrides({ ...DEFAULT_SETTINGS, [SettingKey.TRANSCRIPT_VIEW_MODE]: 'classic' });
-    expect(resolveMessagePageSize('s1')).toBeUndefined();
+  it('asks for the page size the settings hold', () => {
+    mirrorSettingsForOverrides({ ...DEFAULT_SETTINGS, [SettingKey.CHAT_PAGE_SIZE]: 120 });
+    expect(resolveMessagePageSize()).toBe(120);
   });
 
-  it('asks for 150 in the Transcript view modes', () => {
-    mirrorSettingsForOverrides({ ...DEFAULT_SETTINGS, [SettingKey.TRANSCRIPT_VIEW_MODE]: 'normal' });
-    expect(resolveMessagePageSize('s1')).toBe(TRANSCRIPT_PAGE_SIZE);
-  });
-
-  it('follows the view picked for the session over the default', () => {
-    mirrorSettingsForOverrides({
-      ...DEFAULT_SETTINGS,
-      [SettingKey.TRANSCRIPT_VIEW_MODE]: 'normal',
-      [SettingKey.TRANSCRIPT_VIEW_MODE_BY_SESSION]: { s1: 'classic', s2: 'verbose' },
-    });
-    expect(resolveMessagePageSize('s1')).toBeUndefined();
-    expect(resolveMessagePageSize('s2')).toBe(TRANSCRIPT_PAGE_SIZE);
-    expect(resolveMessagePageSize('s3')).toBe(TRANSCRIPT_PAGE_SIZE);
-  });
-
-  it('keeps a size the caller asked for on purpose', () => {
-    mirrorSettingsForOverrides({ ...DEFAULT_SETTINGS, [SettingKey.TRANSCRIPT_VIEW_MODE]: 'normal' });
-    expect(resolveMessagePageSize('s1', 40)).toBe(40);
+  it('asks for the default page size before any settings have arrived', () => {
+    resetUrlOverridesForTest();
+    expect(resolveMessagePageSize()).toBe(DEFAULT_SETTINGS[SettingKey.CHAT_PAGE_SIZE]);
   });
 });

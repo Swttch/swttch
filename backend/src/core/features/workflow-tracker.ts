@@ -401,6 +401,60 @@ function eventTimestamp(event: Record<string, unknown>): number {
 }
 
 /**
+ * What `reconstructWorkflowTasks` reads of a transcript, kept as the transcript is read (#680).
+ *
+ * Rebuilding the background tasks of a session on every open used to take the session's whole parsed chain,
+ * which is why a long session stayed in memory. Of that chain the rebuild looks at very little: the calls of
+ * the three kinds of background task, the results that answer them, and the `<task-notification>` envelopes.
+ * This keeps exactly those, entry by entry in transcript order, so the rest (the tool results that make up
+ * most of a long transcript) never has to be held.
+ *
+ * An entry is kept with the blocks the rebuild reads and the text blocks it falls back on, and nothing else.
+ * `entriesFor` returns the kept entries that are in the active chain, which is what the rebuild is given.
+ */
+export interface WorkflowProjection {
+  add(entry: Record<string, unknown>): void;
+  entriesFor(isActive: (uuid: string | undefined) => boolean): Array<Record<string, unknown>>;
+}
+
+export function createWorkflowProjection(): WorkflowProjection {
+  const taskIds = new Set<string>();
+  const kept: Array<{ uuid: string | undefined; entry: Record<string, unknown> }> = [];
+
+  const withBlocks = (entry: Record<string, unknown>, blocks: Array<Record<string, unknown>>) => {
+    const message = (entry['message'] as Record<string, unknown> | undefined) ?? {};
+    return { ...entry, message: { ...message, content: blocks } };
+  };
+
+  return {
+    add(entry) {
+      const uuid = typeof entry['uuid'] === 'string' ? (entry['uuid'] as string) : undefined;
+      if (entry['type'] === 'assistant') {
+        const calls = getContentBlocks(entry).filter(b => b['type'] === 'tool_use' && backgroundTaskType(b) !== undefined);
+        if (calls.length === 0) return;
+        for (const call of calls) if (typeof call['id'] === 'string') taskIds.add(call['id'] as string);
+        kept.push({ uuid, entry: withBlocks(entry, calls) });
+        return;
+      }
+      if (entry['type'] === 'user') {
+        const blocks = getContentBlocks(entry);
+        const wanted = blocks.filter(b => {
+          if (b['type'] === 'text') return true;
+          return b['type'] === 'tool_result' && typeof b['tool_use_id'] === 'string' && taskIds.has(b['tool_use_id'] as string);
+        });
+        const answers = wanted.some(b => b['type'] === 'tool_result');
+        const notifies = getEventText(entry).includes('<task-notification>');
+        if (!answers && !notifies) return;
+        kept.push({ uuid, entry: typeof (entry['message'] as { content?: unknown } | undefined)?.content === 'string' ? entry : withBlocks(entry, wanted) });
+      }
+    },
+    entriesFor(isActive) {
+      return kept.filter(k => isActive(k.uuid)).map(k => k.entry);
+    },
+  };
+}
+
+/**
  * Reconstruct finished/running workflows from a loaded session transcript so the
  * Background tasks panel and inline cards populate on reload (the live stream is
  * not replayed). Scans for the Workflow tool_use, its immediate tool_result

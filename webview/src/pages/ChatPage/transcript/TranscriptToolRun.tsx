@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import toast from 'react-hot-toast';
 import { ChevronRightIcon, ClipboardDocumentIcon } from '@heroicons/react/20/solid';
 import { useTranslation } from '@/i18n';
@@ -10,12 +10,11 @@ import { toolResultText } from '../message-renderers/ToolRenderers/common/toolSt
 import { HighlightedCode } from '../message-renderers/ToolRenderers/Mcp/Generic/HighlightedCode';
 import { useTranscriptViewMode } from '../message-renderers/transcriptViewMode';
 import { APP_EVENT_TOOL, type ToolCall } from './buildSegments';
-import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { useNow } from '@/hooks/useNow';
 import { useOptionalWorkflowState } from '@/contexts/WorkflowStateContext';
 import { ActivityGlyph, useActivityLabel, useFormatElapsed, useTurnSeconds } from './TranscriptActivity';
+import { LiveActivityContext } from './LiveActivityContext';
 import type { WorkingActivity } from './WorkingMark';
-import { runningActivity } from './streamingActivity';
 import { FileChangeDetail } from './FileChangeDetail';
 import { useDesktopSession } from '@/hooks/useDesktopSession';
 import { DesktopSessionLink } from '../message-renderers/components/DesktopSessionLink';
@@ -659,8 +658,18 @@ export function useRunningAgentLive(calls: ToolCall[]): { label: string; elapsed
   };
 }
 
+/**
+ * The seconds the running turn has taken. Its own component, drawn only by the run that is the live one: the clock
+ * ticks once a second, and a run that held it drew again every second for as long as the page was open, one clock
+ * for each run on the screen (#680).
+ */
+function TurnElapsed() {
+  const formatElapsed = useFormatElapsed();
+  return <>{formatElapsed(useTurnSeconds())}</>;
+}
+
 /** One call: a line that opens to its details. */
-function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive, liveToolUseId }: { calls: ToolCall[]; defaultOpen: boolean; inBox: boolean; live?: { label: string; elapsed: string; mark: WorkingActivity }; liveToolUseId?: string }) {
+function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive, liveToolUseId }: { calls: ToolCall[]; defaultOpen: boolean; inBox: boolean; live?: { label: string; elapsed: ReactNode; mark: WorkingActivity }; liveToolUseId?: string }) {
   const { t } = useTranslation('chat');
   const call = calls[0];
   const runningAgentLive = useRunningAgentLive(calls);
@@ -743,8 +752,7 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
   const verbose = useTranscriptViewMode() === 'verbose';
   // The live run: the turn is running and the call it is waiting on is in this run. Its line then says what the
   // model is doing and for how long, as the working indicator, and its list stays shut unless the reader opens it.
-  const { isStreaming, messages } = useChatStreamContext();
-  const live = useMemo(() => (isStreaming ? runningActivity(messages) : null), [isStreaming, messages]);
+  const live = useContext(LiveActivityContext);
   const active = live !== null && calls.some((call) => call.toolUse.id === live.toolUseId);
   // Shut unless the view is Verbose or the reader opened it: a run that is still going on is not opened for them,
   // and the line over it (the dots, what is running, the seconds) is what tells them it is working.
@@ -758,8 +766,6 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
   useEffect(() => setOpen(startsOpen), [startsOpen]);
   const toggle = () => setOpen((v) => !v);
   const label = useActivityLabel();
-  const formatElapsed = useFormatElapsed();
-  const seconds = useTurnSeconds();
   const runningAgentLive = useRunningAgentLive(calls);
   const pictures = picturesOfCalls(calls);
   const [openPicture, thumbnailViewer] = useThumbnailViewer();
@@ -786,7 +792,7 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
           calls={[calls[0]]}
           defaultOpen={verbose}
           inBox={false}
-          live={active && live ? { label: label(live), elapsed: live.file ? '' : formatElapsed(seconds), mark: live.mark } : undefined}
+          live={active && live ? { label: label(live), elapsed: live.file ? '' : <TurnElapsed />, mark: live.mark } : undefined}
         />
       </div>
     );
@@ -804,7 +810,7 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
           <>
             <span className="me-2 flex"><ActivityGlyph activity={live.mark} /></span>
             <span className="min-w-0 truncate transcript-shimmer">{label(live)}</span>
-            {!live.file && <span className="ms-2 me-1 flex-shrink-0">{formatElapsed(seconds)}</span>}
+            {!live.file && <span className="ms-2 me-1 flex-shrink-0"><TurnElapsed /></span>}
           </>
         ) : runningAgentLive ? (
           <>

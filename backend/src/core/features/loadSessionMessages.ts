@@ -1,22 +1,49 @@
-import { readdir, readFile, stat } from 'fs/promises';
 import { join } from 'path';
 import { getProjectSessionsPath } from './getProjectSessionsPath';
-import { readJsonlEntries } from './readJsonlEntries';
-import { filterActiveChain } from './activeChain';
+import {
+  getSessionIndex,
+  readIndexedEntries,
+  readWholeChain,
+  type IndexedEntry,
+  type SessionMessage,
+} from './sessionIndex';
 import { CLI_FLAG_TO_INPUT_MODE } from '../claude-process';
 
 // Raw JSONL entry - passed through as-is to match Kotlin backend
-export type SessionMessage = Record<string, unknown>;
+export type { SessionMessage };
 
 export interface PaginatedSessionMessages {
   messages: SessionMessage[];
   hasMore: boolean;
   oldestUuid?: string;
+  /**
+   * The uuid of the newest entry on the page that has one, which is the cursor
+   * the page after this one is asked for with (`afterUuid`). An entry without a
+   * uuid is never a cursor, for the same reason `oldestUuid` skips them.
+   */
+  newestUuid?: string;
+  /** The active chain holds entries after the last one on this page. */
+  hasNewer: boolean;
+  /**
+   * The request named an entry to stop at (`untilUuid`) and the page runs right up to it: for a
+   * page after a cursor, it ends exactly in front of that entry; for a page before a cursor, it
+   * begins exactly after it. The client joins what it holds on both sides when this is true,
+   * which it cannot tell from the uuids alone when the page holds none of the entry's neighbours.
+   */
+  reached: boolean;
+  /**
+   * The cursor the request named is not in the active chain, so the page served
+   * is the newest one instead, and the client has to start over from it rather
+   * than join it to what it holds. See the cursor-miss branches below.
+   */
+  reset: boolean;
   total: number;
-  // The complete active chain (not just the returned page). Kept backend-side for
-  // whole-transcript work like workflow reconstruction, which must see tool_use /
-  // tool_result entries older than the page. Never forwarded to the webview.
-  activeChain: SessionMessage[];
+  // What workflow reconstruction reads of the whole active chain: the calls of the background tasks, the
+  // results that answer them and the task notifications, entries older than the page included. The
+  // reconstruction must see tool_use / tool_result entries older than the page, and the chain they come
+  // from is no longer held (see sessionIndex), so this is the part of it that is. Never forwarded to the
+  // webview.
+  workflowChain: SessionMessage[];
   // The permission mode the CLI was last known to be running under, found within
   // the returned (newest) page only — or null if the page carries none. Only set
   // when this is the newest page (no beforeUuid): an older page says nothing about
@@ -39,131 +66,6 @@ export interface PaginatedSessionMessages {
   sessionMissing: boolean;
 }
 
-// Extract Task tool_use id -> agentId mappings from main session messages
-function extractTaskAgentMappings(messages: SessionMessage[]): Map<string, string> {
-  // Map from tool_use id (of Task call) -> agentId
-  const toolUseToAgentId = new Map<string, string>();
-
-  // First pass: collect all Task tool_use ids from assistant messages
-  const taskToolUseIds = new Set<string>();
-  for (const msg of messages) {
-    if (msg.type !== 'assistant') continue;
-    const message = msg.message as Record<string, unknown> | undefined;
-    if (!message) continue;
-    const content = message.content;
-    if (!Array.isArray(content)) continue;
-    for (const block of content) {
-      if (
-        block &&
-        typeof block === 'object' &&
-        (block as Record<string, unknown>).type === 'tool_use' &&
-        ((block as Record<string, unknown>).name === 'Task' || (block as Record<string, unknown>).name === 'Agent')
-      ) {
-        const id = (block as Record<string, unknown>).id;
-        if (typeof id === 'string') {
-          taskToolUseIds.add(id);
-        }
-      }
-    }
-  }
-
-  // Second pass: find tool_result messages for those Task tool_use ids and extract agentId
-  const agentIdRegex = /agentId:\s*([a-f0-9]+)/;
-  for (const msg of messages) {
-    if (msg.type !== 'user') continue;
-    const message = msg.message as Record<string, unknown> | undefined;
-    if (!message) continue;
-    const content = message.content;
-    if (!Array.isArray(content)) continue;
-    for (const block of content) {
-      if (!block || typeof block !== 'object') continue;
-      const b = block as Record<string, unknown>;
-      if (b.type !== 'tool_result') continue;
-      const toolUseId = b.tool_use_id;
-      if (typeof toolUseId !== 'string' || !taskToolUseIds.has(toolUseId)) continue;
-      // Extract agentId from the content text
-      const resultContent = b.content;
-      let text = '';
-      if (typeof resultContent === 'string') {
-        text = resultContent;
-      } else if (Array.isArray(resultContent)) {
-        for (const item of resultContent) {
-          if (item && typeof item === 'object' && (item as Record<string, unknown>).type === 'text') {
-            text += (item as Record<string, unknown>).text ?? '';
-          }
-        }
-      }
-      const match = agentIdRegex.exec(text);
-      if (match) {
-        toolUseToAgentId.set(toolUseId, match[1]);
-      }
-    }
-  }
-
-  return toolUseToAgentId;
-}
-
-// Map Agent tool_use id -> agentId from the `.meta.json` the CLI writes beside each
-// subagent transcript. The Agent call's result only states `agentId:` for a
-// backgrounded agent; a foreground agent's result is the framed report and names
-// no id, so without this its tool calls vanish from a reloaded session (#535).
-async function readSubagentMetaMappings(subagentsDir: string): Promise<Map<string, string>> {
-  const toolUseToAgentId = new Map<string, string>();
-  let names: string[];
-  try {
-    names = await readdir(subagentsDir);
-  } catch {
-    return toolUseToAgentId;
-  }
-  for (const name of names) {
-    const match = /^agent-(.+)\.meta\.json$/.exec(name);
-    if (!match) continue;
-    try {
-      const meta = JSON.parse(await readFile(join(subagentsDir, name), 'utf-8')) as Record<string, unknown>;
-      if (typeof meta.toolUseId === 'string') toolUseToAgentId.set(meta.toolUseId, match[1]);
-    } catch {
-      // Unreadable or half-written meta file — this agent simply has no match
-    }
-  }
-  return toolUseToAgentId;
-}
-
-// Load subagent entries and convert them to synthetic progress entries
-async function loadSubagentProgress(
-  subagentsDir: string,
-  taskToolUseId: string,
-  agentId: string,
-): Promise<SessionMessage[]> {
-  const subagentFile = join(subagentsDir, `agent-${agentId}.jsonl`);
-  const subagentEntries = await readJsonlEntries(subagentFile);
-
-  const syntheticEntries: SessionMessage[] = [];
-  for (const entry of subagentEntries) {
-    const entryType = entry.type;
-    if (entryType !== 'assistant' && entryType !== 'user') continue;
-
-    syntheticEntries.push({
-      type: 'progress',
-      parentToolUseID: taskToolUseId,
-      uuid: entry.uuid,
-      parentUuid: entry.parentUuid,
-      timestamp: entry.timestamp,
-      data: {
-        type: 'agent_progress',
-        agentId,
-        message: {
-          type: entryType,
-          message: entry.message,
-          uuid: entry.uuid,
-          timestamp: entry.timestamp,
-        },
-      },
-    });
-  }
-
-  return syntheticEntries;
-}
-
 // Move a page-start index toward older entries until it lands on a uuid-bearing
 // message (or index 0). Leading progress/summary entries (which have no uuid)
 // belong to this page, not the next older one: keeping them here makes the paging
@@ -171,188 +73,42 @@ async function loadSubagentProgress(
 // "load older" page starts right before it with no overlap. Otherwise those
 // uuid-less entries get re-sent on the next page and duplicate in the UI, since
 // the client can only dedupe by uuid.
-function snapStartToUuid(chain: SessionMessage[], start: number): number {
+function snapStartToUuid(chain: ReadonlyArray<{ uuid?: unknown }>, start: number): number {
   let i = start;
   while (i > 0 && typeof chain[i].uuid !== 'string') i--;
   return i;
 }
 
-// --- Active-chain snapshot cache (issue #8) -------------------------------
-//
-// Building the paged view is O(entire session): read + parse the whole JSONL,
-// read every subagent progress file, then run filterActiveChain over the full
-// history. Doing that on *every* "load older" page turns scrolling up through a
-// huge session into repeated full-file work just to return a ~50-message slice.
-//
-// So we cache the fully-parsed + subagent-injected + active-chain-filtered array
-// per session file. The cache key is the session file's path; the validity key
-// is a cheap `stat` fingerprint (mtimeMs + size of the main file, plus the
-// subagents directory mtime so newly-added agent files invalidate too). If the
-// fingerprint matches, we serve the page as a pure in-memory slice — identical to
-// what the from-disk path would produce, because it *is* the same array. When the
-// file changes, the fingerprint differs and we recompute.
-//
-// Memory is bounded by an LRU-ish Map capped at MAX_CACHED_SESSIONS: a `Map`
-// preserves insertion order, so re-inserting on hit marks most-recently-used and
-// the oldest key is evicted first once the cap is exceeded.
-interface ActiveChainCacheEntry {
-  mtimeMs: number;
-  size: number;
-  // mtimeMs of the subagents dir, or -1 when it does not exist. Adding/removing
-  // agent files bumps the dir mtime, so this catches subagent-driven changes even
-  // when the main file happens to be unchanged.
-  subagentsMtimeMs: number;
-  activeChain: SessionMessage[];
-}
-
-const MAX_CACHED_SESSIONS = 4;
-const activeChainCache = new Map<string, ActiveChainCacheEntry>();
-
-function storeActiveChain(key: string, entry: ActiveChainCacheEntry): void {
-  // delete + set moves the key to the end of the Map, marking it most-recently-used.
-  activeChainCache.delete(key);
-  activeChainCache.set(key, entry);
-  // Evict least-recently-used entries (oldest insertion order = first key).
-  while (activeChainCache.size > MAX_CACHED_SESSIONS) {
-    const oldestKey = activeChainCache.keys().next().value;
-    if (oldestKey === undefined) break;
-    activeChainCache.delete(oldestKey);
-  }
-}
-
-// Read the main JSONL, inject subagent progress entries, and apply active-chain
-// filtering. This is the expensive path the cache exists to avoid repeating.
-async function computeActiveChain(
-  sessionFile: string,
-  subagentsDir: string,
-  hasSubagents: boolean,
-): Promise<SessionMessage[]> {
-  const allMessages: SessionMessage[] = await readJsonlEntries(sessionFile);
-
-  // Load subagent files and inject synthetic progress entries
-  if (hasSubagents) {
-    try {
-      // Extract Task tool_use id -> agentId mappings from main messages
-      const toolUseToAgentId = extractTaskAgentMappings(allMessages);
-      // The agentId line in the result wins; the meta file only fills in the calls
-      // whose result named no agent.
-      for (const [toolUseId, agentId] of await readSubagentMetaMappings(subagentsDir)) {
-        if (!toolUseToAgentId.has(toolUseId)) toolUseToAgentId.set(toolUseId, agentId);
-      }
-
-      if (toolUseToAgentId.size > 0) {
-        // Build a map from tool_use id -> index of the assistant message containing that Task tool_use
-        const toolUseToAssistantIndex = new Map<string, number>();
-        for (let i = 0; i < allMessages.length; i++) {
-          const msg = allMessages[i];
-          if (msg.type !== 'assistant') continue;
-          const message = msg.message as Record<string, unknown> | undefined;
-          if (!message) continue;
-          const msgContent = message.content;
-          if (!Array.isArray(msgContent)) continue;
-          for (const block of msgContent) {
-            if (
-              block &&
-              typeof block === 'object' &&
-              (block as Record<string, unknown>).type === 'tool_use' &&
-              ((block as Record<string, unknown>).name === 'Task' || (block as Record<string, unknown>).name === 'Agent')
-            ) {
-              const id = (block as Record<string, unknown>).id;
-              if (typeof id === 'string' && toolUseToAgentId.has(id)) {
-                toolUseToAssistantIndex.set(id, i);
-              }
-            }
-          }
-        }
-
-        // Load all subagent progress entries, keyed by insertion index
-        // We collect (insertAfterIndex, syntheticEntries) pairs, then splice in reverse order
-        const insertions: Array<{ afterIndex: number; entries: SessionMessage[] }> = [];
-
-        for (const [toolUseId, agentId] of toolUseToAgentId.entries()) {
-          const assistantIndex = toolUseToAssistantIndex.get(toolUseId);
-          if (assistantIndex === undefined) continue;
-
-          try {
-            const syntheticEntries = await loadSubagentProgress(subagentsDir, toolUseId, agentId);
-            if (syntheticEntries.length > 0) {
-              insertions.push({ afterIndex: assistantIndex, entries: syntheticEntries });
-            }
-          } catch {
-            // Subagent file missing or unreadable — skip gracefully
-          }
-        }
-
-        // Insert in reverse order of index so earlier insertions don't shift later indices
-        insertions.sort((a, b) => b.afterIndex - a.afterIndex);
-        for (const { afterIndex, entries } of insertions) {
-          allMessages.splice(afterIndex + 1, 0, ...entries);
-        }
-      }
-    } catch {
-      // Any unexpected error in subagent loading
-    }
-  }
-
-  // Apply active chain filtering on the complete history
-  return filterActiveChain(allMessages);
-}
-
-// Return the active-chain snapshot for a session, from cache when the on-disk
-// fingerprint is unchanged, otherwise recomputed and re-cached.
-async function getActiveChain(
-  sessionFile: string,
-  sessionsPath: string,
-  targetSessionId: string,
-): Promise<SessionMessage[]> {
-  // stat the main file first: this both provides the cache fingerprint and throws
-  // (ENOENT) for a missing session, preserving the "return empty on read error"
-  // behavior via the caller's catch.
-  const mainStat = await stat(sessionFile);
-
-  // Fingerprint the subagents dir too (mtime changes when agent files are added).
-  const subagentsDir = join(sessionsPath, targetSessionId, 'subagents');
-  let subagentsMtimeMs = -1;
-  let hasSubagents = false;
-  try {
-    subagentsMtimeMs = (await stat(subagentsDir)).mtimeMs;
-    hasSubagents = true;
-  } catch {
-    // No subagents directory
-  }
-
-  const cached = activeChainCache.get(sessionFile);
-  if (
-    cached &&
-    cached.mtimeMs === mainStat.mtimeMs &&
-    cached.size === mainStat.size &&
-    cached.subagentsMtimeMs === subagentsMtimeMs
-  ) {
-    // Cache hit: refresh LRU position and reuse the snapshot without touching disk.
-    storeActiveChain(sessionFile, cached);
-    return cached.activeChain;
-  }
-
-  // Cache miss or stale fingerprint: recompute from disk and cache the result.
-  const activeChain = await computeActiveChain(sessionFile, subagentsDir, hasSubagents);
-  storeActiveChain(sessionFile, {
-    mtimeMs: mainStat.mtimeMs,
-    size: mainStat.size,
-    subagentsMtimeMs,
-    activeChain,
-  });
-  return activeChain;
+// The index of the first uuid-bearing entry after `index`, or the chain's length
+// when there is none. A page after a cursor starts here: the entries without a
+// uuid right after the cursor entry are part of its group, which the page the
+// cursor ended already carried.
+function nextUuidIndexAfter(chain: ReadonlyArray<{ uuid?: unknown }>, index: number): number {
+  let i = index + 1;
+  while (i < chain.length && typeof chain[i].uuid !== 'string') i++;
+  return i;
 }
 
 /**
- * A session's complete active chain, served from the same fingerprinted cache the
- * paged loader uses.
+ * How long the whole chain, once read back, is kept for the next caller.
  *
- * Exposed for callers that need the whole transcript rather than a page — the
- * prompt history is the first — so they reuse the parse + subagent-injection +
- * active-chain work `loadSessionMessages` has already done for this session file
- * instead of repeating it. Returns an empty array when the session file cannot be
- * read, matching what `loadSessionMessages` reports for the same failure.
+ * The callers that want all of it (a search, the list of a session's assets) tend to come in bursts, and a
+ * burst should read the file once. But nothing in the paging path needs the whole chain, and keeping it
+ * is what made a long session cost the backend a gigabyte for as long as it stayed open (#680), so it is
+ * let go of after a moment instead of being held with the session.
+ */
+const WHOLE_CHAIN_KEEP_MS = 15_000;
+let wholeChain: { key: string; chain: SessionMessage[]; timer: ReturnType<typeof setTimeout> } | null = null;
+
+/**
+ * A session's complete active chain, read back from the file.
+ *
+ * For the callers that need every entry: a search, the list of what a session produced, its assets. The
+ * prompt history and the send index do not come through here; they read `promptChain` off the index, which
+ * is built in the same pass as the index and holds only what they read (see `loadPromptChain`).
+ *
+ * Returns an empty array when the session file cannot be read, matching what `loadSessionMessages` reports
+ * for the same failure.
  */
 export async function loadActiveChain(
   workingDir: string,
@@ -361,9 +117,39 @@ export async function loadActiveChain(
   try {
     const sessionsPath = await getProjectSessionsPath(workingDir);
     const sessionFile = join(sessionsPath, `${targetSessionId}.jsonl`);
-    return await getActiveChain(sessionFile, sessionsPath, targetSessionId);
+    const index = await getSessionIndex(sessionFile, sessionsPath, targetSessionId);
+    // The key names the index itself, so a changed file (a new index) is read again.
+    const key = `${sessionFile}#${index.entries.length}#${index.entries[index.entries.length - 1]?.offset ?? 0}`;
+    if (wholeChain && wholeChain.key === key) return wholeChain.chain;
+    const chain = await readWholeChain(index);
+    if (wholeChain) clearTimeout(wholeChain.timer);
+    const timer = setTimeout(() => {
+      wholeChain = null;
+    }, WHOLE_CHAIN_KEEP_MS);
+    timer.unref?.();
+    wholeChain = { key, chain, timer };
+    return chain;
   } catch (err) {
     console.error('[node-backend]', 'Error loading active chain:', err);
+    return [];
+  }
+}
+
+/**
+ * The user entries and queue records of a session's active chain, which is everything the prompt history
+ * and the send index read of it. Tool results, which are most of a long transcript, are reduced to what
+ * says they are tool results, so this is small however long the session is.
+ */
+export async function loadPromptChain(
+  workingDir: string,
+  targetSessionId: string,
+): Promise<SessionMessage[]> {
+  try {
+    const sessionsPath = await getProjectSessionsPath(workingDir);
+    const sessionFile = join(sessionsPath, `${targetSessionId}.jsonl`);
+    return (await getSessionIndex(sessionFile, sessionsPath, targetSessionId)).promptChain;
+  } catch (err) {
+    console.error('[node-backend]', 'Error loading prompt chain:', err);
     return [];
   }
 }
@@ -410,74 +196,135 @@ export async function loadSessionMessages(
   targetSessionId: string,
   beforeUuid?: string,
   limit?: number,
-  includeUuid?: string,
+  afterUuid?: string,
+  aroundUuid?: string,
+  untilUuid?: string,
 ): Promise<PaginatedSessionMessages> {
-  let activeChainMessages: SessionMessage[];
+  /*
+    The chain is held as an index: one small record per entry, saying where its line is in the file (see
+    sessionIndex). A page is cut out of the index, and only the entries on it are read and parsed.
+  */
+  let chain: IndexedEntry[];
+  let workflowChain: SessionMessage[];
   try {
     const sessionsPath = await getProjectSessionsPath(workingDir);
     const sessionFile = join(sessionsPath, `${targetSessionId}.jsonl`);
-    activeChainMessages = await getActiveChain(sessionFile, sessionsPath, targetSessionId);
+    const index = await getSessionIndex(sessionFile, sessionsPath, targetSessionId);
+    chain = index.entries;
+    workflowChain = index.workflowChain;
   } catch (err) {
     console.error('[node-backend]', 'Error loading session:', err);
     return {
       messages: [],
       hasMore: false,
+      hasNewer: false,
+      reached: false,
+      reset: false,
       total: 0,
-      activeChain: [],
+      workflowChain: [],
       lastReportedMode: null,
       sessionMissing: (err as NodeJS.ErrnoException)?.code === 'ENOENT',
     };
   }
 
-  const total = activeChainMessages.length;
+  const total = chain.length;
+  const pageSize = limit ?? 50;
 
-  /*
-    A jump from the send index names an entry that has to be on the page, no
-    matter how far back it sits.
-
-    The page is widened to reach it rather than centred on it, because the
-    client's transcript is one contiguous run that only ever grows at the front
-    (see the prepend anchoring in ChatPage). A window around the target would
-    leave a hole between it and what is already loaded, and nothing in the
-    paging contract can describe a hole — "load older" has no counterpart that
-    fills one in.
-
-    Widening costs the entries between the target and the newest page, which is
-    exactly what the user is about to scroll through anyway.
-
-    An unknown uuid falls through to the ordinary page. That happens when the
-    chain was rebuilt under the client by an edit or a rewind, and the same
-    recovery as the cursor-miss below applies: serve something reachable rather
-    than nothing.
-  */
-  const basePageSize = limit ?? 50;
-  const includeIndex = includeUuid ? activeChainMessages.findIndex(m => m.uuid === includeUuid) : -1;
-  // The newest page, which is what a load with no cursor serves, has to reach
-  // all the way from the end of the chain back to the target.
-  const pageSize = includeIndex !== -1 ? Math.max(basePageSize, total - includeIndex) : basePageSize;
-
-  let slicedMessages: SessionMessage[] = [];
+  // The slice of the chain this page is, as indexed entries; read from the file below.
+  let sliced: IndexedEntry[] = [];
   let hasMore = false;
+  let hasNewer = false;
+  let reached = false;
+  let reset = false;
 
   // Compute the latest (newest) page — shared by the no-cursor case and the
   // cursor-miss fallback below.
-  const latestPageStart = snapStartToUuid(activeChainMessages, Math.max(0, total - pageSize));
+  const latestPageStart = snapStartToUuid(chain, Math.max(0, total - pageSize));
 
-  if (beforeUuid) {
+  if (afterUuid) {
+    /*
+      The page after a cursor. A page starts at an entry that has a uuid, and the
+      entries without one that follow an entry belong to it, so the cursor's own
+      group is skipped whole and the page starts at the next uuid entry.
+    */
+    const index = chain.findIndex(m => m.uuid === afterUuid);
+    if (index === -1) {
+      // The cursor is not in the active chain (a rewind or an edit rebuilt it).
+      // Serving the newest page and saying so lets the client start over, rather
+      // than stranding it with a cursor that no page can follow.
+      console.warn(
+        '[node-backend]',
+        `loadSessionMessages: cursor uuid not found in active chain (afterUuid=${afterUuid}); ` +
+          'returning latest page so the client can start over',
+      );
+      sliced = chain.slice(latestPageStart);
+      hasMore = latestPageStart > 0;
+      reset = true;
+    } else {
+      const start = nextUuidIndexAfter(chain, index);
+      // Where the client already holds what follows: the page stops in front of it.
+      const stopIndex = untilUuid ? chain.findIndex(m => m.uuid === untilUuid) : -1;
+      const stop = stopIndex > index ? stopIndex : -1;
+      if (start < total) {
+        const rawEnd = start + pageSize;
+        let end = rawEnd >= total ? total : snapStartToUuid(chain, rawEnd);
+        // A group longer than a page still has to make progress.
+        if (end <= start) end = nextUuidIndexAfter(chain, start);
+        if (stop !== -1 && end >= stop) {
+          end = Math.max(start, stop);
+          reached = true;
+        }
+        sliced = chain.slice(start, end);
+        hasNewer = end < total;
+      }
+      hasMore = start > 0;
+    }
+  } else if (aroundUuid) {
+    /*
+      The page that holds an entry the client does not hold, centred on it: where
+      the find bar or the send index is taking the reader. The client keeps the
+      newest pages it already has and puts this page where the recycler was, so
+      nothing between the two has to be sent. An unknown uuid is a cursor miss.
+    */
+    const index = chain.findIndex(m => m.uuid === aroundUuid);
+    if (index === -1) {
+      console.warn(
+        '[node-backend]',
+        `loadSessionMessages: entry not found in active chain (aroundUuid=${aroundUuid}); ` +
+          'returning latest page so the client can start over',
+      );
+      sliced = chain.slice(latestPageStart);
+      hasMore = latestPageStart > 0;
+      reset = true;
+    } else {
+      const start = snapStartToUuid(chain, Math.max(0, index - Math.floor(pageSize / 2)));
+      const rawEnd = Math.max(start + pageSize, index + 1);
+      let end = rawEnd >= total ? total : snapStartToUuid(chain, rawEnd);
+      // Walking back to a uuid entry must not cut the target itself off.
+      if (end <= index) end = nextUuidIndexAfter(chain, index);
+      sliced = chain.slice(start, end);
+      hasMore = start > 0;
+      hasNewer = end < total;
+    }
+  } else if (beforeUuid) {
     // Find the index of the message with beforeUuid
-    const index = activeChainMessages.findIndex(m => m.uuid === beforeUuid);
+    const index = chain.findIndex(m => m.uuid === beforeUuid);
     if (index !== -1) {
       // Return older messages (indices before index).
-      //
-      // With a target (the find bar moving to a match that is not loaded yet)
-      // the page runs back to the target and no further. Reusing the widened
-      // `pageSize` above would also count the entries NEWER than the cursor,
-      // which the client already holds, and read that many extra entries
-      // before the target for nothing.
-      const reach = includeIndex !== -1 && includeIndex < index ? index - includeIndex : 0;
-      const startIndex = snapStartToUuid(activeChainMessages, Math.max(0, index - Math.max(basePageSize, reach)));
-      slicedMessages = activeChainMessages.slice(startIndex, index);
+      let startIndex = snapStartToUuid(chain, Math.max(0, index - pageSize));
+      // Where the client already holds what comes before: the page begins right after it. The entries
+      // without a uuid that follow that entry are its own, which the client holds.
+      const stopIndex = untilUuid ? chain.findIndex(m => m.uuid === untilUuid) : -1;
+      if (stopIndex !== -1 && stopIndex < index) {
+        const floor = nextUuidIndexAfter(chain, stopIndex);
+        if (startIndex <= floor) {
+          startIndex = Math.min(floor, index);
+          reached = true;
+        }
+      }
+      sliced = chain.slice(startIndex, index);
       hasMore = startIndex > 0;
+      hasNewer = true;
     } else {
       // Issue #6: the cursor uuid is not in the active chain. This can happen if
       // the chain was recomputed and the client's cursor now points at a filtered
@@ -491,14 +338,18 @@ export async function loadSessionMessages(
         `loadSessionMessages: cursor uuid not found in active chain (beforeUuid=${beforeUuid}); ` +
           'returning latest page to avoid stranding history',
       );
-      slicedMessages = activeChainMessages.slice(latestPageStart);
+      sliced = chain.slice(latestPageStart);
       hasMore = latestPageStart > 0;
+      reset = true;
     }
   } else {
     // Return latest page
-    slicedMessages = activeChainMessages.slice(latestPageStart);
+    sliced = chain.slice(latestPageStart);
     hasMore = latestPageStart > 0;
   }
+
+  // Only now is anything read from the file: the entries of this one page.
+  const slicedMessages = await readIndexedEntries(sliced);
 
   // The paging cursor must be a real message uuid. The first sliced entry can be a
   // progress/summary record without a uuid — using it would yield `undefined`, which
@@ -508,16 +359,33 @@ export async function loadSessionMessages(
     (m) => typeof m.uuid === 'string',
   )?.uuid as string | undefined;
 
+  // The cursor for the page after this one. Found from the end, like `oldestUuid`
+  // is from the start, because the last entry of a page can be one without a uuid.
+  let newestUuid: string | undefined;
+  for (let i = slicedMessages.length - 1; i >= 0; i--) {
+    const uuid = slicedMessages[i].uuid;
+    if (typeof uuid === 'string') {
+      newestUuid = uuid;
+      break;
+    }
+  }
+
   // Only the newest page (no cursor) describes the session's CURRENT mode — an
   // older "load older" page is history, not "what mode is this session in now".
-  const lastReportedMode = beforeUuid ? null : findLastReportedModeInPage(slicedMessages);
+  // A page served for a cursor miss IS the newest page, whatever was asked for.
+  const lastReportedMode =
+    (beforeUuid || afterUuid || aroundUuid) && !reset ? null : findLastReportedModeInPage(slicedMessages);
 
   return {
     messages: slicedMessages,
     hasMore,
+    hasNewer,
+    reached,
+    reset,
     oldestUuid,
+    newestUuid,
     total,
-    activeChain: activeChainMessages,
+    workflowChain,
     lastReportedMode,
     sessionMissing: false,
   };

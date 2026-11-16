@@ -180,9 +180,28 @@
       "overlay": "Superposition",
       "newTab": "Nouvel onglet"
     },
-    "chatPagination": {
-      "label": "Paginer l'historique des conversations",
-      "description": "Charger les anciens messages au fur et à mesure du défilement. Désactivé charge toute la conversation en une seule fois."
+    "chatLoading": {
+      "title": "Chargement des conversations",
+      "description": "La quantité d'une longue conversation que le chat garde en mémoire à la fois. Ce dont vous vous éloignez en défilant est libéré, puis rechargé à votre retour.",
+      "windowing": {
+        "label": "Libérer la conversation dont vous vous êtes éloigné",
+        "description": "Activée, les pages d'une longue conversation dont vous vous êtes éloigné sont libérées de la mémoire et rechargées à votre retour. Désactivée, tous les messages chargés restent en mémoire, comme avant."
+      },
+      "pageSize": {
+        "label": "Messages chargés à la fois",
+        "description": "Une conversation est chargée par pages de ce nombre de messages ({{min}} à {{max}}). Plus la page est grande, plus la mémoire en retient à la fois."
+      },
+      "notRecommended": "Déconseillé",
+      "latestPages": {
+        "label": "Pages récentes toujours conservées",
+        "description": "La conversation la plus récente reste toujours en mémoire sur ce nombre de pages ({{min}} à {{max}}), pour que le retour tout en bas n'attende jamais."
+      },
+      "historyPages": {
+        "label": "Pages conservées en lisant l'historique",
+        "description": "Pendant que vous remontez dans les anciens messages, ce nombre de pages ({{min}} à {{max}}) reste en mémoire. Les pages dont vous vous éloignez sont libérées, puis rechargées à votre retour."
+      },
+      "total": "Jusqu'à {{count}} messages sont gardés en mémoire à la fois.",
+      "totalHeavy": "Jusqu'à {{count}} messages seraient gardés en mémoire à la fois. Le chat peut devenir lent sur les longues conversations."
     },
     "configDir": {
       "description": "Répertoire personnel pour la configuration de Claude.\nvariable d'environnement env",

@@ -201,3 +201,34 @@ describe('mergeToolResults', () => {
     });
   });
 });
+
+describe('mergeToolResults keeps the message it rebuilt (#680)', () => {
+  it('returns the same object for an assistant message whose calls got nothing new', () => {
+    const a1 = assistantWithTool('a1', 't1', 'Bash');
+    const result = toolResultUser('u1', 't1', 'done');
+    const first = mergeToolResults([a1, result]);
+    const second = mergeToolResults([a1, result]);
+    expect(second.find(m => m.uuid === 'a1')).toBe(first.find(m => m.uuid === 'a1'));
+  });
+
+  it('returns a new object once a result arrives for one of its calls', () => {
+    const a1 = assistantWithTool('a1', 't1', 'Bash');
+    const before = mergeToolResults([a1]).find(m => m.uuid === 'a1');
+    const after = mergeToolResults([a1, toolResultUser('u1', 't1', 'done')]).find(m => m.uuid === 'a1');
+    expect(after).not.toBe(before);
+    expect(getToolUseBlock(after!)!.tool_result).toBeDefined();
+  });
+
+  it('returns a new object when the result is a different message', () => {
+    const a1 = assistantWithTool('a1', 't1', 'Bash');
+    const first = mergeToolResults([a1, toolResultUser('u1', 't1', 'one')]).find(m => m.uuid === 'a1');
+    const second = mergeToolResults([a1, toolResultUser('u2', 't1', 'two')]).find(m => m.uuid === 'a1');
+    expect(second).not.toBe(first);
+  });
+
+  it('returns a new object when the assistant message itself was replaced', () => {
+    const first = mergeToolResults([assistantWithTool('a1', 't1', 'Bash')]).find(m => m.uuid === 'a1');
+    const second = mergeToolResults([assistantWithTool('a1', 't1', 'Bash')]).find(m => m.uuid === 'a1');
+    expect(second).not.toBe(first);
+  });
+});

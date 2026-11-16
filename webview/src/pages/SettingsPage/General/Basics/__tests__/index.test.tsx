@@ -47,7 +47,6 @@ vi.mock('@/contexts/ClaudeSettingsContext', () => ({
 // that have nothing to do with what is under test here.
 vi.mock('../HostModeRow', () => ({ HostModeRow: () => null }));
 vi.mock('../OpenSettingsRow', () => ({ OpenSettingsRow: () => null }));
-vi.mock('../ChatPaginationRow', () => ({ ChatPaginationRow: () => null }));
 vi.mock('../UiDirectionRow', () => ({ UiDirectionRow: () => null }));
 vi.mock('../ClaudeConfigDirRow', () => ({ ClaudeConfigDirRow: () => null }));
 vi.mock('../FileSuggestionRow', () => ({ FileSuggestionRow: () => null }));

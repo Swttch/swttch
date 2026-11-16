@@ -1,8 +1,9 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode, type RefObject } from 'react';
 import { withoutPeerSections } from './peerSections';
 import type { LoadedMessageDto } from '../../../types';
 import type { SessionSend } from '@/shared';
 import type { SendSection } from '../groupIntoSendSections';
+import { reuseSections } from '../reuseSections';
 import { ProjectSelectorPage } from '@/pages/ProjectSelectorPage';
 import { useSessionContext } from '../../../contexts/SessionContext';
 import { useChatStreamContext } from '../../../contexts/ChatStreamContext';
@@ -14,7 +15,8 @@ import { TranscriptHeldWorking } from './TranscriptHeldWorking';
 import { useReleaseHeldMessages } from '../../../hooks/useReleaseHeldMessages';
 import { TranscriptBackgroundWorking, useBackgroundTaskStart } from './TranscriptBackgroundWorking';
 import { TranscriptPendingMessages } from './TranscriptPendingMessages';
-import { runningActivity } from './streamingActivity';
+import { runningActivity, type StreamingActivity } from './streamingActivity';
+import { LiveActivityContext } from './LiveActivityContext';
 import { EmptyState } from '../EmptyState';
 import { isJetBrains } from '@/config/environment';
 import { SectionFoldContext, SectionKeyContext } from '../SectionFoldContext';
@@ -30,6 +32,8 @@ import { SEND_JUMP_SCROLL_MARGIN } from '../SendIndex/scrollToSend';
 import { TranscriptUserMessage } from './TranscriptUserMessage';
 import { TranscriptBody } from './TranscriptBody';
 import { TranscriptWrapUp } from './TranscriptWrapUp';
+import { WindowGapRow } from '../WindowGapRow';
+import { entryMarker } from '../useScrollAnchor';
 import './prose.css';
 import '../streaming.css';
 
@@ -61,6 +65,10 @@ export interface TranscriptAreaProps {
   hasMore: boolean;
   isLoadingMore: boolean;
   onLoadMore: () => void;
+  /** The index of the section the window's gap stands in front of; null when what is held is one run. */
+  gapSectionIndex?: number | null;
+  /** The page the gap is waiting for is on its way. */
+  isLoadingGap?: boolean;
   findInChat?: ChatSearchSource;
 }
 
@@ -79,12 +87,117 @@ export interface TranscriptAreaProps {
  * provider of `SectionFoldContext` stays, because the find bar and the leaf
  * components read it; nothing ever collapses.
  */
+/**
+ * One send and its reply, drawn as the transcript draws it.
+ *
+ * Its own component, and a memoised one: a long conversation is hundreds of these, and a word of a streaming reply
+ * used to make the area build the elements of every one of them again (several each) only to find that all but the
+ * last had nothing new. Given the same props, a section is not looked at again (#680).
+ */
+const TranscriptSection = memo(function TranscriptSection({
+  section,
+  nextHead,
+  showGap,
+  isLoadingGap,
+  isLast,
+  streaming,
+  awaitingInput,
+  backgroundWorking,
+  lastBodyRef,
+  mergedMessagesRef,
+  onRetry,
+}: {
+  section: SendSection;
+  /** The send after this section, whose text tells whether a wrap-up question was answered. */
+  nextHead: LoadedMessageDto | null;
+  /** The window's gap stands in front of this section. */
+  showGap: boolean;
+  isLoadingGap: boolean;
+  isLast: boolean;
+  /** The turn is running and this is the section it writes into (false for every other section). */
+  streaming: boolean;
+  awaitingInput: boolean;
+  backgroundWorking: boolean;
+  lastBodyRef: MutableRefObject<HTMLDivElement | null> | null;
+  /** All the messages drawn, read only when an entry is clicked, for the console line. */
+  mergedMessagesRef: RefObject<LoadedMessageDto[]>;
+  onRetry: (messageId: string) => void;
+}) {
+  return (
+    /*
+      `data-send-section` and the sentinel are what the send index on the
+      right reads to jump to a send and to know which one the reader is on
+      (see SendIndex). They are the same attributes the classic chat
+      carries, so the rail works the same on both.
+    */
+    <div data-send-section={section.key}>
+      {showGap && <WindowGapRow isLoading={isLoadingGap} />}
+      {section.head && (
+        <>
+          <div
+            data-send-sentinel
+            aria-hidden
+            className="h-0"
+            style={{ scrollMarginTop: SEND_JUMP_SCROLL_MARGIN }}
+          />
+          <SectionKeyContext.Provider value={section.key}>
+            <div
+              {...entryMarker(section.head.uuid)}
+              onClick={() => {
+                const mergedMessages = mergedMessagesRef.current ?? [];
+                console.log(section.head, mergedMessages.indexOf(section.head!), mergedMessages); // NEVER REMOVE THIS LINE
+              }}
+            >
+              <TranscriptUserMessage message={section.head} sectionKey={section.key} />
+            </div>
+          </SectionKeyContext.Provider>
+        </>
+      )}
+      {/* Sent while the card holds the turn: right after the latest message, above the calls still running, as in the desktop app. */}
+      {awaitingInput && <TranscriptHeldMessages />}
+      <div ref={lastBodyRef ?? undefined} data-section-body data-after-send={section.head ? '' : undefined} className={`${section.body.length > 0 ? 'pt-[0.1875rem] ' : ''}${!isLast ? (section.body.length > 0 ? 'pb-[2.2188rem]' : 'pb-[0.8125rem]') : streaming || awaitingInput || backgroundWorking ? 'pb-0' : 'pb-[3.375rem]'}`}>
+        <TranscriptBody body={section.body} mergedMessagesRef={mergedMessagesRef} onRetry={onRetry} turnRunning={streaming} sectionKey={section.key} waiting={isLast ? <TranscriptPendingMessages /> : undefined} />
+        {/* The turn's wrap-up is drawn here, after its last message, not where its call sits: a recap as text until the closing message begins, then the question and its answers. */}
+        <TranscriptWrapUp body={section.body} next={nextHead} />
+      </div>
+    </div>
+  );
+});
+
 export function TranscriptArea(props: TranscriptAreaProps) {
   const { t } = useTranslation('chat');
-  const { isStreaming, awaitingInput = false, trailing = null, awaitingInputLine = 'before', disconnectCountdown = null, apiRetry = null, mergedMessages, hasMore, isLoadingMore, onLoadMore, findInChat = LOADED_ONLY } = props;
-  const sections = useMemo(() => withoutPeerSections(props.sections), [props.sections]);
+  const { isStreaming, awaitingInput = false, trailing = null, awaitingInputLine = 'before', disconnectCountdown = null, apiRetry = null, mergedMessages, hasMore, isLoadingMore, onLoadMore, gapSectionIndex = null, isLoadingGap = false, findInChat = LOADED_ONLY } = props;
+  // Folding a message from another session into the section before it makes that section a new object each time;
+  // the ones that did not change are kept, so that they are not drawn again for every word of a streaming reply (#680).
+  const drawnSectionsRef = useRef<SendSection[]>([]);
+  const sections = useMemo(() => {
+    const reused = reuseSections(drawnSectionsRef.current, withoutPeerSections(props.sections));
+    drawnSectionsRef.current = reused;
+    return reused;
+  }, [props.sections]);
+  const mergedMessagesRef = useRef(mergedMessages);
+  mergedMessagesRef.current = mergedMessages;
   const { workingDirectory } = useSessionContext();
   const { retry: onRetry, messages: streamMessages, isStreaming: turnRunning } = useChatStreamContext();
+  // What the runs of calls read to tell whether one of theirs is the call being waited on: the same object while the
+  // call is the same, however many words arrive (#680).
+  const liveRef = useRef<StreamingActivity | null>(null);
+  const liveActivity = useMemo(() => {
+    const next = turnRunning ? runningActivity(streamMessages) : null;
+    const before = liveRef.current;
+    const same =
+      next === before ||
+      (next !== null &&
+        before !== null &&
+        next.toolUseId === before.toolUseId &&
+        next.description === before.description &&
+        next.phrase === before.phrase &&
+        next.mark === before.mark &&
+        next.file?.name === before.file?.name &&
+        next.file?.creating === before.file?.creating);
+    if (!same) liveRef.current = next;
+    return liveRef.current;
+  }, [turnRunning, streamMessages]);
   const waitedCall = useMemo(() => (isStreaming ? runningActivity(streamMessages) : null), [isStreaming, streamMessages]);
   // Held under a card, they are handed over once the card is answered AND the call it held has finished (a denial
   // hands them over with the answer, in ChatPage): the desktop app keeps them held, with "Send now", while the
@@ -184,42 +297,29 @@ export function TranscriptArea(props: TranscriptAreaProps) {
       <SectionFoldContext.Provider value={fold}>
         <SendActionsContext.Provider value={sendActions}>
           <LastEntryContext.Provider value={lastEntryUuid(mergedMessages)}>
-            {sections.map((section, sectionIndex) => (
-              /*
-                `data-send-section` and the sentinel are what the send index on the
-                right reads to jump to a send and to know which one the reader is on
-                (see SendIndex). They are the same attributes the classic chat
-                carries, so the rail works the same on both.
-              */
-              <div key={section.key} data-send-section={section.key}>
-                {section.head && (
-                  <>
-                    <div
-                      data-send-sentinel
-                      aria-hidden
-                      className="h-0"
-                      style={{ scrollMarginTop: SEND_JUMP_SCROLL_MARGIN }}
-                    />
-                    <SectionKeyContext.Provider value={section.key}>
-                      <div
-                        onClick={() => {
-                          console.log(section.head, mergedMessages.indexOf(section.head!), mergedMessages); // NEVER REMOVE THIS LINE
-                        }}
-                      >
-                        <TranscriptUserMessage message={section.head} sectionKey={section.key} />
-                      </div>
-                    </SectionKeyContext.Provider>
-                  </>
-                )}
-                {/* Sent while the card holds the turn: right after the latest message, above the calls still running, as in the desktop app. */}
-                {awaitingInput && sectionIndex === sections.length - 1 && <TranscriptHeldMessages />}
-                <div ref={sectionIndex === sections.length - 1 ? lastBodyRef : undefined} data-section-body data-after-send={section.head ? '' : undefined} className={`${section.body.length > 0 ? 'pt-[0.1875rem] ' : ''}${sectionIndex < sections.length - 1 ? (section.body.length > 0 ? 'pb-[2.2188rem]' : 'pb-[0.8125rem]') : isStreaming || awaitingInput || backgroundWorking ? 'pb-0' : 'pb-[3.375rem]'}`}>
-                  <TranscriptBody body={section.body} mergedMessages={mergedMessages} onRetry={onRetry} turnRunning={isStreaming && sectionIndex === sections.length - 1} sectionKey={section.key} waiting={sectionIndex === sections.length - 1 ? <TranscriptPendingMessages /> : undefined} />
-                  {/* The turn's wrap-up is drawn here, after its last message, not where its call sits: a recap as text until the closing message begins, then the question and its answers. */}
-                  <TranscriptWrapUp body={section.body} next={sections[sectionIndex + 1]?.head ?? null} />
-                </div>
-              </div>
-            ))}
+            <LiveActivityContext.Provider value={liveActivity}>
+            {sections.map((section, sectionIndex) => {
+              const isLast = sectionIndex === sections.length - 1;
+              // What only the last section needs is told to it alone, so that the others are given the same props
+              // for every word of a streaming reply and are not drawn again for it (#680).
+              return (
+                <TranscriptSection
+                  key={section.key}
+                  section={section}
+                  nextHead={sections[sectionIndex + 1]?.head ?? null}
+                  showGap={gapSectionIndex === sectionIndex}
+                  isLoadingGap={isLoadingGap}
+                  isLast={isLast}
+                  streaming={isLast && isStreaming}
+                  awaitingInput={isLast && awaitingInput}
+                  backgroundWorking={isLast && backgroundWorking}
+                  lastBodyRef={isLast ? lastBodyRef : null}
+                  mergedMessagesRef={mergedMessagesRef}
+                  onRetry={onRetry}
+                />
+              );
+            })}
+            </LiveActivityContext.Provider>
           </LastEntryContext.Provider>
         </SendActionsContext.Provider>
       </SectionFoldContext.Provider>

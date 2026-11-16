@@ -51,7 +51,8 @@ vi.mock('../ChatStreamContext', () => ({
     loadMessages: mockLoadMessages,
     resumeTurn: mockResumeTurn,
     prependOlderMessages: vi.fn(),
-    setPaginationState: vi.fn(),
+    appendNewerMessages: vi.fn(),
+    jumpToMessages: vi.fn(),
     resetForSessionSwitch: vi.fn(),
   }),
 }));
@@ -59,6 +60,7 @@ vi.mock('../ChatStreamContext', () => ({
 vi.mock('../SettingsContext', () => ({
   SettingsProvider: ({ children }: { children: React.ReactNode }) => children,
   useSettings: () => ({ settings: {} }),
+  useSettingsOrNull: () => ({ settings: {} }),
 }));
 
 vi.mock('../WorkingDirContext', () => ({

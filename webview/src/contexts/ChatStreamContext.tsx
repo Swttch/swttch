@@ -16,6 +16,7 @@ import { useSettings } from './SettingsContext';
 import { LoadedMessageDto, Context, Attachment, SessionState } from '../types';
 import { InputMode, InputModeValues, CLI_FLAG_TO_INPUT_MODE } from '../types/chatInput';
 import { isAutoModeAvailable, reconcileSessionModel } from '../types/models';
+import { firstUuidOf, type WindowConfig, type WindowGap, type WindowState } from '../utils/transcriptWindow';
 import {
   MessageType,
   matchControlRequestCommand,
@@ -173,10 +174,13 @@ interface ChatStreamContextType {
   resetStreamState: () => void;
   // From useChatStream (message manipulation)
   clearMessages: () => void;
-  loadMessages: (msgs: LoadedMessageDto[]) => void;
+  loadMessages: (msgs: LoadedMessageDto[], hasOlder?: boolean) => void;
   /** Take up a turn that was already running when this screen attached (see UseChatStreamReturn.resumeTurn). */
   resumeTurn: (startedAt: number) => void;
-  prependOlderMessages: (msgs: LoadedMessageDto[]) => void;
+  prependOlderMessages: (msgs: LoadedMessageDto[], hasOlder?: boolean, beforeUuid?: string, reached?: boolean) => void;
+  appendNewerMessages: (msgs: LoadedMessageDto[], reached?: boolean) => void;
+  jumpToMessages: (msgs: LoadedMessageDto[], hasOlder: boolean, config: WindowConfig) => void;
+  dropWindowPage: (start: string, config: WindowConfig) => void;
   appendMessage: (message: LoadedMessageDto) => void;
   updateMessage: (id: string, updates: Partial<LoadedMessageDto>) => void;
 
@@ -218,10 +222,15 @@ interface ChatStreamContextType {
   effortPick: { model: string | null; level: string } | null;
   rememberEffortPick: (model: string | null, level: string) => void;
 
-  // Pagination
+  // The transcript window (#680): what of the session is held, and what is not.
+  /** The backend has entries older than the first one held. */
   hasMoreOlder: boolean;
+  /** The first held entry that has a uuid, which the next older page is asked for with. */
   oldestLoadedUuid: string | null;
-  setPaginationState: (hasMore: boolean, oldestUuid: string | null) => void;
+  /** The hole between the recycler and the pages after it; null when what is held is one run. */
+  windowGap: WindowGap | null;
+  /** The window's bookkeeping: the gap, whether older entries exist, and where each held page begins. */
+  windowState: WindowState;
 }
 
 const ChatStreamContext = createContext<ChatStreamContextType | undefined>(undefined);
@@ -297,17 +306,10 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   const [isThinkingExpanded, setIsThinkingExpanded] = useState(false);
   const toggleThinkingExpanded = useCallback(() => setIsThinkingExpanded(prev => !prev), []);
   const [sessionModel, setSessionModel] = useState<string | null>(null);
-  const [hasMoreOlder, setHasMoreOlder] = useState(false);
-  const [oldestLoadedUuid, setOldestLoadedUuid] = useState<string | null>(null);
   // The session's backend-owned queue (see messageQueue.ts on the backend).
   // Only ever set from what the backend says — QUEUED_MESSAGES_CHANGED pushes
   // and the GET_QUEUED_MESSAGES fetch below — never derived locally.
   const [queuedMessages, setQueuedMessages] = useState<QueuedMessage[]>([]);
-
-  const setPaginationState = useCallback((hasMore: boolean, oldestUuid: string | null) => {
-    setHasMoreOlder(hasMore);
-    setOldestLoadedUuid(oldestUuid);
-  }, []);
 
   // EnterPlanMode 진입 전의 모드를 저장 (ExitPlanMode 시 복원용)
   const prePlanModeRef = useRef<InputMode | null>(null);
@@ -406,6 +408,9 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     loadMessages: chatStreamLoadMessages,
     resumeTurn: chatStreamResumeTurn,
     prependOlderMessages: chatStreamPrependOlderMessages,
+    appendNewerMessages: chatStreamAppendNewerMessages,
+    jumpToMessages: chatStreamJumpToMessages,
+    dropWindowPage: chatStreamDropWindowPage,
     appendMessage: chatStreamAppendMessage,
     updateMessage: chatStreamUpdateMessage,
     resetStreamState: chatStreamResetStreamState,
@@ -495,8 +500,6 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     tools.clearToolUses();
     diffs.clearDiffs();
     prePlanModeRef.current = null;
-    setHasMoreOlder(false);
-    setOldestLoadedUuid(null);
     // The queue belongs to the session being left, not the one arriving — the
     // GET_QUEUED_MESSAGES fetch below fills in whatever the new session already has.
     setQueuedMessages([]);
@@ -1128,6 +1131,11 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   // Memoize contextValue so consumers don't re-render unless one of the
   // tracked dependencies actually changes. Input/setInput are no longer
   // part of this context — they live in ChatInputStateContext.
+  // The cursor the next older page is asked for with. It moves whenever the top of
+  // the window does: an older page lands in front of it, and a trim takes entries
+  // off it. Read off the held messages so it cannot drift from them.
+  const oldestLoadedUuid = useMemo(() => firstUuidOf(chatStream.messages), [chatStream.messages]);
+
   const contextValue: ChatStreamContextType = useMemo(() => ({
     // From useChatStream
     messages: chatStream.messages,
@@ -1168,6 +1176,9 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     loadMessages: chatStreamLoadMessages,
     resumeTurn: chatStreamResumeTurn,
     prependOlderMessages: chatStreamPrependOlderMessages,
+    appendNewerMessages: chatStreamAppendNewerMessages,
+    jumpToMessages: chatStreamJumpToMessages,
+    dropWindowPage: chatStreamDropWindowPage,
     appendMessage: chatStreamAppendMessage,
     updateMessage: chatStreamUpdateMessage,
 
@@ -1197,13 +1208,21 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     effortPick,
     rememberEffortPick,
 
-    // Pagination
-    hasMoreOlder,
+    // The transcript window
+    hasMoreOlder: chatStream.hasMoreOlder,
     oldestLoadedUuid,
-    setPaginationState,
+    windowGap: chatStream.windowGap,
+    windowState: chatStream.windowState,
   }), [
     chatStream.messages,
     chatStream.isStreaming,
+    chatStream.hasMoreOlder,
+    chatStream.windowGap,
+    chatStream.windowState,
+    oldestLoadedUuid,
+    chatStreamAppendNewerMessages,
+    chatStreamJumpToMessages,
+    chatStreamDropWindowPage,
     chatStream.streamingMessageId,
     chatStream.error,
     chatStream.authDiagnosis,
@@ -1253,9 +1272,6 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     toggleThinkingExpanded,
     sessionModel,
     resetForSessionSwitch,
-    hasMoreOlder,
-    oldestLoadedUuid,
-    setPaginationState,
   ]);
 
   return (

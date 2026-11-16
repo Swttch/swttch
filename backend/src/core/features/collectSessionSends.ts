@@ -1,4 +1,4 @@
-import { loadActiveChain, type SessionMessage } from './loadSessionMessages';
+import { loadPromptChain, type SessionMessage } from './loadSessionMessages';
 import { collectPrompts } from './loadPromptHistory';
 import { withoutSystemReminders, type SessionSend } from '../../shared';
 
@@ -59,7 +59,8 @@ export async function collectSessionSends(
   workingDir: string,
   targetSessionId: string,
 ): Promise<SessionSend[]> {
-  const chain = await loadActiveChain(workingDir, targetSessionId);
+  // Built on the prompt chain: user entries and queue records only, which is all `collectPrompts` reads.
+  const chain = await loadPromptChain(workingDir, targetSessionId);
 
   return collectPrompts(chain)
     .filter(entry => typeof entry.uuid === 'string')
