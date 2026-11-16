@@ -11,6 +11,7 @@
     "attachFile": "Joindre un fichier...",
     "mentionFile": "Mentionner un fichier de ce projet...",
     "clearConversation": "Effacer la conversation",
+    "archiveConversation": "Archiver la conversation",
     "resumeConversation": "Reprendre la conversation",
     "showBackgroundTasks": "Workflow : afficher les tâches en arrière-plan",
     "scheduleSend": "Planifier un message...",

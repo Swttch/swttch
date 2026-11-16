@@ -215,6 +215,10 @@
     },
     "archiveSession": "セッションをアーカイブ",
     "unarchiveSession": "セッションのアーカイブを解除",
+    "archivedToast": "「{{title}}」をアーカイブしました",
+    "archivedToastUntitled": "セッションをアーカイブしました",
+    "unarchivedToast": "「{{title}}」のアーカイブを解除しました",
+    "unarchivedToastUntitled": "セッションのアーカイブを解除しました",
     "startedSessions": {
       "show": "このセッションが開始したセッションを表示",
       "hide": "このセッションが開始したセッションを隠す"
@@ -368,6 +372,7 @@
       "openModelMenu": "モデルを選ぶ",
       "rotateModel": "次のモデルに切り替える",
       "clearConversation": "会話をクリア",
+      "archiveConversation": "会話をアーカイブする、またはアーカイブから戻す",
       "openSideQuestion": "横から質問する (/btw)",
       "cycleTranscriptView": "トランスクリプト表示を切り替える（通常、思考、詳細、クラシック）",
       "refreshSessionList": "セッション一覧が開いているときに更新",

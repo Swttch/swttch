@@ -146,6 +146,24 @@ function ChatPageContent() {
   const api = useApi();
   const onboarding = useOnboarding();
   const { currentSessionId, currentSession } = useSessionContext();
+  // The archived bar takes the keyboard focus (on its new-session button) only when the session was archived while it
+  // was open, however that came about, and not when an archived session is merely opened.
+  const currentSessionArchived = isArchivedMark(currentSession?.sessionMark);
+  // `lastSeenArchived`: whether the open session's row said archived the last time the row was in the list; null before
+  // the row was ever seen. Opening a session loads the list a moment later, and a row that arrives archived is an
+  // archived session being opened, not one archived while open. A moment without the row (the list is read anew)
+  // does not erase what was seen.
+  const lastSeenRef = useRef<{ id: string | null; archived: boolean | null }>({ id: null, archived: null });
+  const [archivedWhileOpenId, setArchivedWhileOpenId] = useState<string | null>(null);
+  useEffect(() => {
+    if (lastSeenRef.current.id !== currentSessionId) lastSeenRef.current = { id: currentSessionId, archived: null };
+    if (!currentSession) return;
+    if (lastSeenRef.current.archived === false && currentSessionArchived && currentSessionId) {
+      setArchivedWhileOpenId(currentSessionId);
+    }
+    lastSeenRef.current = { id: currentSessionId, archived: currentSessionArchived };
+  }, [currentSessionId, currentSession, currentSessionArchived]);
+  const archivedWhileOpen = currentSessionArchived && archivedWhileOpenId === currentSessionId;
   const { messages, isStreaming, error, disconnectCountdown, apiRetry, hasMoreOlder, oldestLoadedUuid, windowGap, windowState, dropWindowPage, releaseHeldMessages, restartTurnClock } = useChatStreamContext();
   // null is the chat released so far; a named view mode draws the transcript with its own code.
   const transcriptViewMode = useTranscriptViewMode();
@@ -796,7 +814,7 @@ function ChatPageContent() {
           ) : folderGone ? (
               <MissingFolderBar />
           ) : currentSessionId && isArchivedMark(currentSession?.sessionMark) ? (
-              <ArchivedChatInputSlot sessionId={currentSessionId}>
+              <ArchivedChatInputSlot sessionId={currentSessionId} focusNewSession={archivedWhileOpen}>
                 <ChatInput />
               </ArchivedChatInputSlot>
           ) : (

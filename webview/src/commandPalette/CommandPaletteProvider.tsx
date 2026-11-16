@@ -4,6 +4,8 @@ import { useChatInputState } from '@/contexts/ChatInputStateContext';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { useCliConfig } from '@/contexts/CliConfigContext';
 import { useCurrentModel } from '@/hooks/useCurrentModel';
+import { useSessionMcp } from '@/hooks/queries/useSessionMcp';
+import { isArchivedMark } from '@/components/SessionList/archive';
 import { getModelEffortConfig } from '@/types/effort';
 import { resolveModelInfo } from '@/types/models';
 import { getAdapter } from '@/adapters';
@@ -25,6 +27,8 @@ import { KeyboardRegistry } from './KeyboardRegistry';
 import { isNewTabShortcut } from './isNewTabShortcut';
 import { isMac } from '@/config/environment';
 import { applyModelCapabilityFlags } from './applyModelCapabilityFlags';
+import { applyArchiveItemVisibility } from './applyArchiveItemVisibility';
+import { isArchiveShortcut, canToggleArchive, toggleArchiveOfOpenSession } from './archiveShortcut';
 import {
   ContextSection,
   ModelSection,
@@ -72,6 +76,12 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
   const { confirmDialog, confirm } = useConfirmDialog();
   const workflowState = useWorkflowState();
   const currentModel = useCurrentModel();
+  const archivingAvailable = useSessionMcp().info?.installed != null;
+  const currentSessionMark = session.sessions.find((s) => s.id === session.currentSessionId)?.sessionMark;
+  const isCurrentArchived = isArchivedMark(currentSessionMark);
+  // "Archive conversation" is offered only where it can do something: the session-management MCP is installed, the
+  // open session is saved, and it is not archived yet.
+  const showArchiveItem = archivingAvailable && session.currentSessionId != null && !isCurrentArchived;
 
   // The Effort and fast-mode rows only make sense on models that support
   // them. Rather than hiding them on unsupported models (e.g. Haiku), we
@@ -106,6 +116,11 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
 
       setSessionState: session.setSessionState,
       resetToNewSession: session.resetToNewSession,
+    },
+    archive: {
+      available: archivingAvailable,
+      isCurrentArchived,
+      setArchived: session.setSessionArchived,
     },
     adapter: {
       openNewTab: () => getAdapter().openNewTab(),
@@ -143,6 +158,11 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
 
       setSessionState: session.setSessionState,
       resetToNewSession: session.resetToNewSession,
+    },
+    archive: {
+      available: archivingAvailable,
+      isCurrentArchived,
+      setArchived: session.setSessionArchived,
     },
     adapter: {
       openNewTab: () => getAdapter().openNewTab(),
@@ -238,6 +258,16 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
       },
     });
 
+    // Cmd/Ctrl+Option/Alt+A (the Claude desktop app's own archive keys) archives the open session, or brings it back when
+    // it is archived. Matched only where it works, so elsewhere the keys are left alone.
+    keyboardReg.register({
+      id: 'toggle-archive-conversation',
+      match: (e: KeyboardEvent) => isArchiveShortcut(e) && canToggleArchive(servicesRef.current),
+      execute: async () => {
+        await toggleArchiveOfOpenSession(servicesRef.current);
+      },
+    });
+
     return { registry: reg, keyboardRegistry: keyboardReg };
   }, []);
 
@@ -279,8 +309,8 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
       registry.registerSection(new SlashCommandsSection(), sortedCommands);
     }
     const built = registry.buildSections();
-    return built.map((s) => applyModelCapabilityFlags(s, { supportsEffort, supportsFastMode }));
-  }, [registry, commands, supportsEffort, supportsFastMode]);
+    return built.map((s) => applyArchiveItemVisibility(applyModelCapabilityFlags(s, { supportsEffort, supportsFastMode }), showArchiveItem));
+  }, [registry, commands, supportsEffort, supportsFastMode, showArchiveItem]);
 
   const contextValue = useMemo<CommandPaletteRegistryContextValue>(
     () => ({ registry, keyboardRegistry, sections }),

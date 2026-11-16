@@ -37,6 +37,7 @@ function makeServices(input: string, inputMode: InputMode = InputModeValues.BYPA
       openSettings: vi.fn().mockResolvedValue(undefined),
       openTerminal: vi.fn().mockResolvedValue(undefined),
     },
+    archive: { available: true, isCurrentArchived: false, setArchived: vi.fn().mockResolvedValue(true) },
     ui: { confirm: vi.fn().mockResolvedValue(true) },
     workflowState: { openPanel: vi.fn() },
   };

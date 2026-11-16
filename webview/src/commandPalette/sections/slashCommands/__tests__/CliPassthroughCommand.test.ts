@@ -32,6 +32,7 @@ function makeServices(overrides: {
       setSessionState: vi.fn(),
       resetToNewSession: vi.fn(),
     },
+    archive: { available: true, isCurrentArchived: false, setArchived: vi.fn().mockResolvedValue(true) },
     adapter: {
       openNewTab: vi.fn().mockResolvedValue(undefined),
       openSettings: vi.fn().mockResolvedValue(undefined),

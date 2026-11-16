@@ -215,6 +215,10 @@
     },
     "archiveSession": "Archivar sesión",
     "unarchiveSession": "Desarchivar sesión",
+    "archivedToast": "\"{{title}}\" archivada",
+    "archivedToastUntitled": "Sesión archivada",
+    "unarchivedToast": "\"{{title}}\" desarchivada",
+    "unarchivedToastUntitled": "Sesión desarchivada",
     "startedSessions": {
       "show": "Mostrar las sesiones que inició",
       "hide": "Ocultar las sesiones que inició"
@@ -368,6 +372,7 @@
       "openModelMenu": "Elegir el modelo",
       "rotateModel": "Cambiar al siguiente modelo",
       "clearConversation": "Borrar la conversación",
+      "archiveConversation": "Archivar la conversación o recuperarla",
       "openSideQuestion": "Hacer una pregunta al margen (/btw)",
       "cycleTranscriptView": "Cambiar la vista de transcripción (Normal, Razonamiento, Detallada, Clásica)",
       "refreshSessionList": "Actualizar la lista de sesiones mientras está abierta",

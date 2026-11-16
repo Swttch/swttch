@@ -42,6 +42,26 @@ describe('ArchivedSessionBar', () => {
   });
 });
 
+describe('ArchivedSessionBar Tab order', () => {
+  it('puts new session, then unarchive, first in the page Tab order', () => {
+    render(<ArchivedSessionBar sessionId="s1" />);
+    expect(screen.getByRole('button', { name: 'archivedSession.newSession' })).toHaveAttribute('tabindex', '1');
+    expect(screen.getByRole('button', { name: 'archivedSession.unarchive' })).toHaveAttribute('tabindex', '2');
+  });
+});
+
+describe('ArchivedSessionBar focus', () => {
+  it('puts the focus on the new-session button when the session was archived while open', () => {
+    render(<ArchivedSessionBar sessionId="s1" focusNewSession />);
+    expect(screen.getByRole('button', { name: 'archivedSession.newSession' })).toHaveFocus();
+  });
+
+  it('leaves the focus alone when an archived session is merely opened', () => {
+    render(<ArchivedSessionBar sessionId="s1" />);
+    expect(screen.getByRole('button', { name: 'archivedSession.newSession' })).not.toHaveFocus();
+  });
+});
+
 describe('ArchivedChatInputSlot', () => {
   it('keeps the input mounted but hidden and shut to focus, with the bar laid over it', () => {
     render(

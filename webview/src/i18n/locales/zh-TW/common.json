@@ -215,6 +215,10 @@
     },
     "archiveSession": "封存工作階段",
     "unarchiveSession": "取消封存工作階段",
+    "archivedToast": "已封存「{{title}}」",
+    "archivedToastUntitled": "已封存工作階段",
+    "unarchivedToast": "已取消封存「{{title}}」",
+    "unarchivedToastUntitled": "已取消封存工作階段",
     "startedSessions": {
       "show": "顯示此工作階段啟動的工作階段",
       "hide": "隱藏此工作階段啟動的工作階段"
@@ -368,6 +372,7 @@
       "openModelMenu": "選擇模型",
       "rotateModel": "切換到下一個模型",
       "clearConversation": "清除對話",
+      "archiveConversation": "封存對話，或取消封存",
       "openSideQuestion": "提一個旁支問題 (/btw)",
       "cycleTranscriptView": "切換對話記錄檢視（一般、思考、詳細、經典）",
       "refreshSessionList": "在工作階段清單開啟時重新整理清單",

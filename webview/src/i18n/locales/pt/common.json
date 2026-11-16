@@ -215,6 +215,10 @@
     },
     "archiveSession": "Arquivar sessão",
     "unarchiveSession": "Desarquivar sessão",
+    "archivedToast": "\"{{title}}\" arquivada",
+    "archivedToastUntitled": "Sessão arquivada",
+    "unarchivedToast": "\"{{title}}\" desarquivada",
+    "unarchivedToastUntitled": "Sessão desarquivada",
     "startedSessions": {
       "show": "Mostrar as sessões que ela iniciou",
       "hide": "Ocultar as sessões que ela iniciou"
@@ -368,6 +372,7 @@
       "openModelMenu": "Escolher o modelo",
       "rotateModel": "Mudar para o próximo modelo",
       "clearConversation": "Limpar a conversa",
+      "archiveConversation": "Arquivar a conversa ou desarquivá-la",
       "openSideQuestion": "Fazer uma pergunta paralela (/btw)",
       "cycleTranscriptView": "Alternar a visualização da transcrição (Normal, Raciocínio, Detalhada, Clássica)",
       "refreshSessionList": "Atualizar a lista de sessões enquanto ela estiver aberta",

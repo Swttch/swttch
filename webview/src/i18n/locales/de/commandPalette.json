@@ -11,6 +11,7 @@
     "attachFile": "Datei anhängen...",
     "mentionFile": "Datei aus diesem Projekt erwähnen...",
     "clearConversation": "Unterhaltung löschen",
+    "archiveConversation": "Unterhaltung archivieren",
     "resumeConversation": "Unterhaltung fortsetzen",
     "showBackgroundTasks": "Workflow: Hintergrundaufgaben anzeigen",
     "scheduleSend": "Nachricht planen...",

@@ -11,6 +11,7 @@
     "attachFile": "Прикрепить файл...",
     "mentionFile": "Упомянуть файл из этого проекта...",
     "clearConversation": "Очистить разговор",
+    "archiveConversation": "Архивировать разговор",
     "resumeConversation": "Возобновить разговор",
     "showBackgroundTasks": "Рабочий процесс: показать фоновые задачи",
     "scheduleSend": "Запланировать сообщение...",

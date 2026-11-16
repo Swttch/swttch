@@ -11,6 +11,7 @@
     "attachFile": "ファイルを添付...",
     "mentionFile": "このプロジェクトのファイルをメンション...",
     "clearConversation": "会話をクリア",
+    "archiveConversation": "会話をアーカイブ",
     "resumeConversation": "会話を再開",
     "showBackgroundTasks": "ワークフロー: バックグラウンドタスクを表示",
     "scheduleSend": "メッセージを予約送信...",

@@ -215,6 +215,10 @@
     },
     "archiveSession": "세션 보관",
     "unarchiveSession": "세션 보관 해제",
+    "archivedToast": "\"{{title}}\" 세션을 보관했습니다",
+    "archivedToastUntitled": "세션을 보관했습니다",
+    "unarchivedToast": "\"{{title}}\" 세션의 보관을 해제했습니다",
+    "unarchivedToastUntitled": "세션의 보관을 해제했습니다",
     "startedSessions": {
       "show": "이 세션이 시작한 세션 펼치기",
       "hide": "이 세션이 시작한 세션 접기"
@@ -368,6 +372,7 @@
       "openModelMenu": "모델 고르기",
       "rotateModel": "다음 모델로 바꾸기",
       "clearConversation": "대화 비우기",
+      "archiveConversation": "대화 보관하기, 보관한 대화는 되살리기",
       "openSideQuestion": "곁가지 질문하기 (/btw)",
       "cycleTranscriptView": "대화 보기를 바꾸기(일반, 생각, 자세히, 클래식)",
       "refreshSessionList": "세션 목록이 열려 있을 때 새로고침",

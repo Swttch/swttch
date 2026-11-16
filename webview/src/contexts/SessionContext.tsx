@@ -20,6 +20,7 @@ import {isJetBrains} from "@/config/environment.ts";
 import { MessageType } from '@/shared';
 import toast from 'react-hot-toast';
 import type { GeneratedSessionTitle } from './generatedTitle';
+import { useArchivedSessionToast } from '@/hooks/useArchivedSessionToast';
 
 
 interface SessionContextValue {
@@ -67,7 +68,7 @@ interface SessionContextValue {
    * Archive a session or bring it back, in the record the session-management MCP keeps. The lists read again once
    * the backend says it is done; a refusal is shown as a toast.
    */
-  setSessionArchived: (sessionId: string, archived: boolean) => Promise<void>;
+  setSessionArchived: (sessionId: string, archived: boolean) => Promise<boolean>;
   /**
    * Put a session under another one, or at the top level when [parentSessionId] is null. The package records the
    * link and the backend tells the lists to read again; a refusal is shown as a toast.
@@ -222,6 +223,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
   // back when a rename fails, and asking whether the list holds a session the news speaks of.
   const sessionsRef = useRef(sessions);
   sessionsRef.current = sessions;
+  useArchivedSessionToast(sessions);
 
   // The directory a session's transcript is filed under. A row of the list says it
   // itself: a nested listing, or the listing of a directory a session was opened in
@@ -692,13 +694,15 @@ export function SessionProvider({ children }: SessionProviderProps) {
     }
   }, [currentSessionId, api.sessions, navigateToNewSession, directoryOfSession]);
 
-  const setSessionArchived = useCallback(async (sessionId: string, archived: boolean) => {
+  const setSessionArchived = useCallback(async (sessionId: string, archived: boolean): Promise<boolean> => {
     try {
       const answer = (await send(MessageType.SET_SESSION_ARCHIVED, { sessionId, archived })) as { status?: string; error?: string };
       if (answer?.status !== 'ok') throw new Error(answer?.error ?? 'Could not change whether the session is archived.');
       // The lists are told to read again by the backend (SESSIONS_UPDATED refresh).
+      return true;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not change whether the session is archived.');
+      return false;
     }
   }, [send]);
 

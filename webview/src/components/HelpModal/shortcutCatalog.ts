@@ -18,6 +18,7 @@ export enum ShortcutId {
   OpenModelMenu = 'openModelMenu',
   RotateModel = 'rotateModel',
   ClearConversation = 'clearConversation',
+  ArchiveConversation = 'archiveConversation',
   OpenSideQuestion = 'openSideQuestion',
   CycleTranscriptView = 'cycleTranscriptView',
   FindInChat = 'findInChat',
@@ -138,6 +139,7 @@ export const SHORTCUT_CATALOG: readonly ShortcutEntry[] = [
   { id: ShortcutId.OpenModelMenu, group: ShortcutGroup.General, descriptionKey: k('openModelMenu'), keys: fixed('Mod+Shift+M') },
   { id: ShortcutId.RotateModel, group: ShortcutGroup.General, descriptionKey: k('rotateModel'), keys: fixed('Mod+Shift+.') },
   { id: ShortcutId.ClearConversation, group: ShortcutGroup.General, descriptionKey: k('clearConversation'), keys: fixed('Mod+Shift+C') },
+  { id: ShortcutId.ArchiveConversation, group: ShortcutGroup.General, descriptionKey: k('archiveConversation'), keys: fixed('Mod+Alt+A') },
   { id: ShortcutId.OpenSideQuestion, group: ShortcutGroup.General, descriptionKey: k('openSideQuestion'), keys: fixed('Mod+Shift+B') },
   // Control on a Mac as well: Cmd+I is the browser's and the editor's own, and Ctrl+I alone is taken by Chrome (it moves to another tab), so the chat claims Ctrl+Alt+I.
   { id: ShortcutId.CycleTranscriptView, group: ShortcutGroup.General, descriptionKey: k('cycleTranscriptView'), keys: fixed('Ctrl+Alt+I') },
