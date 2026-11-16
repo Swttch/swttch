@@ -120,6 +120,10 @@ describe('BackgroundTaskOutputBody', () => {
       vi.unstubAllGlobals();
     });
 
+    /** Enough 16ms frames for the follow's glide to arrive (#701). */
+    const GLIDE_SETTLE_FRAMES = 120;
+    const smoothCalls = (box: { scrollToCalls: ScrollToOptions[] }) => box.scrollToCalls.filter((c) => c.behavior === 'smooth');
+
     /** The pane mounts with the body; lay it out 1000px tall in a 300px view and push `text`. */
     function open(text = 'count: 1\n') {
       const task = makeTask();
@@ -140,10 +144,10 @@ describe('BackgroundTaskOutputBody', () => {
 
       act(() => emitChange(FILE, 'count: 1\ncount: 2\n'));
       box.setScrollHeight(1300);
-      raf.flushFrames();
+      raf.flushFrames(GLIDE_SETTLE_FRAMES);
 
       expect(box.el.scrollTop).toBe(1000);
-      expect(box.lastScrollTo()).toEqual({ top: 1300, behavior: 'smooth' });
+      expect(smoothCalls(box)).toEqual([]);
       expect(screen.queryByText('Scroll to bottom')).not.toBeInTheDocument();
     });
 
@@ -167,9 +171,10 @@ describe('BackgroundTaskOutputBody', () => {
       expect(screen.getByText('Scroll to bottom')).toBeInTheDocument();
 
       fireEvent.click(screen.getByText('Scroll to bottom'));
+      raf.flushFrames(GLIDE_SETTLE_FRAMES);
 
-      expect(box.lastScrollTo()).toEqual({ top: 1000, behavior: 'smooth' });
-      raf.flushFrames();
+      expect(box.el.scrollTop).toBe(700);
+      expect(smoothCalls(box)).toEqual([]);
       expect(screen.queryByText('Scroll to bottom')).not.toBeInTheDocument();
     });
 

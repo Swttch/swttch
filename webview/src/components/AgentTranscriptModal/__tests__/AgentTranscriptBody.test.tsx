@@ -95,6 +95,9 @@ const NOTICE = "Couldn't refresh this transcript. Showing the last version that 
 describe('AgentTranscriptBody', () => {
   let raf: RafQueue;
   let client: QueryClient;
+  /** Enough 16ms frames for the follow's glide to arrive (#701). */
+  const GLIDE_SETTLE_FRAMES = 120;
+  const smoothCalls = (box: { scrollToCalls: ScrollToOptions[] }) => box.scrollToCalls.filter((c) => c.behavior === 'smooth');
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -250,10 +253,10 @@ describe('AgentTranscriptBody', () => {
 
     await progress(rerenderWith, 200, SECOND);
     box.setScrollHeight(2400);
-    raf.flushFrames();
+    raf.flushFrames(GLIDE_SETTLE_FRAMES);
 
     expect(box.el.scrollTop).toBe(2000);
-    expect(box.lastScrollTo()).toEqual({ top: 2400, behavior: 'smooth' });
+    expect(smoothCalls(box)).toEqual([]);
   });
 
   it('moves straight there, without gliding, once the agent is done', async () => {
@@ -275,8 +278,9 @@ describe('AgentTranscriptBody', () => {
     expect(screen.getByText('Scroll to bottom')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Scroll to bottom'));
-    expect(box.lastScrollTo()).toEqual({ top: 2000, behavior: 'smooth' });
-    raf.flushFrames();
+    raf.flushFrames(GLIDE_SETTLE_FRAMES);
+    expect(box.el.scrollTop).toBe(1600);
+    expect(smoothCalls(box)).toEqual([]);
     expect(screen.queryByText('Scroll to bottom')).not.toBeInTheDocument();
   });
 
@@ -294,7 +298,7 @@ describe('AgentTranscriptBody', () => {
 
     await progress(rerenderWith, 200, SECOND);
     box.setScrollHeight(2400);
-    raf.flushFrames();
+    raf.flushFrames(GLIDE_SETTLE_FRAMES);
 
     expect(box.el.scrollTop).toBe(2000);
   });
@@ -306,17 +310,22 @@ describe('AgentTranscriptBody', () => {
     const { box, rerenderWith } = await openTranscript();
     box.userScrollTo(500);
     raf.flushFrames();
-    const callsBefore = box.scrollToCalls.length;
 
     rerenderWith({ sendCount: 1 });
+    raf.flushFrames();
+    expect(box.el.scrollTop).toBeGreaterThan(500);
+    raf.flushFrames(GLIDE_SETTLE_FRAMES);
 
-    expect(box.scrollToCalls.length).toBe(callsBefore + 1);
-    expect(box.lastScrollTo()).toEqual({ top: 2000, behavior: 'smooth' });
+    expect(box.el.scrollTop).toBe(1600);
+    expect(smoothCalls(box)).toEqual([]);
   });
 
   it('does not move a transcript that is opened after earlier sends', async () => {
     const { box } = await openTranscript({ sendCount: 3 });
-    expect(box.scrollToCalls.filter((call) => call.behavior === 'smooth')).toHaveLength(0);
+    box.userScrollTo(500);
+    raf.flushFrames(GLIDE_SETTLE_FRAMES);
+
+    expect(box.el.scrollTop).toBe(500);
   });
 
   // Every opening starts at the newest entry; no reading position is kept.

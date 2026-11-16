@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
+  AUTO_SCROLL_GLIDE_MS,
   AUTO_SCROLL_HOLD_MS,
+  glideStep,
   clampAutoScrollThreshold,
   isReaderMovingDown,
   isReaderMovingUp,
@@ -219,5 +221,38 @@ describe('shouldPullToBottom', () => {
 
   it('pulls again once the reader has been still for the hold time', () => {
     expect(shouldPullToBottom(true, true, FAR, AUTO_SCROLL_HOLD_MS)).toBe(true);
+  });
+});
+
+// Issue #701: the follow moves the view itself, a step per frame, instead of asking the browser for a smooth
+// scroll. A step closes part of what is left, more the longer the frame took, and never passes the bottom.
+describe('glideStep', () => {
+  it('closes part of the gap in one ordinary frame, not all of it', () => {
+    const step = glideStep(300, 16);
+    expect(step).toBeGreaterThan(0);
+    expect(step).toBeLessThan(300);
+  });
+
+  it('closes more of the gap the longer the frame took', () => {
+    expect(glideStep(300, 100)).toBeGreaterThan(glideStep(300, 16));
+  });
+
+  it('closes nearly all of it after a frame much longer than the glide time', () => {
+    expect(glideStep(300, AUTO_SCROLL_GLIDE_MS * 10)).toBeGreaterThan(299);
+  });
+
+  it('never moves past the bottom', () => {
+    expect(glideStep(3, 1000)).toBeLessThanOrEqual(3);
+    expect(glideStep(0.4, 16)).toBeLessThanOrEqual(0.4);
+  });
+
+  it('always makes progress, so the glide ends', () => {
+    expect(glideStep(50, 0)).toBeGreaterThanOrEqual(1);
+    expect(glideStep(2, 1)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('does not move when there is nothing left to close', () => {
+    expect(glideStep(0, 16)).toBe(0);
+    expect(glideStep(-5, 16)).toBe(0);
   });
 });

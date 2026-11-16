@@ -1,10 +1,11 @@
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { ChevronDoubleUpIcon } from '@heroicons/react/20/solid';
 import { useTranslation } from '@/i18n';
 import { useScrollFold, FOLD_MIN_HEIGHT } from './useScrollFold';
 import { useTopBar } from '@/contexts/TopBarContext';
 import { ScrollFoldContext } from './ScrollFoldContext';
 import { SEND_JUMP_SCROLL_MARGIN, SEND_SCROLL_OPTIONS } from './SendIndex/scrollToSend';
+import { ChatFollowContext } from './ChatFollowContext';
 
 interface Props {
   children: ReactNode;
@@ -41,6 +42,7 @@ export function StickySendHeader(props: Props) {
   const { children, onClick } = props;
   const { t } = useTranslation('chat');
   const { topBarHeight } = useTopBar();
+  const releaseFollow = useContext(ChatFollowContext);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [pinned, setPinned] = useState(false);
   const [scrollRoot, setScrollRoot] = useState<HTMLElement | null>(null);
@@ -103,9 +105,13 @@ export function StickySendHeader(props: Props) {
     : Math.max(restingHeight - Math.max(foldHeight, FOLD_MIN_HEIGHT), 0) + Math.max(wrapLoss, 0);
 
   const scrollToSelf = () => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    // A reply streaming in must not pull the view back under the jump.
+    releaseFollow?.();
     // The options are shared with the send index, so a jump lands the same way
     // whichever control started it — see SEND_SCROLL_OPTIONS.
-    sentinelRef.current?.scrollIntoView(SEND_SCROLL_OPTIONS);
+    sentinel.scrollIntoView(SEND_SCROLL_OPTIONS);
   };
 
   return (

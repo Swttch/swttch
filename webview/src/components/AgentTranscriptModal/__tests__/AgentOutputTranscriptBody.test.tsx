@@ -146,6 +146,10 @@ describe('AgentOutputTranscriptBody', () => {
       return `${JSON.stringify({ type: 'assistant', uuid, message: { role: 'assistant', content: [{ type: 'text', text }] } })}\n`;
     }
 
+    /** Enough 16ms frames for the follow's glide to arrive (#701). */
+    const GLIDE_SETTLE_FRAMES = 120;
+    const smoothCalls = (box: { scrollToCalls: ScrollToOptions[] }) => box.scrollToCalls.filter((c) => c.behavior === 'smooth');
+
     const ONE = entryText('u1', 'first');
     // A reply, not a second prompt: a new prompt from the user is itself a
     // reason to follow again, which would hide what these tests look at.
@@ -174,10 +178,10 @@ describe('AgentOutputTranscriptBody', () => {
 
       act(() => emitChange(FILE, TWO));
       box.setScrollHeight(1300);
-      raf.flushFrames();
+      raf.flushFrames(GLIDE_SETTLE_FRAMES);
 
       expect(box.el.scrollTop).toBe(1000);
-      expect(box.lastScrollTo()).toEqual({ top: 1300, behavior: 'smooth' });
+      expect(smoothCalls(box)).toEqual([]);
       expect(screen.queryByText('Scroll to bottom')).not.toBeInTheDocument();
     });
 
@@ -201,9 +205,10 @@ describe('AgentOutputTranscriptBody', () => {
       expect(screen.getByText('Scroll to bottom')).toBeInTheDocument();
 
       fireEvent.click(screen.getByText('Scroll to bottom'));
+      raf.flushFrames(GLIDE_SETTLE_FRAMES);
 
-      expect(box.lastScrollTo()).toEqual({ top: 1000, behavior: 'smooth' });
-      raf.flushFrames();
+      expect(box.el.scrollTop).toBe(700);
+      expect(smoothCalls(box)).toEqual([]);
       expect(screen.queryByText('Scroll to bottom')).not.toBeInTheDocument();
     });
 
@@ -215,7 +220,7 @@ describe('AgentOutputTranscriptBody', () => {
       rerender(makeTask(), 1);
       act(() => emitChange(FILE, TWO));
       box.setScrollHeight(1300);
-      raf.flushFrames();
+      raf.flushFrames(GLIDE_SETTLE_FRAMES);
 
       expect(box.el.scrollTop).toBe(1000);
     });
@@ -229,7 +234,7 @@ describe('AgentOutputTranscriptBody', () => {
 
       act(() => emitChange(FILE, TWO + entryText('u2', 'and now this')));
       box.setScrollHeight(1300);
-      raf.flushFrames();
+      raf.flushFrames(GLIDE_SETTLE_FRAMES);
 
       expect(box.el.scrollTop).toBe(1000);
     });

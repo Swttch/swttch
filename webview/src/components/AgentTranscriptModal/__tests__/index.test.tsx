@@ -480,7 +480,8 @@ describe('AgentTranscriptModal scrolling', () => {
 
     expect(screen.queryByText('Scroll to bottom')).not.toBeInTheDocument();
     box.setScrollHeight(2400);
-    raf.flushFrames();
+    // The follow glides there over a few frames rather than in one (#701).
+    raf.flushFrames(120);
     expect(box.el.scrollTop).toBe(2000);
   });
 });

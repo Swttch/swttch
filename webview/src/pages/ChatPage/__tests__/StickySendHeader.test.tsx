@@ -5,6 +5,7 @@ import { StickySendHeader } from '../StickySendHeader';
 import { FOLD_MAX_HEIGHT, FOLD_MIN_HEIGHT, PINNED_TOP_INSET } from '../useScrollFold';
 import { useScrollFoldValue } from '../ScrollFoldContext';
 import { TopBarProvider } from '@/contexts/TopBarContext';
+import { ChatFollowContext } from '../ChatFollowContext';
 
 /**
  * The global setup installs an IntersectionObserver stub that never fires (it
@@ -164,6 +165,26 @@ describe('StickySendHeader', () => {
     await userEvent.click(screen.getByRole('button', { name: jumpLabel }));
 
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+  });
+
+  // Issue #701: the chat follows a streaming reply by moving the view itself every frame, and a write of the
+  // scroll position cancels the browser's smooth scroll. Following has to stop before the jump starts, or the
+  // next line of the reply pulls the view back under it.
+  it('stops following the reply before it jumps', async () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const releaseFollow = vi.fn();
+
+    render(
+      <ChatFollowContext.Provider value={releaseFollow}>
+        <StickySendHeader onClick={() => {}}>msg</StickySendHeader>
+      </ChatFollowContext.Provider>,
+    );
+    setPinned(true);
+    await userEvent.click(screen.getByRole('button', { name: jumpLabel }));
+
+    expect(releaseFollow).toHaveBeenCalledTimes(1);
+    expect(releaseFollow.mock.invocationCallOrder[0]).toBeLessThan(scrollIntoView.mock.invocationCallOrder[0]);
   });
 
   it('does not fire the wrapper handler when the jump button is clicked', async () => {
