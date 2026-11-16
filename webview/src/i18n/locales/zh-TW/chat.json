@@ -61,7 +61,8 @@
   },
   "archivedSession": {
     "message": "此工作階段已封存。若要繼續在此工作階段中工作,請先取消封存。",
-    "unarchive": "取消封存"
+    "unarchive": "取消封存",
+    "newSession": "新增工作階段"
   },
   "missingFolder": {
     "message": "工作資料夾已不存在。請選擇其他資料夾以繼續。",

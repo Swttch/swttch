@@ -60,8 +60,9 @@
     }
   },
   "archivedSession": {
-    "message": "이 세션은 보관되었습니다. 이 세션에서 계속 작업하려면 보관을 취소하세요.",
-    "unarchive": "보관 해제"
+    "message": "이 세션은 보관되었습니다. 이 세션에서 계속 작업하려면 보관을 해제하세요.",
+    "unarchive": "보관 해제",
+    "newSession": "새 세션"
   },
   "missingFolder": {
     "message": "작업 폴더가 더 이상 존재하지 않습니다. 계속하려면 다른 폴더를 선택하세요.",

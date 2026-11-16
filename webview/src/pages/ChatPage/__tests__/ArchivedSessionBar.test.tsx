@@ -2,14 +2,15 @@ import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 
 const setSessionArchived = vi.fn();
+const resetToNewSession = vi.fn();
 vi.mock('@/contexts/SessionContext', () => ({
-  useSessionContext: () => ({ setSessionArchived }),
+  useSessionContext: () => ({ setSessionArchived, resetToNewSession }),
 }));
 vi.mock('@/i18n', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-import { ArchivedSessionBar } from '../ArchivedSessionBar';
+import { ArchivedChatInputSlot, ArchivedSessionBar } from '../ArchivedSessionBar';
 
 /** Stands where the chat input would be when the session is archived. */
 describe('ArchivedSessionBar', () => {
@@ -20,9 +21,38 @@ describe('ArchivedSessionBar', () => {
     expect(setSessionArchived).toHaveBeenCalledWith('s1', false);
   });
 
-  it('lets the button go under the sentence when the window is narrow', () => {
+  it('offers a new session in this tab, to the left of unarchive', () => {
     render(<ArchivedSessionBar sessionId="s1" />);
-    const line = screen.getByText('archivedSession.message').parentElement as HTMLElement;
-    expect(line.className).toContain('flex-wrap');
+    const buttons = screen.getAllByRole('button');
+    expect(buttons.map((b) => b.textContent)).toEqual(['archivedSession.newSession', 'archivedSession.unarchive']);
+    fireEvent.click(buttons[0]);
+    expect(resetToNewSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("fills the input's own column and is laid over the input's place", () => {
+    render(<ArchivedSessionBar sessionId="s1" />);
+    const bar = screen.getByTestId('archived-session-bar');
+    expect(bar.className).toContain('absolute inset-0');
+    const column = bar.firstElementChild as HTMLElement;
+    expect(column.className).toContain('max-w-[var(--chat-column-max,44rem)]');
+    expect(column.className).toContain('h-full');
+    const box = column.firstElementChild as HTMLElement;
+    expect(box.className).toContain('bg-surface-hover');
+    expect(box.contains(screen.getByText('archivedSession.message'))).toBe(true);
+  });
+});
+
+describe('ArchivedChatInputSlot', () => {
+  it('keeps the input mounted but hidden and shut to focus, with the bar laid over it', () => {
+    render(
+      <ArchivedChatInputSlot sessionId="s1">
+        <input aria-label="the input" />
+      </ArchivedChatInputSlot>,
+    );
+    const hidden = screen.getByLabelText('the input').parentElement as HTMLElement;
+    expect(hidden.className).toContain('invisible');
+    expect(hidden.hasAttribute('inert')).toBe(true);
+    expect(hidden.getAttribute('aria-hidden')).toBe('true');
+    expect(screen.getByTestId('archived-session-bar')).toBeInTheDocument();
   });
 });

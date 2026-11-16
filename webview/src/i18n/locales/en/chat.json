@@ -61,7 +61,8 @@
   },
   "archivedSession": {
     "message": "This session is archived. To keep working in it, unarchive it.",
-    "unarchive": "Unarchive"
+    "unarchive": "Unarchive",
+    "newSession": "New session"
   },
   "missingFolder": {
     "message": "The working folder no longer exists. Choose another folder to continue.",

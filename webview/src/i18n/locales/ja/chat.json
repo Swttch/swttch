@@ -61,7 +61,8 @@
   },
   "archivedSession": {
     "message": "このセッションはアーカイブされています。作業を続けるにはアーカイブを解除してください。",
-    "unarchive": "アーカイブを解除"
+    "unarchive": "アーカイブを解除",
+    "newSession": "新規セッション"
   },
   "missingFolder": {
     "message": "作業フォルダが存在しなくなりました。続けるには別のフォルダを選んでください。",

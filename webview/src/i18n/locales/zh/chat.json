@@ -61,7 +61,8 @@
   },
   "archivedSession": {
     "message": "此会话已归档。若要继续在此会话中工作,请先取消归档。",
-    "unarchive": "取消归档"
+    "unarchive": "取消归档",
+    "newSession": "新建会话"
   },
   "missingFolder": {
     "message": "工作文件夹已不存在。请选择其他文件夹以继续。",

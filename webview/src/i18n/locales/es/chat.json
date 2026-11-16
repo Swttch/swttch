@@ -61,7 +61,8 @@
   },
   "archivedSession": {
     "message": "Esta sesión está archivada. Para seguir trabajando en ella, desarchívala.",
-    "unarchive": "Desarchivar"
+    "unarchive": "Desarchivar",
+    "newSession": "Nueva sesión"
   },
   "missingFolder": {
     "message": "La carpeta de trabajo ya no existe. Elige otra carpeta para continuar.",

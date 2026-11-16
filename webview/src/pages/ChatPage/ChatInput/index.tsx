@@ -11,6 +11,7 @@ import { ScheduleSendPopover } from './ScheduleSendPopover';
 import { ActionButtons } from './ActionButtons';
 import { FollowUpMenu } from './FollowUpMenu';
 import { InputFrame } from './InputFrame';
+import { InputColumn } from './InputColumn';
 import { MicButton } from './MicButton';
 import { useDictationContext } from './DictationProvider';
 import { useNavigateToLogin } from '@/hooks';
@@ -1292,7 +1293,7 @@ export function ChatInput({ cardWaiting = false }: ChatInputProps = {}) {
   }, [composerHasContent, setComposerHasContent]);
 
   return (
-    <div className="max-w-[var(--chat-column-max,44rem)] mx-auto px-4 sm:px-[var(--chat-column-px,1rem)] pb-[14px] pt-2">
+    <InputColumn>
       {/* 텔레메트리 동의 인풋배너: 미응답(PENDING)이고 이 세션에서 닫지 않았을 때만 표시 */}
       {showConsentBanner && (
         <TelemetryConsentBanner
@@ -1679,6 +1680,6 @@ export function ChatInput({ cardWaiting = false }: ChatInputProps = {}) {
           Portal로 그려지므로 위치가 레이아웃에 영향을 주지 않고, 인풋 내부에
           두면 컴포저가 조건부로 언마운트될 때 함께 사라지기 때문이다. */}
       {confirmDialog}
-    </div>
+    </InputColumn>
   );
 }

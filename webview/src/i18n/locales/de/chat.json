@@ -61,7 +61,8 @@
   },
   "archivedSession": {
     "message": "Diese Sitzung ist archiviert. Um darin weiterzuarbeiten, heben Sie die Archivierung auf.",
-    "unarchive": "Archivierung aufheben"
+    "unarchive": "Archivierung aufheben",
+    "newSession": "Neue Sitzung"
   },
   "missingFolder": {
     "message": "Der Arbeitsordner existiert nicht mehr. Wähle einen anderen Ordner, um fortzufahren.",
