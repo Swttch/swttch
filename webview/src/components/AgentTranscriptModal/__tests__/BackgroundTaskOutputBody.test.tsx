@@ -178,6 +178,22 @@ describe('BackgroundTaskOutputBody', () => {
       expect(screen.queryByText('Scroll to bottom')).not.toBeInTheDocument();
     });
 
+    // #680: the button's glide must not be cut short by a frame in which the content got shorter.
+    it('gets all the way down when the content gets shorter during the glide the button starts', () => {
+      const box = open();
+      box.userScrollTo(100);
+      raf.flushFrames();
+      fireEvent.click(screen.getByText('Scroll to bottom'));
+      raf.flushFrames(3);
+
+      box.setScrollHeight(990);
+      box.userScrollTo(box.el.scrollTop - 10);
+      raf.flushFrames(GLIDE_SETTLE_FRAMES);
+
+      expect(box.el.scrollTop).toBe(690);
+      expect(screen.queryByText('Scroll to bottom')).not.toBeInTheDocument();
+    });
+
     // Every opening starts at the newest output; no reading position is kept.
     it('opens at the newest output again after being scrolled up, and stores nothing', () => {
       vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });

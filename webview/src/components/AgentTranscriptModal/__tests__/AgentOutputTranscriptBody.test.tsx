@@ -212,6 +212,22 @@ describe('AgentOutputTranscriptBody', () => {
       expect(screen.queryByText('Scroll to bottom')).not.toBeInTheDocument();
     });
 
+    // #680: the button's glide must not be cut short by a frame in which the content got shorter.
+    it('gets all the way down when the content gets shorter during the glide the button starts', () => {
+      const { box } = open();
+      box.userScrollTo(100);
+      raf.flushFrames();
+      fireEvent.click(screen.getByText('Scroll to bottom'));
+      raf.flushFrames(3);
+
+      box.setScrollHeight(990);
+      box.userScrollTo(box.el.scrollTop - 10);
+      raf.flushFrames(GLIDE_SETTLE_FRAMES);
+
+      expect(box.el.scrollTop).toBe(690);
+      expect(screen.queryByText('Scroll to bottom')).not.toBeInTheDocument();
+    });
+
     it('follows again after the user sends the agent a message', () => {
       const { box, rerender } = open();
       box.userScrollTo(100);
@@ -223,6 +239,21 @@ describe('AgentOutputTranscriptBody', () => {
       raf.flushFrames(GLIDE_SETTLE_FRAMES);
 
       expect(box.el.scrollTop).toBe(1000);
+    });
+
+    // #680: the glide a send starts (useGlideOnSend) is the same glide, so the same frame must not cut it short.
+    it('gets all the way down after a send even if the content gets shorter during the glide', () => {
+      const { box, rerender } = open();
+      box.userScrollTo(100);
+      raf.flushFrames();
+
+      rerender(makeTask(), 1);
+      raf.flushFrames(3);
+      box.setScrollHeight(990);
+      box.userScrollTo(box.el.scrollTop - 10);
+      raf.flushFrames(GLIDE_SETTLE_FRAMES);
+
+      expect(box.el.scrollTop).toBe(690);
     });
 
     // The same signal the main chat follows on: the newest message the user
