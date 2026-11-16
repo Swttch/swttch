@@ -1,0 +1,74 @@
+/*
+  The sentences of a MorphText sit in one cell of a grid, over each other; the box is as wide as the sentence that
+  is meant to be shown, and takes that width with the steep ease-out the desktop app's summary line was measured to
+  use (about 0.2s). Text that does not fit is cut at the box, which is what uncovers a longer sentence from its start.
+*/
+.morph-text {
+  display: inline-grid;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  vertical-align: bottom;
+}
+
+.morph-fade-end {
+  mask-image: linear-gradient(to right, black calc(100% - 1.5rem), transparent);
+}
+
+[dir='rtl'] .morph-fade-end {
+  mask-image: linear-gradient(to left, black calc(100% - 1.5rem), transparent);
+}
+
+.morph-text-animated {
+  transition: width 0.2s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.morph-layer {
+  grid-area: 1 / 1;
+  /* As wide as its own text, from the start of the box, whatever the width of the box is right now. */
+  width: max-content;
+  justify-self: start;
+  white-space: nowrap;
+}
+
+.morph-in {
+  animation: morphFadeIn 0.15s ease-in-out both;
+}
+
+.morph-out {
+  animation: morphFadeOut 0.15s ease-in-out forwards;
+  pointer-events: none;
+}
+
+@keyframes morphFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes morphFadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .morph-text-animated {
+    transition: none;
+  }
+
+  .morph-in,
+  .morph-out {
+    animation: none;
+  }
+
+  .morph-out {
+    display: none;
+  }
+}

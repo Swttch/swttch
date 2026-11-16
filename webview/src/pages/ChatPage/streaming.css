@@ -27,6 +27,49 @@
   }
 }
 
+/* Words that arrive with a new chunk of a streaming reply fade in; the span of a word already on screen is kept
+   by React, so only the new ones start the animation (see utils/streamFadePlugin.ts). */
+.streaming-words .stream-word {
+  animation: 0.25s linear backwards streamWordFadeIn;
+}
+
+@keyframes streamWordFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* A reply that appears whole, just now, rises a little into place. */
+.reply-slide-up {
+  animation: replySlideUp 0.45s ease-out;
+}
+
+@keyframes replySlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* A block that slides up as a whole does not also fade its words: they would all start together, as one flash. */
+.reply-slide-up .stream-word {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .streaming-words .stream-word,
+  .reply-slide-up {
+    animation: none;
+  }
+}
+
 .incomplete-indicator {
   display: inline-block;
   margin-left: 2px;

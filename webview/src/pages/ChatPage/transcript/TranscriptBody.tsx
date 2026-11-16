@@ -33,10 +33,17 @@ function TranscriptBlocks({
   showFooter,
   summary,
   summaryShown,
+  liveTail = false,
 }: {
   message: LoadedMessageDto;
   blocks: AnyContentBlockDto[];
   showFooter: boolean;
+  /**
+   * These blocks are the last thing of a turn that is still running. A reply of several blocks stops being
+   * `isStreaming` as soon as its first block is finished, though the next block keeps arriving word by word, so
+   * the words of its last block fade in on this instead.
+   */
+  liveTail?: boolean;
   /** What closes the turn, drawn between the text and the footer: the desktop app has its copy / fork row under it. */
   summary?: ReactNode;
   /** The turn has a file summary under this text: the text's last paragraph or list gives up its own bottom margin to it. */
@@ -81,6 +88,7 @@ function TranscriptBlocks({
               plain
               content={text}
               isStreaming={streaming}
+              fadeWords={liveTail && index === blocks.length - 1}
               className={`text-[var(--tr-text)] text-[1.02rem] leading-[1.3]${summaryShown && showFooter && !streaming ? ' [&_.markdown-content>*:last-child]:mb-0 [&_.markdown-content>div>*:last-child]:mb-0 [&_.markdown-content>div>ul:last-child]:pb-0 [&_.markdown-content>div>ol:last-child]:pb-0 [&_.markdown-content>div>ul:last-child>li:last-child]:pb-0 [&_.markdown-content>div>ol:last-child>li:last-child]:pb-0' : ''}`}
               message={message}
               footer={
@@ -106,7 +114,7 @@ function TranscriptBlocks({
   );
 }
 
-function SegmentView({ segment, endsTurn, onRetry, summary, summaryShown }: { segment: Segment; endsTurn: boolean; onRetry?: (messageId: string) => void; summary?: ReactNode; summaryShown?: boolean }) {
+function SegmentView({ segment, endsTurn, onRetry, summary, summaryShown, liveTail }: { segment: Segment; endsTurn: boolean; liveTail?: boolean; onRetry?: (messageId: string) => void; summary?: ReactNode; summaryShown?: boolean }) {
   switch (segment.kind) {
     case 'message':
       // What a compaction leaves in the record is drawn as the desktop app draws it: a line where it happened, the
@@ -118,7 +126,7 @@ function SegmentView({ segment, endsTurn, onRetry, summary, summaryShown }: { se
     case 'blocks':
       return (
         <div className="group transcript-prose px-4 [&_.markdown-content_p:first-child]:mt-0">
-          <TranscriptBlocks message={segment.message} blocks={segment.blocks} showFooter={endsTurn} summary={summary} summaryShown={summaryShown} />
+          <TranscriptBlocks message={segment.message} blocks={segment.blocks} showFooter={endsTurn} summary={summary} summaryShown={summaryShown} liveTail={liveTail} />
         </div>
       );
     case 'tools':
@@ -211,7 +219,7 @@ export const TranscriptBody = memo(function TranscriptBody({ body, mergedMessage
 
   return (
     <>
-      {segments.map((segment) => (
+      {segments.map((segment, segmentIndex) => (
         <Fragment key={segment.key}>
           {segment.key === planBefore && <>{plan}{waiting}</>}
         <div
@@ -225,7 +233,7 @@ export const TranscriptBody = memo(function TranscriptBody({ body, mergedMessage
             console.log(entry, mergedMessages.indexOf(entry), mergedMessages); // NEVER REMOVE THIS LINE
           }}
         >
-          <SegmentView segment={segment} endsTurn={turnEnds.has(segment.key)} onRetry={onRetry} summary={<TranscriptFileChanges body={body} sectionKey={sectionKey} hidden={turnRunning} />} summaryShown={hasFileSummary} />
+          <SegmentView segment={segment} endsTurn={turnEnds.has(segment.key)} onRetry={onRetry} summary={<TranscriptFileChanges body={body} sectionKey={sectionKey} hidden={turnRunning} />} summaryShown={hasFileSummary} liveTail={turnRunning && segmentIndex === segments.length - 1} />
         </div>
         </Fragment>
       ))}

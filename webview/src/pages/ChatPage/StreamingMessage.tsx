@@ -1,5 +1,6 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {Streamdown} from 'streamdown';
+import {Streamdown, defaultRehypePlugins} from 'streamdown';
+import {rehypeStreamFade} from '../../utils/streamFadePlugin';
 import {math} from '../../utils/mathPlugin';
 import {code} from '../../utils/codePlugin';
 import {mermaid, MERMAID_CONTROLS, useMermaidOptions} from '../../utils/mermaidPlugin';
@@ -10,9 +11,29 @@ import {MARKDOWN_COMPONENTS} from '@/pages/ChatPage/message-renderers/components
 import {prepareAssistantMarkdown} from '@/pages/ChatPage/message-renderers/utils/markdownFileLink';
 import {CodeBlockWrapControls} from '@/pages/ChatPage/message-renderers/components/CodeBlockWrapControls';
 
+/** The plugins Streamdown applies by default, then the word wrapper last so sanitizing cannot strip its class. */
+const STREAMING_REHYPE_PLUGINS = [...Object.values(defaultRehypePlugins), rehypeStreamFade];
+
+/**
+ * A reply whose first draw is already finished arrives "all at once" (the CLI wrote it whole, or a streamed
+ * reply was only seen when done). It slides up when that happens just now. Replies loaded from history carry
+ * an old time and are drawn still.
+ */
+const FRESH_REPLY_WINDOW_MS = 3000;
+const isFreshReply = (timestamp: string | undefined): boolean => {
+    if (!timestamp) return false;
+    const sentAt = Date.parse(timestamp);
+    return Number.isFinite(sentAt) && Math.abs(Date.now() - sentAt) < FRESH_REPLY_WINDOW_MS;
+};
+
 interface StreamingMessageProps {
     content: string;
     isStreaming: boolean;
+    /**
+     * Fade in the words that arrive, though `isStreaming` is off: the text still grows because the turn goes on
+     * (the last block of a reply whose earlier block was already finished). `isStreaming` on its own implies this.
+     */
+    fadeWords?: boolean;
     className?: string;
     message?: import('../../types').LoadedMessageDto;
     /**
@@ -32,6 +53,7 @@ interface StreamingMessageProps {
 export const StreamingMessage: React.FC<StreamingMessageProps> = ({
     content,
     isStreaming,
+    fadeWords = false,
     className = '',
     message,
     footer,
@@ -39,7 +61,19 @@ export const StreamingMessage: React.FC<StreamingMessageProps> = ({
 }) => {
     const mermaidOptions = useMermaidOptions();
     const [shouldAnimate, setShouldAnimate] = useState(isStreaming);
+    // Decided once, on the first draw: a reply that is not streaming yet already fresh arrives whole.
+    const [slidesUp] = useState(() => !isStreaming && !!message && isFreshReply(message.timestamp));
     const markdownRef = useRef<HTMLDivElement>(null);
+    const wordsFade = isStreaming || fadeWords;
+    // Streaming ending is the finished text coming in as a whole: the markdown is drawn again from scratch, as a card
+    // that arrives in one piece, so it slides up like one. Decided while rendering, not in an effect, so that the
+    // first frame of the new drawing already has it. (The words' own fade is held back by CSS while it plays.)
+    const [wasStreaming, setWasStreaming] = useState(isStreaming);
+    const [finalized, setFinalized] = useState(false);
+    if (wasStreaming !== isStreaming) {
+        setWasStreaming(isStreaming);
+        if (wasStreaming && !isStreaming) setFinalized(true);
+    }
 
     // useWorkingDirOrNull (not useWorkingDir): StreamingMessage is broadly reused
     // and rendered without a WorkingDirProvider in some places (and in tests),
@@ -59,12 +93,13 @@ export const StreamingMessage: React.FC<StreamingMessageProps> = ({
     }, [isStreaming]);
 
     const text = (
-        <div className={`streaming-message ${className}`}>
-            <div ref={markdownRef} className={`markdown-content ${shouldAnimate ? 'streaming-animate' : ''}`}>
+        <div className={`streaming-message ${slidesUp || finalized ? 'reply-slide-up' : ''} ${className}`}>
+            <div ref={markdownRef} className={`markdown-content ${shouldAnimate ? 'streaming-animate' : ''} ${wordsFade ? 'streaming-words' : ''}`}>
                 <Streamdown
                     mode={isStreaming ? 'streaming' : 'static'}
                     parseIncompleteMarkdown={isStreaming}
                     isAnimating={isStreaming}
+                    rehypePlugins={wordsFade ? STREAMING_REHYPE_PLUGINS : undefined}
                     components={MARKDOWN_COMPONENTS}
                     controls={{
                         code: true,

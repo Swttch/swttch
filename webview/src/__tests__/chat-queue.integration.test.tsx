@@ -141,6 +141,13 @@ function TestChatComponent() {
           .map(m => (typeof m.message?.content === 'string' ? m.message.content : ''))
           .join('|')}
       </div>
+      <div data-testid="tool-use-ids">
+        {ctx.messages
+          .flatMap(m => (m.type === 'assistant' && Array.isArray(m.message?.content) ? m.message.content : []))
+          .filter((b: any) => b.type === 'tool_use')
+          .map((b: any) => b.id)
+          .join('|')}
+      </div>
       <div data-testid="thinking-texts">
         {ctx.messages
           .flatMap(m => (m.type === 'assistant' && Array.isArray(m.message?.content) ? m.message.content : []))
@@ -403,6 +410,29 @@ describe('queued follow-up message integration', () => {
 
     await waitFor(() => expect(screen.getByTestId('thinking-texts')).toHaveTextContent('summary of the plan'));
     expect(screen.getByTestId('order')).toHaveTextContent('assistant|tool_result|user:sent mid-turn|assistant');
+  });
+
+  // The calls of one parallel tool use are written as entries of their own a few milliseconds apart, so more than one
+  // reaches the chat before the state update of the first has run. Each one then read the count of blocks already
+  // written from before the others and replaced them: only the last call stayed on screen, and the results of the
+  // others were drawn as bare boxes with the file's or the command's raw output.
+  it('keeps every call of a parallel tool use when their entries arrive together', async () => {
+    render(<TestWrapper><TestChatComponent /></TestWrapper>);
+    await startStreaming();
+
+    const assistant = (block: Record<string, unknown>) => emitBridgeEvent(MessageType.CLI_EVENT, {
+      type: 'assistant',
+      uuid: `a-${Math.random()}`,
+      timestamp: new Date().toISOString(),
+      message: { id: 'msg-parallel', role: 'assistant', content: [block] },
+    });
+    await act(async () => {
+      assistant({ type: 'tool_use', id: 'toolu_a', name: 'Bash', input: { command: 'git branch' } });
+      assistant({ type: 'tool_use', id: 'toolu_b', name: 'Read', input: { file_path: '/x/CLAUDE.md' } });
+      assistant({ type: 'tool_use', id: 'toolu_c', name: 'Bash', input: { command: 'git stash list' } });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('tool-use-ids')).toHaveTextContent('toolu_a|toolu_b|toolu_c'));
   });
 
   // The setting's description promises a key that does the opposite for one

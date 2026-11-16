@@ -14,6 +14,8 @@ import { useNow } from '@/hooks/useNow';
 import { useOptionalWorkflowState } from '@/contexts/WorkflowStateContext';
 import { ActivityGlyph, useActivityLabel, useFormatElapsed, useTurnSeconds } from './TranscriptActivity';
 import { LiveActivityContext } from './LiveActivityContext';
+import { MorphText } from './MorphText';
+import { useSettledText } from './useSettledText';
 import type { WorkingActivity } from './WorkingMark';
 import { FileChangeDetail } from './FileChangeDetail';
 import { useDesktopSession } from '@/hooks/useDesktopSession';
@@ -673,7 +675,10 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive, liveTool
   const { t } = useTranslation('chat');
   const call = calls[0];
   const runningAgentLive = useRunningAgentLive(calls);
-  const live = turnLive ?? runningAgentLive;
+  const liveNow = turnLive ?? runningAgentLive;
+  // The words of what is running as they have settled: a description is written a few letters at a time (see useSettledText).
+  const liveLabel = useSettledText(liveNow?.label ?? '');
+  const live = liveNow ? { ...liveNow, label: liveLabel || liveNow.label } : liveNow;
   const [open, setOpen] = useState(defaultOpen);
   // A row already drawn follows the view it is drawn in: Verbose opens it, another view shuts it again.
   useEffect(() => setOpen(defaultOpen), [defaultOpen]);
@@ -699,32 +704,33 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive, liveTool
         onClick={() => expandable && setOpen((v) => !v)}
         className={`flex w-full items-center gap-2.5 ${inBox ? 'px-3' : ''} py-[0.625rem] text-start text-[0.9656rem] transition-colors ${SUMMARY_TEXT} ${running && !waitedOn ? 'animate-pulse' : ''}`}
       >
-        {live ? (
-          <>
-            <ActivityGlyph activity={live.mark} />
-            <span className="min-w-0 truncate transcript-shimmer">{live.label}</span>
-            {live.elapsed && <span className="flex-shrink-0">{live.elapsed}</span>}
-          </>
-        ) : (
-        <span className={`${label.fileName ? 'flex min-w-0 items-baseline whitespace-nowrap' : 'min-w-0 truncate'}${waitedOn ? ' transcript-shimmer' : ''}`}>
-          <span className={label.fileName ? 'me-2 flex-shrink-0' : undefined}>{label.before}</span>
-          {label.fileName && (
-            <span
-              role="link"
-              tabIndex={0}
-              onClick={(event) => {
-                event.stopPropagation();
-                if (path) void openChatFile(path);
-              }}
-              className={`${LINK_TEXT} min-w-0 cursor-pointer truncate transition-[filter] hover:brightness-[1.08]`}
-            >
-              {label.fileName}
+        {live && <ActivityGlyph activity={live.mark} />}
+        {/* One MorphText stays through what is running and what was done, as in the summary line over a group. */}
+        <MorphText id={live ? `live:${live.label}` : `row:${JSON.stringify([label.before, label.fileName, label.after])}`}>
+          {live ? (
+            <span className="transcript-shimmer">{live.label}</span>
+          ) : (
+            <span className={`${label.fileName ? 'flex min-w-0 items-baseline whitespace-nowrap' : 'whitespace-nowrap'}${waitedOn ? ' transcript-shimmer' : ''}`}>
+              <span className={label.fileName ? 'me-2 flex-shrink-0' : undefined}>{label.before}</span>
+              {label.fileName && (
+                <span
+                  role="link"
+                  tabIndex={0}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    if (path) void openChatFile(path);
+                  }}
+                  className={`${LINK_TEXT} min-w-0 cursor-pointer truncate transition-[filter] hover:brightness-[1.08]`}
+                >
+                  {label.fileName}
+                </span>
+              )}
+              {label.after}
+              <RowMeta call={call} meta={label.meta} />
             </span>
           )}
-          {label.after}
-          <RowMeta call={call} meta={label.meta} />
-        </span>
-        )}
+        </MorphText>
+        {live && live.elapsed && <span className="flex-shrink-0">{live.elapsed}</span>}
         {hasFailed(call) && toolKindOf(call) !== 'sessionStart' && <span className="flex-shrink-0 text-red-400">{t('transcript.tools.failedMark')}</span>}
         {wasStopped(call) && <span className="flex-shrink-0">{t('transcript.tools.stoppedMark')}</span>}
         <LineStatsView stats={sumLineStats(calls)} />
@@ -766,6 +772,7 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
   useEffect(() => setOpen(startsOpen), [startsOpen]);
   const toggle = () => setOpen((v) => !v);
   const label = useActivityLabel();
+  const liveText = useSettledText(active && live ? label(live) : '');
   const runningAgentLive = useRunningAgentLive(calls);
   const pictures = picturesOfCalls(calls);
   const [openPicture, thumbnailViewer] = useThumbnailViewer();
@@ -798,6 +805,8 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
     );
   }
 
+  const summaryParts = groupLabelParts(calls, t);
+
   return (
     <div className="px-4 pt-3 pb-[11px]" data-transcript-tool-run>
       <button
@@ -806,23 +815,33 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
         onClick={toggle}
         className={`flex w-full items-center gap-1 py-2 text-start text-[0.9656rem] transition-colors ${SUMMARY_TEXT}`}
       >
+        {/* One MorphText stays through the three states of the line (what is running, an agent that runs, what was done),
+            so that the sentence is replaced the way the desktop app's is: crossed, and the line growing or shrinking. */}
         {active && live ? (
-          <>
-            <span className="me-2 flex"><ActivityGlyph activity={live.mark} /></span>
-            <span className="min-w-0 truncate transcript-shimmer">{label(live)}</span>
-            {!live.file && <span className="ms-2 me-1 flex-shrink-0"><TurnElapsed /></span>}
-          </>
+          <span className="me-2 flex"><ActivityGlyph activity={live.mark} /></span>
         ) : runningAgentLive ? (
-          <>
-            <span className="me-2 flex"><ActivityGlyph activity={runningAgentLive.mark} /></span>
-            <span className="min-w-0 truncate transcript-shimmer">{runningAgentLive.label}</span>
-            <span className="ms-2 me-1 flex-shrink-0">{runningAgentLive.elapsed}</span>
-          </>
+          <span className="me-2 flex"><ActivityGlyph activity={runningAgentLive.mark} /></span>
+        ) : null}
+        {/* What was done has no seconds beside it as the running lines have, whose margin keeps the arrow off the text;
+            the margin is given to it here so that the arrow does not sit against the last letter. */}
+        <MorphText
+          className={active && live || runningAgentLive ? '' : 'me-1.5'}
+          id={active && live ? `live:${liveText}` : runningAgentLive ? `agent:${runningAgentLive.label}` : `done:${JSON.stringify(summaryParts)}`}
+        >
+          {active && live ? (
+            <span className="transcript-shimmer">{liveText}</span>
+          ) : runningAgentLive ? (
+            <span className="transcript-shimmer">{runningAgentLive.label}</span>
+          ) : (
+            <GroupSummaryText {...summaryParts} />
+          )}
+        </MorphText>
+        {active && live ? (
+          !live.file && <span className="ms-2 me-1 flex-shrink-0"><TurnElapsed /></span>
+        ) : runningAgentLive ? (
+          <span className="ms-2 me-1 flex-shrink-0">{runningAgentLive.elapsed}</span>
         ) : (
-          <>
-            <GroupSummaryText {...groupLabelParts(calls, t)} />
-            <LineStatsView stats={sumLineStats(calls)} />
-          </>
+          <LineStatsView stats={sumLineStats(calls)} />
         )}
         <Chevron open={open} />
         {!open && <Thumbnails pictures={pictures} onOpen={openPicture} />}
