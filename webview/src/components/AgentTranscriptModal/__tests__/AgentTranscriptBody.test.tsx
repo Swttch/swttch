@@ -284,6 +284,23 @@ describe('AgentTranscriptBody', () => {
     expect(screen.queryByText('Scroll to bottom')).not.toBeInTheDocument();
   });
 
+  // #680: a glide crosses frames in which the content gets shorter and the browser lowers the position with it.
+  // That is the content moving, not the reader, so the button still has to bring the view all the way down.
+  it('gets all the way down when the content gets shorter during the glide the button starts', async () => {
+    const { box } = await openTranscript();
+    box.userScrollTo(500);
+    raf.flushFrames();
+    fireEvent.click(screen.getByText('Scroll to bottom'));
+    raf.flushFrames(3);
+
+    box.setScrollHeight(1990);
+    box.userScrollTo(box.el.scrollTop - 10);
+    raf.flushFrames(GLIDE_SETTLE_FRAMES);
+
+    expect(box.el.scrollTop).toBe(1590);
+    expect(screen.queryByText('Scroll to bottom')).not.toBeInTheDocument();
+  });
+
   // The main chat follows again the moment you send. A message to an agent
   // only shows up here once the CLI has resumed the agent, so the modal's own
   // count of sends is what has to do it.

@@ -1,4 +1,5 @@
 import { BasicsSection } from './Basics';
+import { ChatLoadingSection } from './ChatLoading';
 import { ComposerSection } from './Composer';
 import { NotificationsSection } from './Notifications';
 import { VoiceSection } from './Voice';
@@ -23,6 +24,7 @@ export function GeneralSettings() {
       <h2 className="text-xl font-semibold text-text-primary mb-6">{t('nav.general')}</h2>
 
       <BasicsSection />
+      <ChatLoadingSection />
       <ComposerSection />
       <NotificationsSection />
       <VoiceSection />

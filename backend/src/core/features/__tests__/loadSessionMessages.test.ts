@@ -7,20 +7,20 @@ vi.mock('../getProjectSessionsPath', () => ({
   getProjectSessionsPath: vi.fn(),
 }));
 
-// Wrap the real readJsonlEntries in a spy so tests can assert whether a page
-// request actually touched disk (cache behavior, issue #8) while preserving
-// real parsing behavior for every other test.
-vi.mock('../readJsonlEntries', async (importActual) => {
-  const actual = await importActual<typeof import('../readJsonlEntries')>();
-  return { readJsonlEntries: vi.fn(actual.readJsonlEntries) };
+// Wrap the real scanJsonlLines in a spy so tests can assert whether a page
+// request actually read the transcript (cache behavior, issue #8) while preserving
+// real reading behavior for every other test.
+vi.mock('../scanJsonl', async (importActual) => {
+  const actual = await importActual<typeof import('../scanJsonl')>();
+  return { scanJsonlLines: vi.fn(actual.scanJsonlLines) };
 });
 
 import { loadSessionMessages } from '../loadSessionMessages';
 import { getProjectSessionsPath } from '../getProjectSessionsPath';
-import { readJsonlEntries } from '../readJsonlEntries';
+import { scanJsonlLines } from '../scanJsonl';
 
 const mockGetPath = vi.mocked(getProjectSessionsPath);
-const mockReadJsonl = vi.mocked(readJsonlEntries);
+const mockScan = vi.mocked(scanJsonlLines);
 
 describe('loadSessionMessages', () => {
   let tmpDir: string;
@@ -96,7 +96,7 @@ describe('loadSessionMessages', () => {
       const permissionError = Object.assign(new Error('EACCES: permission denied'), {
         code: 'EACCES',
       });
-      mockReadJsonl.mockRejectedValueOnce(permissionError);
+      mockScan.mockRejectedValueOnce(permissionError);
 
       const result = await loadSessionMessages('/work', 'sess-unreadable');
       expect(result.messages).toEqual([]);
@@ -180,17 +180,17 @@ describe('loadSessionMessages', () => {
       JSON.stringify({ type: 'assistant', uuid: 'a2', parentUuid: 'u2' }),
     ]);
 
-    // First load populates the cache and reads the main file exactly once.
+    // First load populates the index and scans the main file exactly once.
     const first = await loadSessionMessages('/work', 'sess-cache', undefined, 2);
     expect(first.messages.map((m) => m.uuid)).toEqual(['u2', 'a2']);
-    expect(mockReadJsonl).toHaveBeenCalledTimes(1);
+    expect(mockScan).toHaveBeenCalledTimes(1);
 
-    // A page request against the same (unchanged) file must be served from the
-    // cached snapshot — no additional disk read.
-    mockReadJsonl.mockClear();
+    // A page request against the same (unchanged) file is served from the index —
+    // no further scan of the file; only the entries of the page are read back.
+    mockScan.mockClear();
     const older = await loadSessionMessages('/work', 'sess-cache', 'u2', 2);
     expect(older.messages.map((m) => m.uuid)).toEqual(['u1', 'a1']);
-    expect(mockReadJsonl).not.toHaveBeenCalled();
+    expect(mockScan).not.toHaveBeenCalled();
   });
 
   // Issue #8: a real content change (different mtime/size) must invalidate the cache.
@@ -211,11 +211,48 @@ describe('loadSessionMessages', () => {
       JSON.stringify({ type: 'assistant', uuid: 'a2', parentUuid: 'u2' }),
     ]);
 
-    mockReadJsonl.mockClear();
+    mockScan.mockClear();
     const second = await loadSessionMessages('/work', 'sess-inv');
-    // The new messages are visible and the file was re-read.
+    // The new messages are visible and the file was scanned again.
     expect(second.messages.map((m) => m.uuid)).toEqual(['u1', 'a1', 'u2', 'a2']);
-    expect(mockReadJsonl).toHaveBeenCalledTimes(1);
+    expect(mockScan).toHaveBeenCalledTimes(1);
+  });
+
+  // #680: a transcript only ever grows by appending, so a longer file is read from where the last read stopped.
+  it('reads only what was added when the session file has grown', async () => {
+    const head = [
+      JSON.stringify({ type: 'user', uuid: 'u1' }),
+      JSON.stringify({ type: 'assistant', uuid: 'a1', parentUuid: 'u1' }),
+    ].join('\n') + '\n';
+    await writeFile(join(tmpDir, 'sess-grow.jsonl'), head);
+    await loadSessionMessages('/work', 'sess-grow');
+
+    await writeFile(join(tmpDir, 'sess-grow.jsonl'), head + JSON.stringify({ type: 'user', uuid: 'u2', parentUuid: 'a1' }) + '\n');
+    mockScan.mockClear();
+    const grown = await loadSessionMessages('/work', 'sess-grow');
+
+    expect(grown.messages.map((m) => m.uuid)).toEqual(['u1', 'a1', 'u2']);
+    // The scan began after the lines already indexed, not at the start of the file.
+    const calls = mockScan.mock.calls.filter(([file]) => String(file).endsWith('sess-grow.jsonl'));
+    expect(calls).toHaveLength(1);
+    expect(calls[0][1]).toBe(Buffer.byteLength(head));
+  });
+
+  it('starts over when the file got shorter than what was indexed', async () => {
+    const long = [
+      JSON.stringify({ type: 'user', uuid: 'u1' }),
+      JSON.stringify({ type: 'assistant', uuid: 'a1', parentUuid: 'u1' }),
+      JSON.stringify({ type: 'user', uuid: 'u2', parentUuid: 'a1' }),
+    ].join('\n') + '\n';
+    await writeFile(join(tmpDir, 'sess-short.jsonl'), long);
+    await loadSessionMessages('/work', 'sess-short');
+
+    await writeFile(join(tmpDir, 'sess-short.jsonl'), JSON.stringify({ type: 'user', uuid: 'x1' }) + '\n');
+    mockScan.mockClear();
+    const result = await loadSessionMessages('/work', 'sess-short');
+
+    expect(result.messages.map((m) => m.uuid)).toEqual(['x1']);
+    expect(mockScan.mock.calls.filter(([file]) => String(file).endsWith('sess-short.jsonl'))[0][1]).toBe(0);
   });
 
   // Issue #6: a cursor that isn't in the active chain must not strand older history.

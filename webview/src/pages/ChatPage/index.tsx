@@ -56,10 +56,15 @@ import { usePendingPlanApproval } from '../../hooks/usePendingPlanApproval';
 import { useChatAutoScroll } from './useChatAutoScroll';
 import { useApi } from '../../contexts/ApiContext';
 import { mergeToolResults } from './mergeToolResults';
+import { reuseSections } from './reuseSections';
+import type { SendSection } from './groupIntoSendSections';
 import { mergeSplitThinkingMessages } from './mergeSplitThinkingMessages';
 import { restoreQueuedMessages } from './restoreQueuedMessages';
 import { hideCliNotes } from './hideCliNotes';
-import { isOlderPagePrepend } from './paging';
+import { splitSectionsAtGap } from './windowGapSections';
+import { ENTRY_UUID_ATTRIBUTE, useScrollAnchor } from './useScrollAnchor';
+import { useChatWindowConfig } from '@/hooks/useChatWindowConfig';
+import { firstUuidOf, nextStep } from '@/utils/transcriptWindow';
 import { useTranslation } from '@/i18n';
 import { AutoResumeProvider } from '@/contexts/AutoResumeContext';
 import { useOnboarding } from '@/contexts/OnboardingContext';
@@ -70,10 +75,12 @@ import { ChatFollowContext } from './ChatFollowContext';
 import { carriedSend } from './SendIndex/carriedSend';
 import { useSessionSends } from '@/hooks/useSessionSends';
 import type { SessionSend } from '@/shared';
-import { groupIntoSendSections } from './groupIntoSendSections';
 
 /** Stable empty list, so a session with no index yet does not re-render everything each time. */
 const EMPTY_SENDS: SessionSend[] = [];
+
+/** How long the window is left alone after a page came or went, while what was drawn settles to its height. */
+const WINDOW_SETTLE_MS = 600;
 
 export function ChatPage() {
   return (
@@ -139,7 +146,7 @@ function ChatPageContent() {
   const api = useApi();
   const onboarding = useOnboarding();
   const { currentSessionId, currentSession } = useSessionContext();
-  const { messages, isStreaming, error, disconnectCountdown, apiRetry, hasMoreOlder, oldestLoadedUuid, releaseHeldMessages, restartTurnClock } = useChatStreamContext();
+  const { messages, isStreaming, error, disconnectCountdown, apiRetry, hasMoreOlder, oldestLoadedUuid, windowGap, windowState, dropWindowPage, releaseHeldMessages, restartTurnClock } = useChatStreamContext();
   // null is the chat released so far; a named view mode draws the transcript with its own code.
   const transcriptViewMode = useTranscriptViewMode();
   // The send index sits on the start edge in the transcript view modes, where user messages are on the end side,
@@ -229,21 +236,56 @@ function ChatPageContent() {
     prevScrollTopRef,
     lastScrollHeightRef,
     autoFollowRef,
-    // The button glides with the follow's own steps rather than the browser's smooth scroll (#701).
-    scrollToBottom,
+    // The follow's own way to the bottom: a glide in its frame loop (#701), or straight there when asked.
+    scrollToBottom: followToBottom,
     releaseFollow,
   } = useChatAutoScroll(currentSessionId, messages, isStreaming);
 
-  // Page tracking refs
+  // Page tracking refs. One request for a page is in flight at a time, whichever side of the
+  // transcript it is for; `loadingPage` says which, so the right indicator is drawn.
   const isLoadingMoreRef = useRef(false);
   const hasMoreOlderRef = useRef(false);
   // Reactive mirror of isLoadingMoreRef so the "loading earlier" indicator updates
   // immediately (the ref alone can't drive a re-render → the indicator lagged).
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [loadingPage, setLoadingPage] = useState<'older' | 'gap' | null>(null);
+  const isLoadingMore = loadingPage === 'older';
+  const isLoadingGap = loadingPage === 'gap';
 
-  // Refs for scroll anchoring during prepend paging
-  const prevScrollHeightRef = useRef(0);
+  // What the transcript window holds, and the place the reader is held at while it changes (#680).
+  const windowConfig = useChatWindowConfig();
+  const windowConfigRef = useRef(windowConfig);
+  windowConfigRef.current = windowConfig;
+  const windowStateRef = useRef(windowState);
+  windowStateRef.current = windowState;
+  const windowGapKey = windowGap ? `${windowGap.afterUuid}|${windowGap.beforeUuid}` : null;
+  // The held messages, read at the moment of a question rather than closed over, and the index of each
+  // by uuid, rebuilt only when they are not the ones it was built from.
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+  const heldIndexRef = useRef<{ source: unknown; index: Map<string, number> } | null>(null);
+  const heldIndexOf = useCallback((): Map<string, number> => {
+    const source = messagesRef.current;
+    if (heldIndexRef.current?.source !== source) {
+      const index = new Map<string, number>();
+      source.forEach((m, i) => { if (typeof m.uuid === 'string') index.set(m.uuid, i); });
+      heldIndexRef.current = { source, index };
+    }
+    return heldIndexRef.current.index;
+  }, []);
+  const isHeldUuid = useCallback((uuid: string) => heldIndexOf().has(uuid), [heldIndexOf]);
+  const { capture: captureScrollAnchor, restore: restoreScrollAnchor, forget: forgetScrollAnchor } = useScrollAnchor(scrollContainerRef, isHeldUuid);
   const prevOldestUuidRef = useRef<string | null>(null);
+  const prevGapKeyRef = useRef<string | null>(null);
+  // Set while a scroll to the bottom is on its way, so the pages it passes are not loaded for nothing.
+  const scrollingToBottomRef = useRef(false);
+  // Until when the window is left alone after it last changed (see reconcile).
+  const windowSettlingUntilRef = useRef(0);
+  const windowSettleTimerRef = useRef<number | null>(null);
+  // The window is brought back in line with the reader's page by `reconcile`, defined further down; the
+  // scroll to the bottom asks for one more pass when it is over.
+  const reconcileRef = useRef<() => void>(() => {});
+  // The last page asked for and when, so a page that adds nothing new is not asked for again at once.
+  const lastRequestRef = useRef<{ key: string; at: number } | null>(null);
 
   useEffect(() => {
     hasMoreOlderRef.current = hasMoreOlder;
@@ -252,9 +294,13 @@ function ChatPageContent() {
   // Track session change (paging state; useAutoScroll resets its own)
   useEffect(() => {
     prevOldestUuidRef.current = null;
+    prevGapKeyRef.current = null;
+    lastRequestRef.current = null;
+    forgetScrollAnchor();
+    windowSettlingUntilRef.current = 0;
     isLoadingMoreRef.current = false;
-    setIsLoadingMore(false);
-  }, [currentSessionId]);
+    setLoadingPage(null);
+  }, [currentSessionId, forgetScrollAnchor]);
 
   // restoreQueuedMessages runs first: it turns the CLI's queue bookkeeping back
   // into the user messages it never wrote to the session file, so mergeToolResults
@@ -267,7 +313,19 @@ function ChatPageContent() {
 
   // One split, read by both the transcript and the send index. See the
   // `sections` prop on ChatMessageArea for why it is not computed there.
-  const sections = useMemo(() => groupIntoSendSections(mergedMessages), [mergedMessages]);
+  const split = useMemo(
+    () => splitSectionsAtGap(mergedMessages, messages, windowGap),
+    [mergedMessages, messages, windowGap],
+  );
+  // The sections that did not change stay the objects they were, so that only the one a reply is streaming into
+  // is drawn again for each word (#680).
+  const drawnSectionsRef = useRef<SendSection[]>([]);
+  const sections = useMemo(() => {
+    const reused = reuseSections(drawnSectionsRef.current, split.sections);
+    drawnSectionsRef.current = reused;
+    return reused;
+  }, [split.sections]);
+  const { gapSectionIndex } = split;
 
   /*
     Every send in the session, which two surfaces need: the rail draws a tick
@@ -279,34 +337,64 @@ function ChatPageContent() {
   const carried = useMemo(() => carriedSend(sections, sessionSends), [sections, sessionSends]);
 
 
-  // Scroll preservation on older-page prepend.
+  // Scroll preservation while the window changes.
   //
-  // Anchoring is keyed purely on oldestLoadedUuid changing to a different non-null
-  // value — i.e. an actual older-page prepend. Streaming deltas grow the newest
-  // messages and leave oldestLoadedUuid untouched, so they never enter the
-  // anchoring branch (a streaming delta doing so is what made the viewport jump).
+  // What the reader is looking at moves when entries are added or taken away above
+  // it: an older page lands in front of everything, a trim lets go of the top, a page
+  // filling the gap lands above the newest pages. Those are the moments the first
+  // entry in view is the one held in place (see useScrollAnchor). Streaming deltas grow
+  // the newest messages and change neither the oldest entry held nor the gap, so they
+  // never enter this branch (a streaming delta doing so is what made the viewport jump).
   // The loading guard is intentionally neither read nor cleared here; its lifecycle
-  // is owned by the loadOlder promise (see loadMore), so a mid-request streaming
+  // is owned by the request itself (see requestPage), so a mid-request streaming
   // delta can no longer release it early.
+  //
+  // The place to hold is noted again right here, while this is being rendered and the screen is
+  // still the old one. The note taken at the last scroll event can be a frame old: a page that arrives
+  // between a scroll and its event would otherwise move the reader back by what was scrolled since.
+  // Only reads the screen, so rendering this twice does no harm.
+  if (
+    prevOldestUuidRef.current !== null &&
+    (prevOldestUuidRef.current !== oldestLoadedUuid || prevGapKeyRef.current !== windowGapKey)
+  ) {
+    captureScrollAnchor();
+  }
+
   useLayoutEffect(() => {
     const el = scrollContainerRef.current;
     if (!el || !currentSessionId) return;
 
-    const prepended = isOlderPagePrepend(prevOldestUuidRef.current, oldestLoadedUuid);
-    if (prepended) {
-      // Older messages were prepended, adjust scroll position to prevent jumping
-      const newScrollHeight = el.scrollHeight;
-      const heightDiff = newScrollHeight - prevScrollHeightRef.current;
-      el.scrollTop = prevScrollTopRef.current + heightDiff;
-
-      // Sync scroll baselines
-      prevScrollTopRef.current = el.scrollTop;
-      lastScrollHeightRef.current = el.scrollHeight;
+    const hadSomethingHeld = prevOldestUuidRef.current !== null;
+    const topMoved = hadSomethingHeld && prevOldestUuidRef.current !== oldestLoadedUuid;
+    const gapMoved = hadSomethingHeld && prevGapKeyRef.current !== windowGapKey;
+    if (topMoved || gapMoved) {
+      windowSettlingUntilRef.current = Date.now() + WINDOW_SETTLE_MS;
+      if (restoreScrollAnchor()) {
+        // Sync scroll baselines
+        prevScrollTopRef.current = el.scrollTop;
+        lastScrollHeightRef.current = el.scrollHeight;
+      }
     }
 
-    prevScrollHeightRef.current = el.scrollHeight;
     prevOldestUuidRef.current = oldestLoadedUuid;
-  }, [messages, oldestLoadedUuid, currentSessionId]);
+    prevGapKeyRef.current = windowGapKey;
+    // The screen is now as the reader sees it: note the place for the next change.
+    captureScrollAnchor();
+  }, [messages, oldestLoadedUuid, windowGapKey, currentSessionId, restoreScrollAnchor, captureScrollAnchor, prevScrollTopRef, lastScrollHeightRef]);
+
+  const scrollToBottom = useCallback(() => {
+    // The newest pages are always held, so the way down never waits for the backend: the
+    // pages the scroll passes on the way are not worth loading.
+    scrollingToBottomRef.current = true;
+    window.setTimeout(() => {
+      scrollingToBottomRef.current = false;
+      reconcileRef.current();
+    }, 1200);
+    // A jump, not a glide: a glide runs on screen over pages that are not held (a hole the recycler left, or
+    // pages still being drawn) and stutters while they come in. The newest pages are held, so go straight there.
+    // The follow is switched on again by the same call, so what streams in afterwards is followed (#701).
+    followToBottom({ instant: true });
+  }, [followToBottom]);
 
   useAwaitingNotifications(currentSession?.title ?? null, {
     pendingPermission: pendingPermission !== null,
@@ -321,55 +409,51 @@ function ChatPageContent() {
   oldestLoadedUuidRef.current = oldestLoadedUuid;
 
   /**
-   * Ask for the page before the oldest one loaded, or null when there is nothing
-   * to ask for (nothing older, or a request already in flight).
-   *
-   * With `includeUuid` the page runs back to that entry and no further, which is
-   * how the find bar brings a match that is not loaded into the transcript.
+   * Make one request for a page, or null when another is in flight (one at a time, whichever side
+   * of the transcript it is for) or there is nothing to ask. The loading guard is closed by the
+   * request's own lifecycle, not a wall-clock guess: it resolves on the backend ACK (the handler
+   * sends SESSION_LOADED then ACK). The .finally() clears the guard for every outcome — a normal
+   * page, an empty page, an all-duplicate page, or an error — so paging can neither get permanently
+   * stuck nor fire a duplicate request with the same cursor while one is still in flight.
    */
-  const requestOlderPage = useCallback((includeUuid?: string): Promise<void> | null => {
+  const requestPage = useCallback((kind: 'older' | 'gap', request: (sessionId: string) => Promise<void>): Promise<void> | null => {
     const el = scrollContainerRef.current;
-    const cursor = oldestLoadedUuidRef.current;
-    if (!el || !hasMoreOlderRef.current || !cursor || isLoadingMoreRef.current || !currentSessionId) return null;
+    if (!el || isLoadingMoreRef.current || !currentSessionId) return null;
 
     isLoadingMoreRef.current = true;
-    setIsLoadingMore(true);
-    prevScrollHeightRef.current = el.scrollHeight;
-    prevScrollTopRef.current = el.scrollTop;
+    setLoadingPage(kind);
+    // The screen as the reader has it, so that the page can be added without moving it.
+    captureScrollAnchor();
+    return request(currentSessionId).finally(() => {
+      isLoadingMoreRef.current = false;
+      setLoadingPage(null);
+    });
+  }, [currentSessionId, captureScrollAnchor]);
 
-    // The loading guard is closed by the request's own lifecycle, not a wall-clock
-    // guess: loadOlder resolves on the backend ACK (the handler sends SESSION_LOADED
-    // then ACK). The .finally() clears the guard for every outcome — a normal page,
-    // an empty page, an all-duplicate page, or an error — so paging can neither get
-    // permanently stuck nor fire a duplicate request with the same cursor while one
-    // is still in flight.
-    return api.sessions.loadOlder(currentSessionId, cursor, undefined, undefined, includeUuid)
-      .finally(() => {
-        isLoadingMoreRef.current = false;
-        setIsLoadingMore(false);
-      });
-  }, [currentSessionId, api.sessions]);
-
+  /**
+   * The button at the top of the transcript: ask for the page before the oldest one held. The window asks for
+   * it on its own well before the reader gets there (see `reconcile`); this is for the reader who is there.
+   */
   const loadMore = useCallback(() => {
-    requestOlderPage()?.catch(err => {
+    const cursor = oldestLoadedUuidRef.current;
+    if (!hasMoreOlderRef.current || !cursor) return;
+    requestPage('older', sessionId => api.sessions.loadOlder(sessionId, cursor))?.catch(err => {
       console.error('[ChatPage] Failed to load older messages:', err);
     });
-  }, [requestOlderPage]);
+  }, [requestPage, api.sessions]);
 
-  // The find bar moves to a match that is not loaded: bring the transcript back
-  // to its entry. A scroll prefetch may already be running, so it is waited out
-  // first rather than answered with a second request for the same page.
+  // The find bar moves to a match that is not loaded: bring the page around its entry in, where the
+  // history was. A scroll prefetch may already be running, so it is waited out first rather than
+  // answered with a second request for the same page.
   const loadThrough = useCallback(async (uuid: string): Promise<void> => {
     for (let waited = 0; isLoadingMoreRef.current && waited < 100; waited++) {
       await new Promise(resolve => setTimeout(resolve, 50));
     }
-    await requestOlderPage(uuid);
-  }, [requestOlderPage]);
+    await requestPage('older', sessionId => api.sessions.loadAround(sessionId, uuid));
+  }, [requestPage, api.sessions]);
 
   // Which entries the transcript holds, asked about from outside the render.
   // The set is rebuilt only when the messages are not the ones it was built from.
-  const messagesRef = useRef(messages);
-  messagesRef.current = messages;
   const loadedUuidsRef = useRef<{ source: unknown; uuids: Set<string> } | null>(null);
   const isEntryLoaded = useCallback((uuid: string): boolean => {
     const source = messagesRef.current;
@@ -396,6 +480,103 @@ function ChatPageContent() {
     },
   }), [currentSessionId, api.sessions, isEntryLoaded, loadThrough, autoFollowRef]);
 
+  /**
+   * The indexes, among the held messages, of the first and the last entry on the screen. Both ends and
+   * not the middle: a page can be much shorter than the screen, and the middle of the screen is then
+   * well inside the stretch the reader sees, while the pages the window keeps have to reach past its edges.
+   */
+  const readerRange = useCallback((): { top: number; bottom: number } | null => {
+    const el = scrollContainerRef.current;
+    if (!el) return null;
+    const view = el.getBoundingClientRect();
+    // One screen more on each side: the gap, when there is one, is then always at least a screen away
+    // from what the reader sees, however fast they scroll, and the page that is shown is never the last.
+    const reach = el.clientHeight;
+    // What is on the screen is the merged messages, and some of those were made out of others (a restored
+    // queued message, say) and carry a uuid that none of the held entries has. Those say nothing about
+    // where the reader is in what is held, so they are passed over.
+    const heldIndex = heldIndexOf();
+    let top = -1;
+    let bottom = -1;
+    for (const node of el.querySelectorAll<HTMLElement>(`[${ENTRY_UUID_ATTRIBUTE}]`)) {
+      const rect = node.getBoundingClientRect();
+      if (rect.bottom <= view.top - reach) continue;
+      if (rect.top >= view.bottom + reach) break;
+      const at = heldIndex.get(node.getAttribute(ENTRY_UUID_ATTRIBUTE) ?? '');
+      if (at === undefined) continue;
+      if (top === -1 || at < top) top = at;
+      if (at > bottom) bottom = at;
+    }
+    return top === -1 ? null : { top, bottom };
+  }, [scrollContainerRef, heldIndexOf]);
+
+  /**
+   * Bring what is held in line with the page the reader is on, one step at a time (#680): the newest pages
+   * are always held, and around the reader's page the recycler holds as many pages above and below as the
+   * settings say. What is out of its reach is dropped and what has come within it is loaded, and nothing
+   * else decides: not which way the reader is scrolling, not how tall anything is on the screen.
+   *
+   * Asked after every scroll AND after every change to what is held, because the reader can be at the very
+   * top with nothing left to scroll: a wheel turn there makes no scroll event, so nothing would ask again.
+   * Nothing is dropped or asked for while a page is on its way: the cursor it was asked for with names
+   * entries that a drop could take away from under it.
+   */
+  const reconcile = useCallback(() => {
+    if (!scrollContainerRef.current || !currentSessionId || isLoadingMoreRef.current) return;
+    // Entries just drawn are not at their final height yet (a long reply is folded a frame after it lands, so
+    // the entries above the reader shrink by hundreds of pixels), and the reader's range measured on them
+    // is off by whole pages: a page loaded for it was dropped again for the range measured a frame later,
+    // and loaded once more. Decide on the screen as it settles into.
+    const settlingFor = windowSettlingUntilRef.current - Date.now();
+    if (settlingFor > 0) {
+      if (windowSettleTimerRef.current === null) {
+        windowSettleTimerRef.current = window.setTimeout(() => {
+          windowSettleTimerRef.current = null;
+          reconcileRef.current();
+        }, settlingFor + 20);
+      }
+      return;
+    }
+    const range = readerRange();
+    if (range === null) return;
+    const state = windowStateRef.current;
+    const config = windowConfigRef.current;
+    let step = nextStep(messagesRef.current, state, config, range.top, range.bottom);
+    if (step.kind === 'none' && config.recycle === false) {
+      // The way the chat loaded before the window: the next older page is asked for once the reader is within
+      // a screen (at least 400px) of the top, and nothing is ever dropped.
+      const el = scrollContainerRef.current;
+      const oldest = firstUuidOf(messagesRef.current);
+      if (el && state.hasOlder && oldest !== null && el.scrollTop < Math.max(400, el.clientHeight)) {
+        step = { kind: 'loadOlder', beforeUuid: oldest };
+      }
+    }
+    if (step.kind === 'none') return;
+    if (step.kind === 'drop') {
+      captureScrollAnchor();
+      dropWindowPage(step.start, config);
+      return;
+    }
+    if (scrollingToBottomRef.current) return;
+
+    // The same page asked for again within a moment means the last answer changed nothing.
+    const key = step.kind === 'loadNewer' ? `n${step.afterUuid}` : `o${step.beforeUuid}`;
+    const last = lastRequestRef.current;
+    const now = Date.now();
+    if (last && last.key === key && now - last.at < 400) return;
+    lastRequestRef.current = { key, at: now };
+
+    const failed = (err: unknown) => console.error('[ChatPage] Failed to load a page:', err);
+    if (step.kind === 'loadOlder') {
+      requestPage('older', sessionId => api.sessions.loadOlder(sessionId, step.beforeUuid))?.catch(failed);
+    } else if (step.kind === 'loadNewer') {
+      requestPage('gap', sessionId => api.sessions.loadNewer(sessionId, step.afterUuid, state.gap?.beforeUuid))?.catch(failed);
+    } else {
+      requestPage('gap', sessionId => api.sessions.loadOlder(sessionId, step.beforeUuid, state.gap?.afterUuid))?.catch(failed);
+    }
+  }, [currentSessionId, readerRange, captureScrollAnchor, dropWindowPage, requestPage, api.sessions, scrollContainerRef]);
+  reconcileRef.current = reconcile;
+
   const handleScroll = useCallback(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
@@ -403,13 +584,18 @@ function ChatPageContent() {
     // 1. Debounced save scroll position to localStorage
     rememberScrollPosition();
 
-    // 2. Prefetch the next page ~one viewport BEFORE the top, so older messages
-    //    are already in place by the time the user scrolls up — smooth, no wall.
-    const prefetchMargin = Math.max(400, el.clientHeight);
-    if (el.scrollTop < prefetchMargin && hasMoreOlderRef.current && oldestLoadedUuid && !isLoadingMoreRef.current) {
-      loadMore();
-    }
-  }, [rememberScrollPosition, oldestLoadedUuid, loadMore]);
+    // 2. The reader may be on another page now.
+    reconcile();
+
+    // 3. Note the entry in view, so a page added above it does not move the reader (see useScrollAnchor).
+    captureScrollAnchor();
+  }, [rememberScrollPosition, reconcile, captureScrollAnchor]);
+
+  // After the held messages change, or a request ends, ask again: the page that just arrived may not
+  // have been enough, and no scroll event is coming to say so.
+  useEffect(() => {
+    reconcile();
+  }, [messages, windowState, loadingPage, windowConfig, reconcile]);
 
   // No mousedown handler on this container on purpose (#513): cancelling the
   // default of a mousedown stops the browser from starting a word or drag
@@ -496,6 +682,8 @@ function ChatPageContent() {
             hasMore={hasMoreOlder}
             isLoadingMore={isLoadingMore}
             onLoadMore={loadMore}
+            gapSectionIndex={gapSectionIndex}
+            isLoadingGap={isLoadingGap}
             findInChat={findInChat}
           />
         ) : (
@@ -531,6 +719,8 @@ function ChatPageContent() {
             hasMore={hasMoreOlder}
             isLoadingMore={isLoadingMore}
             onLoadMore={loadMore}
+            gapSectionIndex={gapSectionIndex}
+            isLoadingGap={isLoadingGap}
             findInChat={findInChat}
           />
         )}

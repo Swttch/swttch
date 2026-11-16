@@ -180,9 +180,28 @@
       "overlay": "Overlay",
       "newTab": "Neuer Tab"
     },
-    "chatPagination": {
-      "label": "Chatverlauf seitenweise laden",
-      "description": "Ältere Nachrichten werden beim Scrollen nachgeladen. Bei Deaktivierung wird die gesamte Unterhaltung auf einmal geladen."
+    "chatLoading": {
+      "title": "Unterhaltungen laden",
+      "description": "Wie viel einer langen Unterhaltung der Chat gleichzeitig im Speicher hält. Was Sie wegscrollen, wird freigegeben und beim Zurückkehren neu geladen.",
+      "windowing": {
+        "label": "Weggescrollte Unterhaltung freigeben",
+        "description": "Wenn aktiviert, werden Seiten einer langen Unterhaltung, von denen Sie weggescrollt sind, aus dem Speicher entfernt und beim Zurückkehren neu geladen. Wenn deaktiviert, bleiben alle geladenen Nachrichten wie bisher im Speicher."
+      },
+      "pageSize": {
+        "label": "Nachrichten pro Ladevorgang",
+        "description": "Eine Unterhaltung wird in Seiten mit so vielen Nachrichten geladen ({{min}} bis {{max}}). Je größer die Seite, desto mehr liegt gleichzeitig im Speicher."
+      },
+      "notRecommended": "Nicht empfohlen",
+      "latestPages": {
+        "label": "Immer behaltene neueste Seiten",
+        "description": "Die neueste Unterhaltung bleibt immer mit so vielen Seiten im Speicher ({{min}} bis {{max}}), damit das Springen ans Ende nie warten muss."
+      },
+      "historyPages": {
+        "label": "Beim Lesen älterer Nachrichten behaltene Seiten",
+        "description": "Während Sie durch ältere Nachrichten zurückscrollen, bleiben so viele Seiten ({{min}} bis {{max}}) im Speicher. Seiten, von denen Sie sich entfernen, werden freigegeben und beim Zurückkehren neu geladen."
+      },
+      "total": "Bis zu {{count}} Nachrichten werden gleichzeitig im Speicher gehalten.",
+      "totalHeavy": "Bis zu {{count}} Nachrichten würden gleichzeitig im Speicher gehalten. Bei langen Unterhaltungen kann der Chat langsam werden."
     },
     "configDir": {
       "description": "Home-Verzeichnis für Claudes Konfiguration.\nenv-Umgebungsvariable",

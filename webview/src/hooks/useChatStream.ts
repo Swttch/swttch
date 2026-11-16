@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef, useEffect } from 'react';
+import { useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import { Context, getTextContent, LoadedMessageDto, Attachment, isImageAttachment, FileAttachment, FolderAttachment, ContextType } from '../types';
 import type { TextBlockDto, ToolUseBlockDto, ThinkingBlockDto, ImageBlockDto, ImageSourceDto, AnyContentBlockDto } from '../dto/message/ContentBlockDto';
 import { ContentBlockType } from '../dto/message/ContentBlockDto';
@@ -11,6 +11,19 @@ import { i18n } from '@/i18n';
 import { WorkingDirMissingError } from './WorkingDirMissingError';
 import { parseControlRequestResult } from './controlRequestResult';
 import { SIDE_QUESTION_SUBTYPE } from '../contexts/SideQuestionContext';
+import {
+  appendNewer,
+  dropPage,
+  EMPTY_WINDOW_STATE,
+  jumpTo,
+  loadInitial,
+  normalizeState,
+  prependOlder,
+  prependToLatest,
+  type WindowConfig,
+  type WindowResult,
+  type WindowState,
+} from '../utils/transcriptWindow';
 import type { ControlRequestResult, ControlResponseEvent } from './controlRequestResult';
 
 /** Re-export for backwards compatibility */
@@ -143,14 +156,31 @@ export interface UseChatStreamReturn {
   /** Echo a command with no assistant turn — for control_request commands (#270). */
   addCommandEcho: (content: string) => void;
   clearMessages: () => void;
-  loadMessages: (msgs: LoadedMessageDto[]) => void;
+  /** The newest page of a session: replaces what is held. `hasOlder` is whether the backend has entries before it. */
+  loadMessages: (msgs: LoadedMessageDto[], hasOlder?: boolean) => void;
+  /** The backend has entries older than the first one held. */
+  hasMoreOlder: boolean;
+  /** The hole between the recycler and the pages after it, or null when what is held is one run. */
+  windowGap: WindowState['gap'];
+  /** The window's bookkeeping: the gap, whether older entries exist, and where each held page begins. */
+  windowState: WindowState;
   /**
    * Take up a turn that was already running when this screen attached (a reload, a tab opened again): the
    * composer and the working indicators say so from `startedAt` on, and the turn's own events (which keep
    * arriving) carry it from there to its `result`.
    */
   resumeTurn: (startedAt: number) => void;
-  prependOlderMessages: (msgs: LoadedMessageDto[]) => void;
+  /**
+   * An older page. `beforeUuid` is the cursor it was asked for with, which says which side of the gap it belongs to;
+   * `reached` is the backend's word that it ends exactly where what is held on the far side begins.
+   */
+  prependOlderMessages: (msgs: LoadedMessageDto[], hasOlder?: boolean, beforeUuid?: string, reached?: boolean) => void;
+  /** The page after the recycler, where the gap is. `reached` is the backend's word that it ends exactly where the next pages begin. */
+  appendNewerMessages: (msgs: LoadedMessageDto[], reached?: boolean) => void;
+  /** A page centred on an entry the reader is going to; takes the recycler's place. */
+  jumpToMessages: (msgs: LoadedMessageDto[], hasOlder: boolean, config: WindowConfig) => void;
+  /** Let go of the page that begins with `start`: a recycler page that is out of the reader's reach. */
+  dropWindowPage: (start: string, config: WindowConfig) => void;
   appendMessage: (message: LoadedMessageDto) => void;
   updateMessage: (id: string, updates: Partial<LoadedMessageDto>) => void;
 
@@ -174,10 +204,48 @@ export interface UseChatStreamReturn {
 
 
 
+/** The transcript and the window's bookkeeping about it. See utils/transcriptWindow. */
+interface ChatStore {
+  messages: LoadedMessageDto[];
+  window: WindowState;
+}
+
+const EMPTY_CHAT_STORE: ChatStore = { messages: [], window: EMPTY_WINDOW_STATE };
+
+/** The bookkeeping as it applies to these messages: a gap or a page start naming an entry that is not held describes nothing. */
+function windowOf(store: ChatStore): WindowState {
+  return normalizeState(store.messages, store.window);
+}
+
+function storeFrom(result: WindowResult<LoadedMessageDto>): ChatStore {
+  return { messages: result.messages, window: result.state };
+}
+
 export function useChatStream(options: UseChatStreamOptions): UseChatStreamReturn {
   const { bridge, onStreamStart, onStreamEnd, onError, onSystemMessage, onToolUseStart, onControlRequestResult, takeSentWhileRunning } = options;
 
-  const [messages, setMessages] = useState<LoadedMessageDto[]>([]);
+  /*
+    The transcript and what is known about the rest of it (#680). Held as one
+    value so a page arriving, or a window being trimmed, changes the messages and
+    the bookkeeping in a single step: a state of messages with a gap that is not
+    the one they have must never be seen.
+
+    `setMessages` keeps the shape every call site below was written for: it
+    changes the messages and leaves the bookkeeping alone. Only the window
+    operations (loadMessages, prependOlderMessages, appendNewerMessages,
+    jumpToMessages, dropWindowPage) change both.
+  */
+  const [store, setStore] = useState<ChatStore>(EMPTY_CHAT_STORE);
+  const messages = store.messages;
+  // The bookkeeping as it applies to these messages: a gap naming an entry that is
+  // not held any more (a retry cut the tail off, say) describes nothing.
+  const windowState = useMemo(() => windowOf(store), [store]);
+  const setMessages = useCallback((update: LoadedMessageDto[] | ((prev: LoadedMessageDto[]) => LoadedMessageDto[])) => {
+    setStore(prev => {
+      const next = typeof update === 'function' ? update(prev.messages) : update;
+      return next === prev.messages ? prev : { ...prev, messages: next };
+    });
+  }, []);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   // Seconds left before a dropped connection ends the turn. Null whenever the
@@ -693,19 +761,20 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
 
   // Clear messages
   const clearMessages = useCallback(() => {
-    setMessages([]);
+    setStore(EMPTY_CHAT_STORE);
     setError(null);
     setAuthDiagnosis(null);
   }, []);
 
   // Load messages from raw JSONL entries.
   // LoadedMessageDto's @Type/@Transform decorators handle nested transformation automatically.
-  const loadMessages = useCallback((msgs: LoadedMessageDto[]) => {
+  const loadMessages = useCallback((msgs: LoadedMessageDto[], hasOlder = false) => {
     const convertedMessages = msgs
       // .filter(raw => raw.type === LoadedMessageType.User || raw.type === LoadedMessageType.Assistant)
       .map(raw => toInstance(LoadedMessageDto, raw));
 
-    setMessages(convertedMessages);
+    // The newest page: everything the backend sent is the newest pages, with no gap.
+    setStore(storeFrom(loadInitial(convertedMessages, hasOlder)));
     setError(null);
     setAuthDiagnosis(null);
     console.log('[useChatStream] Loaded messages:', convertedMessages.length);
@@ -732,17 +801,62 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     }
   }, []);
 
-  const prependOlderMessages = useCallback((msgs: LoadedMessageDto[]) => {
-    const convertedMessages = msgs.map(raw => toInstance(LoadedMessageDto, raw));
-    setMessages(prev => {
-      const existingUuids = new Set(prev.map(m => m.uuid).filter(Boolean));
-      const filteredNew = convertedMessages.filter(m => !m.uuid || !existingUuids.has(m.uuid));
-      return [...filteredNew, ...prev];
+  // The window operations below turn a page the backend sent into the next state of
+  // the transcript. Each one reads the state it is applied to inside the updater, so
+  // a stream delta that lands between the request and the page is never lost.
+
+  /**
+   * An older page. It goes in front of everything held, unless it was asked for with
+   * the first entry after the gap as its cursor: then it fills the gap from that side.
+   * Whether to hold more or less is not decided here: the page that arrives is held, and
+   * the window is brought back to what the reader's page calls for by stepping it (see
+   * `nextStep`), which drops what is out of reach before it asks for anything else.
+   */
+  const prependOlderMessages = useCallback((msgs: LoadedMessageDto[], hasOlder = false, beforeUuid?: string, reached = false) => {
+    const page = msgs.map(raw => toInstance(LoadedMessageDto, raw));
+    setStore(prev => {
+      const state = windowOf(prev);
+      const fillsGap = state.gap !== null && beforeUuid !== undefined && beforeUuid === state.gap.beforeUuid;
+      return storeFrom(fillsGap ? prependToLatest(prev.messages, state, page, reached) : prependOlder(prev.messages, state, page, hasOlder));
+    });
+  }, []);
+
+  /** A newer page: goes where the gap is, after the recycler. */
+  const appendNewerMessages = useCallback((msgs: LoadedMessageDto[], reached = false) => {
+    const page = msgs.map(raw => toInstance(LoadedMessageDto, raw));
+    setStore(prev => storeFrom(appendNewer(prev.messages, windowOf(prev), page, reached)));
+  }, []);
+
+  /** A page centred on an entry the reader is going to: takes the recycler's place, the newest pages stay. */
+  const jumpToMessages = useCallback((msgs: LoadedMessageDto[], hasOlder: boolean, config: WindowConfig) => {
+    const page = msgs.map(raw => toInstance(LoadedMessageDto, raw));
+    setStore(prev => storeFrom(jumpTo(prev.messages, windowOf(prev), page, hasOlder, config)));
+  }, []);
+
+  /** Let go of the page that begins with `start`. It is named by its first entry, not by a position, so a change between asking and doing cannot make it another page. */
+  const dropWindowPage = useCallback((start: string, config: WindowConfig) => {
+    setStore(prev => {
+      const result = dropPage(prev.messages, windowOf(prev), config, start);
+      return result.messages.length === prev.messages.length ? prev : storeFrom(result);
     });
   }, []);
 
   // Retry
+  // The messages are read when a retry is asked for, not closed over: every row of the transcript is handed this
+  // function, and one that changed with the messages made every row draw again for each word of a streaming reply (#680).
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+  const addUserMessageRef = useRef(addUserMessage);
+  addUserMessageRef.current = addUserMessage;
+  const endStreamingRef = useRef(endStreaming);
+  endStreamingRef.current = endStreaming;
+  const bridgeRef = useRef(bridge);
+  bridgeRef.current = bridge;
   const retry = useCallback((messageId: string) => {
+    const messages = messagesRef.current;
+    const addUserMessage = addUserMessageRef.current;
+    const endStreaming = endStreamingRef.current;
+    const bridge = bridgeRef.current;
     const messageIndex = messages.findIndex(m => m.uuid === messageId);
     if (messageIndex === -1) return;
 
@@ -771,7 +885,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
         endStreaming();
       });
     }
-  }, [messages, addUserMessage, bridge, endStreaming]);
+  }, []);
 
   // A turn that began before this screen did (see UseChatStreamReturn.resumeTurn). The streaming state is
   // what the CLI's own events then carry to the end: the first delta opens its message as usual and the
@@ -1652,8 +1766,14 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     addCommandEcho,
     clearMessages,
     loadMessages,
+    hasMoreOlder: windowState.hasOlder,
+    windowGap: windowState.gap,
+    windowState,
     resumeTurn,
     prependOlderMessages,
+    appendNewerMessages,
+    jumpToMessages,
+    dropWindowPage,
     appendMessage,
     updateMessage,
     retry,

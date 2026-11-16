@@ -1,4 +1,4 @@
-import { loadActiveChain, type SessionMessage } from './loadSessionMessages';
+import { loadPromptChain, type SessionMessage } from './loadSessionMessages';
 import { isCliAuthoredText, isQueueOperation, queuedMidTurnCounts } from '../../shared';
 
 /**
@@ -170,7 +170,8 @@ export async function loadPromptHistory(
   beforeUuid?: string,
   limit?: number,
 ): Promise<PromptHistoryPage> {
-  const chain = await loadActiveChain(workingDir, targetSessionId);
+  // The prompt history reads user entries and queue records only, which is all the prompt chain holds.
+  const chain = await loadPromptChain(workingDir, targetSessionId);
   const prompts = collectPrompts(chain);
 
   // A cursor that is not in the list means the chain was rebuilt under the client

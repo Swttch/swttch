@@ -408,6 +408,45 @@ describe('useAutoScroll', () => {
       expect(box.el.scrollTop).toBe(readerAt);
     });
 
+    it('keeps gliding when the content gets shorter and the browser lowers the position with it (#680)', () => {
+      const { box } = mountWithBox({ isStreaming: true });
+      raf.flushFrames();
+      box.setScrollHeight(5000);
+      raf.flushFrames(5); // a glide is well under way, far from the bottom
+      expect(box.el.scrollTop).toBeLessThan(4000);
+
+      // A few pixels of content go away above the view and the browser lowers scrollTop by the same amount.
+      // That is the content moving, not the reader, so the glide must carry on.
+      box.setScrollHeight(4990);
+      box.userScrollTo(box.el.scrollTop - 10);
+      raf.flushFrames(GLIDE_SETTLE_FRAMES);
+
+      expect(box.el.scrollTop).toBe(4590);
+      expect(api.autoFollowRef.current).toBe(true);
+    });
+
+    it('does not take a frame in which the content got shorter for the reader moving up', () => {
+      const { box } = mountWithBox();
+      raf.flushFrames();
+      box.setScrollHeight(5000);
+      raf.flushFrames();
+      box.userScrollTo(500);
+      raf.flushFrames();
+      expect(api.autoFollowRef.current).toBe(false);
+      act(() => api.scrollToBottom());
+
+      for (let i = 0; i < 6; i++) {
+        raf.flushFrames(3);
+        // Every few frames the top of the held conversation is let go of and the position is lowered with it.
+        box.setScrollHeight(box.el.scrollHeight - 12);
+        box.userScrollTo(box.el.scrollTop - 12);
+      }
+      raf.flushFrames(GLIDE_SETTLE_FRAMES);
+
+      expect(box.el.scrollTop).toBe(box.el.scrollHeight - 400);
+      expect(buttonShown()).toBe(false);
+    });
+
     it('lets a jump away from the bottom run, instead of pulling the view back under it', () => {
       const { box } = mountWithBox({ isStreaming: true });
       raf.flushFrames();
@@ -511,6 +550,19 @@ describe('useAutoScroll', () => {
       expect(afterOneFrame).toBeLessThan(1600);
       expect(box.el.scrollTop).toBe(1600);
       expect(buttonShown()).toBe(false);
+    });
+
+    it('goes straight to the bottom when asked to go instantly, and follows again (#680)', () => {
+      const { box } = mountWithBox();
+      raf.flushFrames();
+      box.userScrollTo(500);
+      raf.flushFrames();
+      expect(api.autoFollowRef.current).toBe(false);
+
+      act(() => api.scrollToBottom({ instant: true }));
+
+      expect(box.lastScrollTo()).toMatchObject({ top: 2000, behavior: 'auto' });
+      expect(api.autoFollowRef.current).toBe(true);
     });
 
     it('switches following back on when pressed, so nothing else repositions the view during the glide', () => {

@@ -29,6 +29,23 @@ export function buildSubAgentMessages(progressEntries: LoadedMessageDto[]): SubA
 }
 
 /**
+ * What the rebuilt copy of an assistant message was made from, kept per message (#680).
+ *
+ * The copy is a new object on every run, and a new object is what makes every row that draws it draw again: while
+ * a reply streams, each delta ran this and handed every message that called a tool back as a different object, so
+ * every send section above the reply drew again for one more word. The copy only differs when what went into it
+ * does: the message itself (its key here), the result, the children and the progress entries attached to its calls.
+ * Same ones in, the same copy out.
+ */
+const rebuilt = new WeakMap<LoadedMessageDto, { deps: readonly unknown[]; out: LoadedMessageDto }>();
+
+function sameDeps(a: readonly unknown[], b: readonly unknown[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
+/**
  * Merge tool_result user messages into the preceding assistant's tool_use blocks,
  * attach sub-agent progress (Task) and child messages (Skill), and hide the
  * now-merged user messages from the rendered list.
@@ -53,6 +70,16 @@ export function mergeToolResults(messages: LoadedMessageDto[]): LoadedMessageDto
   // be wrong — and could also duplicate runtime fields on re-render
   // (e.g. React StrictMode).
   const toolUseMap = new Map<string, ToolUseBlockDto>();
+  // Every entry that was attached to a call, per call: the inputs the copy of its message depends on.
+  const attachments = new Map<string, unknown[]>();
+  const attachedTo = (toolUseId: string): unknown[] => {
+    let list = attachments.get(toolUseId);
+    if (!list) {
+      list = [];
+      attachments.set(toolUseId, list);
+    }
+    return list;
+  };
   for (const msg of messages) {
     if (msg.type !== LoadedMessageType.Assistant) continue;
     const content = msg.message?.content;
@@ -80,6 +107,7 @@ export function mergeToolResults(messages: LoadedMessageDto[]): LoadedMessageDto
     // Agent is what the main thread waits on, so it keeps the nested list.
     if (toolUseBlock && toolUseBlock.input?.run_in_background !== true) {
       toolUseBlock.subAgentMessages = buildSubAgentMessages(progressEntries);
+      attachedTo(parentId).push('progress', ...progressEntries);
     }
   }
 
@@ -102,6 +130,7 @@ export function mergeToolResults(messages: LoadedMessageDto[]): LoadedMessageDto
         : undefined;
       if (notification && toolUseBlock) {
         toolUseBlock.workflowNotification = notification;
+        attachedTo(notification.toolUseId as string).push('workflow', msg);
         mergedUserMsgs.add(msg);
         continue;
       }
@@ -113,6 +142,7 @@ export function mergeToolResults(messages: LoadedMessageDto[]): LoadedMessageDto
       if (toolUseBlock) {
         if (!toolUseBlock.childMessages) toolUseBlock.childMessages = [];
         toolUseBlock.childMessages.push(msg);
+        attachedTo(msg.sourceToolUseID).push('child', msg);
         mergedUserMsgs.add(msg);
         continue; // Rendered inside the tool renderer
       }
@@ -129,6 +159,7 @@ export function mergeToolResults(messages: LoadedMessageDto[]): LoadedMessageDto
             const toolUseBlock = toolUseMap.get((block as ToolResultBlockDto).tool_use_id);
             if (toolUseBlock) {
               toolUseBlock.tool_result = msg;
+              attachedTo((block as ToolResultBlockDto).tool_use_id).push('result', msg);
               attached = true;
             }
           }
@@ -157,12 +188,24 @@ export function mergeToolResults(messages: LoadedMessageDto[]): LoadedMessageDto
       const message = msg.message;
       const content = message?.content;
       if (message && isContentBlockArray(content) && content.some(b => b.type === ContentBlockType.ToolUse)) {
+        const deps: unknown[] = [];
+        for (const block of content) {
+          if (block.type !== ContentBlockType.ToolUse) continue;
+          deps.push((block as ToolUseBlockDto).id, ...(attachments.get((block as ToolUseBlockDto).id) ?? []));
+        }
+        const known = rebuilt.get(msg);
+        if (known && sameDeps(known.deps, deps)) {
+          result.push(known.out);
+          continue;
+        }
         const newContent = content.map(block =>
           block.type === ContentBlockType.ToolUse
             ? (toolUseMap.get((block as ToolUseBlockDto).id) ?? block)
             : block,
         );
-        result.push({ ...msg, message: { ...message, content: newContent } });
+        const out = { ...msg, message: { ...message, content: newContent } };
+        rebuilt.set(msg, { deps, out });
+        result.push(out);
         continue;
       }
     }

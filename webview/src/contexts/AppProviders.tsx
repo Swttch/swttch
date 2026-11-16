@@ -7,9 +7,9 @@ import { ApiProvider, useApiContext } from './ApiContext';
 import { SessionProvider, useSessionContext } from './SessionContext';
 import { ChatStreamProvider, useChatStreamContext } from './ChatStreamContext';
 import { ThemeProvider } from './ThemeContext';
-import { SettingsProvider, useSettings } from './SettingsContext';
+import { SettingsProvider } from './SettingsContext';
 import { ZoomProvider } from './ZoomContext';
-import { SettingKey, NO_PAGINATION_LIMIT } from '@/types/settings';
+import { useChatWindowConfig } from '@/hooks/useChatWindowConfig';
 import { ClaudeSettingsProvider, useClaudeSettings } from './ClaudeSettingsContext';
 import { AuthProvider } from './AuthContext';
 import { TopBarProvider } from './TopBarContext';
@@ -64,8 +64,12 @@ export function SessionLoader({ children }: { children: ReactNode }) {
     loadSessions, currentSessionId, navigateToNewSession, mergeSession,
     isNewlyCreatedSession, setSessionState, syncEffectiveMode,
   } = useSessionContext();
-  const { loadMessages, resumeTurn, prependOlderMessages, setPaginationState, resetForSessionSwitch } = useChatStreamContext();
-  const { settings } = useSettings();
+  const { loadMessages, resumeTurn, prependOlderMessages, appendNewerMessages, jumpToMessages, resetForSessionSwitch } = useChatStreamContext();
+  // The window's size, read when a page arrives rather than closed over: a page that
+  // answers a request made before the setting changed is still cut by the current one.
+  const windowConfig = useChatWindowConfig();
+  const windowConfigRef = useRef(windowConfig);
+  windowConfigRef.current = windowConfig;
   // Not read directly — it is what makes the session-loading effect re-run when
   // a navigation swaps the working directory alongside the session id.
   const { workingDirectory } = useWorkingDir();
@@ -74,18 +78,9 @@ export function SessionLoader({ children }: { children: ReactNode }) {
   const currentSessionIdRef = useRef<string | null>(currentSessionId);
   currentSessionIdRef.current = currentSessionId;
 
-  // When paging is off, request a huge page so the backend returns the whole active
-  // chain in one shot (hasMore=false → no "load older" UI). Default on.
-  const chatPagination = settings[SettingKey.CHAT_PAGINATION] ?? true;
-
   // Track previous values for change detection
   const prevSessionIdRef = useRef<string | null | undefined>(undefined); // undefined = not yet initialized
   const prevConnectedRef = useRef(false);
-  // The pagination value the current session was last loaded with. A change must
-  // re-load the session (toggle flip, or the setting resolving after a cold
-  // deep-link where it briefly read the default before the bridge value arrived).
-  const prevPaginationRef = useRef(chatPagination);
-
   // 1. Load session list on connect
   useEffect(() => {
     if (isConnected) {
@@ -104,14 +99,12 @@ export function SessionLoader({ children }: { children: ReactNode }) {
 
     const sessionChanged = prevSessionIdRef.current !== currentSessionId;
     const reconnected = !prevConnectedRef.current && prevSessionIdRef.current !== undefined;
-    const paginationChanged = prevPaginationRef.current !== chatPagination;
 
     prevSessionIdRef.current = currentSessionId;
     prevConnectedRef.current = true;
-    prevPaginationRef.current = chatPagination;
 
     // Nothing to do if nothing relevant changed
-    if (!sessionChanged && !reconnected && !paginationChanged) return;
+    if (!sessionChanged && !reconnected) return;
 
     console.log('[SessionLoader] Session reaction:', {
       currentSessionId,
@@ -129,18 +122,16 @@ export function SessionLoader({ children }: { children: ReactNode }) {
     setSessionState(SessionState.Idle);
 
     // Load session messages (skip for new/empty sessions and newly created sessions).
-    // Paging off → request a huge page so the entire conversation loads at once.
     if (currentSessionId && !isNewlyCreatedSession(currentSessionId)) {
-      const limit = chatPagination ? undefined : NO_PAGINATION_LIMIT;
       // Read the directory from the URL rather than letting the API fall back
       // to its configured one. Opening a session nested under the directory
       // being browsed changes the session id and the working dir in the same
       // navigation, and the API's copy is refreshed by a separate effect — so
       // the fallback can still hold the previous directory here and the lookup
       // misses, leaving the conversation blank.
-      api.sessions.load(currentSessionId, readWorkingDirFromUrl(), limit);
+      api.sessions.load(currentSessionId, readWorkingDirFromUrl());
     }
-  }, [currentSessionId, workingDirectory, isConnected, chatPagination, resetForSessionSwitch, setSessionState, api.sessions, isNewlyCreatedSession]);
+  }, [currentSessionId, workingDirectory, isConnected, resetForSessionSwitch, setSessionState, api.sessions, isNewlyCreatedSession]);
 
   // 3. Subscribe to SESSION_LOADED — with sessionId guard against stale responses
   useEffect(() => {
@@ -149,8 +140,16 @@ export function SessionLoader({ children }: { children: ReactNode }) {
         const rawMessages = message.payload.messages as LoadedMessageDto[];
         const sid = message.payload?.sessionId as string | undefined;
         const prepend = message.payload?.prepend as boolean | undefined;
+        const append = message.payload?.append as boolean | undefined;
+        const around = message.payload?.around as boolean | undefined;
+        // The cursor the request named is gone from the chain: this is the newest
+        // page, sent to start over from (see backend loadSessionMessages).
+        const reset = message.payload?.reset as boolean | undefined;
         const hasMore = message.payload?.hasMore as boolean | undefined;
-        const oldestUuid = message.payload?.oldestUuid as string | undefined;
+        // The cursor an older page was asked for with: tells which side of a gap it belongs to.
+        const beforeUuid = message.payload?.beforeUuid as string | undefined;
+        // The page runs right up to the entry the request named to stop at: the gap it was filling is closed.
+        const reached = message.payload?.reached as boolean | undefined;
         const lastReportedMode = message.payload?.lastReportedMode as string | null | undefined;
         const sessionMissing = message.payload?.sessionMissing as boolean | undefined;
         const turnStartedAt = message.payload?.turnStartedAt as number | null | undefined;
@@ -189,19 +188,25 @@ export function SessionLoader({ children }: { children: ReactNode }) {
           return;
         }
 
-        console.log('[SessionLoader] Session loaded:', rawMessages.length, 'messages, prepend:', !!prepend, 'hasMore:', !!hasMore);
-        if (prepend) {
-          prependOlderMessages(rawMessages);
+        // The newest page replaces what is held. Anything else is a page of the same
+        // transcript, joined to what is held where the window says it belongs.
+        const isNewestPage = reset === true || (!prepend && !append && !around);
+        console.log('[SessionLoader] Session loaded:', rawMessages.length, 'messages, prepend:', !!prepend, 'append:', !!append, 'around:', !!around, 'reset:', !!reset, 'hasMore:', !!hasMore);
+        if (isNewestPage) {
+          loadMessages(rawMessages, !!hasMore);
+        } else if (prepend) {
+          prependOlderMessages(rawMessages, !!hasMore, beforeUuid, !!reached);
+        } else if (append) {
+          appendNewerMessages(rawMessages, !!reached);
         } else {
-          loadMessages(rawMessages);
+          jumpToMessages(rawMessages, !!hasMore, windowConfigRef.current);
         }
-        setPaginationState(!!hasMore, oldestUuid ?? null);
 
         // A turn was already running when this screen attached (a reload, a tab opened
         // again). This screen did not see it start, so it would draw an idle composer
         // (no stop button) over a CLI that is working until the answer arrived. The
         // CLI's own events carry the turn from here to its result (#673).
-        if (!prepend && typeof turnStartedAt === 'number') {
+        if (!prepend && !append && !around && typeof turnStartedAt === 'number') {
           resumeTurn(turnStartedAt);
         }
 
@@ -211,12 +216,12 @@ export function SessionLoader({ children }: { children: ReactNode }) {
         // "too far back to look" per the backend's page-only search — so the
         // composer falls back to the configured default via syncInitialInputMode,
         // same as a session with no prior mode at all.
-        if (!prepend && isValidInputMode(lastReportedMode)) {
+        if (isNewestPage && isValidInputMode(lastReportedMode)) {
           syncEffectiveMode(lastReportedMode);
         }
       }
     });
-  }, [subscribe, loadMessages, resumeTurn, prependOlderMessages, setPaginationState, isNewlyCreatedSession, syncEffectiveMode, navigateToNewSession, mergeSession]);
+  }, [subscribe, loadMessages, resumeTurn, prependOlderMessages, appendNewerMessages, jumpToMessages, isNewlyCreatedSession, syncEffectiveMode, navigateToNewSession, mergeSession]);
 
   return <>{children}</>;
 }

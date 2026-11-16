@@ -284,6 +284,8 @@ export async function handleMessage(
       break;
     case MessageType.LOAD_SESSION:
     case MessageType.LOAD_OLDER_MESSAGES:
+    case MessageType.LOAD_NEWER_MESSAGES:
+    case MessageType.LOAD_MESSAGES_AROUND:
       await loadSessionHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.LOAD_PROMPT_HISTORY:

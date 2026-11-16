@@ -10,7 +10,6 @@ import { AutoResumeOnLimitRow } from './AutoResumeOnLimitRow';
 import { FileSuggestionRow } from './FileSuggestionRow';
 import { HostModeRow } from './HostModeRow';
 import { OpenSettingsRow } from './OpenSettingsRow';
-import { ChatPaginationRow } from './ChatPaginationRow';
 import { ClaudeConfigDirRow } from './ClaudeConfigDirRow';
 import { ShowThinkingSummariesRow } from './ShowThinkingSummariesRow';
 import { NonessentialTrafficRow } from './NonessentialTrafficRow';
@@ -41,7 +40,6 @@ export function BasicsSection() {
       <FileSuggestionRow />
       <HostModeRow />
       <OpenSettingsRow />
-      <ChatPaginationRow />
       <GenerateSessionTitlesRow />
       <SessionTitleFromLastPromptRow />
       <ShowThinkingSummariesRow />

@@ -78,7 +78,10 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   openFilesWithCustom: null,
   hostMode: 'editor-tab',
   openSettingsAs: 'overlay',
-  chatPagination: true,
+  chatWindowing: true,
+  chatPageSize: 50,
+  chatLatestPages: 5,
+  chatHistoryPages: 5,
   hideToolCalls: false,
   transcriptViewMode: 'normal',
   transcriptViewModeBySession: {},
@@ -168,7 +171,10 @@ const COMMENT_MAP: Record<string, string> = {
   openFilesWithCustom: '사용자 지정 파일 열기 프로그램: { path, arguments } (arguments의 %TARGET_PATH%가 파일 경로로 치환)',
   hostMode: '채팅을 띄우는 자리: "editor-tab" | "tool-window"',
   openSettingsAs: '설정 화면을 여는 방식: "overlay" | "new-tab"',
-  chatPagination: '채팅 기록을 페이지 단위로 로드(스크롤 시 이전 메시지 추가). false면 전체를 한 번에 로드',
+  chatWindowing: '긴 대화에서 멀어진 페이지를 메모리에서 비운다. false면 불러온 메시지를 모두 메모리에 두는 이전 방식으로 동작한다',
+  chatPageSize: '채팅 기록을 한 번에 불러오는 메시지 수(한 페이지). 50~1000',
+  chatLatestPages: '항상 메모리에 두는 가장 최근 페이지 수. 2~20',
+  chatHistoryPages: '과거를 볼 때 메모리에 두는 페이지 수. 스크롤을 따라 이동한다. 2~20',
   hideToolCalls: '명령 실행·조회처럼 과정에 해당하는 도구 카드를 채팅에서 숨긴다(CLI의 focus view와 같은 자리). 파일 변경(Edit/Write)과 질문·계획처럼 사용자를 향한 것은 계속 보인다',
   transcriptViewMode: '채팅 보기 방식: "normal" | "thinking" | "verbose" | "classic". 비어 있으면(null) normal. classic은 이전 버전 채팅 UI이고, 나머지 셋은 데스크탑 앱의 Transcript view와 같으며 사용자 말풍선을 오른쪽에 두고 접기·상단 고정을 없앤다',
   transcriptViewModeBySession: '헤더 메뉴에서 세션마다 고른 보기 방식. { 세션id: "normal" | "thinking" | "verbose" | "classic" }. 항목이 없는 세션은 transcriptViewMode를 따른다',
@@ -496,8 +502,23 @@ function validateSetting(key: string, value: unknown): string | null {
         return 'notificationBanner must be a boolean or null';
       }
       break;
+    case 'chatPageSize': {
+      const n = Number(value);
+      if (!Number.isInteger(n) || n < 50 || n > 1000) {
+        return 'chatPageSize must be an integer between 50 and 1000';
+      }
+      break;
+    }
+    case 'chatLatestPages':
+    case 'chatHistoryPages': {
+      const n = Number(value);
+      if (!Number.isInteger(n) || n < 2 || n > 20) {
+        return `${key} must be an integer between 2 and 20`;
+      }
+      break;
+    }
+    case 'chatWindowing':
     case 'autoOpenDiffOnPermission':
-    case 'chatPagination':
     case 'hideToolCalls':
     case 'includeNestedSessions':
     case 'softWrap':

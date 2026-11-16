@@ -180,9 +180,28 @@
       "overlay": "Sobreposição",
       "newTab": "Nova aba"
     },
-    "chatPagination": {
-      "label": "Paginar histórico do chat",
-      "description": "Carrega mensagens mais antigas conforme você rola a tela. Desativado carrega toda a conversa de uma vez."
+    "chatLoading": {
+      "title": "Carregamento de conversas",
+      "description": "Quanto de uma conversa longa o chat mantém na memória de uma vez. O que você deixa para trás ao rolar é liberado e carregado de novo quando você volta.",
+      "windowing": {
+        "label": "Liberar a conversa da qual você se afastou",
+        "description": "Quando ativada, as páginas de uma conversa longa das quais você se afastou são liberadas da memória e carregadas de novo quando você volta. Quando desativada, todas as mensagens carregadas permanecem na memória, como antes."
+      },
+      "pageSize": {
+        "label": "Mensagens carregadas por vez",
+        "description": "Uma conversa é carregada em páginas com esta quantidade de mensagens ({{min}} a {{max}}). Quanto maior a página, mais fica na memória de uma vez."
+      },
+      "notRecommended": "Não recomendado",
+      "latestPages": {
+        "label": "Páginas mais recentes sempre mantidas",
+        "description": "A conversa mais recente fica sempre na memória, com esta quantidade de páginas ({{min}} a {{max}}), para que ir ao fim nunca precise esperar."
+      },
+      "historyPages": {
+        "label": "Páginas mantidas ao ler o histórico",
+        "description": "Enquanto você rola para trás por mensagens antigas, esta quantidade de páginas ({{min}} a {{max}}) fica na memória. As páginas de que você se afasta são liberadas e carregadas de novo quando você volta."
+      },
+      "total": "Até {{count}} mensagens são mantidas na memória de uma vez.",
+      "totalHeavy": "Até {{count}} mensagens seriam mantidas na memória de uma vez. Em conversas longas, o chat pode ficar lento."
     },
     "configDir": {
       "description": "Diretório inicial para a configuração do Claude.\nvariável de ambiente env",

@@ -182,6 +182,43 @@ describe('SessionsApi', () => {
       expect(mockBridge.request).toHaveBeenCalledWith(MessageType.LOAD_SESSION, {
         sessionId: 'session-1',
         workingDir: '/test/path',
+        limit: 50,
+      });
+    });
+  });
+
+  // #680: the transcript window asks for pages by cursor, in either direction and around an entry.
+  describe('paging the transcript', () => {
+    it('asks for the page before a cursor', async () => {
+      mockBridge.request.mockResolvedValueOnce(undefined);
+      await api.loadOlder('session-1', 'u9');
+      expect(mockBridge.request).toHaveBeenCalledWith(MessageType.LOAD_OLDER_MESSAGES, {
+        sessionId: 'session-1',
+        workingDir: '/test/path',
+        beforeUuid: 'u9',
+        limit: 50,
+      });
+    });
+
+    it('asks for the page after a cursor', async () => {
+      mockBridge.request.mockResolvedValueOnce(undefined);
+      await api.loadNewer('session-1', 'u9');
+      expect(mockBridge.request).toHaveBeenCalledWith(MessageType.LOAD_NEWER_MESSAGES, {
+        sessionId: 'session-1',
+        workingDir: '/test/path',
+        afterUuid: 'u9',
+        limit: 50,
+      });
+    });
+
+    it('asks for the page around an entry', async () => {
+      mockBridge.request.mockResolvedValueOnce(undefined);
+      await api.loadAround('session-1', 'u9');
+      expect(mockBridge.request).toHaveBeenCalledWith(MessageType.LOAD_MESSAGES_AROUND, {
+        sessionId: 'session-1',
+        workingDir: '/test/path',
+        aroundUuid: 'u9',
+        limit: 50,
       });
     });
   });

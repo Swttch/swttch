@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { useSessionContext } from '@/contexts/SessionContext';
@@ -36,11 +36,21 @@ export function useSendActions(messages: LoadedMessageDto[]): SendActionsValue {
   const { currentSessionId, workingDirectory, addNewSession, sessions } = useSessionContext();
   const api = useApi();
 
+  // The messages are read when an action is asked about, not closed over. The value this hook returns is handed to
+  // every row through a context, so one that changed with the messages made every row draw again for each word of a
+  // streaming reply (#680).
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+  // The session list is replaced whenever a title or a read time changes, which happens while a reply streams.
+  // Only the fork's title lookup needs it, and that runs on a click, so it is read then.
+  const sessionsRef = useRef(sessions);
+  sessionsRef.current = sessions;
+
   // The menu identifies a send by the key the transcript is grouped on, which is
   // whatever `uuid` the entry carries — so every answer starts by finding it.
   const sendByKey = useCallback(
-    (sendUuid: string) => messages.find((message) => message.uuid === sendUuid),
-    [messages],
+    (sendUuid: string) => messagesRef.current.find((message) => message.uuid === sendUuid),
+    [],
   );
 
   const canFork = useCallback(
@@ -49,8 +59,8 @@ export function useSendActions(messages: LoadedMessageDto[]): SendActionsValue {
   );
 
   const canRewind = useCallback(
-    (sendUuid: string) => canRewindTo(messages, sendByKey(sendUuid)),
-    [messages, sendByKey],
+    (sendUuid: string) => canRewindTo(messagesRef.current, sendByKey(sendUuid)),
+    [sendByKey],
   );
 
   const openFork = useCallback(
@@ -99,7 +109,7 @@ export function useSendActions(messages: LoadedMessageDto[]): SendActionsValue {
          * and for a send that reduces to nothing — a task notification, a bare
          * system tag — that name comes out as "No title".
          */
-        const originTitle = sessions.find((s) => s.id === currentSessionId)?.title ?? promptText;
+        const originTitle = sessionsRef.current.find((s) => s.id === currentSessionId)?.title ?? promptText;
         addNewSession(response.sessionId, originTitle, { promptText });
         /*
          * Ask for the transcript explicitly.
@@ -115,15 +125,15 @@ export function useSendActions(messages: LoadedMessageDto[]): SendActionsValue {
         toast.error(error instanceof Error ? error.message : t('sendActions.forkFailed'));
       }
     },
-    [sendByKey, currentSessionId, workingDirectory, bridge, t, addNewSession, api, sessions],
+    [sendByKey, currentSessionId, workingDirectory, bridge, t, addNewSession, api],
   );
 
   const canForkReply = useCallback(
     (replyUuid: string) => {
-      const reply = messages.find((message) => message.uuid === replyUuid);
+      const reply = messagesRef.current.find((message) => message.uuid === replyUuid);
       return reply !== undefined && !reply.isStreaming && Boolean(currentSessionId);
     },
-    [messages, currentSessionId],
+    [currentSessionId],
   );
 
   // The same branch as `openFork`, cut after the reply instead of before a send; nothing goes back into the composer.
@@ -142,7 +152,7 @@ export function useSendActions(messages: LoadedMessageDto[]): SendActionsValue {
           toast.error(response?.error || t('sendActions.forkFailed'));
           return;
         }
-        const originTitle = sessions.find((s) => s.id === currentSessionId)?.title ?? '';
+        const originTitle = sessionsRef.current.find((s) => s.id === currentSessionId)?.title ?? '';
         addNewSession(response.sessionId, originTitle, { promptText: '' });
         void api.sessions.load(response.sessionId, workingDirectory);
         toast.success(t('sendActions.forkDone'));
@@ -150,7 +160,7 @@ export function useSendActions(messages: LoadedMessageDto[]): SendActionsValue {
         toast.error(error instanceof Error ? error.message : t('sendActions.forkFailed'));
       }
     },
-    [currentSessionId, workingDirectory, bridge, t, addNewSession, api, sessions],
+    [currentSessionId, workingDirectory, bridge, t, addNewSession, api],
   );
 
   const runRewind = useCallback(

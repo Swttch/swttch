@@ -69,8 +69,15 @@ export enum SettingKey {
   // Settings screen open mode
   OPEN_SETTINGS_AS = 'openSettingsAs',
 
-  // Chat history paging
-  CHAT_PAGINATION = 'chatPagination',
+  // How much of a long conversation the chat holds in memory (#680): the size of
+  // one page, the newest pages that are always kept, and the pages of older
+  // history that follow the reader. See utils/transcriptWindow.ts.
+  // Whether the window lets go of pages the reader is far from (on) or keeps
+  // everything it has loaded, as the chat did before (off).
+  CHAT_WINDOWING = 'chatWindowing',
+  CHAT_PAGE_SIZE = 'chatPageSize',
+  CHAT_LATEST_PAGES = 'chatLatestPages',
+  CHAT_HISTORY_PAGES = 'chatHistoryPages',
 
   // Hide the cards for tools that only look or run, the way the CLI's focus
   // view does. File changes and anything addressed to the user stay; the list
@@ -301,11 +308,13 @@ export interface DockLayout {
 }
 
 /**
- * Page size sent when chat pagination is OFF: request the whole active chain in
- * one shot so the backend returns everything (hasMore=false → no "load older"
- * UI). Shared by every session-load path so they resolve the setting identically.
+ * The ranges the chat window settings accept, mirrored from the backend's
+ * validation (backend settings.ts). A page size above `recommendedMax` is allowed
+ * and flagged as not recommended: a bigger page means a bigger share of the
+ * transcript in memory at once.
  */
-export const NO_PAGINATION_LIMIT = 1_000_000;
+export const CHAT_PAGE_SIZE_RANGE = { min: 50, max: 1000, recommendedMax: 200 } as const;
+export const CHAT_PAGES_RANGE = { min: 2, max: 20 } as const;
 
 /**
  * How the Settings screen opens from the gear button:
@@ -498,7 +507,10 @@ export interface SettingsState {
   [SettingKey.OPEN_FILES_WITH_CUSTOM]: OpenFileWithCustom | null;
   [SettingKey.HOST_MODE]: HostMode;
   [SettingKey.OPEN_SETTINGS_AS]: OpenSettingsMode;
-  [SettingKey.CHAT_PAGINATION]: boolean;
+  [SettingKey.CHAT_WINDOWING]: boolean;
+  [SettingKey.CHAT_PAGE_SIZE]: number;
+  [SettingKey.CHAT_LATEST_PAGES]: number;
+  [SettingKey.CHAT_HISTORY_PAGES]: number;
   [SettingKey.HIDE_TOOL_CALLS]: boolean;
   [SettingKey.TRANSCRIPT_VIEW_MODE]: TranscriptViewMode | 'classic' | null;
   [SettingKey.TRANSCRIPT_VIEW_MODE_BY_SESSION]: Record<string, TranscriptViewMode | 'classic'>;
@@ -551,7 +563,10 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.OPEN_FILES_WITH_CUSTOM]: null,
   [SettingKey.HOST_MODE]: HostMode.EDITOR_TAB,
   [SettingKey.OPEN_SETTINGS_AS]: OpenSettingsMode.OVERLAY,
-  [SettingKey.CHAT_PAGINATION]: true,
+  [SettingKey.CHAT_WINDOWING]: true,
+  [SettingKey.CHAT_PAGE_SIZE]: 50,
+  [SettingKey.CHAT_LATEST_PAGES]: 5,
+  [SettingKey.CHAT_HISTORY_PAGES]: 5,
   [SettingKey.HIDE_TOOL_CALLS]: false,
   [SettingKey.TRANSCRIPT_VIEW_MODE]: 'normal',
   [SettingKey.TRANSCRIPT_VIEW_MODE_BY_SESSION]: {},

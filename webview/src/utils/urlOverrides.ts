@@ -11,7 +11,7 @@
  * setting, or a resolver like `resolveMessagePageSize` for a value that is not one). A value that is not a
  * number in its range is ignored, as if the parameter were not there.
  */
-import { NO_PAGINATION_LIMIT, SettingKey, TRANSCRIPT_VIEW_MODES, type SettingsState } from '@/types/settings';
+import { DEFAULT_SETTINGS, SettingKey, type SettingsState } from '@/types/settings';
 
 export const URL_OVERRIDE_KEYS = {
   PAGE_SIZE: 'pageSize',
@@ -24,9 +24,6 @@ export interface UrlOverrides {
   /** The root font size in px, which scales everything drawn in rem. */
   fontSize?: number;
 }
-
-/** How many entries a page holds in the Transcript view modes when nothing says otherwise. */
-export const TRANSCRIPT_PAGE_SIZE = 150;
 
 const PAGE_SIZE_RANGE = { min: 10, max: 2000 };
 const FONT_SIZE_RANGE = { min: 8, max: 40 };
@@ -71,38 +68,29 @@ export function resetUrlOverridesForTest(): void {
 /** The settings with every value the URL carries laid over them. */
 export function applyUrlOverridesToSettings(settings: SettingsState): SettingsState {
   const overrides = getUrlOverrides();
-  if (overrides.fontSize === undefined || settings[SettingKey.FONT_SIZE] === overrides.fontSize) return settings;
-  return { ...settings, [SettingKey.FONT_SIZE]: overrides.fontSize };
+  let result = settings;
+  if (overrides.fontSize !== undefined && settings[SettingKey.FONT_SIZE] !== overrides.fontSize) {
+    result = { ...result, [SettingKey.FONT_SIZE]: overrides.fontSize };
+  }
+  if (overrides.pageSize !== undefined && settings[SettingKey.CHAT_PAGE_SIZE] !== overrides.pageSize) {
+    result = { ...result, [SettingKey.CHAT_PAGE_SIZE]: overrides.pageSize };
+  }
+  return result;
 }
 
 let mirroredSettings: SettingsState | undefined;
 
-/** Called by SettingsContext whenever its settings change, so code outside React can tell which view is in use. */
+/** Called by SettingsContext whenever its settings change, so code outside React can read them. */
 export function mirrorSettingsForOverrides(settings: SettingsState): void {
   mirroredSettings = settings;
 }
 
-function usesTranscriptView(sessionId: string | undefined): boolean {
-  const picked = sessionId ? mirroredSettings?.[SettingKey.TRANSCRIPT_VIEW_MODE_BY_SESSION]?.[sessionId] : undefined;
-  if (picked === 'classic') return false;
-  if (TRANSCRIPT_VIEW_MODES.includes(picked as never)) return true;
-  if (!mirroredSettings) return false;
-  return mirroredSettings[SettingKey.TRANSCRIPT_VIEW_MODE] !== 'classic';
-}
-
 /**
- * How many entries to ask the backend for in one page, or undefined to leave it to the backend (50, which is
- * what the classic chat has always loaded).
- *
- * With pagination switched off (`NO_PAGINATION_LIMIT`) that size is kept as it is. Otherwise, in order: the URL's `pageSize`; a size the caller asked for on purpose (a jump that has to reach a given entry,
- * say); 150 in the Transcript view modes, which draw many entries in the space of a few classic ones; otherwise
- * undefined.
+ * How many entries one page of a session's messages holds: the `chatPageSize` setting, which the URL's
+ * `pageSize` has already been laid over (see `applyUrlOverridesToSettings`). Read outside React by the
+ * code that asks the backend for a page, so the size it asks for and the size the transcript window
+ * counts in are the same number.
  */
-export function resolveMessagePageSize(sessionId: string | undefined, explicit?: number): number | undefined {
-  // Pagination switched off in the settings means "load everything": no page size applies, the URL's included.
-  if (explicit === NO_PAGINATION_LIMIT) return explicit;
-  const fromUrl = getUrlOverrides().pageSize;
-  if (fromUrl !== undefined) return fromUrl;
-  if (explicit !== undefined) return explicit;
-  return usesTranscriptView(sessionId) ? TRANSCRIPT_PAGE_SIZE : undefined;
+export function resolveMessagePageSize(): number {
+  return mirroredSettings?.[SettingKey.CHAT_PAGE_SIZE] ?? DEFAULT_SETTINGS[SettingKey.CHAT_PAGE_SIZE];
 }

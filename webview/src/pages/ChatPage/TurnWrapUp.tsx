@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { getTextContent, type LoadedMessageDto } from '@/types';
 import { useChatInputState } from '@/contexts/ChatInputStateContext';
 import { useChatStreamContextOrNull } from '@/contexts/ChatStreamContext';
@@ -31,8 +31,8 @@ const WrapUpOfTurn: React.FC<{ next: LoadedMessageDto | null; wrapUp: Record<str
  *
  * Most turns made no wrap-up call, and they touch no context at all: the check comes before the box mounts.
  */
-export const TurnWrapUp: React.FC<Props> = ({ body, next }) => {
+export const TurnWrapUp: React.FC<Props> = memo(function TurnWrapUp({ body, next }) {
   const wrapUp = findWrapUpInput(body);
   if (!wrapUp) return null;
   return <WrapUpOfTurn next={next} wrapUp={wrapUp} />;
-};
+});

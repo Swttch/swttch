@@ -167,40 +167,45 @@ export class SessionsApi {
    * Triggers SESSION_LOADED event which AppProviders.SessionLoader handles
    * POST /sessions/:id/load
    */
-  async load(
-    sessionId: string,
-    workingDir?: string,
-    limit?: number,
-    /**
-     * An entry the page must contain, however far back it sits.
-     *
-     * Used by the send index to jump to a send the transcript has not loaded.
-     * The backend widens the page back to it rather than windowing around it,
-     * so the transcript stays one contiguous run with no hole in the middle.
-     */
-    includeUuid?: string,
-  ): Promise<void> {
+  async load(sessionId: string, workingDir?: string): Promise<void> {
     const dir = workingDir ?? this.getConfig().workingDir;
-    await this.bridge.request(MessageType.LOAD_SESSION, { sessionId, workingDir: dir, limit: resolveMessagePageSize(sessionId, limit), includeUuid });
+    await this.bridge.request(MessageType.LOAD_SESSION, { sessionId, workingDir: dir, limit: resolveMessagePageSize() });
   }
 
   /**
-   * Load older messages before a specific message cursor (paging)
+   * Load the page of messages before a message cursor, toward the oldest.
    * Triggers SESSION_LOADED event with prepend: true
    *
-   * `includeUuid` widens the page back to that entry, however far it sits, and
-   * no further. The find bar uses it to bring a match into the transcript
-   * without loading the stretch of history that is older than the match.
+   * `untilUuid` is the entry the transcript already holds on the far side of the page: the page begins
+   * right after it, and the answer says so (`reached`) when there is nothing in between.
    */
-  async loadOlder(
-    sessionId: string,
-    beforeUuid: string,
-    workingDir?: string,
-    limit?: number,
-    includeUuid?: string,
-  ): Promise<void> {
+  async loadOlder(sessionId: string, beforeUuid: string, untilUuid?: string, workingDir?: string): Promise<void> {
     const dir = workingDir ?? this.getConfig().workingDir;
-    await this.bridge.request(MessageType.LOAD_OLDER_MESSAGES, { sessionId, workingDir: dir, beforeUuid, limit: resolveMessagePageSize(sessionId, limit), includeUuid });
+    await this.bridge.request(MessageType.LOAD_OLDER_MESSAGES, { sessionId, workingDir: dir, beforeUuid, untilUuid, limit: resolveMessagePageSize() });
+  }
+
+  /**
+   * Load the page of messages after a message cursor, toward the newest. The
+   * transcript lets go of pages far from the reader, and this brings them back.
+   * Triggers SESSION_LOADED event with append: true
+   *
+   * `untilUuid` is the entry the transcript already holds on the far side of the page: the page ends
+   * right in front of it, and the answer says so (`reached`) when there is nothing in between.
+   */
+  async loadNewer(sessionId: string, afterUuid: string, untilUuid?: string, workingDir?: string): Promise<void> {
+    const dir = workingDir ?? this.getConfig().workingDir;
+    await this.bridge.request(MessageType.LOAD_NEWER_MESSAGES, { sessionId, workingDir: dir, afterUuid, untilUuid, limit: resolveMessagePageSize() });
+  }
+
+  /**
+   * Load the page of messages centred on one entry the transcript does not hold,
+   * for the find bar or the send index jumping to it. The page takes the place of
+   * the history held; the newest pages stay.
+   * Triggers SESSION_LOADED event with around: true
+   */
+  async loadAround(sessionId: string, aroundUuid: string, workingDir?: string): Promise<void> {
+    const dir = workingDir ?? this.getConfig().workingDir;
+    await this.bridge.request(MessageType.LOAD_MESSAGES_AROUND, { sessionId, workingDir: dir, aroundUuid, limit: resolveMessagePageSize() });
   }
 
   /**
@@ -284,8 +289,8 @@ export class SessionsApi {
    * Kills the existing process and reloads session messages
    * POST /sessions/:id/reclaim
    */
-  async reclaim(sessionId: string, workingDir?: string, limit?: number): Promise<void> {
+  async reclaim(sessionId: string, workingDir?: string): Promise<void> {
     const dir = workingDir ?? this.getConfig().workingDir;
-    await this.bridge.request(MessageType.RECLAIM_SESSION, { sessionId, workingDir: dir, limit: resolveMessagePageSize(sessionId, limit) });
+    await this.bridge.request(MessageType.RECLAIM_SESSION, { sessionId, workingDir: dir, limit: resolveMessagePageSize() });
   }
 }

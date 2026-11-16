@@ -53,9 +53,12 @@ describe('loadAndSendSession', () => {
     mockLoad.mockResolvedValue({
       messages: pageMessages,
       hasMore: true,
+      hasNewer: false,
+      reached: false,
+      reset: false,
       oldestUuid: 'u99',
       total: 100,
-      activeChain: fullChain,
+      workflowChain: fullChain,
       lastReportedMode: null,
       sessionMissing: false,
     });
@@ -67,8 +70,8 @@ describe('loadAndSendSession', () => {
     await loadAndSendSession('conn-1', conn, '/work', 'sess-1', {
       limit: 1_000_000,
     });
-    // signature: (workingDir, sessionId, beforeUuid, limit, includeUuid)
-    expect(mockLoad).toHaveBeenCalledWith('/work', 'sess-1', undefined, 1_000_000, undefined);
+    // signature: (workingDir, sessionId, beforeUuid, limit, afterUuid, aroundUuid, untilUuid)
+    expect(mockLoad).toHaveBeenCalledWith('/work', 'sess-1', undefined, 1_000_000, undefined, undefined, undefined);
   });
 
   it('sends SESSION_LOADED with the paging fields and prepend=false on initial load', async () => {
@@ -164,8 +167,11 @@ describe('loadAndSendSession', () => {
     mockLoad.mockResolvedValue({
       messages: [],
       hasMore: false,
+      hasNewer: false,
+      reached: false,
+      reset: false,
       total: 0,
-      activeChain: [],
+      workflowChain: [],
       lastReportedMode: null,
       sessionMissing: true,
     });
@@ -195,7 +201,36 @@ describe('loadAndSendSession', () => {
 
     const loaded = sent.find((m) => m.type === MessageType.SESSION_LOADED);
     expect(loaded?.payload).toMatchObject({ prepend: true });
-    expect(mockLoad).toHaveBeenCalledWith('/work', 'sess-1', 'u9', 50, undefined);
+    expect(mockLoad).toHaveBeenCalledWith('/work', 'sess-1', 'u9', 50, undefined, undefined, undefined);
+    expect(mockReconstruct).not.toHaveBeenCalled();
+  });
+
+  // #680: the transcript window asks for the page after an entry and the page around one.
+  it('marks append=true and skips workflow reconstruction for a newer page', async () => {
+    const { conn, sent } = makeConnections();
+    await loadAndSendSession('conn-1', conn, '/work', 'sess-1', {
+      afterUuid: 'u9',
+      limit: 50,
+      isNewerPage: true,
+    });
+
+    const loaded = sent.find((m) => m.type === MessageType.SESSION_LOADED);
+    expect(loaded?.payload).toMatchObject({ append: true, prepend: false, around: false });
+    expect(mockLoad).toHaveBeenCalledWith('/work', 'sess-1', undefined, 50, 'u9', undefined, undefined);
+    expect(mockReconstruct).not.toHaveBeenCalled();
+  });
+
+  it('marks around=true and skips workflow reconstruction for a page around an entry', async () => {
+    const { conn, sent } = makeConnections();
+    await loadAndSendSession('conn-1', conn, '/work', 'sess-1', {
+      aroundUuid: 'u5',
+      limit: 50,
+      isAroundPage: true,
+    });
+
+    const loaded = sent.find((m) => m.type === MessageType.SESSION_LOADED);
+    expect(loaded?.payload).toMatchObject({ around: true, append: false, prepend: false });
+    expect(mockLoad).toHaveBeenCalledWith('/work', 'sess-1', undefined, 50, undefined, 'u5', undefined);
     expect(mockReconstruct).not.toHaveBeenCalled();
   });
 });
