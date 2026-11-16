@@ -85,7 +85,7 @@ This is offered on Follow-up behavior, Log level, Color theme, Interface languag
 
 ## Rows that only exist globally
 
-A few settings apply to the whole app and are always saved to your global file: **Enable RTL(Right-to-left)**, **Preferred Location**, **Open Settings as**, **Paginate chat history**, **Block nonessential traffic** and **Allow all command in all sessions**. On the Project tab they are dimmed and cannot be changed, and they show the value in effect. Before, some of them looked editable on the Project tab and saved to your global file anyway.
+A few settings apply to the whole app and are always saved to your global file: **Enable RTL(Right-to-left)**, **Preferred Location**, **Open Settings as**, the four **Loading conversations** settings (**Release conversation you scrolled away from**, **Messages loaded at a time**, **Newest pages always kept**, **Pages kept while reading history**), **Block nonessential traffic** and **Allow all command in all sessions**. On the Project tab they are dimmed and cannot be changed, and they show the value in effect. Before, some of them looked editable on the Project tab and saved to your global file anyway.
 
 ## Pages without the switch
 

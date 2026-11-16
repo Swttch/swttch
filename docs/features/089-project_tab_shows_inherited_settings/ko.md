@@ -85,7 +85,7 @@ Follow-up behavior, Log level, Color theme, Interface language, Default permissi
 
 ## 전역에만 있는 행
 
-일부 설정은 앱 전체에 적용되며 언제나 전역 파일에 저장됩니다. **Enable RTL(Right-to-left)**, **Preferred Location**, **Open Settings as**, **Paginate chat history**, **Block nonessential traffic**, **Allow all command in all sessions**입니다. 프로젝트 탭에서는 이 행들이 흐리게 잠기고 적용 중인 값을 보여줍니다. 전에는 이 중 일부가 프로젝트 탭에서 고칠 수 있는 것처럼 보이면서 실제로는 전역 파일에 저장됐습니다.
+일부 설정은 앱 전체에 적용되며 언제나 전역 파일에 저장됩니다. **Enable RTL(Right-to-left)**, **Preferred Location**, **Open Settings as**, **대화 불러오기**의 설정 네 개(**Release conversation you scrolled away from**, **Messages loaded at a time**, **Newest pages always kept**, **Pages kept while reading history**), **Block nonessential traffic**, **Allow all command in all sessions**입니다. 프로젝트 탭에서는 이 행들이 흐리게 잠기고 적용 중인 값을 보여줍니다. 전에는 이 중 일부가 프로젝트 탭에서 고칠 수 있는 것처럼 보이면서 실제로는 전역 파일에 저장됐습니다.
 
 ## 스위치가 없는 페이지
 
