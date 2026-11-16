@@ -223,6 +223,9 @@ export function buildSegments(body: LoadedMessageDto[]): Segment[] {
 
   body.forEach((message, entryIndex) => {
     const key = message.uuid ?? `entry-${entryIndex}`;
+    // The segments of a streamed reply are keyed by the id it was first drawn under: its `uuid` changes with
+    // each block it finishes (see `rowKey`), and a key that followed it would draw the reply again from scratch.
+    const rowKey = message.rowKey ?? key;
     const content = message.message?.content;
     const backgroundDone = backgroundDoneOf(message);
     if (backgroundDone) {
@@ -264,11 +267,11 @@ export function buildSegments(body: LoadedMessageDto[]): Segment[] {
     if (!drawnInBlocks) {
       const isConversation = message.type === 'assistant' || isUserSend(message);
       if (run && !isConversation) {
-        deferred.push({ kind: 'message', key, message });
+        deferred.push({ kind: 'message', key: rowKey, message });
         return;
       }
       closeRun();
-      segments.push({ kind: 'message', key, message });
+      segments.push({ kind: 'message', key: rowKey, message });
       return;
     }
 
@@ -279,7 +282,7 @@ export function buildSegments(body: LoadedMessageDto[]): Segment[] {
     const flushBlocks = (endsEntry: boolean) => {
       if (pending.length === 0) return;
       closeRun();
-      segments.push({ kind: 'blocks', key: `${key}-blocks-${segments.length}`, message, blocks: pending, endsEntry });
+      segments.push({ kind: 'blocks', key: `${rowKey}-blocks-${segments.length}`, message, blocks: pending, endsEntry });
       pending = [];
     };
 

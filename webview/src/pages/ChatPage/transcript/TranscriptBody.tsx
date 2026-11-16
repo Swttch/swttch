@@ -43,6 +43,9 @@ function TranscriptBlocks({
 }) {
   const sendActions = useSendActionsValue();
   const streaming = message.isStreaming ?? false;
+  // Keyed by the id the reply was first drawn under, not its `uuid`, which a streamed reply changes with every
+  // block it finishes (see `rowKey`).
+  const keyBase = message.rowKey ?? message.uuid;
 
   return (
     <>
@@ -55,7 +58,7 @@ function TranscriptBlocks({
           if (!thinking.thinking) return null;
           return (
             <StreamingMessage
-              key={`${message.uuid}-thinking-${index}`}
+              key={`${keyBase}-thinking-${index}`}
               plain
               content={thinking.thinking}
               isStreaming={streaming}
@@ -69,11 +72,11 @@ function TranscriptBlocks({
           // `/context` reports arrive as markdown; once streamed they are drawn as the usage grid, as in the classic chat.
           const contextUsage = streaming ? null : parseContextUsage(text);
           if (contextUsage) {
-            return <ContextUsageCard key={`${message.uuid}-context-${index}`} data={contextUsage} rawMarkdown={text} />;
+            return <ContextUsageCard key={`${keyBase}-context-${index}`} data={contextUsage} rawMarkdown={text} />;
           }
           return (
             <StreamingMessage
-              key={`${message.uuid}-text-${index}`}
+              key={`${keyBase}-text-${index}`}
               plain
               content={text}
               isStreaming={streaming}
