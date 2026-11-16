@@ -4,9 +4,11 @@ import { SettingKey } from '@/types/settings';
 import {
   AUTO_SCROLL_THRESHOLD_DEFAULT,
   clampAutoScrollThreshold,
+  glideStep,
   isReaderMovingDown,
   isReaderMovingUp,
   nextAutoFollow,
+  prefersReducedMotion,
   shouldPullToBottom,
   shouldShowScrollToBottom,
 } from '@/utils/autoScroll';
@@ -57,8 +59,18 @@ export interface UseAutoScroll {
   showScrollButton: boolean;
   /** Attach to the scrolling element's `onScroll`. Remembers the position. */
   handleScroll: () => void;
-  /** Glide to the bottom. What the "Scroll to bottom" button does. */
+  /**
+   * Glide to the bottom and follow again. What the "Scroll to bottom" button
+   * does. Jumps instead when the system asks for reduced motion.
+   */
   scrollToBottom: () => void;
+  /**
+   * Stop following, for a control about to move the view away from the bottom
+   * with a smooth scroll of the browser's own (a jump to a send). The follow
+   * writes the scroll position every frame while it glides, and a write cancels
+   * such a scroll, so following has to end before the jump starts.
+   */
+  releaseFollow: () => void;
   /**
    * The scroll position and content height as of the last frame.
    *
@@ -133,6 +145,13 @@ export function useAutoScroll(options: UseAutoScrollOptions): UseAutoScroll {
   // pull to the bottom waits while this is recent. -Infinity means "not lately".
   const lastReaderUpAtRef = useRef(-Infinity);
 
+  // A glide to the bottom is under way: each frame moves the view a step (see
+  // `glideStep`) until it arrives, the reader moves it up, or following stops.
+  const glidingRef = useRef(false);
+  // The previous frame's time, on the animation-frame clock, so a glide step
+  // knows how long the frame took. Null before the first frame.
+  const lastFrameAtRef = useRef<number | null>(null);
+
   // Clean up timers on unmount
   useEffect(() => {
     return () => {
@@ -145,6 +164,7 @@ export function useAutoScroll(options: UseAutoScrollOptions): UseAutoScroll {
     isInitialScrollDoneRef.current = false;
     autoFollowRef.current = true;
     lastReaderUpAtRef.current = -Infinity;
+    glidingRef.current = false;
   }, [resetKey]);
 
   // Re-arm auto-follow whenever the user sends something, even if they had
@@ -191,6 +211,7 @@ export function useAutoScroll(options: UseAutoScrollOptions): UseAutoScroll {
           }
           isInitialScrollDoneRef.current = true;
           lastReaderUpAtRef.current = -Infinity;
+          glidingRef.current = false;
           prevScrollTopRef.current = el.scrollTop;
           lastScrollHeightRef.current = el.scrollHeight;
         } else {
@@ -205,19 +226,41 @@ export function useAutoScroll(options: UseAutoScrollOptions): UseAutoScroll {
 
           const grew = el.scrollHeight !== lastScrollHeightRef.current;
           const contentShrank = el.scrollHeight < lastScrollHeightRef.current;
-          if (isReaderMovingUp(delta, contentShrank)) lastReaderUpAtRef.current = now;
-          else if (isReaderMovingDown(delta)) lastReaderUpAtRef.current = -Infinity;
-          if (shouldPullToBottom(next, grew, dist, now - lastReaderUpAtRef.current)) {
-            // Smooth scroll during streaming, instant otherwise
-            el.scrollTo({
-              top: el.scrollHeight,
-              behavior: isStreamingRef.current ? 'smooth' : 'auto',
-            });
+          if (isReaderMovingUp(delta, contentShrank)) {
+            lastReaderUpAtRef.current = now;
+            // The reader took the view: a glide under way gives it up at once.
+            glidingRef.current = false;
+          } else if (isReaderMovingDown(delta)) {
+            lastReaderUpAtRef.current = -Infinity;
+          }
+          if (!next) glidingRef.current = false;
+          if (!glidingRef.current && shouldPullToBottom(next, grew, dist, now - lastReaderUpAtRef.current)) {
+            // A glide while streaming, a jump otherwise. Never the browser's
+            // smooth scroll: it starts from the position the page holds, which
+            // in a busy page is far behind the screen, and each new one snapped
+            // the view back to it (#701).
+            if (isStreamingRef.current && !prefersReducedMotion()) glidingRef.current = true;
+            else el.scrollTo({ top: el.scrollHeight, behavior: 'auto' });
+          }
+          if (glidingRef.current) {
+            const bottom = el.scrollHeight - el.clientHeight;
+            const gap = bottom - el.scrollTop;
+            if (gap <= 0.5) {
+              // Within half a pixel: land on the bottom exactly and stop, rather
+              // than leave a fraction a rounded scrollTop would never close.
+              if (gap > 0) el.scrollTop = bottom;
+              glidingRef.current = false;
+            } else {
+              el.scrollTop = el.scrollTop + glideStep(gap, lastFrameAtRef.current === null ? 0 : now - lastFrameAtRef.current);
+            }
           }
           lastScrollHeightRef.current = el.scrollHeight;
+          // Read back after the glide's own step, so the next frame's `delta` is
+          // only what someone else did to the view.
           prevScrollTopRef.current = el.scrollTop;
         }
       }
+      lastFrameAtRef.current = now;
       rafId = requestAnimationFrame(tick);
     };
     rafId = requestAnimationFrame(tick);
@@ -240,17 +283,26 @@ export function useAutoScroll(options: UseAutoScrollOptions): UseAutoScroll {
   const scrollToBottom = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
-    // Pressing the button is the user asking to follow the bottom again. Without
-    // this, a caller that moves the view by itself while the glide is under way
-    // (the log pane putting the reader back after text left from above) writes
-    // the scroll position and cancels the glide, and the view stops part-way.
-    // Pressing the button is the user asking to follow the bottom again. Without
-    // this, a caller that moves the view by itself while the glide is under way
-    // (the log pane putting the reader back after text left from above) writes
-    // the scroll position and cancels the glide, and the view stops part-way.
+    // Pressing the button is the user asking to follow the bottom again, so
+    // following is on at once rather than once the view is back within the
+    // resume distance, and the glide that takes the view down is the follow's
+    // own (#701): during a reply it carries straight on into following it.
     autoFollowRef.current = true;
     lastReaderUpAtRef.current = -Infinity;
-    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    if (prefersReducedMotion()) {
+      glidingRef.current = false;
+      el.scrollTo({ top: el.scrollHeight, behavior: 'auto' });
+      return;
+    }
+    glidingRef.current = true;
+  }, []);
+
+  const releaseFollow = useCallback(() => {
+    autoFollowRef.current = false;
+    glidingRef.current = false;
+    // Counted as the reader moving the view up, so the pull also waits out the
+    // hold time while the jump has not yet carried the view away from the bottom.
+    lastReaderUpAtRef.current = lastFrameAtRef.current ?? -Infinity;
   }, []);
 
   return {
@@ -258,6 +310,7 @@ export function useAutoScroll(options: UseAutoScrollOptions): UseAutoScroll {
     showScrollButton,
     handleScroll,
     scrollToBottom,
+    releaseFollow,
     prevScrollTopRef,
     lastScrollHeightRef,
     autoFollowRef,

@@ -18,9 +18,19 @@
  * localStorage read/write/delete, and every `scrollTo` call with its arguments.
  * The two recordings must be identical.
  *
- * One difference is intended and is kept out of the scripts, not out of the
- * yardstick: since #530 the pull to the bottom waits while the reader keeps
- * moving the view up (see `stops` below). The yardstick pulls at once.
+ * Two differences are intended and are kept out of the comparison, not out of
+ * the yardstick:
+ *
+ * - Since #530 the pull to the bottom waits while the reader keeps moving the
+ *   view up (see `READER_STOPS_FRAMES` below). The yardstick pulls at once.
+ * - Since #701 the pull while streaming moves the view itself, a step per
+ *   frame, instead of calling `scrollTo({ behavior: 'smooth' })`: a smooth
+ *   scroll the browser plays starts from the position the page holds, and in a
+ *   busy page that position is far behind the screen. The yardstick's smooth
+ *   calls are therefore left out of the comparison (`withoutSmooth`), and every
+ *   growth is given time to arrive (`GLIDE_SETTLES_FRAMES`). Where the view
+ *   ends up, whether it follows, the button and the remembered position must
+ *   still match exactly, and the instant calls must still match call for call.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render } from '@testing-library/react';
@@ -322,6 +332,11 @@ function runScenario(impl: Impl, scenario: Scenario): Snapshot[] {
   return records;
 }
 
+/** The yardstick's recording with its smooth scrolls taken out, which #701 replaced on purpose. */
+function withoutSmooth(records: Snapshot[]): Snapshot[] {
+  return records.map((r) => ({ ...r, scrollTo: r.scrollTo.filter((c) => c.behavior !== 'smooth') }));
+}
+
 function compare(scenario: Scenario) {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
   const before = runScenario(useHeadChatAutoScroll, scenario);
@@ -337,8 +352,12 @@ function compare(scenario: Scenario) {
 // differ on purpose, so after every move the reader stops for longer than the
 // hold before anything else happens.
 const READER_STOPS_FRAMES = 40;
+// Since #701 the pull while streaming arrives over a few frames rather than in
+// one, so after every growth the script waits until any glide has arrived. The
+// yardstick, already at the bottom, does nothing in those frames.
+const GLIDE_SETTLES_FRAMES = 120;
 const frames = (n = 1): Step => ({ name: `${n} frame(s)`, run: (c) => c.raf.flushFrames(n) });
-const grow = (h: number): Step => ({ name: `content grows to ${h}`, run: (c) => { c.box.setScrollHeight(h); c.raf.flushFrames(); } });
+const grow = (h: number): Step => ({ name: `content grows to ${h}`, run: (c) => { c.box.setScrollHeight(h); c.raf.flushFrames(1 + GLIDE_SETTLES_FRAMES); } });
 const scrollTo = (top: number): Step => ({ name: `user scrolls to ${top}`, run: (c) => { c.box.userScrollTo(top); c.raf.flushFrames(1 + READER_STOPS_FRAMES); } });
 const wait = (ms: number): Step => ({ name: `wait ${ms}ms`, run: () => { vi.advanceTimersByTime(ms); } });
 const props = (name: string, next: Partial<ChatProps>): Step => ({ name, run: (c) => { c.set(next); c.raf.flushFrames(); } });
@@ -390,13 +409,15 @@ describe('main chat auto-scroll, before and after moving into useAutoScroll', ()
       ],
     };
     const { before, now } = compare(scenario);
-    expect(now).toEqual(before);
+    expect(now).toEqual(withoutSmooth(before));
     // Not vacuous: the script really did read, write, glide and jump.
     const flat = JSON.stringify(before);
     expect(flat).toContain('get claude-gui:scroll:s1');
     expect(flat).toContain('set claude-gui:scroll:s1=');
     expect(flat).toContain('"behavior":"smooth"');
     expect(flat).toContain('"behavior":"auto"');
+    // #701: where the yardstick asked the browser for a smooth scroll, the chat now asks for none.
+    expect(JSON.stringify(now)).not.toContain('"behavior":"smooth"');
     expect(before.some((r) => r.button)).toBe(true);
     expect(before.some((r) => !r.autoFollow)).toBe(true);
   });
@@ -433,7 +454,7 @@ describe('main chat auto-scroll, before and after moving into useAutoScroll', ()
       ],
     };
     const { before, now } = compare(scenario);
-    expect(now).toEqual(before);
+    expect(now).toEqual(withoutSmooth(before));
     const flat = JSON.stringify(before);
     expect(flat).toContain('remove claude-gui:scroll:s2');
     expect(flat).toContain('get claude-gui:scroll:null');
@@ -460,7 +481,7 @@ describe('main chat auto-scroll, before and after moving into useAutoScroll', ()
       ],
     };
     const { before, now } = compare(scenario);
-    expect(now).toEqual(before);
+    expect(now).toEqual(withoutSmooth(before));
   });
 
   // The chat's paging writes the hook's baseline itself (loadMore records the
@@ -494,6 +515,6 @@ describe('main chat auto-scroll, before and after moving into useAutoScroll', ()
       ],
     };
     const { before, now } = compare(scenario);
-    expect(now).toEqual(before);
+    expect(now).toEqual(withoutSmooth(before));
   });
 });

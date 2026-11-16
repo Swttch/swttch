@@ -66,6 +66,7 @@ import { useOnboarding } from '@/contexts/OnboardingContext';
 import { ChatInput } from './ChatInput';
 import { AccountSwitchErrorBanner } from './AccountSwitchErrorBanner';
 import { SendIndex, SEND_INDEX_RAIL_WIDTH } from './SendIndex';
+import { ChatFollowContext } from './ChatFollowContext';
 import { carriedSend } from './SendIndex/carriedSend';
 import { useSessionSends } from '@/hooks/useSessionSends';
 import type { SessionSend } from '@/shared';
@@ -228,6 +229,9 @@ function ChatPageContent() {
     prevScrollTopRef,
     lastScrollHeightRef,
     autoFollowRef,
+    // The button glides with the follow's own steps rather than the browser's smooth scroll (#701).
+    scrollToBottom,
+    releaseFollow,
   } = useChatAutoScroll(currentSessionId, messages, isStreaming);
 
   // Page tracking refs
@@ -303,12 +307,6 @@ function ChatPageContent() {
     prevScrollHeightRef.current = el.scrollHeight;
     prevOldestUuidRef.current = oldestLoadedUuid;
   }, [messages, oldestLoadedUuid, currentSessionId]);
-
-  const scrollToBottom = useCallback(() => {
-    const marker = document.getElementById('scroll-bottom-marker');
-    if (!marker) return;
-    marker.scrollIntoView({ behavior: 'smooth' });
-  }, []);
 
   useAwaitingNotifications(currentSession?.title ?? null, {
     pendingPermission: pendingPermission !== null,
@@ -417,7 +415,8 @@ function ChatPageContent() {
   // default of a mousedown stops the browser from starting a word or drag
   // selection anywhere in the chat.
   return (
-    <>
+    /* A jump to a send (the send index, a pinned send's button) stops the follow before it starts (#701). */
+    <ChatFollowContext.Provider value={releaseFollow}>
     {/* While the preview pane is a column, the chat is narrowed to what is left of the window. The
         transform makes the chat the frame its fixed header is placed in, so the header narrows with it. */}
     <div
@@ -535,8 +534,6 @@ function ChatPageContent() {
             findInChat={findInChat}
           />
         )}
-
-        <div id="scroll-bottom-marker" />
 
         {/* Input Area */}
         {/* Named so a collapsed review can sit clear of it: the review is drawn
@@ -657,6 +654,6 @@ function ChatPageContent() {
     </div>
     {/* A page, picture, PDF or video the chat named, beside the chat (#593) */}
     <FilePreviewPane />
-    </>
+    </ChatFollowContext.Provider>
   );
 }

@@ -1,7 +1,7 @@
 import { useTranslation } from '@/i18n';
 import { stripSessionMentionTags } from '../ChatInput/sessionMentionTag';
 import { parseCrossSessionPreview } from '../message-renderers/CrossSessionMessageRenderer';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { CHAT_FOOTER_ID } from '../chatFooter';
 import { matchesShortcut, shouldToggleOnShortcut } from '@/utils/shortcut';
 import { isCliAuthoredText, type SessionSend } from '@/shared';
@@ -13,6 +13,7 @@ import type { SendSection } from '../groupIntoSendSections';
 import { composeSendText, sendText } from '../sendText';
 import { SendIndexList } from './SendIndexList';
 import { scrollToSend } from './scrollToSend';
+import { ChatFollowContext } from '../ChatFollowContext';
 import { readingLineSectionKey } from './readingLine';
 import { useTopBar } from '@/contexts/TopBarContext';
 
@@ -355,6 +356,8 @@ interface Props {
 
 export function SendIndex(props: Props) {
   const { sections, sessionSends, side } = props;
+  // A jump stops the chat following a streaming reply first, or the reply pulls the view back under it.
+  const releaseFollow = useContext(ChatFollowContext);
   /*
     The row being pointed at, by mouse or by keyboard.
 
@@ -395,8 +398,8 @@ export function SendIndex(props: Props) {
 
   useEffect(() => {
     if (!pendingJump) return;
-    if (scrollToSend(pendingJump)) setPendingJump(null);
-  }, [pendingJump, sections]);
+    if (scrollToSend(pendingJump, releaseFollow)) setPendingJump(null);
+  }, [pendingJump, sections, releaseFollow]);
 
   /*
     Which send the reader is on, measured off the transcript as it scrolls.
@@ -588,7 +591,7 @@ export function SendIndex(props: Props) {
       something already in front of the user would throw the transcript away and
       rebuild it for nothing.
     */
-    if (scrollToSend(entry.key)) return;
+    if (scrollToSend(entry.key, releaseFollow)) return;
     /*
       The send is further back than the transcript has loaded. Ask for a page
       that reaches it — the backend widens back to the entry rather than

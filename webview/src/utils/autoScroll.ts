@@ -33,6 +33,12 @@ export const AUTO_SCROLL_HOLD_MS = 500;
  */
 export const AUTO_SCROLL_UP_MOVE_EPS = 1;
 
+/**
+ * How quickly the follow glides to the bottom, in ms: the time in which the
+ * distance still to go shrinks to about a third (see `glideStep`).
+ */
+export const AUTO_SCROLL_GLIDE_MS = 90;
+
 /** Clamp a user-supplied resume distance into the supported range. */
 export function clampAutoScrollThreshold(value: number): number {
   if (!Number.isFinite(value)) return AUTO_SCROLL_THRESHOLD_DEFAULT;
@@ -150,4 +156,36 @@ export function shouldPullToBottom(
   if (!following || !contentGrew) return false;
   if (distanceFromBottom <= AUTO_SCROLL_BOTTOM_EPS) return false;
   return msSinceReaderMovedUp >= AUTO_SCROLL_HOLD_MS;
+}
+
+/**
+ * How far, in px, one frame of the glide moves the view toward the bottom.
+ *
+ * The follow moves the view itself, writing the scroll position a step per
+ * frame, rather than asking the browser for `scrollTo({ behavior: 'smooth' })`
+ * (issue #701). The browser plays a smooth scroll on its compositor and starts
+ * each one from the scroll position the page holds. In a busy page that
+ * position is far behind what is on screen, so each new smooth scroll, one per
+ * burst of a streaming reply, snapped the view back up and glided it down
+ * again. A step taken from where the view is can only go forward.
+ *
+ * Each step closes part of what is left (`gapPx`), more the longer the frame
+ * took (`elapsedMs`): a page that was busy for a while catches up in one step
+ * instead of crawling. It is at least 1px, so the glide always arrives, and it
+ * never passes the bottom.
+ */
+export function glideStep(gapPx: number, elapsedMs: number, glideMs = AUTO_SCROLL_GLIDE_MS): number {
+  if (!(gapPx > 0)) return 0;
+  const share = 1 - Math.exp(-Math.max(0, elapsedMs) / glideMs);
+  return Math.min(gapPx, Math.max(1, gapPx * share));
+}
+
+/**
+ * Whether the system asks for reduced motion. The browser's own smooth scroll
+ * honoured it by itself; the glide that replaced it has to ask.
+ */
+export function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined'
+    && typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }

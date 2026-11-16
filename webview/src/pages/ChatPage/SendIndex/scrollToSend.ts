@@ -70,12 +70,16 @@ export const SEND_SCROLL_OPTIONS: ScrollIntoViewOptions = {
  * Returns whether a target was found, so a caller that jumped to a send which
  * is not in the transcript yet can tell the difference between "done" and
  * "still needs loading".
+ *
+ * `releaseFollow` stops the chat following the bottom before the jump starts
+ * (see `ChatFollowContext`); it is left alone when there is nothing to jump to.
  */
-export function scrollToSend(sectionKey: string): boolean {
+export function scrollToSend(sectionKey: string, releaseFollow?: (() => void) | null): boolean {
   const sentinel = document.querySelector<HTMLElement>(
     `[data-send-section="${CSS.escape(sectionKey)}"] [data-send-sentinel]`,
   );
   if (!sentinel) return false;
+  releaseFollow?.();
   sentinel.scrollIntoView(SEND_SCROLL_OPTIONS);
   return true;
 }

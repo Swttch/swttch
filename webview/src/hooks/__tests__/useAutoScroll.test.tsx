@@ -50,6 +50,33 @@ function buttonShown() {
   return screen.queryByText('Scroll to bottom') !== null;
 }
 
+/** Enough 16ms frames for a glide of a few hundred to a few thousand pixels to arrive. */
+const GLIDE_SETTLE_FRAMES = 120;
+
+/** The scrollTop after each of `count` frames. */
+function topsOver(raf: RafQueue, box: ScrollBox, count: number): number[] {
+  const tops: number[] = [];
+  for (let i = 0; i < count; i++) {
+    raf.flushFrames();
+    tops.push(box.el.scrollTop);
+  }
+  return tops;
+}
+
+function neverGoesBack(tops: number[]): boolean {
+  return tops.every((t, i) => i === 0 || t >= tops[i - 1]);
+}
+
+/** Answer `prefers-reduced-motion: reduce` the way the system setting would. */
+function stubReducedMotion(reduce: boolean) {
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: reduce && query.includes('prefers-reduced-motion') && query.includes('reduce'),
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  }));
+}
+
 describe('useAutoScroll', () => {
   let raf: RafQueue;
 
@@ -126,8 +153,12 @@ describe('useAutoScroll', () => {
 
       box.setScrollHeight(2300);
       raf.flushFrames();
+      const afterOneFrame = box.el.scrollTop;
+      raf.flushFrames(GLIDE_SETTLE_FRAMES);
 
-      expect(box.lastScrollTo()).toEqual({ top: 2300, behavior: 'smooth' });
+      expect(afterOneFrame).toBeGreaterThan(1600);
+      expect(afterOneFrame).toBeLessThan(1900);
+      expect(box.el.scrollTop).toBe(1900);
     });
 
     // Issue #100: a big block landing at once pushes the bottom out past the
@@ -217,13 +248,14 @@ describe('useAutoScroll', () => {
       raf.flushFrames();
       const h = { height: 2000 };
       stream(box, h, 5);
+      const leftAt = box.el.scrollTop;
 
       raf.flushFrames(10); // 160ms of stillness
       h.height += 5;
       box.setScrollHeight(h.height);
       raf.flushFrames();
 
-      expect(box.scrollToCalls).toEqual([]);
+      expect(box.el.scrollTop).toBe(leftAt);
     });
 
     it('pulls the view back to the bottom once the reader has stopped inside the distance', () => {
@@ -235,9 +267,8 @@ describe('useAutoScroll', () => {
       raf.flushFrames(40); // 640ms of stillness
       h.height += 5;
       box.setScrollHeight(h.height);
-      raf.flushFrames();
+      raf.flushFrames(GLIDE_SETTLE_FRAMES);
 
-      expect(box.lastScrollTo()).toEqual({ top: h.height, behavior: 'smooth' });
       expect(box.el.scrollTop).toBe(h.height - 400);
     });
 
@@ -249,9 +280,12 @@ describe('useAutoScroll', () => {
 
       box.userScrollTo(box.el.scrollTop + 10);
       raf.flushFrames();
+      const turnedAt = box.el.scrollTop;
       h.height += 5;
       box.setScrollHeight(h.height);
       raf.flushFrames();
+      expect(box.el.scrollTop).toBeGreaterThan(turnedAt);
+      raf.flushFrames(GLIDE_SETTLE_FRAMES);
 
       expect(box.el.scrollTop).toBe(h.height - 400);
     });
@@ -292,10 +326,9 @@ describe('useAutoScroll', () => {
       box.setScrollHeight(1900); // scrollTop 1600 -> 1500
       raf.flushFrames();
       box.setScrollHeight(2000);
-      raf.flushFrames();
+      raf.flushFrames(GLIDE_SETTLE_FRAMES);
 
       expect(box.el.scrollTop).toBe(1600);
-      expect(box.lastScrollTo()).toEqual({ top: 2000, behavior: 'smooth' });
     });
 
     it('follows again at once when the reader sends something, even right after moving up', () => {
@@ -303,13 +336,139 @@ describe('useAutoScroll', () => {
       raf.flushFrames();
       const h = { height: 2000 };
       stream(box, h, 3);
+      const sentAt = box.el.scrollTop;
 
       rerender({ isStreaming: true, rearmKey: 'u2' });
       h.height += 5;
       box.setScrollHeight(h.height);
       raf.flushFrames();
+      expect(box.el.scrollTop).toBeGreaterThan(sentAt);
+      raf.flushFrames(GLIDE_SETTLE_FRAMES);
 
       expect(box.el.scrollTop).toBe(h.height - 400);
+    });
+  });
+
+  // Issue #701: a smooth scroll the browser plays starts from the scroll position the page holds. When the page
+  // is busy that position falls behind the screen, and each new smooth scroll snapped the view back to it.
+  // So the follow and the button move the view themselves, a step per frame, and never ask for one.
+  describe('moving the view without the browser\'s smooth scroll (#701)', () => {
+    const smoothCalls = (box: ScrollBox) => box.scrollToCalls.filter((c) => c.behavior === 'smooth');
+
+    it('follows a streaming reply without asking the browser for a smooth scroll', () => {
+      const { box } = mountWithBox({ isStreaming: true });
+      raf.flushFrames();
+
+      box.setScrollHeight(2300);
+      raf.flushFrames(GLIDE_SETTLE_FRAMES);
+      box.setScrollHeight(2600);
+      raf.flushFrames(GLIDE_SETTLE_FRAMES);
+
+      expect(box.el.scrollTop).toBe(2200);
+      expect(smoothCalls(box)).toEqual([]);
+    });
+
+    it('only ever moves the view down while the reply keeps growing under it', () => {
+      const { box } = mountWithBox({ isStreaming: true });
+      raf.flushFrames();
+      const tops: number[] = [];
+      let height = 2000;
+      for (let burst = 0; burst < 20; burst++) {
+        height += 60;
+        box.setScrollHeight(height);
+        tops.push(...topsOver(raf, box, 3)); // a burst lands every few frames, mid-glide
+      }
+      tops.push(...topsOver(raf, box, GLIDE_SETTLE_FRAMES));
+
+      expect(neverGoesBack(tops)).toBe(true);
+      expect(box.el.scrollTop).toBe(height - 400);
+    });
+
+    it('moves further in a frame that came late, as after a long render', () => {
+      const { box } = mountWithBox({ isStreaming: true });
+      raf.flushFrames();
+
+      raf.flushFrames(1, 300); // the next frame starts 300ms after this one
+      box.setScrollHeight(2600);
+      raf.flushFrames();
+
+      expect(box.el.scrollTop).toBeGreaterThan(1600 + 0.9 * 600);
+    });
+
+    it('stops the glide the moment the reader moves the view up', () => {
+      const { box } = mountWithBox({ isStreaming: true });
+      raf.flushFrames();
+      box.setScrollHeight(3000);
+      raf.flushFrames(2);
+
+      box.userScrollTo(box.el.scrollTop - 30);
+      const readerAt = box.el.scrollTop;
+      raf.flushFrames(GLIDE_SETTLE_FRAMES);
+
+      expect(box.el.scrollTop).toBe(readerAt);
+    });
+
+    it('lets a jump away from the bottom run, instead of pulling the view back under it', () => {
+      const { box } = mountWithBox({ isStreaming: true });
+      raf.flushFrames();
+      box.setScrollHeight(2300);
+      raf.flushFrames(2); // a glide is under way
+
+      act(() => api.releaseFollow());
+      // The jump's own animation has not moved the view yet when more of the reply lands.
+      const jumpStartedAt = box.el.scrollTop;
+      box.setScrollHeight(2400);
+      raf.flushFrames(5);
+      expect(box.el.scrollTop).toBe(jumpStartedAt);
+
+      box.el.scrollTop = 600; // the jump arrives
+      raf.flushFrames(GLIDE_SETTLE_FRAMES);
+      box.setScrollHeight(2500);
+      raf.flushFrames(GLIDE_SETTLE_FRAMES);
+
+      expect(box.el.scrollTop).toBe(600);
+      expect(api.autoFollowRef.current).toBe(false);
+      expect(buttonShown()).toBe(true);
+    });
+
+    it('presses the button without asking the browser for a smooth scroll', () => {
+      const { box } = mountWithBox();
+      raf.flushFrames();
+      box.userScrollTo(500);
+      raf.flushFrames();
+
+      act(() => api.scrollToBottom());
+      const tops = topsOver(raf, box, GLIDE_SETTLE_FRAMES);
+
+      expect(neverGoesBack(tops)).toBe(true);
+      expect(box.el.scrollTop).toBe(1600);
+      expect(smoothCalls(box)).toEqual([]);
+    });
+
+    describe('with the system asking for reduced motion', () => {
+      beforeEach(() => stubReducedMotion(true));
+
+      it('follows a streaming reply by jumping to the bottom', () => {
+        const { box } = mountWithBox({ isStreaming: true });
+        raf.flushFrames();
+
+        box.setScrollHeight(2300);
+        raf.flushFrames();
+
+        expect(box.el.scrollTop).toBe(1900);
+      });
+
+      it('jumps to the bottom when the button is pressed', () => {
+        const { box } = mountWithBox();
+        raf.flushFrames();
+        box.userScrollTo(500);
+        raf.flushFrames();
+
+        act(() => api.scrollToBottom());
+        raf.flushFrames();
+
+        expect(box.el.scrollTop).toBe(1600);
+      });
     });
   });
 
@@ -344,9 +503,13 @@ describe('useAutoScroll', () => {
       raf.flushFrames();
 
       act(() => api.scrollToBottom());
-
-      expect(box.lastScrollTo()).toEqual({ top: 2000, behavior: 'smooth' });
       raf.flushFrames();
+      const afterOneFrame = box.el.scrollTop;
+      raf.flushFrames(GLIDE_SETTLE_FRAMES);
+
+      expect(afterOneFrame).toBeGreaterThan(500);
+      expect(afterOneFrame).toBeLessThan(1600);
+      expect(box.el.scrollTop).toBe(1600);
       expect(buttonShown()).toBe(false);
     });
 
@@ -360,6 +523,21 @@ describe('useAutoScroll', () => {
       act(() => api.scrollToBottom());
 
       expect(api.autoFollowRef.current).toBe(true);
+    });
+
+    it('keeps following the reply once it has brought the view down', () => {
+      const { box } = mountWithBox({ isStreaming: true });
+      raf.flushFrames();
+      box.userScrollTo(500);
+      raf.flushFrames(40);
+
+      act(() => api.scrollToBottom());
+      raf.flushFrames(GLIDE_SETTLE_FRAMES);
+      expect(box.el.scrollTop).toBe(1600);
+
+      box.setScrollHeight(2300);
+      raf.flushFrames(GLIDE_SETTLE_FRAMES);
+      expect(box.el.scrollTop).toBe(1900);
     });
 
     it('never shows with nothing on screen', () => {
