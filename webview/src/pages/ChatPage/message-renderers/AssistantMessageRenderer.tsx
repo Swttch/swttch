@@ -31,6 +31,9 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
     mergeAdjacentTextBlocks(isContentBlockArray(content) ? content : []),
   );
   const hasContent = blocks.length > 0 || typeof content === 'string';
+  // Blocks are keyed by the id the reply was first drawn under, not its `uuid`, which a streamed reply
+  // changes with every block it finishes (see `rowKey`).
+  const keyBase = message.rowKey ?? message.uuid;
 
   // Skip rendering if message has no meaningful content (e.g. interrupted empty responses)
   if (!message.isStreaming) {
@@ -91,7 +94,7 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
                       const thinkingBlock = block as ThinkingBlockDto;
                       return (
                           <ThinkingStreamingMessage
-                              key={`${message.uuid}-thinking-${index}`}
+                              key={`${keyBase}-thinking-${index}`}
                               thinking={thinkingBlock.thinking}
                               isStreaming={message.isStreaming ?? false}
                               estimatedTokens={thinkingBlock.estimatedTokens}
@@ -111,7 +114,7 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
                       if (contextUsage) {
                         return (
                             <ContextUsageCard
-                                key={`${message.uuid}-context-${index}`}
+                                key={`${keyBase}-context-${index}`}
                                 data={contextUsage}
                                 rawMarkdown={block.text}
                             />
@@ -119,7 +122,7 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
                       }
                       return (
                           <StreamingMessage
-                              key={`${message.uuid}-text-${index}`}
+                              key={`${keyBase}-text-${index}`}
                               content={block.text}
                               isStreaming={message.isStreaming ?? false}
                               className="text-text-primary text-[1rem] leading-relaxed"

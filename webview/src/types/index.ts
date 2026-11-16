@@ -115,6 +115,14 @@ export class LoadedMessageDto {
   // the section identity do not change under the user mid-session.
   cliUuid?: string;
 
+  // UI-only: the id a streamed reply was first drawn under, which the chat keeps as
+  // its React key. The CLI writes each finished content block of a response as an
+  // entry of its own, and the reply takes over each entry's `uuid` as it arrives —
+  // a reply that thinks and makes three edits is renamed four times while it runs.
+  // Keyed by `uuid`, every rename remounted the whole reply: its cards started over,
+  // and each Edit card was drawn for a frame without its diff, pulling the view up.
+  rowKey?: string;
+
   // UI-only: whether the CLI wrote a file-history snapshot for this send, so the
   // code can be rewound to it. Arrives with `cliUuid` on SEND_RECORDED; for a
   // send read from the transcript the snapshot entry itself answers this instead.

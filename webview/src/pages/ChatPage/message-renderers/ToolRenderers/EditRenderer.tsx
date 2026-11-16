@@ -1,4 +1,4 @@
-import {useMemo, useRef, useState, useEffect} from "react";
+import {useMemo, useRef, useState, useLayoutEffect} from "react";
 import {ToolUseBlockDto} from "@/types";
 import {getAdapter} from "@/adapters";
 import {useTranslation} from "@/i18n";
@@ -116,7 +116,10 @@ export function EditRenderer(props: RendererProps) {
     const softWrap = useSoftWrapToggle();
     const [containerWidth, setContainerWidth] = useState<number>(0);
 
-    useEffect(() => {
+    // Measured before the browser paints: whether the diff is drawn depends on this width, and the card's
+    // first frame is otherwise drawn without its diff. That frame is short by the whole diff's height,
+    // which pulled a chat held at the bottom up and back each time a reply with Edit cards was redrawn.
+    useLayoutEffect(() => {
         const el = containerRef.current;
         if (!el) return;
 

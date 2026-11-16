@@ -1232,6 +1232,8 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
             return {
               ...msg,
               uuid: entryUuid ?? msg.uuid,
+              // The uuid changes with every finished block; the row it is drawn in must not.
+              rowKey: msg.rowKey ?? msg.uuid,
               timestamp: entryTimestamp ?? msg.timestamp,
               message: { ...msg.message!, content: mergedBlocks },
               isStreaming: false,

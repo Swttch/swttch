@@ -15,6 +15,17 @@ function assistant(uuid: string, blocks: Block[], isStreaming = false): LoadedMe
 const kinds = (body: LoadedMessageDto[]) => buildSegments(body).map((s) => s.kind);
 
 describe('buildSegments', () => {
+  // A reply being streamed takes over the uuid of each finished block's session entry (see `rowKey`). The keys
+  // of its segments follow the id it was first drawn under, so the text and thinking blocks are not drawn again
+  // from scratch at every rename.
+  it('keeps the keys of a streamed reply through the uuid it takes from each finished block', () => {
+    const reply = (uuid: string): LoadedMessageDto =>
+      ({ ...assistant(uuid, [thinking('Reading first.'), text('Editing it now.')], true), rowKey: 'placeholder-1' }) as LoadedMessageDto;
+    const keysOf = (uuid: string) => buildSegments([reply(uuid)]).map((s) => s.key);
+    expect(keysOf('entry-thinking')).toEqual(keysOf('entry-text'));
+    expect(keysOf('entry-text').every((key) => key.startsWith('placeholder-1'))).toBe(true);
+  });
+
   it('gathers calls from consecutive entries into one run', () => {
     const body = [assistant('a', [tool('1')]), assistant('b', [tool('2')]), assistant('c', [tool('3', 'Read')])];
     const segments = buildSegments(body);
