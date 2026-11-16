@@ -188,24 +188,18 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
-            <h3>0.37.1 - Permission and question cards now look like Claude Desktop</h3>
+            <h3>0.38.0 - Long chats stay responsive, and streaming no longer jumps</h3>
             <ul>
-                <li>Draw permission, question and plan cards like Claude Desktop, including permission requests from subagents (#673, reported by @Tahiaji)</li>
-                <li>Fix code blocks not following the Font size setting (#685, reported by @yesbutno)</li>
-                <li>Fix the tool window crashing on IntelliJ 2026.2.4 (#682, reported by @dpasztor)</li>
-                <li>Fix the chat panel freezing when selecting text (#645, reported by @Zach0126)</li>
-                <li>Fix Ctrl/Cmd-click on the tunnel item in the &#8942; menu not opening the browser (#689 by @ShiningPluto, #688)</li>
+                <li>Fix the chat panel freezing for seconds in long-lived sessions (#680, reported by @Zach0126)</li>
+                <li>Fix the view snapping back up while a reply streams (#702 by @ShiningPluto, #701)</li>
+                <li>Fix the chat jumping at every finished block while a reply with Edit cards streams (#700 by @ShiningPluto, #699)</li>
+                <li>Add cancelling a message that is waiting in the queue</li>
+                <li>Improve following session changes across all tabs at once (#696)</li>
+                <li>Fix a message sent mid-turn being drawn in a different place than after a reload (#693, #694)</li>
+                <li>Fix the working line missing right after sending a picture</li>
+                <li>Fix the message box not regaining focus after saving a reply comment</li>
             </ul>
-            <h3>0.37.0 - Now the model can manage sessions!</h3>
-            <ul>
-                <li>Add Claude Desktop-style session management and session tree support (#674)</li>
-                <li>Add a Transcript summary line and progress display improvements (#677)</li>
-                <li>Add choosing where to save files Claude sends, a menu, and multi-select (#675, reported by @Zbajnek)</li>
-                <li>Fix files and folders copied in the IDE not pasting into the chat input (#672, reported by @tianguanlong)</li>
-                <li>Fix sessions that end inside a worktree missing from the session list (#658, reported by @Wo-ogie)</li>
-                <li>Fix some characters such as Thai "จ" and Korean "갈" not being typed in the chat input (#676)</li>
-            </ul>
-        """.trimIndent()
+                """.trimIndent()
     }
     publishing {
         token = providers.environmentVariable("PUBLISH_TOKEN")
