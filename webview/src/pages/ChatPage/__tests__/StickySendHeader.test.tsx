@@ -83,13 +83,20 @@ function inScrollContainer(): HTMLElement {
  * edge, which stands at 0 here. Below `PINNED_TOP_INSET` is above the line the
  * chat actually starts at, i.e. already scrolled past — the state a restored
  * session opens in. The default sits exactly on that line: a send that has
- * just arrived and travelled nothing.
+ * just arrived and travelled nothing. Scrolling moves the sentinel up from
+ * there, as a browser draws it (`sentinelOffset`).
  */
 function giveBubblesHeight(px: number, sentinelTop = PINNED_TOP_INSET) {
   Element.prototype.getBoundingClientRect = function () {
-    const top = (this as HTMLElement).hasAttribute?.('data-send-sentinel') ? sentinelTop : 0;
+    const el = this as HTMLElement;
+    const top = el.hasAttribute?.('data-send-sentinel') ? sentinelTop - sentinelOffset(el) : 0;
     return { height: px, top, bottom: top + px, left: 0, right: 0, width: 0, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
   };
+}
+
+/** How far the transcript holding `el` has been scrolled: what has carried the sentinel up past where it began. */
+function sentinelOffset(el: HTMLElement): number {
+  return el.closest<HTMLElement>('[data-chat-scroll]')?.scrollTop ?? 0;
 }
 
 function scrollBy(px: number) {
@@ -324,7 +331,7 @@ describe('StickySendHeader', () => {
     };
     Element.prototype.getBoundingClientRect = function () {
       const el = this as HTMLElement;
-      const top = el.hasAttribute?.('data-send-sentinel') ? PINNED_TOP_INSET : 0;
+      const top = el.hasAttribute?.('data-send-sentinel') ? PINNED_TOP_INSET - sentinelOffset(el) : 0;
       const height = heightOf(el);
       return { height, top, bottom: top + height, left: 0, right: 0, width: 0, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
     };
