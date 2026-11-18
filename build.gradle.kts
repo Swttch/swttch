@@ -188,6 +188,16 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.38.1 - Various bug fixes and usability improvements</h3>
+            <ul>
+                <li>Add opening the current session in the Claude Desktop app (#710)</li>
+                <li>Stop truncating the title in the question card (#707, reported by @djmarland)</li>
+                <li>Fix a pinned send in a long chat unfolding earlier or later than its real position (#706 by @ShiningPluto)</li>
+                <li>Make the archived session bar cover the chat input and add a new-session button (#710)</li>
+                <li>Add a shortcut and a slash command to archive a session (#710)</li>
+                <li>Add smooth motion to streaming rendering (#710)</li>
+                <li>Improve the started-session card to follow its linked session live (#710)</li>
+            </ul>
             <h3>0.38.0 - Long chats stay responsive, and streaming no longer jumps</h3>
             <ul>
                 <li>Fix the chat panel freezing for seconds in long-lived sessions (#680, reported by @Zach0126)</li>
