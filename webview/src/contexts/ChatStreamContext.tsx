@@ -118,7 +118,11 @@ interface ChatStreamContextType {
    * this one message — the derived key described in {@link invertedOf}. The
    * setting is not touched, so the next message follows it again.
    */
-  handleSubmit: (e: React.FormEvent | undefined, inputMode: InputMode, attachments?: Attachment[], invertFollowUp?: boolean, forceQueue?: boolean, composer?: ComposerSnapshot) => void;
+  /**
+   * Answers with the delivery of the message when it goes to the CLI at once, so that what has to follow the message
+   * (turning down a question card that the message replaces) can wait until the CLI has been handed it.
+   */
+  handleSubmit: (e: React.FormEvent | undefined, inputMode: InputMode, attachments?: Attachment[], invertFollowUp?: boolean, forceQueue?: boolean, composer?: ComposerSnapshot) => Promise<void> | void;
   /** Run a slash command the CLI only accepts as a control_request (#270). */
   runControlRequestCommand: (command: string, inputMode: InputMode) => void;
   stop: () => void;
@@ -149,6 +153,14 @@ interface ChatStreamContextType {
    */
   heldMessages: HeldMessage[];
   /**
+   * The running turn is the one a question was answered in, by a message typed in the chat. The working line carries
+   * the time of the turn from the moment of the answer, before the CLI has said anything (the desktop app's does).
+   * Over when the turn is.
+   */
+  questionRepliedTurn: boolean;
+  /** A message typed in the chat has just taken the place of the answer to a question card. */
+  markQuestionReplied: () => void;
+  /**
    * Messages sent while a turn was running, shown after what that turn has written until it ends (#673): the
    * CLI answers them after the turn, so a bubble put into the chat at the moment of sending would stand above
    * the answer to the message sent before it.
@@ -175,6 +187,8 @@ interface ChatStreamContextType {
   // From useChatStream (message manipulation)
   clearMessages: () => void;
   loadMessages: (msgs: LoadedMessageDto[], hasOlder?: boolean) => void;
+  /** The newest page read again after the transcript changed on disk under another program; unchanged entries keep their objects. */
+  refreshMessages: (msgs: LoadedMessageDto[], hasOlder?: boolean) => void;
   /** Take up a turn that was already running when this screen attached (see UseChatStreamReturn.resumeTurn). */
   resumeTurn: (startedAt: number) => void;
   prependOlderMessages: (msgs: LoadedMessageDto[], hasOlder?: boolean, beforeUuid?: string, reached?: boolean) => void;
@@ -406,6 +420,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     addCommandEcho,
     clearMessages: chatStreamClearMessages,
     loadMessages: chatStreamLoadMessages,
+    refreshMessages: chatStreamRefreshMessages,
     resumeTurn: chatStreamResumeTurn,
     prependOlderMessages: chatStreamPrependOlderMessages,
     appendNewerMessages: chatStreamAppendNewerMessages,
@@ -953,6 +968,13 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     [addCommandEcho, adoptAllowAllDraft, adoptPendingView, dispatchControlRequestCommand, runSideQuestion, sendMessage, session, sessionModel]
   );
 
+  const [questionRepliedTurn, setQuestionRepliedTurn] = useState(false);
+  const markQuestionReplied = useCallback(() => setQuestionRepliedTurn(true), []);
+  // The turn the question was replied in is over when the turn is.
+  useEffect(() => {
+    if (!chatStream.isStreaming) setQuestionRepliedTurn(false);
+  }, [chatStream.isStreaming]);
+
   const [heldMessages, setHeldMessages] = useState<HeldMessage[]>([]);
   const heldMessagesRef = useRef<HeldMessage[]>([]);
   heldMessagesRef.current = heldMessages;
@@ -1093,8 +1115,9 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
         setInput('');
         return;
       }
-      sendMessage(trimmedInput, inputMode, undefined, attachments, undefined, false, false, restore);
+      const delivery = sendMessage(trimmedInput, inputMode, undefined, attachments, undefined, false, false, restore);
       setInput('');
+      return delivery;
     },
     [inputRef, runControlRequestCommand, sendMessage, setInput, chatStream.isStreaming, appSettings, queueMessage]
   );
@@ -1159,6 +1182,8 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     moveQueuedMessage,
     steerQueuedMessage,
     heldMessages,
+    questionRepliedTurn,
+    markQuestionReplied,
     sentWhileRunning,
     releaseHeldMessages,
     dropReleasedHeldMessages,
@@ -1174,6 +1199,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     // Message manipulation
     clearMessages: chatStreamClearMessages,
     loadMessages: chatStreamLoadMessages,
+    refreshMessages: chatStreamRefreshMessages,
     resumeTurn: chatStreamResumeTurn,
     prependOlderMessages: chatStreamPrependOlderMessages,
     appendNewerMessages: chatStreamAppendNewerMessages,
@@ -1240,6 +1266,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     chatStreamResetStreamState,
     chatStreamClearMessages,
     chatStreamLoadMessages,
+    chatStreamRefreshMessages,
     chatStreamResumeTurn,
     chatStreamPrependOlderMessages,
     chatStreamAppendMessage,
@@ -1257,6 +1284,8 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     moveQueuedMessage,
     steerQueuedMessage,
     heldMessages,
+    questionRepliedTurn,
+    markQuestionReplied,
     sentWhileRunning,
     releaseHeldMessages,
     dropReleasedHeldMessages,

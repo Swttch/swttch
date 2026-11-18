@@ -3,6 +3,62 @@ import { readSessionMarksToShow } from './sessionMarks';
 import { noteSentMark } from './sessionMarksKnown';
 import { announceSessionsUpdated } from './sessionsUpdated';
 
+/** The id a placeholder row has until the answer to the call names the real session. Never an id the CLI could give. */
+export function placeholderSessionId(toolUseId: string): string {
+  return `starting:${toolUseId}`;
+}
+
+/**
+ * Tell the screens a session is being started, before the call that starts it has been answered.
+ *
+ * The session has no id yet (the program that starts it makes the id and tells it in the answer), but the call
+ * already says its name, where it works and, by the session that made the call, whom it was started by. The
+ * screens are handed a row made of that under an id of its own, as the desktop app has the session in its list
+ * the moment the card is in the conversation. The answer replaces it with the real row (see
+ * [announceSessionStarting]) and [dropSessionPlaceholder] takes this one away.
+ */
+export function announceSessionRequested(
+  connections: ConnectionManager,
+  requested: { placeholderId: string; cwd: string; title: string; startedBy?: string },
+): void {
+  const at = new Date().toISOString();
+  announceSessionsUpdated(
+    connections,
+    {
+      action: 'create',
+      session: {
+        sessionId: requested.placeholderId,
+        sessionDir: requested.cwd,
+        title: requested.title,
+        createdAt: at,
+        lastTimestamp: at,
+        messageCount: null,
+        isSidechain: false,
+        sessionMark: {
+          id: requested.placeholderId,
+          parentSessionUid: requested.startedBy ?? null,
+          desktopParentSessionId: null,
+          handle: null,
+          startedAt: Date.now(),
+          archivedAt: 0,
+          desktopArchived: false,
+        },
+        provisional: true,
+      },
+    },
+    { sessionDirs: [requested.cwd] },
+  );
+}
+
+/** Take the placeholder row away: the answer named the real session, or the call failed or was never answered. */
+export function dropSessionPlaceholder(connections: ConnectionManager, placeholder: { placeholderId: string; cwd: string }): void {
+  announceSessionsUpdated(
+    connections,
+    { action: 'delete', session: { sessionId: placeholder.placeholderId } },
+    { sessionDirs: [placeholder.cwd] },
+  );
+}
+
 /**
  * Tell the screens a session was started, before its transcript exists.
  *

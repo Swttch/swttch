@@ -182,6 +182,12 @@ export interface UseChatStreamReturn {
   clearMessages: () => void;
   /** The newest page of a session: replaces what is held. `hasOlder` is whether the backend has entries before it. */
   loadMessages: (msgs: LoadedMessageDto[], hasOlder?: boolean) => void;
+  /**
+   * The newest page again, read because the transcript changed on disk under a program this screen does not run.
+   * What is the same as before keeps its object, so only what changed is drawn again (see `loadMessages`, which
+   * replaces everything).
+   */
+  refreshMessages: (msgs: LoadedMessageDto[], hasOlder?: boolean) => void;
   /** The backend has entries older than the first one held. */
   hasMoreOlder: boolean;
   /** The hole between the recycler and the pages after it, or null when what is held is one run. */
@@ -795,7 +801,11 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
   const loadMessages = useCallback((msgs: LoadedMessageDto[], hasOlder = false) => {
     const convertedMessages = msgs
       // .filter(raw => raw.type === LoadedMessageType.User || raw.type === LoadedMessageType.Assistant)
-      .map(raw => toInstance(LoadedMessageDto, raw));
+      .map(raw => {
+        const made = toInstance(LoadedMessageDto, raw);
+        rawSignatures.current.set(made, JSON.stringify(raw));
+        return made;
+      });
 
     // The newest page: everything the backend sent is the newest pages, with no gap.
     setStore(storeFrom(loadInitial(convertedMessages, hasOlder)));
@@ -823,6 +833,30 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
         }
       }
     }
+  }, []);
+
+  // What each held message was made from, so that a page read again can leave alone the entries that did not change.
+  const rawSignatures = useRef(new WeakMap<object, string>());
+
+  const refreshMessages = useCallback((msgs: LoadedMessageDto[], hasOlder = false) => {
+    setStore(prev => {
+      const held = new Map<string, LoadedMessageDto>();
+      for (const message of prev.messages) if (message.uuid) held.set(message.uuid, message);
+      const next = msgs.map(raw => {
+        const signature = JSON.stringify(raw);
+        const before = raw.uuid ? held.get(raw.uuid) : undefined;
+        if (before && rawSignatures.current.get(before) === signature) return before;
+        const made = toInstance(LoadedMessageDto, raw);
+        rawSignatures.current.set(made, signature);
+        return made;
+      });
+      // The page begins at an entry already held: it takes the place of everything from there on, and the pages
+      // before it, and what the window knows about them, stay as they are. Anything else starts over.
+      const first = next[0]?.uuid;
+      const at = first ? prev.messages.findIndex(message => message.uuid === first) : -1;
+      if (at === -1) return storeFrom(loadInitial(next, hasOlder));
+      return storeFrom({ messages: [...prev.messages.slice(0, at), ...next], state: windowOf(prev) });
+    });
   }, []);
 
   // The window operations below turn a page the backend sent into the next state of
@@ -1796,6 +1830,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     addCommandEcho,
     clearMessages,
     loadMessages,
+    refreshMessages,
     hasMoreOlder: windowState.hasOlder,
     windowGap: windowState.gap,
     windowState,

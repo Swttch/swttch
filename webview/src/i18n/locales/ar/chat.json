@@ -327,7 +327,15 @@
       "submit": "إرسال",
       "placeholder": "اكتب إجابتك هنا",
       "progress": "{{current}} من {{total}}",
-      "skipped": "تم التخطي"
+      "skipped": "تم التخطي",
+      "requested": "تم الطلب",
+      "repliedInChat": "تم الرد في الدردشة",
+      "questionCount_zero": "لا أسئلة",
+      "questionCount_one": "سؤال واحد",
+      "questionCount_two": "سؤالان",
+      "questionCount_few": "{{count}} أسئلة",
+      "questionCount_many": "{{count}} سؤالًا",
+      "questionCount_other": "{{count}} سؤال"
     }
   },
   "backgroundTasks": {
@@ -1281,6 +1289,7 @@
       "startedByClaudeFrom": "بدأها Claude من",
       "startedByClaude": "بدأها Claude من جلسة أخرى",
       "sessionNotStarted": "لم تبدأ الجلسة",
+      "startingSession": "جارٍ بدء جلسة",
       "sessionLookedUp": "تم البحث عن الجلسة",
       "sessionTranscriptRead": "تمت قراءة نص الجلسة",
       "skillRan": "تم تشغيل Skill",

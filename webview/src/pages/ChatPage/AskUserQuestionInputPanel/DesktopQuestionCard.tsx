@@ -38,8 +38,10 @@ export function DesktopQuestionCard({ form, total, onSubmit, onCancel, onOtherKe
   return (
     <div className="w-full shrink-0 animate-[fadeIn_0.3s_ease-out] px-4 pb-2 pt-[0.375rem]" data-testid="desktop-question-card">
       <div className="flex w-full max-w-[33.4rem] flex-col overflow-hidden rounded-[0.8125rem] border border-text-primary/[0.05]">
-        <div className="flex h-[2.99rem] shrink-0 items-center justify-between bg-text-primary/[0.04] px-[1.2188rem] text-[0.9rem] text-text-primary">
-          <span className="min-w-0 truncate">{form.currentQuestion.question}</span>
+        {/* The band is as tall as the desktop app's for a question of one line (min-h), and grows for a longer one: the
+            question is what the person answers by, so none of it is cut off (#707). */}
+        <div className="flex min-h-[2.99rem] shrink-0 items-center justify-between bg-text-primary/[0.04] px-[1.2188rem] py-[0.75rem] text-[0.9rem] leading-[1.35rem] text-text-primary">
+          <span data-testid="question-heading" className="min-w-0 whitespace-pre-line break-words">{form.currentQuestion.question}</span>
           {total > 1 && (
             <span className="flex shrink-0 items-center gap-[0.9rem] ps-3 text-[0.8461rem] text-text-secondary">
               <button

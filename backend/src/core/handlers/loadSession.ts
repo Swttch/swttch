@@ -4,6 +4,7 @@ import type { IPCMessage } from '../types';
 import { markSessionAsSpawned } from '../claude-process';
 import { MessageType } from '../../shared';
 import { loadAndSendSession } from './loadAndSendSession';
+import { followSessionTranscript } from '../features/sessionTranscriptFollower';
 
 export async function loadSessionHandler(
   connectionId: string,
@@ -49,6 +50,11 @@ export async function loadSessionHandler(
       isNewerPage,
       isAroundPage,
     });
+    // Opening a session (not a page of one already open): when a program this backend does not run works on it,
+    // its screen is told as the transcript grows.
+    if (!isOlderPage && !isNewerPage && !isAroundPage) {
+      void followSessionTranscript(connectionId, sessionId, workingDir, connections);
+    }
   }
   connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId });
 }

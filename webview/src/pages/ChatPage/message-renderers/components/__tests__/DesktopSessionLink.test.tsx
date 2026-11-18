@@ -50,14 +50,18 @@ describe('DesktopSessionLink', () => {
     expect(link.getAttribute('href')).toMatch(/\/sessions\/cli-1\?workingDir=%2FUsers%2Fme%2Fproject$/);
   });
 
-  it('is named by the session\'s own title in the Transcript view, and by the text in the classic chat', () => {
-    session.value = { cliSessionId: 'cli-1', title: '* Issue 657 - history' };
+  it('is named by the session\'s own title in every view, and by the text until the title is known', () => {
+    session.value = { cliSessionId: 'cli-1' };
     const { unmount } = render(<DesktopSessionLink id="local_x">Issue 657 session</DesktopSessionLink>);
     expect(screen.getByRole('link', { name: 'Issue 657 session' })).toBeInTheDocument();
     unmount();
-    viewMode.value = 'normal';
-    render(<DesktopSessionLink id="local_x">Issue 657 session</DesktopSessionLink>);
-    expect(screen.getByRole('link', { name: '* Issue 657 - history' })).toBeInTheDocument();
+    session.value = { cliSessionId: 'cli-1', title: '* Issue 657 - history' };
+    for (const mode of [null, 'normal']) {
+      viewMode.value = mode;
+      const view = render(<DesktopSessionLink id="local_x">Issue 657 session</DesktopSessionLink>);
+      expect(screen.getByRole('link', { name: '* Issue 657 - history' })).toBeInTheDocument();
+      view.unmount();
+    }
   });
 
   it('leaves the opening to the link itself in a browser, where target=_blank puts it in a new tab', () => {

@@ -327,7 +327,11 @@
       "submit": "ارسال",
       "placeholder": "پاسخ خود را اینجا بنویسید",
       "progress": "{{current}} از {{total}}",
-      "skipped": "رد شد"
+      "skipped": "رد شد",
+      "requested": "درخواست شد",
+      "repliedInChat": "در گفتگو پاسخ داده شد",
+      "questionCount_one": "{{count}} پرسش",
+      "questionCount_other": "{{count}} پرسش"
     }
   },
   "backgroundTasks": {
@@ -1206,6 +1210,7 @@
       "startedByClaudeFrom": "شروع‌شده توسط Claude از",
       "startedByClaude": "شروع‌شده توسط Claude از جلسه‌ای دیگر",
       "sessionNotStarted": "جلسه شروع نشد",
+      "startingSession": "در حال شروع جلسه",
       "sessionLookedUp": "جلسه جستجو شد",
       "sessionTranscriptRead": "رونوشت جلسه خوانده شد",
       "skillRan": "Skill اجرا شد",

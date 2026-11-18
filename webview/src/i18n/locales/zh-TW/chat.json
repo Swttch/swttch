@@ -327,7 +327,10 @@
       "submit": "提交",
       "placeholder": "在此輸入你的答案",
       "progress": "第 {{current}} 個，共 {{total}} 個",
-      "skipped": "已略過"
+      "skipped": "已略過",
+      "requested": "已請求",
+      "repliedInChat": "已在聊天中回覆",
+      "questionCount_other": "{{count}} 個問題"
     }
   },
   "backgroundTasks": {
@@ -1189,6 +1192,7 @@
       "startedByClaudeFrom": "Claude 從以下工作階段啟動",
       "startedByClaude": "Claude 從另一個工作階段啟動",
       "sessionNotStarted": "工作階段未啟動",
+      "startingSession": "正在啟動工作階段",
       "sessionLookedUp": "已查詢工作階段",
       "sessionTranscriptRead": "已讀取工作階段逐字稿",
       "skillRan": "已執行 Skill",

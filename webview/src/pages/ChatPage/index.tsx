@@ -9,6 +9,7 @@ import { TranscriptArea } from './transcript/TranscriptArea';
 import { useTranscriptViewMode } from './message-renderers/transcriptViewMode';
 import type { ChatSearchSource } from './chatSearch/useChatSearch';
 import { PermissionBanner } from './PermissionBanner';
+import { REPLIED_IN_CHAT_ANSWER, repliedInChatAnswers } from './AskUserQuestionInputPanel/repliedInChat';
 import { usesDesktopPermissionCard } from './PermissionBanner/DesktopPermissionCard';
 import { AskUserQuestionInputPanel } from './AskUserQuestionInputPanel';
 import { AcceptPlanPanel } from './AcceptPlanPanel';
@@ -67,6 +68,7 @@ import { useChatWindowConfig } from '@/hooks/useChatWindowConfig';
 import { firstUuidOf, nextStep } from '@/utils/transcriptWindow';
 import { useTranslation } from '@/i18n';
 import { AutoResumeProvider } from '@/contexts/AutoResumeContext';
+import { BacklinkedSessionsProvider } from '@/contexts/BacklinkedSessionsContext';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { ChatInput } from './ChatInput';
 import { AccountSwitchErrorBanner } from './AccountSwitchErrorBanner';
@@ -88,7 +90,9 @@ export function ChatPage() {
       {/* Outside ChatPageContent so a recording survives the composer being
           swapped out for an approval prompt — see the note on the provider. */}
       <DictationProvider>
-        <ChatPageContent />
+        <BacklinkedSessionsProvider>
+          <ChatPageContent />
+        </BacklinkedSessionsProvider>
       </DictationProvider>
     </AutoResumeProvider>
   );
@@ -164,7 +168,7 @@ function ChatPageContent() {
     lastSeenRef.current = { id: currentSessionId, archived: currentSessionArchived };
   }, [currentSessionId, currentSession, currentSessionArchived]);
   const archivedWhileOpen = currentSessionArchived && archivedWhileOpenId === currentSessionId;
-  const { messages, isStreaming, error, disconnectCountdown, apiRetry, hasMoreOlder, oldestLoadedUuid, windowGap, windowState, dropWindowPage, releaseHeldMessages, restartTurnClock } = useChatStreamContext();
+  const { messages, isStreaming, error, disconnectCountdown, apiRetry, hasMoreOlder, oldestLoadedUuid, windowGap, windowState, dropWindowPage, releaseHeldMessages, restartTurnClock, markQuestionReplied } = useChatStreamContext();
   // null is the chat released so far; a named view mode draws the transcript with its own code.
   const transcriptViewMode = useTranscriptViewMode();
   // The send index sits on the start edge in the transcript view modes, where user messages are on the end side,
@@ -779,7 +783,29 @@ function ChatPageContent() {
           {answerCard ? (
               /* The card is part of the conversation above, after the last message, and the composer stays (#673). */
               <div>
-                <ChatInput cardWaiting />
+                <ChatInput
+                  cardWaiting
+                  onQuestionReplied={
+                    pendingUserAnswer
+                      ? () => {
+                          // A message typed under a question card is the answer to it, as in the desktop app: the CLI is
+                          // told that the person did not answer in the card but sent a message instead.
+                          // The working line carries the time from this moment, before the CLI has said anything.
+                          markQuestionReplied();
+                          if (pendingUserAnswer.controlRequestId) {
+                            api.tools.respond(pendingUserAnswer.toolUse.id, REPLIED_IN_CHAT_ANSWER, {
+                              controlRequestId: pendingUserAnswer.controlRequestId,
+                              updatedInput: {
+                                questions: pendingUserAnswer.toolUse.input.questions,
+                                answers: repliedInChatAnswers(pendingUserAnswer.toolUse.input.questions),
+                              },
+                            });
+                          }
+                          dismiss(pendingUserAnswer.toolUse.id);
+                        }
+                      : undefined
+                  }
+                />
               </div>
           ) : pendingUserAnswer ? (
               <AskUserQuestionInputPanel

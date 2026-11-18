@@ -327,7 +327,10 @@
       "submit": "제출",
       "placeholder": "여기에 답변을 입력하세요",
       "progress": "{{total}}개 중 {{current}}번째",
-      "skipped": "건너뜀"
+      "skipped": "건너뜀",
+      "requested": "요청됨",
+      "repliedInChat": "채팅에서 답장함",
+      "questionCount_other": "질문 {{count}}개"
     }
   },
   "backgroundTasks": {
@@ -1189,6 +1192,7 @@
       "startedByClaudeFrom": "Claude가 다음 세션에서 시작함",
       "startedByClaude": "Claude가 다른 세션에서 시작함",
       "sessionNotStarted": "세션이 시작되지 않음",
+      "startingSession": "세션 시작 중",
       "sessionLookedUp": "세션 조회됨",
       "sessionTranscriptRead": "세션 트랜스크립트 읽음",
       "skillRan": "Skill 실행됨",

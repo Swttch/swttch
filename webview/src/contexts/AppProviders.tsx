@@ -58,13 +58,13 @@ interface AppProvidersProps {
  */
 export function SessionLoader({ children }: { children: ReactNode }) {
   const { isConnected } = useApiContext();
-  const { subscribe } = useBridgeContext();
+  const { subscribe, send } = useBridgeContext();
   const api = useApi();
   const {
     loadSessions, currentSessionId, navigateToNewSession, mergeSession,
     isNewlyCreatedSession, setSessionState, syncEffectiveMode,
   } = useSessionContext();
-  const { loadMessages, resumeTurn, prependOlderMessages, appendNewerMessages, jumpToMessages, resetForSessionSwitch } = useChatStreamContext();
+  const { loadMessages, refreshMessages, resumeTurn, prependOlderMessages, appendNewerMessages, jumpToMessages, resetForSessionSwitch } = useChatStreamContext();
   // The window's size, read when a page arrives rather than closed over: a page that
   // answers a request made before the setting changed is still cut by the current one.
   const windowConfig = useChatWindowConfig();
@@ -73,6 +73,10 @@ export function SessionLoader({ children }: { children: ReactNode }) {
   // Not read directly — it is what makes the session-loading effect re-run when
   // a navigation swaps the working directory alongside the session id.
   const { workingDirectory } = useWorkingDir();
+
+  // The session whose newest page was asked for again because another program wrote to its transcript: that page is
+  // joined to what is held (unchanged entries keep their objects) instead of replacing it, so the screen does not flicker.
+  const externalRefreshFor = useRef<string | null>(null);
 
   // Ref to track currentSessionId for SESSION_LOADED validation (avoids stale closure)
   const currentSessionIdRef = useRef<string | null>(currentSessionId);
@@ -133,6 +137,29 @@ export function SessionLoader({ children }: { children: ReactNode }) {
     }
   }, [currentSessionId, workingDirectory, isConnected, resetForSessionSwitch, setSessionState, api.sessions, isNewlyCreatedSession]);
 
+  // 2b. A program this backend does not run (a session woken by the session-management MCP, one running in the
+  //     desktop app) wrote to the transcript of the session shown: read it again, the same read that opened it, so
+  //     the screen follows the session while it works instead of staying on what it read at the start. The backend
+  //     sends this only for a session it does not run itself; one it runs is streamed.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const unsubscribe = subscribe(MessageType.SESSION_EXTERNALLY_CHANGED, (message) => {
+      const sid = message.payload?.sessionId as string | undefined;
+      if (!sid || sid !== currentSessionIdRef.current) return;
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        externalRefreshFor.current = sid;
+        void Promise.resolve(api.sessions.load(sid, readWorkingDirFromUrl())).catch(() => {
+          externalRefreshFor.current = null;
+        });
+      }, 150);
+    });
+    return () => {
+      unsubscribe();
+      if (timer) clearTimeout(timer);
+    };
+  }, [subscribe, api.sessions]);
+
   // 3. Subscribe to SESSION_LOADED — with sessionId guard against stale responses
   useEffect(() => {
     return subscribe(MessageType.SESSION_LOADED, (message) => {
@@ -192,7 +219,12 @@ export function SessionLoader({ children }: { children: ReactNode }) {
         // transcript, joined to what is held where the window says it belongs.
         const isNewestPage = reset === true || (!prepend && !append && !around);
         console.log('[SessionLoader] Session loaded:', rawMessages.length, 'messages, prepend:', !!prepend, 'append:', !!append, 'around:', !!around, 'reset:', !!reset, 'hasMore:', !!hasMore);
-        if (isNewestPage) {
+        if (isNewestPage && sid && externalRefreshFor.current === sid) {
+          externalRefreshFor.current = null;
+          refreshMessages(rawMessages, !!hasMore);
+          // The person is looking at the screen that just drew what the other program wrote: it is read.
+          if (!document.hidden) void Promise.resolve(send(MessageType.MARK_SESSION_READ, { sessionId: sid })).catch(() => undefined);
+        } else if (isNewestPage) {
           loadMessages(rawMessages, !!hasMore);
         } else if (prepend) {
           prependOlderMessages(rawMessages, !!hasMore, beforeUuid, !!reached);
@@ -221,7 +253,7 @@ export function SessionLoader({ children }: { children: ReactNode }) {
         }
       }
     });
-  }, [subscribe, loadMessages, resumeTurn, prependOlderMessages, appendNewerMessages, jumpToMessages, isNewlyCreatedSession, syncEffectiveMode, navigateToNewSession, mergeSession]);
+  }, [subscribe, send, loadMessages, refreshMessages, resumeTurn, prependOlderMessages, appendNewerMessages, jumpToMessages, isNewlyCreatedSession, syncEffectiveMode, navigateToNewSession, mergeSession]);
 
   return <>{children}</>;
 }

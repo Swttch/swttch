@@ -2,7 +2,7 @@ import {ToolUseBlockDto} from "@/dto";
 import {Container, LabelValue, RendererProps, ToolHeader, ToolWrapper, toolResultText} from "./common";
 import {useTranslation} from "@/i18n";
 import {StreamingMessage} from "../../StreamingMessage";
-import {useDesktopSession} from "@/hooks/useDesktopSession";
+import {useBacklinkedSession} from "@/contexts/BacklinkedSessionsContext";
 
 class SendMessageToolUseDto extends ToolUseBlockDto {
     declare input: {
@@ -56,8 +56,9 @@ function SessionMessageCard(props: {to: string; text: string; resultText: string
     // Desktop's answer names the session; when it does not (an older answer, or none yet), Desktop's own session
     // file does. An id says nothing to a reader, so when neither is known the line says only that it was another
     // session.
-    const looked = useDesktopSession(props.to, answeredTitle === undefined)?.title;
-    const title = answeredTitle ?? looked ?? t('sendMessage.anotherSession');
+    // The name the session has now comes first: a message sent to a session that was renamed since says the new name.
+    const looked = useBacklinkedSession(props.to.startsWith('local_') ? props.to : '')?.title;
+    const title = looked ?? answeredTitle ?? t('sendMessage.anotherSession');
     return (
         <ToolWrapper message={props.message} groupClassName="pb-2.5">
             <ToolHeader name={t('sendMessage.sent')} description={title} inProgress={props.inProgress} className="mb-1" />

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from '@/i18n';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
-import type { StreamingActivity } from './streamingActivity';
+import { activityLabel, type StreamingActivity } from './streamingActivity';
 import { WorkingMark, type WorkingActivity } from './WorkingMark';
 
 /**
@@ -32,11 +32,8 @@ export function useFormatElapsed(): (seconds: number) => string {
       : t('transcript.streaming.minutesSeconds', { minutes: Math.floor(seconds / 60), seconds: seconds % 60 });
 }
 
-/** What the live call is doing, in words: its own description, or the desktop app's phrase for the kind of call. */
+/** What the live call is doing, in words (see `activityLabel`). */
 export function useActivityLabel(): (activity: StreamingActivity) => string {
   const { t } = useTranslation('chat');
-  return (activity) =>
-    activity.file
-      ? t(activity.file.creating ? 'transcript.tools.creatingFile' : 'transcript.tools.editingFile', { name: activity.file.name })
-      : (activity.description ?? t(`transcript.streaming.activity.${activity.phrase}`));
+  return (activity) => activityLabel(activity, t);
 }

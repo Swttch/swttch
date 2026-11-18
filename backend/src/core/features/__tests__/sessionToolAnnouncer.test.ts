@@ -14,13 +14,16 @@ vi.mock('../announceSessionCreated', () => ({
 
 vi.mock('../announceSessionStarting', () => ({
   announceSessionStarting: vi.fn(),
+  announceSessionRequested: vi.fn(),
+  dropSessionPlaceholder: vi.fn(),
+  placeholderSessionId: (toolUseId: string) => `starting:${toolUseId}`,
 }));
 
-import { announceSessionToolChanges, resetSessionToolAnnouncer } from '../sessionToolAnnouncer';
+import { announceSessionToolChanges, isSessionStarting, resetSessionToolAnnouncer } from '../sessionToolAnnouncer';
 import { awaitSessionTranscript } from '../awaitSessionTranscript';
 import { readSessionMarksToShow, type SessionMark } from '../sessionMarks';
 import { announceSessionCreated } from '../announceSessionCreated';
-import { announceSessionStarting } from '../announceSessionStarting';
+import { announceSessionRequested, announceSessionStarting, dropSessionPlaceholder } from '../announceSessionStarting';
 import { MessageType } from '../../../shared';
 import type { ConnectionManager } from '../../../ws/connection-manager';
 
@@ -61,6 +64,7 @@ describe('announceSessionToolChanges', () => {
     broadcastToAll = vi.fn();
     connections = { broadcastToAll } as unknown as ConnectionManager;
     mockMarks.mockResolvedValue(new Map());
+    vi.mocked(announceSessionStarting).mockResolvedValue(undefined);
   });
 
   it('tells the screens a started session is there at once, with the name it was given, before its transcript exists', () => {
@@ -301,5 +305,111 @@ describe('announceSessionToolChanges', () => {
 
     expect(mockAwait).not.toHaveBeenCalled();
     expect(broadcastToAll).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The session is in the lists from the moment the call that starts it goes out, as the desktop app has it in its
+ * list the moment the card is in the conversation: the call already says its name and where it works, and the
+ * session that made the call is the one that started it. The answer replaces that row with the real one.
+ */
+describe('announceSessionToolChanges: a start that is not answered yet', () => {
+  const connections = { broadcastToAll: vi.fn() } as unknown as ConnectionManager;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useRealTimers();
+    resetSessionToolAnnouncer();
+    mockMarks.mockResolvedValue(new Map());
+    vi.mocked(announceSessionStarting).mockResolvedValue(undefined);
+  });
+
+  it('puts a row made of the call into the lists, under the session that made the call', () => {
+    announceSessionToolChanges(toolUse('call-1', 'mcp__swttch_session__start_session', { title: '* Review env' }), connections, 'parent', '/work');
+
+    expect(announceSessionRequested).toHaveBeenCalledWith(connections, {
+      placeholderId: 'starting:call-1',
+      cwd: '/work',
+      title: '* Review env',
+      startedBy: 'parent',
+    });
+  });
+
+  it('uses the folder the call names over the folder of the session that made it', () => {
+    announceSessionToolChanges(toolUse('call-1', 'mcp__swttch_session__start_session', { title: 'x', cwd: '/elsewhere' }), connections, 'parent', '/work');
+
+    expect(announceSessionRequested).toHaveBeenCalledWith(connections, expect.objectContaining({ cwd: '/elsewhere' }));
+  });
+
+  it('puts nothing in the lists when the call has no name or no folder to say', () => {
+    announceSessionToolChanges(toolUse('call-1', 'mcp__swttch_session__start_session', {}), connections, 'parent', '/work');
+    announceSessionToolChanges(toolUse('call-2', 'mcp__swttch_session__start_session', { title: 'x' }), connections, 'parent');
+
+    expect(announceSessionRequested).not.toHaveBeenCalled();
+  });
+
+  it('takes that row away once the answer has named the real session', async () => {
+    announceSessionToolChanges(toolUse('call-1', 'mcp__swttch_session__start_session', { title: 'x' }), connections, 'parent', '/work');
+    announceSessionToolChanges(toolResult('call-1', JSON.stringify({ session_id: 'child', cwd: '/work' })), connections, 'parent', '/work');
+    await settle();
+
+    expect(announceSessionStarting).toHaveBeenCalledWith(connections, { sessionId: 'child', cwd: '/work' }, 'x');
+    expect(dropSessionPlaceholder).toHaveBeenCalledWith(connections, expect.objectContaining({ placeholderId: 'starting:call-1', cwd: '/work' }));
+  });
+
+  it('takes that row away when the call failed', () => {
+    announceSessionToolChanges(toolUse('call-1', 'mcp__swttch_session__start_session', { title: 'x' }), connections, 'parent', '/work');
+    announceSessionToolChanges(toolResult('call-1', 'could not start', true), connections, 'parent', '/work');
+
+    expect(dropSessionPlaceholder).toHaveBeenCalledWith(connections, expect.objectContaining({ placeholderId: 'starting:call-1' }));
+    expect(announceSessionStarting).not.toHaveBeenCalled();
+  });
+
+  it('takes that row away when the call is never answered', () => {
+    vi.useFakeTimers();
+    announceSessionToolChanges(toolUse('call-1', 'mcp__swttch_session__start_session', { title: 'x' }), connections, 'parent', '/work');
+    expect(dropSessionPlaceholder).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(121_000);
+
+    expect(dropSessionPlaceholder).toHaveBeenCalledWith(connections, expect.objectContaining({ placeholderId: 'starting:call-1' }));
+    vi.useRealTimers();
+  });
+});
+
+/**
+ * A session just started has no transcript for many seconds. It is not a deleted one, and what is asked about
+ * missing transcripts has to be able to tell.
+ */
+describe('announceSessionToolChanges: a session that is starting', () => {
+  const connections = { broadcastToAll: vi.fn(), broadcastToListsHolding: vi.fn() } as unknown as ConnectionManager;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetSessionToolAnnouncer();
+    mockMarks.mockResolvedValue(new Map());
+    vi.mocked(announceSessionStarting).mockResolvedValue(undefined);
+  });
+
+  const start = () => {
+    announceSessionToolChanges(toolUse('call-1', 'mcp__swttch_session__start_session', { title: 'x' }), connections);
+    announceSessionToolChanges(toolResult('call-1', JSON.stringify({ session_id: 'child', cwd: '/work' })), connections);
+  };
+
+  it('is starting from the answer until its transcript is there', () => {
+    expect(isSessionStarting('child')).toBe(false);
+    start();
+    expect(isSessionStarting('child')).toBe(true);
+
+    mockAwait.mock.calls[0][2]();
+
+    expect(isSessionStarting('child')).toBe(false);
+  });
+
+  it('is not starting any more when no transcript ever came', () => {
+    start();
+    mockAwait.mock.calls[0][3]?.();
+
+    expect(isSessionStarting('child')).toBe(false);
   });
 });

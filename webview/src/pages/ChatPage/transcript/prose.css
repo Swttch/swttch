@@ -95,6 +95,52 @@
   100% { background-position: 0 0; }
 }
 
+/* The name on a session card that is still starting or working: the band crosses it in about a second and a
+   half, then the name rests for the rest of four seconds (measured off the desktop app). */
+.transcript-card-shimmer {
+  animation-duration: 4s;
+  animation-name: transcript-card-shimmer;
+}
+@keyframes transcript-card-shimmer {
+  0% { background-position: 100% 0; }
+  38% { background-position: 0 0; }
+  100% { background-position: 0 0; }
+}
+
+/* The dot on the right of that card breathes, between about a quarter and four fifths of its colour, every 1.2 seconds. */
+.transcript-card-dot {
+  animation: transcript-card-dot 1.2s ease-in-out infinite;
+}
+@keyframes transcript-card-dot {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 0.26; }
+}
+
+/* The dots after the word that says work goes on ("Working..."): one, then two, then three, every 1.5 seconds. The
+   second and third are hidden, not removed, so the line keeps its width the whole time. */
+.working-dots-2 {
+  animation: working-dots-2 1.5s step-end infinite;
+}
+.working-dots-3 {
+  animation: working-dots-3 1.5s step-end infinite;
+}
+@keyframes working-dots-2 {
+  0% { opacity: 0; }
+  33.3% { opacity: 1; }
+  100% { opacity: 1; }
+}
+@keyframes working-dots-3 {
+  0% { opacity: 0; }
+  66.6% { opacity: 1; }
+  100% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .working-dots-2,
+  .working-dots-3 {
+    animation: none;
+  }
+}
+
 /* A card drawn by the classic renderers (a file Claude sent, an Artifact) sits in the reply like the text does: no
    bullet before it and none of the room the classic chat leaves for the bullet. */
 [data-transcript-card] [data-message-bullet] { display: none; }

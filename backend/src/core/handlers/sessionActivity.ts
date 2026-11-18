@@ -1,3 +1,4 @@
+import { recordSessionRead } from '../features/sessionReadLedger';
 import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
@@ -46,7 +47,11 @@ export function markSessionReadHandler(
   _bridge: Bridge,
 ): void {
   const sessionId = (message.payload as { sessionId?: string } | undefined)?.sessionId;
-  if (sessionId) connections.markSessionRead(sessionId);
+  if (sessionId) {
+    // Kept in a file, so that it holds across a refresh, another tab and a restart.
+    recordSessionRead(sessionId);
+    connections.markSessionRead(sessionId);
+  }
   connections.sendTo(connectionId, MessageType.ACK, {
     requestId: message.requestId,
     status: 'ok',

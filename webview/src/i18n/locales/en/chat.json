@@ -327,7 +327,11 @@
       "submit": "Submit",
       "placeholder": "Type your own answer here",
       "progress": "{{current}} of {{total}}",
-      "skipped": "Skipped"
+      "skipped": "Skipped",
+      "requested": "Requested",
+      "repliedInChat": "Replied in chat",
+      "questionCount_one": "{{count}} question",
+      "questionCount_other": "{{count}} questions"
     }
   },
   "backgroundTasks": {
@@ -1211,6 +1215,7 @@
       "startedByClaudeFrom": "Started by Claude from",
       "startedByClaude": "Started by Claude from another session",
       "sessionNotStarted": "Session not started",
+      "startingSession": "Starting a session",
       "sessionLookedUp": "Looked up session",
       "sessionTranscriptRead": "Read session transcript",
       "skillRan": "Ran skill",

@@ -5,9 +5,9 @@ import { ClientEnv } from '@/shared';
 import { ArchiveBoxIcon } from '@heroicons/react/24/outline';
 import { i18n, useTranslation } from '@/i18n';
 import { Tooltip } from '@/components/Tooltip';
-import { useDesktopSession, type DesktopSession } from '@/hooks/useDesktopSession';
+import type { DesktopSession } from '@/hooks/useDesktopSession';
+import { useBacklinkedSession } from '@/contexts/BacklinkedSessionsContext';
 import { timeAgo } from '@/utils/timeAgo';
-import { useTranscriptViewMode } from '../transcriptViewMode';
 
 /** A link to a Claude Desktop session as the chat text writes it: `[title](#local_<id>)`. */
 const DESKTOP_SESSION_HREF = /^#?(local_[0-9A-Za-z-]+)$/;
@@ -72,11 +72,11 @@ export function openSessionFromClick(event: React.MouseEvent, sessionId: string,
  * `plain` draws it as an underlined link in the text around it, not on the background: a name in a line of a run.
  */
 export const DesktopSessionLink: React.FC<{ id: string; children?: ReactNode; plain?: boolean }> = ({ id, children, plain }) => {
-  const session = useDesktopSession(id);
+  const session = useBacklinkedSession(id);
   const sessionId = session?.cliSessionId;
-  // In the Transcript view the desktop app names the session by its own title, whatever the text called it.
-  const inTranscript = useTranscriptViewMode() !== null;
-  const name = inTranscript && session?.title ? session.title : children;
+  // The session is named by the name it has now, whatever the text called it when it was written: a session that was
+  // renamed since is renamed here too, as everywhere else that points at it.
+  const name = session?.title ? session.title : children;
 
   // Nothing to say about the session (no folder, no time, not archived) means no tooltip, rather than an empty one.
   const hasFacts = session !== undefined && (session.isArchived === true || session.cwd !== undefined || session.lastActivityAt !== undefined);

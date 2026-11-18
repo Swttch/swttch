@@ -40,12 +40,14 @@ export interface UseSessionActivityReturn {
  * The map travels whole rather than as deltas, so a dropped message costs one
  * stale render rather than a permanently wrong row.
  */
-export function useSessionActivity(): UseSessionActivityReturn {
+export function useSessionActivity(enabled: boolean = true): UseSessionActivityReturn {
   const { send, subscribe } = useBridge();
   const [activity, setActivity] = useState<SessionActivityMap>({});
   const [open, setOpen] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
+    // Not asked for: nothing is read and nothing is listened to (a screen whose answer comes from elsewhere).
+    if (!enabled) return;
     let cancelled = false;
 
     void (async () => {
@@ -70,7 +72,7 @@ export function useSessionActivity(): UseSessionActivityReturn {
       cancelled = true;
       unsubscribe();
     };
-  }, [send, subscribe]);
+  }, [send, subscribe, enabled]);
 
   const markRead = useCallback(
     (sessionId: string) => {

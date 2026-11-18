@@ -943,6 +943,99 @@ describe('useChatStream', () => {
     });
   });
 
+  // The transcript changed on disk under a program this screen does not run: the newest page is read again, and
+  // what did not change keeps its object, so that only what changed is drawn again.
+  describe('refreshMessages', () => {
+    const entry = (uuid: string, text: string): LoadedMessage => ({
+      uuid,
+      type: LoadedMessageType.Assistant,
+      timestamp: '2024-01-01T00:00:00Z',
+      message: { role: MessageRole.Assistant, content: text },
+    });
+
+    it('keeps the object of an entry that did not change, and makes a new one for one that did', () => {
+      const { bridge } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+      act(() => {
+        result.current.loadMessages([entry('a', 'one'), entry('b', 'two')]);
+      });
+      const [a, b] = result.current.messages;
+
+      act(() => {
+        result.current.refreshMessages([entry('a', 'one'), entry('b', 'two, changed'), entry('c', 'three')]);
+      });
+
+      expect(result.current.messages.length).toBe(3);
+      expect(result.current.messages[0]).toBe(a);
+      expect(result.current.messages[1]).not.toBe(b);
+      expect(result.current.messages[2].uuid).toBe('c');
+    });
+
+    it('also keeps what a refresh itself made, for the refresh after it', () => {
+      const { bridge } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+      act(() => {
+        result.current.loadMessages([entry('a', 'one')]);
+      });
+      act(() => {
+        result.current.refreshMessages([entry('a', 'one'), entry('b', 'two')]);
+      });
+      const [, b] = result.current.messages;
+
+      act(() => {
+        result.current.refreshMessages([entry('a', 'one'), entry('b', 'two')]);
+      });
+
+      expect(result.current.messages[1]).toBe(b);
+    });
+
+    it('replaces what the page begins at and after, and leaves the pages before it as they were', () => {
+      const { bridge } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+      act(() => {
+        result.current.loadMessages([entry('a', 'one'), entry('b', 'two'), entry('c', 'three')]);
+      });
+      const [a] = result.current.messages;
+
+      act(() => {
+        result.current.refreshMessages([entry('b', 'two'), entry('c', 'three, changed'), entry('d', 'four')]);
+      });
+
+      expect(result.current.messages.map((m) => m.uuid)).toEqual(['a', 'b', 'c', 'd']);
+      expect(result.current.messages[0]).toBe(a);
+    });
+
+    it('keeps what the window knows of the pages held, as a page joined to them does', () => {
+      const { bridge } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+      act(() => {
+        result.current.loadMessages([entry('a', 'one'), entry('b', 'two')], true);
+      });
+      const before = result.current.windowState;
+
+      act(() => {
+        result.current.refreshMessages([entry('b', 'two'), entry('c', 'three')], false);
+      });
+
+      expect(result.current.windowState.starts).toEqual(before.starts);
+      expect(result.current.windowState.hasOlder).toBe(before.hasOlder);
+    });
+
+    it('starts over when the page begins at an entry that is not held', () => {
+      const { bridge } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+      act(() => {
+        result.current.loadMessages([entry('a', 'one'), entry('b', 'two')]);
+      });
+
+      act(() => {
+        result.current.refreshMessages([entry('x', 'new'), entry('y', 'newer')]);
+      });
+
+      expect(result.current.messages.map((m) => m.uuid)).toEqual(['x', 'y']);
+    });
+  });
+
   describe('appendMessage / updateMessage', () => {
     it('appendMessage로 메시지를 추가할 수 있다', () => {
       const { bridge } = createMockBridge();

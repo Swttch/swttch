@@ -327,7 +327,11 @@
       "submit": "Enviar",
       "placeholder": "Escribe tu propia respuesta aquí",
       "progress": "{{current}} de {{total}}",
-      "skipped": "Omitida"
+      "skipped": "Omitida",
+      "requested": "Solicitado",
+      "repliedInChat": "Respondió en el chat",
+      "questionCount_one": "{{count}} pregunta",
+      "questionCount_other": "{{count}} preguntas"
     }
   },
   "backgroundTasks": {
@@ -1215,6 +1219,7 @@
       "startedByClaudeFrom": "Iniciada por Claude desde",
       "startedByClaude": "Iniciado por Claude desde otra sesión",
       "sessionNotStarted": "Sesión no iniciada",
+      "startingSession": "Iniciando una sesión",
       "sessionLookedUp": "Sesión consultada",
       "sessionTranscriptRead": "Transcripción de la sesión leída",
       "skillRan": "Skill ejecutado",

@@ -666,6 +666,31 @@ describe('ConnectionManager', () => {
       expect(cm.getSessionActivity()).toEqual({ 'sess-1': SessionActivity.Awaiting });
     });
 
+    it('shows a session another program ran as running while it grows, then as unread until the person looks', () => {
+      cm.setExternalRunning('child', true);
+      expect(cm.getSessionActivity()).toEqual({ child: SessionActivity.Running });
+
+      cm.setExternalDone('child', true);
+      expect(cm.getSessionActivity()).toEqual({ child: SessionActivity.Running });
+
+      cm.setExternalRunning('child', false);
+      expect(cm.getSessionActivity()).toEqual({ child: SessionActivity.Done });
+
+      cm.markSessionRead('child');
+      expect(cm.getSessionActivity()).toEqual({});
+    });
+
+    it('tells every connection when the unread state of a session another program ran moves, once per move', () => {
+      const announce = vi.spyOn(cm as unknown as { announceSessions: () => void }, 'announceSessions');
+
+      cm.setExternalDone('child', true);
+      cm.setExternalDone('child', true);
+      cm.markSessionRead('child');
+      cm.markSessionRead('child');
+
+      expect(announce).toHaveBeenCalledTimes(2);
+    });
+
     it('takes a screen at its word when it says it is waiting on an answer', () => {
       cm.getOrCreateSession('sess-1');
 

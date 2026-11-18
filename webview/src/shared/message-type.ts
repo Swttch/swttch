@@ -151,6 +151,14 @@ export enum MessageType {
   /** A watched background Bash task's output log changed on disk — carries the full current text. outbound backend→webview */
   BACKGROUND_TASK_OUTPUT_CHANGED = 'BACKGROUND_TASK_OUTPUT_CHANGED',
 
+  // -- A session another program works on --
+  /** The transcript of the session a screen shows grew on disk, written by a program this backend does not run (a session woken by the session-management MCP, one run in the desktop app or a terminal) — the screen reads the session again. Not sent for a session this backend runs. outbound backend→webview */
+  SESSION_EXTERNALLY_CHANGED = 'SESSION_EXTERNALLY_CHANGED',
+  /** The sessions the transcript on screen points at (cards for sessions Claude started): keep what they are doing (running, unread) up to date. Replaces the list of the call before. inbound webview→backend */
+  WATCH_SESSIONS = 'WATCH_SESSIONS',
+  /** Which of some sessions no longer have a transcript on disk (deleted): answers with `missing`. inbound webview→backend */
+  GET_SESSIONS_EXIST = 'GET_SESSIONS_EXIST',
+
   // -- IDE settings (terminal/theme/etc., ~/.claude GUI settings) --
   /** Read merged or scope-specific GUI settings. */
   GET_SETTINGS = 'GET_SETTINGS',
@@ -758,6 +766,8 @@ export enum MessageType {
   // -- Session sends --
   /** Ask for the index of every send the USER typed in one session, as {workingDir, sessionId}. The reply carries one row per send — uuid, timestamp and a truncated preview — so the send index can draw a tick for the whole session while the transcript itself is still paged. Never carries the entries: a prompt drags whatever was pasted into it, up to 21MB of base64 in the worst session measured here. inbound webview→backend */
   GET_SESSION_SENDS = 'GET_SESSION_SENDS',
+  /** Ask for the newest entries of one session without opening it, as {workingDir, sessionId, limit?}. The reply carries {messages}, the entries exactly as the session's record holds them, so the card of a session another session started can say what that session is doing or did last. It does not subscribe this connection to the session and does not mark it as spawned. inbound webview→backend */
+  GET_SESSION_TAIL = 'GET_SESSION_TAIL',
   /** Ask for the title of the Claude Desktop session that started this one, as {sessionId} (the CLI session id). The reply is {title} when Desktop's own session files name a starter with a title, and carries no title otherwise. The first message of a session another session started shows it in the line over its Task and Context cards. inbound webview→backend */
   GET_SESSION_PARENT_TITLE = 'GET_SESSION_PARENT_TITLE',
   /** Ask what Claude Desktop's own file says about a session named by its Desktop id, as {desktopSessionId} (`local_…`). The reply is {session: {title?, cliSessionId?, cwd?, isArchived?, lastActivityAt?}}, with no `session` when there is no such file. The chat text that links to a session and the card for a message sent to one use it to name the session and to open it. inbound webview→backend */

@@ -327,7 +327,11 @@
       "submit": "Übermitteln",
       "placeholder": "Gib hier deine eigene Antwort ein",
       "progress": "{{current}} von {{total}}",
-      "skipped": "Übersprungen"
+      "skipped": "Übersprungen",
+      "requested": "Angefragt",
+      "repliedInChat": "Im Chat geantwortet",
+      "questionCount_one": "{{count}} Frage",
+      "questionCount_other": "{{count}} Fragen"
     }
   },
   "backgroundTasks": {
@@ -1207,6 +1211,7 @@
       "startedByClaudeFrom": "Von Claude gestartet aus",
       "startedByClaude": "Von Claude aus einer anderen Sitzung gestartet",
       "sessionNotStarted": "Sitzung nicht gestartet",
+      "startingSession": "Sitzung wird gestartet",
       "sessionLookedUp": "Sitzung nachgeschlagen",
       "sessionTranscriptRead": "Sitzungstranskript gelesen",
       "skillRan": "Skill ausgeführt",

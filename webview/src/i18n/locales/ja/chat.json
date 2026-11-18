@@ -327,7 +327,10 @@
       "submit": "送信",
       "placeholder": "ここに独自の回答を入力してください",
       "progress": "{{current}}/{{total}}",
-      "skipped": "スキップ済み"
+      "skipped": "スキップ済み",
+      "requested": "リクエスト済み",
+      "repliedInChat": "チャットで返信しました",
+      "questionCount_other": "{{count}} 件の質問"
     }
   },
   "backgroundTasks": {
@@ -1189,6 +1192,7 @@
       "startedByClaudeFrom": "Claude が次のセッションから開始：",
       "startedByClaude": "別のセッションから Claude が開始",
       "sessionNotStarted": "セッションが開始されていません",
+      "startingSession": "セッションを開始しています",
       "sessionLookedUp": "セッションを検索しました",
       "sessionTranscriptRead": "セッションのトランスクリプトを読み取りました",
       "skillRan": "Skills を実行しました",

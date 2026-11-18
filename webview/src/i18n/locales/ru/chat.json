@@ -327,7 +327,13 @@
       "submit": "Отправить",
       "placeholder": "Введите свой ответ здесь",
       "progress": "{{current}} из {{total}}",
-      "skipped": "Пропущено"
+      "skipped": "Пропущено",
+      "requested": "Запрошено",
+      "repliedInChat": "Ответ в чате",
+      "questionCount_one": "{{count}} вопрос",
+      "questionCount_few": "{{count}} вопроса",
+      "questionCount_many": "{{count}} вопросов",
+      "questionCount_other": "{{count}} вопроса"
     }
   },
   "backgroundTasks": {
@@ -1251,6 +1257,7 @@
       "startedByClaudeFrom": "Запущено Claude из сеанса",
       "startedByClaude": "Запущено Claude из другого сеанса",
       "sessionNotStarted": "Сеанс не запущен",
+      "startingSession": "Запуск сеанса",
       "sessionLookedUp": "Сеанс найден",
       "sessionTranscriptRead": "Расшифровка сеанса прочитана",
       "skillRan": "Skill выполнен",

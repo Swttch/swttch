@@ -21,6 +21,7 @@ import { cancelLogin } from '../core/handlers/login';
 import { releaseDictation } from '../core/handlers/dictation';
 import { releaseReadAloud } from '../core/handlers/readAloud';
 import { unwatchAllForConnection } from '../core/features/backgroundTaskOutputWatcher';
+import { stopFollowingSessionTranscript } from '../core/features/sessionTranscriptFollower';
 import { stopIdleSessions } from '../core/features/idleSessions';
 import { reportBackendError, trackActivity } from '../core/features/telemetry';
 import { tunnelPairing, issueLocalPairCode } from '../core/features/tunnel-pairing';
@@ -432,6 +433,8 @@ export function startWebSocketServer(
         // And for background-task output watchers: fs.watch handles are ours
         // too, so a closed tab must not leave them running forever.
         unwatchAllForConnection(connectionId);
+        // And the transcript this screen was following for a session another program works on.
+        stopFollowingSessionTranscript(connectionId, connections);
         connections.removeConnection(connectionId);
       });
     });
@@ -633,7 +636,10 @@ export function startWebSocketServer(
             res.end(JSON.stringify({ error: 'Failed to read request body' }));
             return;
           }
-          const result = await handleSessionControl(connections, rawBody);
+          // A session started through this route has no screen yet: it uses the bridge of the environment this backend runs in.
+          const result = await handleSessionControl(connections, rawBody, {
+            bridge: bridges[isJetBrainsMode ? ClientEnv.JETBRAINS : ClientEnv.BROWSER],
+          });
           res.writeHead(result.status, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify(result.body));
           return;
