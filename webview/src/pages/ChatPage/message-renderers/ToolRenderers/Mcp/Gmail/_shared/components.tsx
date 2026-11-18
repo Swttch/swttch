@@ -25,7 +25,7 @@ export const GmailMailRow = (props: {
             )}
             <span
                 className={cn(
-                    "shrink-0 min-w-[140px] max-w-[180px] truncate text-[0.8461rem] text-text-primary/80",
+                    "shrink-0 min-w-[8.75rem] max-w-[11.25rem] truncate text-[0.8461rem] text-text-primary/80",
                     unread ? "font-semibold" : ""
                 )}
             >

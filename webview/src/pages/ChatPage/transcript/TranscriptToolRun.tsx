@@ -1,4 +1,4 @@
-import { useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useContext, useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import toast from 'react-hot-toast';
 import { ChevronRightIcon, ClipboardDocumentIcon } from '@heroicons/react/20/solid';
 import { useTranslation } from '@/i18n';
@@ -14,9 +14,15 @@ import { useNow } from '@/hooks/useNow';
 import { useOptionalWorkflowState } from '@/contexts/WorkflowStateContext';
 import { ActivityGlyph, useActivityLabel, useFormatElapsed, useTurnSeconds } from './TranscriptActivity';
 import { LiveActivityContext } from './LiveActivityContext';
+import { MorphText } from './MorphText';
+import { useSettledText } from './useSettledText';
 import type { WorkingActivity } from './WorkingMark';
 import { FileChangeDetail } from './FileChangeDetail';
-import { useDesktopSession } from '@/hooks/useDesktopSession';
+import { useNavigate } from 'react-router-dom';
+import { isJetBrains } from '@/config/environment';
+import { SessionActivity } from '@/shared';
+import { useBacklinkedSession } from '@/contexts/BacklinkedSessionsContext';
+import { useSessionActivityLine } from '@/hooks/useSessionActivityLine';
 import { DesktopSessionLink } from '../message-renderers/components/DesktopSessionLink';
 import { StartedSessionLink, sessionLinkProps } from '../message-renderers/components/StartedSessionLink';
 import { isCliSessionId, startedSessionOf } from '../message-renderers/utils/startedSessions';
@@ -233,7 +239,7 @@ function Thumbnails({ pictures, onOpen }: { pictures: PictureRef[]; onOpen: (pic
             }}
             className="flex flex-shrink-0 cursor-zoom-in"
           >
-            <img src={picture.src} alt="" className="h-7 w-auto max-w-[56px] rounded-[3px] border border-border-default/70 object-contain" />
+            <img src={picture.src} alt="" className="h-7 w-auto max-w-[3.5rem] rounded-[0.1875rem] border border-border-default/70 object-contain" />
           </span>
         ))}
       </span>
@@ -571,8 +577,9 @@ function RowMeta({ call, meta }: { call: ToolCall; meta?: string }) {
   const isSent = toolKindOf(call) === 'messageSent';
   const to = typeof call.toolUse.input?.to === 'string' ? (call.toolUse.input.to as string) : '';
   const answered = isSent ? sentTo(call) : '';
-  const looked = useDesktopSession(isSent ? to : '', isSent && answered === '')?.title;
-  const shown = isSent ? answered || looked || meta : meta;
+  // The name the session has now comes first: a message sent to a session that was renamed since says the new name.
+  const looked = useBacklinkedSession(isSent ? to : '')?.title;
+  const shown = isSent ? looked || answered || meta : meta;
   if (!shown) return null;
   // The session a message came from is a way into that session, named by the title it has now.
   const fromInput = call.toolUse.input?.from;
@@ -596,33 +603,113 @@ function RowMeta({ call, meta }: { call: ToolCall; meta?: string }) {
 }
 
 /** A session Claude started: a card with its title, which goes to that session, as the desktop app draws it. */
-function StartedSessionCard({ call }: { call: ToolCall }) {
+export function StartedSessionCard({ call }: { call: ToolCall }) {
   const { t } = useTranslation('chat');
-  const title = typeof call.toolUse.input?.title === 'string' ? (call.toolUse.input.title as string) : '';
-  // The answer names the session it started; Desktop's own file for it says whether it is waiting for the person.
+  const { t: tChat } = useTranslation('chatTools');
+  const startedTitle = typeof call.toolUse.input?.title === 'string' ? (call.toolUse.input.title as string) : '';
+  // The answer names the session it started. What the chat knows of that session (its name now, where it works,
+  // what it is doing, whether it waits for the person or is archived) is one record, shared with every other place
+  // that names it, so a rename or a change of state shows here at the moment it shows anywhere.
   const answer = toolResultText(call.toolUse.tool_result as LoadedMessageDto | undefined);
   const startedId = /session_id:\s*(local_[\w-]+)/.exec(answer)?.[1] ?? '';
-  const session = useDesktopSession(startedId, startedId !== '');
   // The session-management MCP answers with the CLI session itself and the folder it runs in, so there is
   // nothing to look up. A session started without a folder of its own runs in this conversation's folder.
   const workingDirectory = useWorkingDirOrNull()?.workingDirectory ?? undefined;
   const own = startedId === '' ? startedSessionOf(answer, call.toolUse.input as Record<string, unknown> | undefined) : undefined;
-  const awaiting = session?.awaitingPerson === true;
+  const session = useBacklinkedSession(startedId || own?.sessionId || '');
+  const title = session?.title || startedTitle;
   const sessionId = session?.cliSessionId ?? own?.sessionId;
   const cwd = session?.cwd ?? own?.cwd ?? (own ? workingDirectory : undefined);
-  // The card is a way into the session it names: in a browser a link that opens it in a new tab, in the IDE the adapter opens it.
-  const { href, onClick: goTo } = sessionLinkProps(sessionId ? { sessionId, cwd } : undefined);
+  const doing = session?.activity ?? SessionActivity.Idle;
+
+  // The call has been made but the answer that names the session has not come: nothing to open yet.
+  const starting = !call.toolUse.tool_result;
+  const notStarted = hasFailed(call) || wasStopped(call);
+  const settled = !starting && !notStarted;
+  // The session was deleted: its transcript is gone. There is nowhere to go, and the card says so.
+  const deleted = settled && session?.missing === true;
+  const working = settled && !deleted && doing === SessionActivity.Running;
+  const archived = settled && !deleted && session?.isArchived === true;
+  const awaiting = settled && !deleted && !working && (session?.awaitingPerson === true || doing === SessionActivity.Awaiting);
+  // It answered and the person has not looked at it since (kept by the backend, so it holds across a refresh and
+  // another tab, and ends everywhere when the session is opened in any of them): a dot that stays, in the colour
+  // of the label for a session waiting for the person, in the place of the dot of a session at work.
+  const unread = settled && !deleted && !working && doing === SessionActivity.Done;
+  // What the session is doing now, under its title, while it works and not after (the desktop app's card does the
+  // same). Read from its record without opening it; nothing for a session that is not there or never started.
+  const activityLine = useSessionActivityLine(working ? sessionId : undefined, cwd, doing);
+  // While it works the second line is always there, so the card does not grow and shrink between two calls or before
+  // the first one: when its record has no call to say yet, the line says only that work goes on ("Working..."). The
+  // desktop app was not measured for this stretch; this is the product's own choice.
+  const secondLine = working ? (activityLine ?? '') : undefined;
+
+  // The card is a way into the session it names: a plain click goes there in this page, as it does in the desktop app;
+  // a click made to open elsewhere (modifier key, middle button) keeps the browser's own way, and the IDE opens an editor tab.
+  const { href, onClick: goTo } = sessionLinkProps(sessionId && !notStarted && !deleted ? { sessionId, cwd } : undefined);
+  const navigate = useNavigate();
+  const onClick = (event: MouseEvent) => {
+    if (deleted) {
+      // Nothing to open: the person is told so, and stays where they are.
+      event.preventDefault();
+      event.stopPropagation();
+      toast.error(t('transcript.tools.sessionDeleted'));
+      return;
+    }
+    const plain = event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
+    if (href && sessionId && plain) {
+      event.preventDefault();
+      event.stopPropagation();
+      navigate(`/sessions/${sessionId}${cwd ? `?workingDir=${encodeURIComponent(cwd)}` : ''}`, { replace: isJetBrains() });
+      return;
+    }
+    goTo(event);
+  };
+
+  const chip = notStarted
+    ? { text: t('transcript.tools.sessionNotStarted'), className: 'text-state-error-fg' }
+    : deleted
+      ? { text: t('transcript.tools.sessionDeleted'), className: 'text-state-error-fg' }
+      : awaiting
+        ? { text: t('transcript.tools.needsInput'), className: 'text-[#d99a2b]' }
+        : archived
+          ? { text: tChat('sessionLink.archived'), className: 'text-[var(--tr-muted)]' }
+          : undefined;
+  const busy = starting || working;
+  const state = notStarted ? 'not-started' : starting ? 'starting' : deleted ? 'deleted' : working ? 'working' : awaiting ? 'needs-input' : archived ? 'archived' : unread ? 'unread' : 'idle';
   return (
-    <div className="px-4 py-[11px]" data-transcript-started-session>
+    <div className="px-4 py-[0.6875rem]" data-transcript-started-session data-state={state}>
       <a
         href={href}
-        target="_blank"
         rel="noreferrer"
-        onClick={goTo}
-        className={`flex w-full items-center gap-2 rounded-lg border ${BOX_BORDER} px-3.5 py-[13px] text-start text-[0.9375rem] text-[var(--tr-text)] hover:bg-[var(--tr-chip)] ${href ? 'cursor-pointer' : ''}`}
+        onClick={onClick}
+        aria-disabled={href ? undefined : true}
+        className={`flex w-fit min-w-[min(100%,30.5556rem)] max-w-[max(75%,min(100%,30.5556rem))] items-center gap-2 rounded-lg border ${BOX_BORDER} min-h-[2.4306rem] ps-[0.6944rem] pe-3.5 py-[0.4237rem] text-start text-[0.9375rem] text-[var(--tr-text)] ${href || deleted ? 'cursor-pointer' : 'cursor-default'}${href ? ' hover:bg-[var(--tr-chip)]' : ''}`}
       >
-        <span className="min-w-0 flex-1 truncate">{title}</span>
-        {awaiting && <span className="flex-shrink-0 text-[0.8461rem] text-[#d99a2b]">{t('transcript.tools.needsInput')}</span>}
+        <span className="flex min-w-0 flex-1 flex-col">
+          {/* With a second line the two lines stand 1.3194rem apart and the card is 3.6111rem tall (measured on the desktop app's card). */}
+          <span className={`min-w-0 truncate${secondLine !== undefined ? ' leading-[1.3194rem]' : ''}${busy ? ' transcript-shimmer transcript-card-shimmer' : ''}`}>{title || t('transcript.tools.startingSession')}</span>
+          {/* `w-0 min-w-full`: the line fills the card but does not make it wider, so a long command is cut at the
+              card's edge and the card keeps the width of one without a second line (as the desktop app's does). */}
+          {secondLine !== undefined && (
+            <span data-started-session-activity className="block w-0 min-w-full text-[0.866rem] leading-[1.3194rem] text-[var(--tr-muted)]">
+              {/* The line is replaced by the next one the way the summary line of a chat is: crossed, and growing or shrinking. */}
+              <MorphText id={secondLine || 'working'}>
+                {secondLine || (
+                  <span data-started-session-working>
+                    {t('transcript.streaming.activity.working')}
+                    {/* One, two, three dots, one again. All three take their room from the start, so the line keeps its width. */}
+                    <span aria-hidden="true">.</span>
+                    <span aria-hidden="true" className="working-dots-2">.</span>
+                    <span aria-hidden="true" className="working-dots-3">.</span>
+                  </span>
+                )}
+              </MorphText>
+            </span>
+          )}
+        </span>
+        {chip && <span className={`me-[0.4407rem] flex-shrink-0 text-[0.8461rem] ${chip.className}`}>{chip.text}</span>}
+        {busy && <span aria-hidden="true" className="transcript-card-dot me-[0.598rem] h-[0.4167rem] w-[0.4167rem] flex-shrink-0 rounded-full bg-[var(--tr-muted)]" data-started-session-dot />}
+        {!busy && !chip && unread && <span aria-hidden="true" className="me-[0.598rem] h-[0.4167rem] w-[0.4167rem] flex-shrink-0 rounded-full bg-[#d99a2b]" data-started-session-unread />}
         <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-[var(--tr-muted)] rtl:-scale-x-100" />
       </a>
     </div>
@@ -673,7 +760,10 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive, liveTool
   const { t } = useTranslation('chat');
   const call = calls[0];
   const runningAgentLive = useRunningAgentLive(calls);
-  const live = turnLive ?? runningAgentLive;
+  const liveNow = turnLive ?? runningAgentLive;
+  // The words of what is running as they have settled: a description is written a few letters at a time (see useSettledText).
+  const liveLabel = useSettledText(liveNow?.label ?? '');
+  const live = liveNow ? { ...liveNow, label: liveLabel || liveNow.label } : liveNow;
   const [open, setOpen] = useState(defaultOpen);
   // A row already drawn follows the view it is drawn in: Verbose opens it, another view shuts it again.
   useEffect(() => setOpen(defaultOpen), [defaultOpen]);
@@ -699,32 +789,33 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive, liveTool
         onClick={() => expandable && setOpen((v) => !v)}
         className={`flex w-full items-center gap-2.5 ${inBox ? 'px-3' : ''} py-[0.625rem] text-start text-[0.9656rem] transition-colors ${SUMMARY_TEXT} ${running && !waitedOn ? 'animate-pulse' : ''}`}
       >
-        {live ? (
-          <>
-            <ActivityGlyph activity={live.mark} />
-            <span className="min-w-0 truncate transcript-shimmer">{live.label}</span>
-            {live.elapsed && <span className="flex-shrink-0">{live.elapsed}</span>}
-          </>
-        ) : (
-        <span className={`${label.fileName ? 'flex min-w-0 items-baseline whitespace-nowrap' : 'min-w-0 truncate'}${waitedOn ? ' transcript-shimmer' : ''}`}>
-          <span className={label.fileName ? 'me-2 flex-shrink-0' : undefined}>{label.before}</span>
-          {label.fileName && (
-            <span
-              role="link"
-              tabIndex={0}
-              onClick={(event) => {
-                event.stopPropagation();
-                if (path) void openChatFile(path);
-              }}
-              className={`${LINK_TEXT} min-w-0 cursor-pointer truncate transition-[filter] hover:brightness-[1.08]`}
-            >
-              {label.fileName}
+        {live && <ActivityGlyph activity={live.mark} />}
+        {/* One MorphText stays through what is running and what was done, as in the summary line over a group. */}
+        <MorphText id={live ? `live:${live.label}` : `row:${JSON.stringify([label.before, label.fileName, label.after])}`}>
+          {live ? (
+            <span className="transcript-shimmer">{live.label}</span>
+          ) : (
+            <span className={`${label.fileName ? 'flex min-w-0 items-baseline whitespace-nowrap' : 'whitespace-nowrap'}${waitedOn ? ' transcript-shimmer' : ''}`}>
+              <span className={label.fileName ? 'me-2 flex-shrink-0' : undefined}>{label.before}</span>
+              {label.fileName && (
+                <span
+                  role="link"
+                  tabIndex={0}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    if (path) void openChatFile(path);
+                  }}
+                  className={`${LINK_TEXT} min-w-0 cursor-pointer truncate transition-[filter] hover:brightness-[1.08]`}
+                >
+                  {label.fileName}
+                </span>
+              )}
+              {label.after}
+              <RowMeta call={call} meta={label.meta} />
             </span>
           )}
-          {label.after}
-          <RowMeta call={call} meta={label.meta} />
-        </span>
-        )}
+        </MorphText>
+        {live && live.elapsed && <span className="flex-shrink-0">{live.elapsed}</span>}
         {hasFailed(call) && toolKindOf(call) !== 'sessionStart' && <span className="flex-shrink-0 text-red-400">{t('transcript.tools.failedMark')}</span>}
         {wasStopped(call) && <span className="flex-shrink-0">{t('transcript.tools.stoppedMark')}</span>}
         <LineStatsView stats={sumLineStats(calls)} />
@@ -766,6 +857,7 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
   useEffect(() => setOpen(startsOpen), [startsOpen]);
   const toggle = () => setOpen((v) => !v);
   const label = useActivityLabel();
+  const liveText = useSettledText(active && live ? label(live) : '');
   const runningAgentLive = useRunningAgentLive(calls);
   const pictures = picturesOfCalls(calls);
   const [openPicture, thumbnailViewer] = useThumbnailViewer();
@@ -778,8 +870,8 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
     // A capture on its own is shown open, as the desktop app shows it: its line has nothing to fold and no thumbnail,
     // since the picture itself is right under it.
     return (
-      <div className="px-4 pt-3 pb-[11px]" data-transcript-tool-run-single>
-        <div className="py-[10px] text-[0.9375rem] text-[var(--tr-muted)]">{rowLabel(calls[0], t).before}</div>
+      <div className="px-4 pt-3 pb-[0.6875rem]" data-transcript-tool-run-single>
+        <div className="py-[0.625rem] text-[0.9375rem] text-[var(--tr-muted)]">{rowLabel(calls[0], t).before}</div>
         <PlainDetail call={calls[0]} />
       </div>
     );
@@ -787,7 +879,7 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
 
   if (calls.length === 1) {
     return (
-      <div className="px-4 pt-3 pb-[11px]" data-transcript-tool-run-single>
+      <div className="px-4 pt-3 pb-[0.6875rem]" data-transcript-tool-run-single>
         <TranscriptToolRow
           calls={[calls[0]]}
           defaultOpen={verbose}
@@ -798,31 +890,43 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
     );
   }
 
+  const summaryParts = groupLabelParts(calls, t);
+
   return (
-    <div className="px-4 pt-3 pb-[11px]" data-transcript-tool-run>
+    <div className="px-4 pt-3 pb-[0.6875rem]" data-transcript-tool-run>
       <button
         type="button"
         aria-expanded={open}
         onClick={toggle}
         className={`flex w-full items-center gap-1 py-2 text-start text-[0.9656rem] transition-colors ${SUMMARY_TEXT}`}
       >
+        {/* One MorphText stays through the three states of the line (what is running, an agent that runs, what was done),
+            so that the sentence is replaced the way the desktop app's is: crossed, and the line growing or shrinking. */}
         {active && live ? (
-          <>
-            <span className="me-2 flex"><ActivityGlyph activity={live.mark} /></span>
-            <span className="min-w-0 truncate transcript-shimmer">{label(live)}</span>
-            {!live.file && <span className="ms-2 me-1 flex-shrink-0"><TurnElapsed /></span>}
-          </>
+          <span className="me-2 flex"><ActivityGlyph activity={live.mark} /></span>
         ) : runningAgentLive ? (
-          <>
-            <span className="me-2 flex"><ActivityGlyph activity={runningAgentLive.mark} /></span>
-            <span className="min-w-0 truncate transcript-shimmer">{runningAgentLive.label}</span>
-            <span className="ms-2 me-1 flex-shrink-0">{runningAgentLive.elapsed}</span>
-          </>
+          <span className="me-2 flex"><ActivityGlyph activity={runningAgentLive.mark} /></span>
+        ) : null}
+        {/* What was done has no seconds beside it as the running lines have, whose margin keeps the arrow off the text;
+            the margin is given to it here so that the arrow does not sit against the last letter. */}
+        <MorphText
+          className={active && live || runningAgentLive ? '' : 'me-1.5'}
+          id={active && live ? `live:${liveText}` : runningAgentLive ? `agent:${runningAgentLive.label}` : `done:${JSON.stringify(summaryParts)}`}
+        >
+          {active && live ? (
+            <span className="transcript-shimmer">{liveText}</span>
+          ) : runningAgentLive ? (
+            <span className="transcript-shimmer">{runningAgentLive.label}</span>
+          ) : (
+            <GroupSummaryText {...summaryParts} />
+          )}
+        </MorphText>
+        {active && live ? (
+          !live.file && <span className="ms-2 me-1 flex-shrink-0"><TurnElapsed /></span>
+        ) : runningAgentLive ? (
+          <span className="ms-2 me-1 flex-shrink-0">{runningAgentLive.elapsed}</span>
         ) : (
-          <>
-            <GroupSummaryText {...groupLabelParts(calls, t)} />
-            <LineStatsView stats={sumLineStats(calls)} />
-          </>
+          <LineStatsView stats={sumLineStats(calls)} />
         )}
         <Chevron open={open} />
         {!open && <Thumbnails pictures={pictures} onOpen={openPicture} />}

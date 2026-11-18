@@ -9,6 +9,7 @@ import { useSessionContext } from '../../../contexts/SessionContext';
 import { useChatStreamContext } from '../../../contexts/ChatStreamContext';
 import { StreamErrorBanner } from '../StreamErrorBanner';
 import { TranscriptStreamingIndicator } from './TranscriptStreamingIndicator';
+import { TranscriptExternalWorking } from './TranscriptExternalWorking';
 import { TranscriptAwaitingInput } from './TranscriptAwaitingInput';
 import { TranscriptHeldMessages } from './TranscriptHeldMessages';
 import { TranscriptHeldWorking } from './TranscriptHeldWorking';
@@ -16,6 +17,7 @@ import { useReleaseHeldMessages } from '../../../hooks/useReleaseHeldMessages';
 import { TranscriptBackgroundWorking, useBackgroundTaskStart } from './TranscriptBackgroundWorking';
 import { TranscriptPendingMessages } from './TranscriptPendingMessages';
 import { runningActivity, type StreamingActivity } from './streamingActivity';
+import { replyStartedIn } from './replyStarted';
 import { LiveActivityContext } from './LiveActivityContext';
 import { EmptyState } from '../EmptyState';
 import { isJetBrains } from '@/config/environment';
@@ -155,7 +157,7 @@ const TranscriptSection = memo(function TranscriptSection({
       )}
       {/* Sent while the card holds the turn: right after the latest message, above the calls still running, as in the desktop app. */}
       {awaitingInput && <TranscriptHeldMessages />}
-      <div ref={lastBodyRef ?? undefined} data-section-body data-after-send={section.head ? '' : undefined} className={`${section.body.length > 0 ? 'pt-[0.1875rem] ' : ''}${!isLast ? (section.body.length > 0 ? 'pb-[2.2188rem]' : 'pb-[0.8125rem]') : streaming || awaitingInput || backgroundWorking ? 'pb-0' : 'pb-[3.375rem]'}`}>
+      <div ref={lastBodyRef ?? undefined} data-section-body data-after-send={section.head ? '' : undefined} className={`${section.body.length > 0 || (isLast && streaming) ? 'pt-[0.1875rem] ' : ''}${!isLast ? (section.body.length > 0 ? 'pb-[2.2188rem]' : 'pb-[0.8125rem]') : streaming || awaitingInput || backgroundWorking ? 'pb-0' : 'pb-[3.375rem]'}`}>
         <TranscriptBody body={section.body} mergedMessagesRef={mergedMessagesRef} onRetry={onRetry} turnRunning={streaming} sectionKey={section.key} waiting={isLast ? <TranscriptPendingMessages /> : undefined} />
         {/* The turn's wrap-up is drawn here, after its last message, not where its call sits: a recap as text until the closing message begins, then the question and its answers. */}
         <TranscriptWrapUp body={section.body} next={nextHead} />
@@ -177,7 +179,7 @@ export function TranscriptArea(props: TranscriptAreaProps) {
   }, [props.sections]);
   const mergedMessagesRef = useRef(mergedMessages);
   mergedMessagesRef.current = mergedMessages;
-  const { workingDirectory } = useSessionContext();
+  const { workingDirectory, currentSessionId } = useSessionContext();
   const { retry: onRetry, messages: streamMessages, isStreaming: turnRunning } = useChatStreamContext();
   // What the runs of calls read to tell whether one of theirs is the call being waited on: the same object while the
   // call is the same, however many words arrive (#680).
@@ -206,11 +208,10 @@ export function TranscriptArea(props: TranscriptAreaProps) {
   // A call is still running until its result has come back: in the stream the result is a message of its own after the
   // call, not yet folded into the call.
   // The model has begun writing its answer after the calls: the newest entry is its text.
-  const replyStarted = useMemo(() => {
-    const last = streamMessages[streamMessages.length - 1];
-    const content = last?.type === 'assistant' ? last.message?.content : undefined;
-    return Array.isArray(content) && content.some((block) => (block as { type?: string; text?: string }).type === 'text' && Boolean((block as { text?: string }).text?.trim()));
-  }, [streamMessages]);
+  // A question answered by a message typed in the chat also starts the line's time at once, before the CLI has said
+  // anything (questionRepliedTurn); the entries it writes after that keep the time on (replyStartedIn).
+  const { questionRepliedTurn } = useChatStreamContext();
+  const replyStarted = useMemo(() => questionRepliedTurn || replyStartedIn(streamMessages), [questionRepliedTurn, streamMessages]);
   const callRunning = useMemo(() => {
     const activity = runningActivity(streamMessages);
     if (!activity) return false;
@@ -331,6 +332,8 @@ export function TranscriptArea(props: TranscriptAreaProps) {
         </div>
       )}
       {!isStreaming && <TranscriptBackgroundWorking hidden={awaitingInput} />}
+      {/* A program this screen does not run works on the session (its turn is not streamed here): the session says so. */}
+      {!isStreaming && <TranscriptExternalWorking sessionId={currentSessionId} />}
       {/* While a call is being waited on, the run of calls that holds it is the working indicator (see TranscriptToolRun); this line is for the rest of the turn, when the model thinks or writes. A dropped connection and the CLI's retries still say so here. */}
       {isStreaming && (waitedCall === null || disconnectCountdown !== null || apiRetry !== null) && (
         <div>

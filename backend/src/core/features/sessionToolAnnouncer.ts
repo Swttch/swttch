@@ -3,7 +3,7 @@ import { MessageType } from '../../shared';
 import { awaitSessionTranscript } from './awaitSessionTranscript';
 import { announceSessionMark } from './announceSessionMark';
 import { announceSessionCreated } from './announceSessionCreated';
-import { announceSessionStarting } from './announceSessionStarting';
+import { announceSessionRequested, announceSessionStarting, dropSessionPlaceholder, placeholderSessionId } from './announceSessionStarting';
 import { normalizeSessionName } from './cli-rename';
 import { announceSessionsUpdated } from './sessionsUpdated';
 
@@ -21,10 +21,26 @@ interface PendingCall {
   sessionId?: string;
   /** The name a `set_session_title` call asked for. */
   title?: string;
+  /** The row the screens were given for a session being started, until the answer names the real one. */
+  placeholder?: { placeholderId: string; cwd: string; timer: ReturnType<typeof setTimeout> };
 }
+
+/** A start whose answer does not come (an interrupted turn) takes its placeholder row away after this long. */
+const PLACEHOLDER_GIVE_UP_MS = 120_000;
 
 /** Calls seen and not answered yet, by the id of the call. */
 const pendingCalls = new Map<string, PendingCall>();
+
+/**
+ * Sessions announced as started whose transcript does not exist yet (the CLI writes it many seconds later). Such a
+ * session is not a deleted one, so what is asked about missing transcripts leaves it out (see `isSessionStarting`).
+ */
+const startingSessions = new Set<string>();
+
+/** Whether the session was just started and its transcript is not written yet. */
+export function isSessionStarting(sessionId: string): boolean {
+  return startingSessions.has(sessionId);
+}
 
 /** A call that is never answered (an interrupted turn) must not stay here for good. */
 const MAX_PENDING_CALLS = 200;
@@ -106,12 +122,29 @@ export function announceSessionToolChanges(
       const tool = LIST_CHANGING_TOOL.exec(block.name)?.[1];
       if (!tool) continue;
       if (pendingCalls.size >= MAX_PENDING_CALLS) pendingCalls.clear();
-      const title = (block.input as { title?: unknown } | undefined)?.title;
-      pendingCalls.set(block.id, {
+      const input = block.input as { title?: unknown; cwd?: unknown } | undefined;
+      const title = input?.title;
+      const pending: PendingCall = {
         tool,
         sessionId: sessionIdOfInput(block.input, callerSessionId),
         ...(typeof title === 'string' ? { title } : {}),
-      });
+      };
+      pendingCalls.set(block.id, pending);
+      // The session is in the lists from the moment the call goes out, not from the moment it is answered.
+      const cwd = typeof input?.cwd === 'string' && input.cwd !== '' ? input.cwd : callerWorkingDir;
+      if (tool === 'start_session' && cwd && typeof title === 'string' && title.trim() !== '') {
+        const placeholderId = placeholderSessionId(block.id);
+        announceSessionRequested(connections, { placeholderId, cwd, title, startedBy: callerSessionId });
+        const timer = setTimeout(() => {
+          const call = pendingCalls.get(block.id as string);
+          if (call?.placeholder) {
+            dropSessionPlaceholder(connections, call.placeholder);
+            call.placeholder = undefined;
+          }
+        }, PLACEHOLDER_GIVE_UP_MS);
+        timer.unref?.();
+        pending.placeholder = { placeholderId, cwd, timer };
+      }
     }
     return;
   }
@@ -123,23 +156,38 @@ export function announceSessionToolChanges(
     if (call === undefined) continue;
     const { tool } = call;
     pendingCalls.delete(block.tool_use_id);
+    // The row made of the call is taken away when the answer comes, whether it names the real session or not.
+    const placeholder = call.placeholder;
+    if (placeholder) clearTimeout(placeholder.timer);
     // A refused or failed call changed nothing.
-    if (block.is_error === true) continue;
+    if (block.is_error === true) {
+      if (placeholder) dropSessionPlaceholder(connections, placeholder);
+      continue;
+    }
 
     if (tool === 'start_session') {
       const started = startedSessionOf(block.content);
-      if (!started) continue;
+      if (!started) {
+        if (placeholder) dropSessionPlaceholder(connections, placeholder);
+        continue;
+      }
       // The screens are told the session is there at once, with a row made of what is known, because the CLI
       // writes its transcript a long while later. The row the transcript gives replaces it when the file
       // exists; and when no file ever comes (the session could not start) the screens are told it is not there.
-      void announceSessionStarting(connections, started, call.title);
+      startingSessions.add(started.sessionId);
+      void announceSessionStarting(connections, started, call.title).then(() => {
+        // The real row is in the lists; the one made of the call goes.
+        if (placeholder) dropSessionPlaceholder(connections, placeholder);
+      });
       void awaitSessionTranscript(
         started.sessionId,
         started.cwd,
         () => {
+          startingSessions.delete(started.sessionId);
           void announceSessionCreated(connections, started.sessionId, started.cwd);
         },
         () => {
+          startingSessions.delete(started.sessionId);
           announceSessionsUpdated(
             connections,
             { action: 'delete', session: { sessionId: started.sessionId } },
@@ -191,5 +239,7 @@ function sessionIdOfInput(input: unknown, callerSessionId: string | undefined): 
 
 /** Forget every call seen. For tests. */
 export function resetSessionToolAnnouncer(): void {
+  startingSessions.clear();
+  for (const call of pendingCalls.values()) if (call.placeholder) clearTimeout(call.placeholder.timer);
   pendingCalls.clear();
 }

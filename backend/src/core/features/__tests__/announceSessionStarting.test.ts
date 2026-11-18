@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../sessionMarks', () => ({ readSessionMarksToShow: vi.fn() }));
 
-import { announceSessionStarting } from '../announceSessionStarting';
+import { announceSessionRequested, announceSessionStarting, dropSessionPlaceholder, placeholderSessionId } from '../announceSessionStarting';
 import { readSessionMarksToShow, type SessionMark } from '../sessionMarks';
 import { resetKnownMarks, seedKnownMarks, takeMarkChanges } from '../sessionMarksKnown';
 import { MessageType } from '../../../shared';
@@ -91,5 +91,63 @@ describe('announceSessionStarting', () => {
     await announceSessionStarting(connections, { sessionId: 'child', cwd: '/work' }, 'T');
 
     expect(broadcastToListsHolding).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * A session is being started and the call that starts it has not been answered, so the session has no id yet. The
+ * screens are given a row made of the call under an id of its own, which the answer replaces.
+ */
+describe('announceSessionRequested', () => {
+  let broadcastToListsHolding: ReturnType<typeof vi.fn>;
+  let connections: ConnectionManager;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    broadcastToListsHolding = vi.fn();
+    connections = { broadcastToListsHolding, broadcastToAll: vi.fn() } as unknown as ConnectionManager;
+  });
+
+  it('names its placeholder so that no id the CLI gives can be taken for it', () => {
+    expect(placeholderSessionId('toolu_1')).toBe('starting:toolu_1');
+  });
+
+  it('hands the screens whose list can hold the session a provisional row under the session that started it', () => {
+    announceSessionRequested(connections, { placeholderId: 'starting:toolu_1', cwd: '/work', title: '* Review env', startedBy: 'parent' });
+
+    expect(broadcastToListsHolding).toHaveBeenCalledWith(
+      MessageType.SESSIONS_UPDATED,
+      {
+        action: 'create',
+        session: expect.objectContaining({
+          sessionId: 'starting:toolu_1',
+          sessionDir: '/work',
+          title: '* Review env',
+          provisional: true,
+          sessionMark: expect.objectContaining({ id: 'starting:toolu_1', parentSessionUid: 'parent', archivedAt: 0, desktopArchived: false }),
+        }),
+        ts: expect.any(Number),
+      },
+      ['/work'],
+      undefined,
+    );
+  });
+
+  it('is put under nothing when nothing says who started it', () => {
+    announceSessionRequested(connections, { placeholderId: 'starting:toolu_1', cwd: '/work', title: 'x' });
+
+    const session = broadcastToListsHolding.mock.calls[0][1].session;
+    expect(session.sessionMark.parentSessionUid).toBeNull();
+  });
+
+  it('is taken away as a delete of that id', () => {
+    dropSessionPlaceholder(connections, { placeholderId: 'starting:toolu_1', cwd: '/work' });
+
+    expect(broadcastToListsHolding).toHaveBeenCalledWith(
+      MessageType.SESSIONS_UPDATED,
+      { action: 'delete', session: { sessionId: 'starting:toolu_1' }, ts: expect.any(Number) },
+      ['/work'],
+      undefined,
+    );
   });
 });

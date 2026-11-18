@@ -68,7 +68,7 @@ export function ReadMediaFileRenderer(props: RendererProps) {
                                 <img
                                     src={`data:${imageBlock.source.media_type};base64,${imageBlock.source.data}`}
                                     alt=""
-                                    className="max-h-[200px] max-w-full object-contain"
+                                    className="max-h-[12.5rem] max-w-full object-contain"
                                 />
                                 <div className="text-text-primary/50 text-[0.7692rem]">
                                     {imageBlock.source.media_type}

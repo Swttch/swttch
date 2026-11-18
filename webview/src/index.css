@@ -36,11 +36,17 @@ html:root [data-dnd-dragging] {
    second time: at 90% it landed a tenth of its distance from the corner up and to the left of the
    button. The wrapper takes the zoom back off so the translation is exact, and the tooltip box
    inside puts it on again, so its text and padding still follow the zoom like the rest of the UI.
+
+   Only where this Chromium reports rectangles in screen pixels (Chromium 128 and later; main.tsx sets
+   `data-zoom-rects` on <html> from a measurement, see utils/zoomRects.ts). The Chromium of an older JetBrains IDE
+   (122 in 2024.2) reports them in layout pixels, so the translation is already in the unit the zoom will scale and
+   cancelling the zoom there double-counts it: a menu above its button, or the context tooltip, hung about 65px too
+   low on a 740px window at 90% and ran off the bottom of it.
    ============================================ */
-[data-tippy-root] {
+html[data-zoom-rects="scaled"] [data-tippy-root] {
   zoom: calc(1 / var(--ui-zoom, 1));
 }
-[data-tippy-root] > * {
+html[data-zoom-rects="scaled"] [data-tippy-root] > * {
   zoom: var(--ui-zoom, 1);
 }
 

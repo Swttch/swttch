@@ -2,7 +2,8 @@
   "confirmDialog": {
     "confirm": "Confirmer",
     "cancel": "Annuler",
-    "close": "Fermer"
+    "close": "Fermer",
+    "loading": "Chargement…"
   },
   "renameTabDialog": {
     "title": "Renommer l'onglet",
@@ -215,6 +216,10 @@
     },
     "archiveSession": "Archiver la session",
     "unarchiveSession": "Désarchiver la session",
+    "archivedToast": "« {{title}} » archivée",
+    "archivedToastUntitled": "Session archivée",
+    "unarchivedToast": "« {{title}} » désarchivée",
+    "unarchivedToastUntitled": "Session désarchivée",
     "startedSessions": {
       "show": "Afficher les sessions qu’elle a lancées",
       "hide": "Masquer les sessions qu’elle a lancées"
@@ -368,6 +373,9 @@
       "openModelMenu": "Choisir le modèle",
       "rotateModel": "Passer au modèle suivant",
       "clearConversation": "Effacer la conversation",
+      "archiveConversation": "Archiver la conversation ou la désarchiver",
+      "openInDesktop": "Ouvrir la session dans Claude Desktop",
+      "openDevTools": "Ouvrir les outils de développement",
       "openSideQuestion": "Poser une question en aparté (/btw)",
       "cycleTranscriptView": "Changer la vue de la transcription (Normale, Réflexion, Détaillée, Classique)",
       "refreshSessionList": "Actualiser la liste des sessions quand elle est ouverte",

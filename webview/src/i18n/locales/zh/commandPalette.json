@@ -11,6 +11,7 @@
     "attachFile": "附加文件...",
     "mentionFile": "提及此项目中的文件...",
     "clearConversation": "清除对话",
+    "archiveConversation": "归档对话",
     "resumeConversation": "恢复对话",
     "showBackgroundTasks": "工作流:显示后台任务",
     "scheduleSend": "定时发送消息...",
@@ -64,7 +65,8 @@
     "permissions": "权限",
     "mcpServers": "MCP 服务器",
     "managePlugins": "管理插件",
-    "openInTerminal": "在终端中打开 Claude"
+    "openInTerminal": "在终端中打开 Claude",
+    "openInDesktop": "在 Claude 桌面版中打开 (Code)"
   },
   "settings": {
     "switchAccount": "切换账户",

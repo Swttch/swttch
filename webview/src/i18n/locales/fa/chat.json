@@ -61,7 +61,8 @@
   },
   "archivedSession": {
     "message": "این نشست بایگانی شده است. برای ادامهٔ کار در آن، آن را از بایگانی خارج کنید.",
-    "unarchive": "خروج از بایگانی"
+    "unarchive": "خروج از بایگانی",
+    "newSession": "نشست جدید"
   },
   "missingFolder": {
     "message": "پوشه کاری دیگر وجود ندارد. برای ادامه پوشه دیگری انتخاب کنید.",
@@ -75,6 +76,7 @@
     },
     "attachMenu": {
       "filesOrPhotos": "افزودن فایل یا عکس",
+      "openInDesktop": "باز کردن در Claude Desktop",
       "folder": "افزودن پوشه",
       "slashCommands": "دستورهای اسلش"
     },
@@ -326,7 +328,11 @@
       "submit": "ارسال",
       "placeholder": "پاسخ خود را اینجا بنویسید",
       "progress": "{{current}} از {{total}}",
-      "skipped": "رد شد"
+      "skipped": "رد شد",
+      "requested": "درخواست شد",
+      "repliedInChat": "در گفتگو پاسخ داده شد",
+      "questionCount_one": "{{count}} پرسش",
+      "questionCount_other": "{{count}} پرسش"
     }
   },
   "backgroundTasks": {
@@ -839,6 +845,11 @@
     "open": "باز کردن",
     "newAnswer": "پاسخ جدید"
   },
+  "openInDesktopConfirm": {
+    "title": "باز کردن در Claude Desktop",
+    "message": "نشست در برنامهٔ Claude Desktop باز می‌شود. اگر برنامه در حال اجرا نباشد، ابتدا اجرا می‌شود.",
+    "confirm": "باز کردن"
+  },
   "externalLink": {
     "copyAddress": "کپی نشانی پیوند",
     "copyDone": "نشانی پیوند کپی شد",
@@ -861,6 +872,10 @@
       "notInListHint": "این نشست در فهرست نیست. ممکن است حذف شده باشد یا به پوشهٔ دیگری تعلق داشته باشد.",
       "archived": "بایگانی‌شده",
       "resetToDesktop": "بازگرداندن پیوندهای تغییریافته با دست به آنچه برنامهٔ دسکتاپ Claude ثبت کرده است",
+      "desktopMenu": "Claude Desktop",
+      "syncWithDesktop": "همسان‌سازی با سابقهٔ Desktop",
+      "openInDesktop": "باز کردن در Claude Desktop",
+      "openInDesktopNoSession": "پس از شروع نشست در دسترس است",
       "resetSynced": "چیزی برای بازگرداندن نیست: پیوندهای این نشست از قبل با برنامهٔ دسکتاپ Claude یکسان است",
       "resetNoRecord": "چیزی برای بازگرداندن نیست: برنامهٔ دسکتاپ Claude پیوندی برای این نشست ثبت نکرده است",
       "searchPlaceholder": "جستجوی نشست‌ها",
@@ -1205,6 +1220,7 @@
       "startedByClaudeFrom": "شروع‌شده توسط Claude از",
       "startedByClaude": "شروع‌شده توسط Claude از جلسه‌ای دیگر",
       "sessionNotStarted": "جلسه شروع نشد",
+      "startingSession": "در حال شروع جلسه",
       "sessionLookedUp": "جلسه جستجو شد",
       "sessionTranscriptRead": "رونوشت جلسه خوانده شد",
       "skillRan": "Skill اجرا شد",

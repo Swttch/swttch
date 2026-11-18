@@ -389,4 +389,87 @@ describe('ConfirmDialog — locked checkbox', () => {
     expect(screen.getByRole('checkbox')).not.toBeDisabled();
     expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(true);
   });
+
+  describe('while the confirm callback is pending (busy)', () => {
+    /** A callback that stays pending until `finish` is called. */
+    function pendingCallback() {
+      let finish: () => void = () => {};
+      const callback = vi.fn(() => new Promise<void>((resolve) => { finish = resolve; }));
+      return { callback, finish: () => finish() };
+    }
+
+    it('turns the confirm button into a spinner and shuts every other way out', async () => {
+      const onCancel = vi.fn();
+      const onDismiss = vi.fn();
+      const { callback } = pendingCallback();
+      render(<ConfirmDialog {...baseProps} onConfirm={callback} onCancel={onCancel} onDismiss={onDismiss} />);
+
+      expect(screen.queryByTestId('confirm-dialog-spinner')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
+
+      expect(await screen.findByTestId('confirm-dialog-spinner')).toBeInTheDocument();
+      // Every button of the dialog (confirm, cancel, close) is shut while the callback is pending.
+      const buttons = screen.getAllByRole('button');
+      expect(buttons).toHaveLength(3);
+      buttons.forEach((button) => expect(button).toBeDisabled());
+
+      fireEvent.keyDown(window, { key: 'Escape' });
+      fireEvent.click(screen.getByTestId('confirm-dialog-backdrop'));
+      expect(onCancel).not.toHaveBeenCalled();
+      expect(onDismiss).not.toHaveBeenCalled();
+    });
+
+    it('is free again once the callback has settled, and the dialog is not closed by itself', async () => {
+      const onCancel = vi.fn();
+      const { callback, finish } = pendingCallback();
+      render(<ConfirmDialog {...baseProps} onConfirm={callback} onCancel={onCancel} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
+      await screen.findByTestId('confirm-dialog-spinner');
+      finish();
+
+      await waitFor(() => expect(screen.queryByTestId('confirm-dialog-spinner')).not.toBeInTheDocument());
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(onCancel).not.toHaveBeenCalled();
+    });
+
+    it('runs the callback once however often the button is pressed meanwhile', async () => {
+      const { callback } = pendingCallback();
+      render(<ConfirmDialog {...baseProps} onConfirm={callback} />);
+
+      const confirm = screen.getByRole('button', { name: 'Enable' });
+      fireEvent.click(confirm);
+      await screen.findByTestId('confirm-dialog-spinner');
+      fireEvent.click(confirm);
+      fireEvent.click(confirm);
+
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+
+    it('logs a callback that throws, plain or async, and frees the dialog', async () => {
+      const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const { rerender } = render(
+        <ConfirmDialog {...baseProps} onConfirm={() => { throw new Error('sync boom'); }} />,
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
+      await waitFor(() => expect(errors).toHaveBeenCalledTimes(1));
+      expect(screen.getByRole('button', { name: 'Enable' })).not.toBeDisabled();
+
+      rerender(<ConfirmDialog {...baseProps} onConfirm={() => Promise.reject(new Error('async boom'))} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
+      await waitFor(() => expect(errors).toHaveBeenCalledTimes(2));
+      expect(screen.getByRole('button', { name: 'Enable' })).not.toBeDisabled();
+      errors.mockRestore();
+    });
+
+    it('treats a plain callback as it always has: called with the box, nothing left spinning', async () => {
+      const onConfirm = vi.fn();
+      render(<ConfirmDialog {...baseProps} onConfirm={onConfirm} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
+
+      expect(onConfirm).toHaveBeenCalledWith(false);
+      await waitFor(() => expect(screen.queryByTestId('confirm-dialog-spinner')).not.toBeInTheDocument());
+    });
+  });
 });

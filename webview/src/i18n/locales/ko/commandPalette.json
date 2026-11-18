@@ -11,6 +11,7 @@
     "attachFile": "파일 첨부...",
     "mentionFile": "이 프로젝트의 파일 멘션...",
     "clearConversation": "대화 지우기",
+    "archiveConversation": "대화 보관",
     "resumeConversation": "대화 재개",
     "showBackgroundTasks": "워크플로: 백그라운드 작업 보기",
     "scheduleSend": "메시지 예약 보내기...",
@@ -64,7 +65,8 @@
     "permissions": "권한",
     "mcpServers": "MCP 서버",
     "managePlugins": "플러그인 관리",
-    "openInTerminal": "터미널에서 Claude 열기"
+    "openInTerminal": "터미널에서 Claude 열기",
+    "openInDesktop": "Claude 데스크탑에서 열기 (Code)"
   },
   "settings": {
     "switchAccount": "계정 전환",

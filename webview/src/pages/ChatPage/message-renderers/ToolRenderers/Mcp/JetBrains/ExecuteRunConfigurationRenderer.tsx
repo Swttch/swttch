@@ -51,7 +51,7 @@ export function ExecuteRunConfigurationRenderer(props: RendererProps) {
                             <Badge tone={exitCode === 0 ? 'success' : 'error'}>{t('jetbrains.common.exitCode', {code: exitCode})}</Badge>
                         </div>
                     )}
-                    {output && <Container><LabelValue maxHeight="max-h-[160px]">{output}</LabelValue></Container>}
+                    {output && <Container><LabelValue maxHeight="max-h-[10rem]">{output}</LabelValue></Container>}
                 </>
             )}
         </ToolWrapper>

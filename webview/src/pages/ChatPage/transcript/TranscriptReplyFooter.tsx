@@ -34,7 +34,10 @@ export function TranscriptReplyFooter({
   onFork,
   timestamp,
   readAloudKey,
+  shown = false,
 }: {
+  /** Stays on screen without the pointer, for a line that stands under something opened. */
+  shown?: boolean;
   className?: string;
   /** Names this reply for "Read aloud", which reads `copyText`. Without it the button is not drawn. */
   readAloudKey?: string;
@@ -77,7 +80,7 @@ export function TranscriptReplyFooter({
 
   if (copyText === undefined && !onFork && !known) return null;
   // While it is being read the line stays on screen, so the pause button does not vanish with the pointer.
-  const visible = reading.status === 'idle' ? 'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100' : 'opacity-100';
+  const visible = reading.status === 'idle' && !shown ? 'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100' : 'opacity-100';
   return (
     // The click stops here: the chat logs the raw entry on any click that reaches it. The line is not part of the
     // message, so a copy that reaches over it leaves it out: `select-none` and `data-copy-ignore`.
@@ -123,7 +126,9 @@ export function TranscriptReplyFooter({
         )}
       </div>
 
-      {known && (copyText !== undefined || onFork) && <span aria-hidden="true">·</span>}
+      {/* The desktop app has no dot between the icons and the time, only the room one takes: measured on its recording
+          (the time starts about 14px after the last icon). The room is kept, the dot is not drawn. */}
+      {known && (copyText !== undefined || onFork) && <span aria-hidden="true" className="invisible" data-testid="reply-footer-gap">·</span>}
 
       {known && (
         <div className="inline-flex items-center gap-0.5">

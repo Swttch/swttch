@@ -26,7 +26,7 @@ export function ReadFileRenderer(props: RendererProps) {
             ) : (
                 out && (
                     <Container className="mt-1.5">
-                        <LabelValue maxHeight="max-h-[160px]">{out}</LabelValue>
+                        <LabelValue maxHeight="max-h-[10rem]">{out}</LabelValue>
                     </Container>
                 )
             )}

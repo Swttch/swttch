@@ -895,7 +895,7 @@
     },
     "devTools": {
       "label": "开发者工具",
-      "description": "在单独的窗口中打开聊天所用的内置浏览器 DevTools。此操作没有键盘快捷键——请从这里打开。",
+      "description": "在单独的窗口中打开聊天所用的内置浏览器 DevTools。在 Mac 上也可以按 Cmd+Option+I 打开。",
       "unavailable": "仅在 IDE 内运行时可用。在浏览器中，请使用浏览器自带的开发者工具。",
       "action": "打开"
     }

@@ -61,7 +61,8 @@
   },
   "archivedSession": {
     "message": "此会话已归档。若要继续在此会话中工作,请先取消归档。",
-    "unarchive": "取消归档"
+    "unarchive": "取消归档",
+    "newSession": "新建会话"
   },
   "missingFolder": {
     "message": "工作文件夹已不存在。请选择其他文件夹以继续。",
@@ -75,6 +76,7 @@
     },
     "attachMenu": {
       "filesOrPhotos": "添加文件或照片",
+      "openInDesktop": "在 Claude 桌面版中打开",
       "folder": "添加文件夹",
       "slashCommands": "斜杠命令"
     },
@@ -326,7 +328,10 @@
       "submit": "提交",
       "placeholder": "在此输入你的答案",
       "progress": "第 {{current}} 个，共 {{total}} 个",
-      "skipped": "已跳过"
+      "skipped": "已跳过",
+      "requested": "已请求",
+      "repliedInChat": "已在聊天中回复",
+      "questionCount_other": "{{count}} 个问题"
     }
   },
   "backgroundTasks": {
@@ -839,6 +844,11 @@
     "open": "打开",
     "newAnswer": "新回答"
   },
+  "openInDesktopConfirm": {
+    "title": "在 Claude 桌面版中打开",
+    "message": "将在 Claude 桌面版应用中打开此会话。若应用未运行，会先启动应用。",
+    "confirm": "打开"
+  },
   "externalLink": {
     "copyAddress": "复制链接地址",
     "copyDone": "已复制链接地址",
@@ -861,6 +871,10 @@
       "notInListHint": "此会话不在列表中。它可能已被删除,或属于其他文件夹。",
       "archived": "已归档",
       "resetToDesktop": "将手动更改的关联恢复为 Claude 桌面版的记录",
+      "desktopMenu": "Claude Desktop",
+      "syncWithDesktop": "与桌面版记录保持一致",
+      "openInDesktop": "在 Claude 桌面版中打开",
+      "openInDesktopNoSession": "会话开始后才能打开",
       "resetSynced": "无需恢复:此会话的关联已与 Claude 桌面版的记录一致",
       "resetNoRecord": "无需恢复:Claude 桌面版没有此会话的关联记录",
       "searchPlaceholder": "搜索会话",
@@ -1188,6 +1202,7 @@
       "startedByClaudeFrom": "Claude 从以下会话启动",
       "startedByClaude": "Claude 从另一个会话启动",
       "sessionNotStarted": "会话未启动",
+      "startingSession": "正在启动会话",
       "sessionLookedUp": "已查询会话",
       "sessionTranscriptRead": "已读取会话记录",
       "skillRan": "已运行 Skill",

@@ -107,6 +107,7 @@ vi.mock('../useChatAutoScroll', () => ({
 vi.mock('../../../contexts/ApiContext', () => ({ useApi: () => ({ sessions: { loadOlder: vi.fn() } }) }));
 vi.mock('@/i18n', () => ({ useTranslation: () => ({ t: (k: string) => k }) }));
 vi.mock('@/contexts/AutoResumeContext', () => ({ AutoResumeProvider: ({ children }: any) => <>{children}</> }));
+vi.mock('@/contexts/BacklinkedSessionsContext', () => ({ BacklinkedSessionsProvider: ({ children }: any) => <>{children}</> }));
 vi.mock('@/contexts/OnboardingContext', () => ({ useOnboarding: () => ({ visible: false }) }));
 vi.mock('../ChatInput', () => ({
   ChatInput: () => {

@@ -899,7 +899,7 @@
     },
     "devTools": {
       "label": "Ferramentas de desenvolvedor",
-      "description": "Abra o DevTools do navegador incorporado do chat em uma janela separada. Não há atalho de teclado para isso — abra por aqui.",
+      "description": "Abra o DevTools do navegador incorporado do chat em uma janela separada. No Mac, também dá para abrir com Cmd+Option+I.",
       "unavailable": "Disponível ao executar dentro de um IDE. No navegador, use o DevTools do seu próprio navegador.",
       "action": "Abrir"
     }

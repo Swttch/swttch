@@ -28,7 +28,7 @@ export function ListDirectoryTreeRenderer(props: RendererProps) {
             ) : (
                 tree && (
                     <Container className="mt-1.5">
-                        <LabelValue maxHeight="max-h-[200px]">{tree}</LabelValue>
+                        <LabelValue maxHeight="max-h-[12.5rem]">{tree}</LabelValue>
                     </Container>
                 )
             )}

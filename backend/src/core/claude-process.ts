@@ -5,6 +5,7 @@ import { Claude } from './claude';
 import { triggerCliAutoUpdate } from './cli-auto-update';
 import { diagnoseAuthError, authFailureDetail } from './features/auth-diagnosis';
 import { watchReviewBase } from './features/reviewBaseWatch';
+import { recordTurnEnd } from './features/turnEnds';
 import { EditedFileTracker } from './features/editedFileTracker';
 import { ArtifactAutoOpener } from './features/artifactAutoOpen';
 import { keepSentFile, sentFilePathsOf } from './features/sentFileStore';
@@ -1650,6 +1651,8 @@ function handleStreamEvent(
 
   if (eventType === 'result') {
     sessionsWithResult.add(targetSessionId);
+    // A program that started this session through this backend may be waiting for the end of the turn.
+    recordTurnEnd(targetSessionId);
     // The session's activity is NOT set here, though it used to be. A `result`
     // does end the turn, but the screen showing the session says so itself the
     // moment its animation stops, and it is the only one of the two that also

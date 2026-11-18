@@ -2,7 +2,8 @@
   "confirmDialog": {
     "confirm": "تأیید",
     "cancel": "لغو",
-    "close": "بستن"
+    "close": "بستن",
+    "loading": "در حال بارگذاری…"
   },
   "renameTabDialog": {
     "title": "تغییر نام برگه",
@@ -215,6 +216,10 @@
     },
     "archiveSession": "بایگانی نشست",
     "unarchiveSession": "خروج نشست از بایگانی",
+    "archivedToast": "«{{title}}» بایگانی شد",
+    "archivedToastUntitled": "نشست بایگانی شد",
+    "unarchivedToast": "«{{title}}» از بایگانی خارج شد",
+    "unarchivedToastUntitled": "نشست از بایگانی خارج شد",
     "startedSessions": {
       "show": "نمایش نشست‌هایی که این نشست آغاز کرده",
       "hide": "پنهان کردن نشست‌هایی که این نشست آغاز کرده"
@@ -368,6 +373,9 @@
       "openModelMenu": "انتخاب مدل",
       "rotateModel": "رفتن به مدل بعدی",
       "clearConversation": "پاک کردن گفتگو",
+      "archiveConversation": "بایگانی گفتگو یا بازگرداندن آن",
+      "openInDesktop": "باز کردن نشست در Claude Desktop",
+      "openDevTools": "باز کردن ابزارهای توسعه‌دهنده",
       "openSideQuestion": "پرسیدن سؤال جانبی (/btw)",
       "cycleTranscriptView": "تغییر نمای رونوشت (عادی، تفکر، مفصل، کلاسیک)",
       "refreshSessionList": "تازه‌سازی فهرست نشست‌ها هنگام باز بودن آن",

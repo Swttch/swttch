@@ -48,6 +48,30 @@ interface ModelUsageEntry {
  * assistant message above it; splitting that bubble for an entry that renders
  * nothing would leave a visible seam for no reason.
  */
+/** Two content blocks that are the same one written twice: a call by its id, text and thinking by their words. */
+function isSameBlock(a: AnyContentBlockDto, b: AnyContentBlockDto): boolean {
+  if (a.type !== b.type) return false;
+  if (a.type === ContentBlockType.ToolUse) return (a as ToolUseBlockDto).id === (b as ToolUseBlockDto).id;
+  if (a.type === ContentBlockType.Text) return (a as { text: string }).text !== '' && (a as { text: string }).text === (b as { text: string }).text;
+  if (a.type === ContentBlockType.Thinking) {
+    const x = (a as { thinking: string }).thinking;
+    return x !== '' && x === (b as { thinking: string }).thinking;
+  }
+  return false;
+}
+
+/**
+ * How many blocks at the start of `incoming` are the blocks the kept ones end with. An `assistant` entry usually holds
+ * the one block it was written for, but one that holds the response so far starts with blocks that are kept already,
+ * and adding it as it is would put them in twice.
+ */
+function leadingOverlap(kept: AnyContentBlockDto[], incoming: AnyContentBlockDto[]): number {
+  for (let k = Math.min(kept.length, incoming.length); k >= 1; k -= 1) {
+    if (incoming.slice(0, k).every((block, i) => isSameBlock(kept[kept.length - k + i], block))) return k;
+  }
+  return 0;
+}
+
 function rendersAsOwnBubble(message: LoadedMessageDto): boolean {
   // Folded into its Skill tool_use by mergeToolResults.
   if (message.sourceToolUseID) return false;
@@ -158,6 +182,12 @@ export interface UseChatStreamReturn {
   clearMessages: () => void;
   /** The newest page of a session: replaces what is held. `hasOlder` is whether the backend has entries before it. */
   loadMessages: (msgs: LoadedMessageDto[], hasOlder?: boolean) => void;
+  /**
+   * The newest page again, read because the transcript changed on disk under a program this screen does not run.
+   * What is the same as before keeps its object, so only what changed is drawn again (see `loadMessages`, which
+   * replaces everything).
+   */
+  refreshMessages: (msgs: LoadedMessageDto[], hasOlder?: boolean) => void;
   /** The backend has entries older than the first one held. */
   hasMoreOlder: boolean;
   /** The hole between the recycler and the pages after it, or null when what is held is one run. */
@@ -771,7 +801,11 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
   const loadMessages = useCallback((msgs: LoadedMessageDto[], hasOlder = false) => {
     const convertedMessages = msgs
       // .filter(raw => raw.type === LoadedMessageType.User || raw.type === LoadedMessageType.Assistant)
-      .map(raw => toInstance(LoadedMessageDto, raw));
+      .map(raw => {
+        const made = toInstance(LoadedMessageDto, raw);
+        rawSignatures.current.set(made, JSON.stringify(raw));
+        return made;
+      });
 
     // The newest page: everything the backend sent is the newest pages, with no gap.
     setStore(storeFrom(loadInitial(convertedMessages, hasOlder)));
@@ -799,6 +833,30 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
         }
       }
     }
+  }, []);
+
+  // What each held message was made from, so that a page read again can leave alone the entries that did not change.
+  const rawSignatures = useRef(new WeakMap<object, string>());
+
+  const refreshMessages = useCallback((msgs: LoadedMessageDto[], hasOlder = false) => {
+    setStore(prev => {
+      const held = new Map<string, LoadedMessageDto>();
+      for (const message of prev.messages) if (message.uuid) held.set(message.uuid, message);
+      const next = msgs.map(raw => {
+        const signature = JSON.stringify(raw);
+        const before = raw.uuid ? held.get(raw.uuid) : undefined;
+        if (before && rawSignatures.current.get(before) === signature) return before;
+        const made = toInstance(LoadedMessageDto, raw);
+        rawSignatures.current.set(made, signature);
+        return made;
+      });
+      // The page begins at an entry already held: it takes the place of everything from there on, and the pages
+      // before it, and what the window knows about them, stay as they are. Anything else starts over.
+      const first = next[0]?.uuid;
+      const at = first ? prev.messages.findIndex(message => message.uuid === first) : -1;
+      if (at === -1) return storeFrom(loadInitial(next, hasOlder));
+      return storeFrom({ messages: [...prev.messages.slice(0, at), ...next], state: windowOf(prev) });
+    });
   }, []);
 
   // The window operations below turn a page the backend sent into the next state of
@@ -1322,14 +1380,16 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
               ? [...msg.message!.content]
               : [];
 
-            // Preserve blocks from previous turns, replace current turn's blocks
-            const preservedBlocks = existingBlocks.slice(0, turnStart);
+            // Preserve blocks from previous turns, replace current turn's blocks. The count the reply itself carries
+            // is read first: `turnStart` above was read before any update of an entry that came a moment earlier had
+            // run, so on its own it kept too few blocks and dropped that entry's (see `finalizedBlockCount`).
+            const preservedBlocks = existingBlocks.slice(0, msg.finalizedBlockCount ?? turnStart);
             // A tool_use in the final payload can carry an empty `input` while the
             // streamed input_json deltas already assembled the real arguments —
             // the CLI emits this event mid-turn, before the tool call is complete.
             // Replacing blindly would blank the tool card (issue #232), so keep
             // whichever side actually has arguments.
-            const mergedBlocks = [...preservedBlocks, ...finalTurnBlocks.map(block => {
+            const finalBlocks = finalTurnBlocks.map(block => {
               if (block.type !== ContentBlockType.ToolUse) return block;
               const incoming = block as ToolUseBlockDto;
               if (incoming.input && Object.keys(incoming.input).length > 0) return block;
@@ -1338,7 +1398,10 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
               ) as ToolUseBlockDto | undefined;
               if (!streamed?.input || Object.keys(streamed.input).length === 0) return block;
               return { ...incoming, input: streamed.input };
-            })];
+            });
+            // A payload that carries the blocks written before it as well (the whole content of the response so far)
+            // starts with blocks that are already kept above; they are not added a second time.
+            const mergedBlocks = [...preservedBlocks, ...finalBlocks.slice(leadingOverlap(preservedBlocks, finalBlocks))];
 
             // Update turnStartBlockCount for the next turn
             turnStartBlockCountRef.current = mergedBlocks.length;
@@ -1350,6 +1413,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
               rowKey: msg.rowKey ?? msg.uuid,
               timestamp: entryTimestamp ?? msg.timestamp,
               message: { ...msg.message!, content: mergedBlocks },
+              finalizedBlockCount: mergedBlocks.length,
               isStreaming: false,
               message_id: messageId,
               ...apiErrorFields,
@@ -1766,6 +1830,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     addCommandEcho,
     clearMessages,
     loadMessages,
+    refreshMessages,
     hasMoreOlder: windowState.hasOlder,
     windowGap: windowState.gap,
     windowState,

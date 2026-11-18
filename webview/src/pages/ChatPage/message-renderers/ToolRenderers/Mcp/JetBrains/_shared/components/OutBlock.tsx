@@ -19,10 +19,10 @@ export const InOutBlock = (props: InOutBlockProps) => {
     const {inContent, outContent, inLabel = t('jetbrains.common.in'), outLabel = t('jetbrains.common.out')} = props;
     return (
         <Container className="mt-1.5">
-            <LabelValue label={inLabel} className="border-b border-border-subtle" maxHeight="max-h-[80px]">
+            <LabelValue label={inLabel} className="border-b border-border-subtle" maxHeight="max-h-[5rem]">
                 {inContent}
             </LabelValue>
-            <LabelValue label={outLabel} maxHeight="max-h-[140px]">
+            <LabelValue label={outLabel} maxHeight="max-h-[8.75rem]">
                 {outContent}
             </LabelValue>
         </Container>
@@ -45,7 +45,7 @@ export const OutBlock = (props: OutBlockProps) => {
     const {t} = useTranslation('chatTools');
     return (
         <Container className="mt-1.5">
-            <LabelValue label={t('jetbrains.common.out')} maxHeight={props.maxHeight ?? 'max-h-[140px]'}>{props.children}</LabelValue>
+            <LabelValue label={t('jetbrains.common.out')} maxHeight={props.maxHeight ?? 'max-h-[8.75rem]'}>{props.children}</LabelValue>
         </Container>
     );
 };
@@ -80,7 +80,7 @@ export const RawJsonResult = (props: RawJsonResultProps) => {
     if (!out) return null;
     return (
         <Container className="mt-1.5">
-            <LabelValue maxHeight="max-h-[160px]">{pretty ? prettyResult(out) : out}</LabelValue>
+            <LabelValue maxHeight="max-h-[10rem]">{pretty ? prettyResult(out) : out}</LabelValue>
         </Container>
     );
 };

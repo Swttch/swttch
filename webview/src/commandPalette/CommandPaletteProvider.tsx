@@ -4,6 +4,8 @@ import { useChatInputState } from '@/contexts/ChatInputStateContext';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { useCliConfig } from '@/contexts/CliConfigContext';
 import { useCurrentModel } from '@/hooks/useCurrentModel';
+import { useSessionMcp } from '@/hooks/queries/useSessionMcp';
+import { isArchivedMark } from '@/components/SessionList/archive';
 import { getModelEffortConfig } from '@/types/effort';
 import { resolveModelInfo } from '@/types/models';
 import { getAdapter } from '@/adapters';
@@ -25,6 +27,12 @@ import { KeyboardRegistry } from './KeyboardRegistry';
 import { isNewTabShortcut } from './isNewTabShortcut';
 import { isMac } from '@/config/environment';
 import { applyModelCapabilityFlags } from './applyModelCapabilityFlags';
+import { applyArchiveItemVisibility } from './applyArchiveItemVisibility';
+import { isOpenInDesktopShortcut } from './openInDesktopShortcut';
+import { isOpenDevToolsShortcut } from './devToolsShortcut';
+import { ClientEnv } from '@/shared';
+import { confirmAndOpenSessionInDesktop } from '@/hooks/useOpenSessionInDesktop';
+import { isArchiveShortcut, canToggleArchive, toggleArchiveOfOpenSession } from './archiveShortcut';
 import {
   ContextSection,
   ModelSection,
@@ -72,6 +80,12 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
   const { confirmDialog, confirm } = useConfirmDialog();
   const workflowState = useWorkflowState();
   const currentModel = useCurrentModel();
+  const archivingAvailable = useSessionMcp().info?.installed != null;
+  const currentSessionMark = session.sessions.find((s) => s.id === session.currentSessionId)?.sessionMark;
+  const isCurrentArchived = isArchivedMark(currentSessionMark);
+  // "Archive conversation" is offered only where it can do something: the session-management MCP is installed, the
+  // open session is saved, and it is not archived yet.
+  const showArchiveItem = archivingAvailable && session.currentSessionId != null && !isCurrentArchived;
 
   // The Effort and fast-mode rows only make sense on models that support
   // them. Rather than hiding them on unsupported models (e.g. Haiku), we
@@ -106,6 +120,12 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
 
       setSessionState: session.setSessionState,
       resetToNewSession: session.resetToNewSession,
+      nameSessionForDesktop: session.nameSessionForDesktop,
+    },
+    archive: {
+      available: archivingAvailable,
+      isCurrentArchived,
+      setArchived: session.setSessionArchived,
     },
     adapter: {
       openNewTab: () => getAdapter().openNewTab(),
@@ -143,6 +163,12 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
 
       setSessionState: session.setSessionState,
       resetToNewSession: session.resetToNewSession,
+      nameSessionForDesktop: session.nameSessionForDesktop,
+    },
+    archive: {
+      available: archivingAvailable,
+      isCurrentArchived,
+      setArchived: session.setSessionArchived,
     },
     adapter: {
       openNewTab: () => getAdapter().openNewTab(),
@@ -238,6 +264,41 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
       },
     });
 
+    // Cmd/Ctrl+Option/Alt+A (the Claude desktop app's own archive keys) archives the open session, or brings it back when
+    // it is archived. Matched only where it works, so elsewhere the keys are left alone.
+    keyboardReg.register({
+      id: 'toggle-archive-conversation',
+      match: (e: KeyboardEvent) => isArchiveShortcut(e) && canToggleArchive(servicesRef.current),
+      execute: async () => {
+        await toggleArchiveOfOpenSession(servicesRef.current);
+      },
+    });
+
+    // Cmd+Option+I opens the IDE's DevTools for this chat (macOS, inside an IDE only: a browser tab has its own, which
+    // this leaves alone). The settings button does the same.
+    keyboardReg.register({
+      id: 'open-dev-tools',
+      match: (e: KeyboardEvent) => isOpenDevToolsShortcut(e) && getAdapter().type !== ClientEnv.BROWSER,
+      execute: async () => {
+        await getAdapter().openDevTools();
+      },
+    });
+
+    // Cmd/Ctrl+Option/Alt+Shift+O opens the open session in the Claude Desktop app, after a confirmation. Matched only
+    // where the session is saved, so elsewhere the keys are left alone.
+    keyboardReg.register({
+      id: 'open-in-desktop',
+      match: (e: KeyboardEvent) => isOpenInDesktopShortcut(e) && servicesRef.current.session.currentSessionId != null,
+      execute: async () => {
+        const sessionId = servicesRef.current.session.currentSessionId;
+        if (sessionId) await confirmAndOpenSessionInDesktop(
+          servicesRef.current.ui.confirm,
+          sessionId,
+          servicesRef.current.session.nameSessionForDesktop,
+        );
+      },
+    });
+
     return { registry: reg, keyboardRegistry: keyboardReg };
   }, []);
 
@@ -279,8 +340,8 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
       registry.registerSection(new SlashCommandsSection(), sortedCommands);
     }
     const built = registry.buildSections();
-    return built.map((s) => applyModelCapabilityFlags(s, { supportsEffort, supportsFastMode }));
-  }, [registry, commands, supportsEffort, supportsFastMode]);
+    return built.map((s) => applyArchiveItemVisibility(applyModelCapabilityFlags(s, { supportsEffort, supportsFastMode }), showArchiveItem));
+  }, [registry, commands, supportsEffort, supportsFastMode, showArchiveItem]);
 
   const contextValue = useMemo<CommandPaletteRegistryContextValue>(
     () => ({ registry, keyboardRegistry, sections }),

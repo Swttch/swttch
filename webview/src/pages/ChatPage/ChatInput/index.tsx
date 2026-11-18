@@ -11,6 +11,7 @@ import { ScheduleSendPopover } from './ScheduleSendPopover';
 import { ActionButtons } from './ActionButtons';
 import { FollowUpMenu } from './FollowUpMenu';
 import { InputFrame } from './InputFrame';
+import { InputColumn } from './InputColumn';
 import { MicButton } from './MicButton';
 import { useDictationContext } from './DictationProvider';
 import { useNavigateToLogin } from '@/hooks';
@@ -141,9 +142,15 @@ interface ChatInputProps {
    * drawn in the conversation under the card and sent when the card is answered. It never goes into the queue above the composer.
    */
   cardWaiting?: boolean;
+  /**
+   * A question card is waiting for its answer, and a message typed here is the answer to it (the desktop app's way):
+   * the message goes to the CLI first, then the question is closed as one the person did not answer in the card but in
+   * the chat, so that the CLI reads the message together with the end of the question and does not ask again.
+   */
+  onQuestionReplied?: () => void;
 }
 
-export function ChatInput({ cardWaiting = false }: ChatInputProps = {}) {
+export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputProps = {}) {
   const { t } = useTranslation('chat');
   // The library's own strings live in the common namespace, and the delete
   // question must read the same here as it does inside the library.
@@ -689,7 +696,10 @@ export function ChatInput({ cardWaiting = false }: ChatInputProps = {}) {
 
     pushToHistory(value);
 
-    onSubmit(undefined, mode, attachments.length > 0 ? attachments : undefined, invertFollowUp, queueWhileWaiting, { pathTokens });
+    const delivery = onSubmit(undefined, mode, attachments.length > 0 ? attachments : undefined, invertFollowUp, queueWhileWaiting, { pathTokens });
+    // The message is handed to the CLI before the question it replaces is closed: the CLI then finds the message
+    // waiting when the question ends and reads both together, in one turn.
+    if (onQuestionReplied) Promise.resolve(delivery).finally(onQuestionReplied);
     clearAttachments();
     setPathTokens([]);
   }, [
@@ -707,6 +717,7 @@ export function ChatInput({ cardWaiting = false }: ChatInputProps = {}) {
     onChange,
     onSubmit,
     queueWhileWaiting,
+    onQuestionReplied,
     pathTokens,
     clearAttachments,
   ]);
@@ -1292,7 +1303,7 @@ export function ChatInput({ cardWaiting = false }: ChatInputProps = {}) {
   }, [composerHasContent, setComposerHasContent]);
 
   return (
-    <div className="max-w-[var(--chat-column-max,44rem)] mx-auto px-4 sm:px-[var(--chat-column-px,1rem)] pb-[14px] pt-2">
+    <InputColumn>
       {/* 텔레메트리 동의 인풋배너: 미응답(PENDING)이고 이 세션에서 닫지 않았을 때만 표시 */}
       {showConsentBanner && (
         <TelemetryConsentBanner
@@ -1679,6 +1690,6 @@ export function ChatInput({ cardWaiting = false }: ChatInputProps = {}) {
           Portal로 그려지므로 위치가 레이아웃에 영향을 주지 않고, 인풋 내부에
           두면 컴포저가 조건부로 언마운트될 때 함께 사라지기 때문이다. */}
       {confirmDialog}
-    </div>
+    </InputColumn>
   );
 }

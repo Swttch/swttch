@@ -60,8 +60,9 @@
     }
   },
   "archivedSession": {
-    "message": "이 세션은 보관되었습니다. 이 세션에서 계속 작업하려면 보관을 취소하세요.",
-    "unarchive": "보관 해제"
+    "message": "이 세션은 보관되었습니다. 이 세션에서 계속 작업하려면 보관을 해제하세요.",
+    "unarchive": "보관 해제",
+    "newSession": "새 세션"
   },
   "missingFolder": {
     "message": "작업 폴더가 더 이상 존재하지 않습니다. 계속하려면 다른 폴더를 선택하세요.",
@@ -75,6 +76,7 @@
     },
     "attachMenu": {
       "filesOrPhotos": "파일 또는 사진 추가",
+      "openInDesktop": "Claude 데스크탑에서 열기",
       "folder": "폴더 추가",
       "slashCommands": "슬래시 명령어"
     },
@@ -326,7 +328,10 @@
       "submit": "제출",
       "placeholder": "여기에 답변을 입력하세요",
       "progress": "{{total}}개 중 {{current}}번째",
-      "skipped": "건너뜀"
+      "skipped": "건너뜀",
+      "requested": "요청됨",
+      "repliedInChat": "채팅에서 답장함",
+      "questionCount_other": "질문 {{count}}개"
     }
   },
   "backgroundTasks": {
@@ -839,6 +844,11 @@
     "open": "열기",
     "newAnswer": "새 답변"
   },
+  "openInDesktopConfirm": {
+    "title": "Claude 데스크탑에서 열기",
+    "message": "이 세션을 Claude 데스크탑 앱에서 엽니다. 앱이 꺼져 있으면 먼저 실행됩니다.",
+    "confirm": "열기"
+  },
   "externalLink": {
     "copyAddress": "링크 주소 복사",
     "copyDone": "링크 주소를 복사했습니다",
@@ -861,6 +871,10 @@
       "notInListHint": "이 목록에 없는 세션입니다. 삭제되었거나 다른 폴더에 있는 세션일 수 있습니다.",
       "archived": "보관됨",
       "resetToDesktop": "손으로 바꾼 연결을 지우고 Claude 데스크탑이 기록한 연결로 되돌립니다",
+      "desktopMenu": "Claude 데스크탑",
+      "syncWithDesktop": "데스크탑 기록과 맞추기",
+      "openInDesktop": "Claude 데스크탑에서 열기",
+      "openInDesktopNoSession": "세션이 시작된 뒤에 열 수 있습니다",
       "resetSynced": "되돌릴 것이 없습니다. 이 세션의 연결이 이미 Claude 데스크탑의 기록과 같습니다",
       "resetNoRecord": "되돌릴 것이 없습니다. Claude 데스크탑에 이 세션의 연결 기록이 없습니다",
       "searchPlaceholder": "세션 검색",
@@ -1188,6 +1202,7 @@
       "startedByClaudeFrom": "Claude가 다음 세션에서 시작함",
       "startedByClaude": "Claude가 다른 세션에서 시작함",
       "sessionNotStarted": "세션이 시작되지 않음",
+      "startingSession": "세션 시작 중",
       "sessionLookedUp": "세션 조회됨",
       "sessionTranscriptRead": "세션 트랜스크립트 읽음",
       "skillRan": "Skill 실행됨",

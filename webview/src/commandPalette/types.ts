@@ -33,6 +33,17 @@ export interface CommandPaletteServices {
     inputMode: InputMode;
     setSessionState: (state: SessionState) => void;
     resetToNewSession: () => void;
+    /** Writes the shown title into the transcript for Claude Desktop (see `SessionContextValue`). */
+    nameSessionForDesktop: (sessionId: string) => Promise<void>;
+  };
+  /** Archiving the open session, which belongs to the session-management MCP (installed or not). */
+  archive: {
+    /** Whether the session-management MCP is installed, so that archiving exists at all. */
+    available: boolean;
+    /** Whether the open session is already archived. */
+    isCurrentArchived: boolean;
+    /** Archive a session; true once the MCP accepted it (a refusal is already shown as a toast). */
+    setArchived: (sessionId: string, archived: boolean) => Promise<boolean>;
   };
   adapter: {
     openNewTab: () => Promise<void>;

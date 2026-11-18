@@ -61,7 +61,8 @@
   },
   "archivedSession": {
     "message": "このセッションはアーカイブされています。作業を続けるにはアーカイブを解除してください。",
-    "unarchive": "アーカイブを解除"
+    "unarchive": "アーカイブを解除",
+    "newSession": "新規セッション"
   },
   "missingFolder": {
     "message": "作業フォルダが存在しなくなりました。続けるには別のフォルダを選んでください。",
@@ -75,6 +76,7 @@
     },
     "attachMenu": {
       "filesOrPhotos": "ファイルまたは写真を追加",
+      "openInDesktop": "Claude デスクトップで開く",
       "folder": "フォルダを追加",
       "slashCommands": "スラッシュコマンド"
     },
@@ -326,7 +328,10 @@
       "submit": "送信",
       "placeholder": "ここに独自の回答を入力してください",
       "progress": "{{current}}/{{total}}",
-      "skipped": "スキップ済み"
+      "skipped": "スキップ済み",
+      "requested": "リクエスト済み",
+      "repliedInChat": "チャットで返信しました",
+      "questionCount_other": "{{count}} 件の質問"
     }
   },
   "backgroundTasks": {
@@ -839,6 +844,11 @@
     "open": "開く",
     "newAnswer": "新しい回答"
   },
+  "openInDesktopConfirm": {
+    "title": "Claude デスクトップで開く",
+    "message": "このセッションを Claude デスクトップアプリで開きます。アプリが起動していない場合は先に起動します。",
+    "confirm": "開く"
+  },
   "externalLink": {
     "copyAddress": "リンクのアドレスをコピー",
     "copyDone": "リンクのアドレスをコピーしました",
@@ -861,6 +871,10 @@
       "notInListHint": "このセッションは一覧にありません。削除されたか、別のフォルダのセッションの可能性があります。",
       "archived": "アーカイブ済み",
       "resetToDesktop": "手動で変更した連携を、Claude デスクトップアプリの記録に戻します",
+      "desktopMenu": "Claude Desktop",
+      "syncWithDesktop": "デスクトップの記録に合わせる",
+      "openInDesktop": "Claude デスクトップで開く",
+      "openInDesktopNoSession": "セッションの開始後に開けます",
       "resetSynced": "戻すものはありません。このセッションの連携は Claude デスクトップアプリの記録と同じです",
       "resetNoRecord": "戻すものはありません。Claude デスクトップアプリにこのセッションの連携記録がありません",
       "searchPlaceholder": "セッションを検索",
@@ -1188,6 +1202,7 @@
       "startedByClaudeFrom": "Claude が次のセッションから開始：",
       "startedByClaude": "別のセッションから Claude が開始",
       "sessionNotStarted": "セッションが開始されていません",
+      "startingSession": "セッションを開始しています",
       "sessionLookedUp": "セッションを検索しました",
       "sessionTranscriptRead": "セッションのトランスクリプトを読み取りました",
       "skillRan": "Skills を実行しました",

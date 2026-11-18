@@ -5,6 +5,7 @@ import { ClientEnv } from '@/shared';
 import { i18n } from '@/i18n';
 import { useChatStreamContextOrNull } from '@/contexts/ChatStreamContext';
 import { useWorkingDirOrNull } from '@/contexts/WorkingDirContext';
+import { useBacklinkedSession } from '@/contexts/BacklinkedSessionsContext';
 import { startedSessionsIn, type StartedSession } from '../utils/startedSessions';
 
 /** The address of a session of this app, and how a click on a link to it opens it. */
@@ -50,11 +51,13 @@ export function useStartedSession(sessionId: string): StartedSession | undefined
  */
 export const StartedSessionLink: React.FC<{ id: string; children?: ReactNode; plain?: boolean }> = ({ id, children, plain }) => {
   const session = useStartedSession(id);
+  // The name the session has now, whatever the text called it when it was written.
+  const named = useBacklinkedSession(session ? id : '')?.title;
   if (!session) return <span className={plain ? '' : 'richInputChip'}>{children}</span>;
   const { href, onClick } = sessionLinkProps(session);
   return (
     <a href={href} target="_blank" rel="noreferrer" className={plain ? 'cursor-pointer underline' : 'richInputChip cursor-pointer'} onClick={onClick}>
-      {children ?? session.title}
+      {named || (children ?? session.title)}
     </a>
   );
 };

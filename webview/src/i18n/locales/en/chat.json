@@ -61,7 +61,8 @@
   },
   "archivedSession": {
     "message": "This session is archived. To keep working in it, unarchive it.",
-    "unarchive": "Unarchive"
+    "unarchive": "Unarchive",
+    "newSession": "New session"
   },
   "missingFolder": {
     "message": "The working folder no longer exists. Choose another folder to continue.",
@@ -75,6 +76,7 @@
     },
     "attachMenu": {
       "filesOrPhotos": "Add files or photos",
+      "openInDesktop": "Open in Claude Desktop",
       "folder": "Add folder",
       "slashCommands": "Slash commands"
     },
@@ -326,7 +328,11 @@
       "submit": "Submit",
       "placeholder": "Type your own answer here",
       "progress": "{{current}} of {{total}}",
-      "skipped": "Skipped"
+      "skipped": "Skipped",
+      "requested": "Requested",
+      "repliedInChat": "Replied in chat",
+      "questionCount_one": "{{count}} question",
+      "questionCount_other": "{{count}} questions"
     }
   },
   "backgroundTasks": {
@@ -843,6 +849,11 @@
     "open": "Open",
     "newAnswer": "New answer"
   },
+  "openInDesktopConfirm": {
+    "title": "Open in Claude Desktop",
+    "message": "This opens the session in the Claude Desktop app. If the app is not running, it starts first.",
+    "confirm": "Open"
+  },
   "externalLink": {
     "copyAddress": "Copy link address",
     "copyDone": "Link address copied",
@@ -865,6 +876,10 @@
       "notInListHint": "This session is not in the list. It may have been deleted, or it may belong to another folder.",
       "archived": "Archived",
       "resetToDesktop": "Reset the links you changed by hand to what the Claude desktop app records",
+      "desktopMenu": "Claude Desktop",
+      "syncWithDesktop": "Match Desktop's records",
+      "openInDesktop": "Open in Claude Desktop",
+      "openInDesktopNoSession": "Available once the session has started",
       "resetSynced": "Nothing to reset: this session's links already match the Claude desktop app's",
       "resetNoRecord": "Nothing to reset: the Claude desktop app has no link recorded for this session",
       "searchPlaceholder": "Search sessions",
@@ -1210,6 +1225,7 @@
       "startedByClaudeFrom": "Started by Claude from",
       "startedByClaude": "Started by Claude from another session",
       "sessionNotStarted": "Session not started",
+      "startingSession": "Starting a session",
       "sessionLookedUp": "Looked up session",
       "sessionTranscriptRead": "Read session transcript",
       "skillRan": "Ran skill",

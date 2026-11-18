@@ -1,6 +1,8 @@
+import { RepliedInChatRow } from "./RepliedInChatRow";
 import { Container, LabelValue, RendererProps, ToolHeader, ToolWrapper } from "../common";
 import { useTranslation } from "@/i18n";
 import { useTranscriptViewMode } from "../../transcriptViewMode";
+import { isRepliedInChat } from "../../../AskUserQuestionInputPanel/repliedInChat";
 
 /** The CLI answers `User has answered your questions: "Q1"="A1", "Q2"="A2". ...`: each question with its answer. */
 function parseAnswers(output: string): Map<string, string> {
@@ -35,6 +37,11 @@ export function AskUserQuestionRenderer(props: RendererProps) {
         const answers = parseAnswers(output);
         const declined = /declined to run|doesn't want to proceed/i.test(output);
         const rows = hasValidQuestions ? (questions as Array<{ question: string; header?: string }>) : [];
+        // A question that the person replied to in the chat, not in the card: a line of its own where the card was
+        // (the desktop app's `Requested "header" Replied in chat ›`), measured on its recording.
+        if (isRepliedInChat(output)) {
+            return <RepliedInChatRow questions={rows} message={props.message} />;
+        }
         if (rows.length === 0) return output && !declined ? <div className="whitespace-pre-wrap text-[0.9rem] text-text-secondary">{output}</div> : null;
         return (
             <div

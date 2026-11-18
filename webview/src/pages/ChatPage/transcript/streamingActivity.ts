@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import type { LoadedMessageDto } from '../../../types';
 import { isContentBlockArray } from '../../../types';
 import { ContentBlockType, type ToolUseBlockDto } from '../../../dto/message/ContentBlockDto';
@@ -47,7 +48,7 @@ const LOOK_BACK = 6;
  * result has a `tool_result` block, and a send has text or a picture and was not written by the CLI itself (a skill's
  * prompt, a note under a picture, a hook's feedback).
  */
-function isASend(message: LoadedMessageDto): boolean {
+export function isASend(message: LoadedMessageDto): boolean {
   if (message.type !== 'user') return false;
   const content = message.message?.content;
   if (!isContentBlockArray(content)) return true;
@@ -73,20 +74,32 @@ export function runningActivity(messages: LoadedMessageDto[]): StreamingActivity
       if (toolUse.tool_result) continue;
       // A question, a plan, what was sent: drawn as a card of its own, not as a call in a run, so no run can say it is working.
       if (isCardTool(toolUse.name)) return null;
-      const call: ToolCall = { toolUse, message };
-      const description = typeof toolUse.input?.description === 'string' ? (toolUse.input.description as string).trim() : '';
-      const kind = toolKindOf(call);
-      const path = kind === 'edit' || kind === 'write' ? pathOf(call) : '';
-      return {
-        toolUseId: toolUse.id,
-        description: description || null,
-        phrase: PHRASE_OF[kind] ?? 'working',
-        mark: MARK_OF[kind] ?? 'default',
-        file: path ? { name: baseName(path), creating: kind === 'write' } : null,
-      };
+      return activityOfCall({ toolUse, message });
     }
   }
   return null;
+}
+
+/** What one call is doing, in the terms the summary line says it: the call itself, whether or not it has answered. */
+export function activityOfCall(call: ToolCall): StreamingActivity {
+  const { toolUse } = call;
+  const description = typeof toolUse.input?.description === 'string' ? (toolUse.input.description as string).trim() : '';
+  const kind = toolKindOf(call);
+  const path = kind === 'edit' || kind === 'write' ? pathOf(call) : '';
+  return {
+    toolUseId: toolUse.id,
+    description: description || null,
+    phrase: PHRASE_OF[kind] ?? 'working',
+    mark: MARK_OF[kind] ?? 'default',
+    file: path ? { name: baseName(path), creating: kind === 'write' } : null,
+  };
+}
+
+/** What a call is doing, in words: its own description, or the desktop app's phrase for the kind of call. */
+export function activityLabel(activity: StreamingActivity, t: TFunction): string {
+  return activity.file
+    ? t(activity.file.creating ? 'transcript.tools.creatingFile' : 'transcript.tools.editingFile', { name: activity.file.name })
+    : (activity.description ?? t(`transcript.streaming.activity.${activity.phrase}`));
 }
 
 /** 725 stays 725; 3712 is 3.7k; 12000 is 12k. */

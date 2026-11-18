@@ -3,6 +3,7 @@ import type { PromptScope, SavedPrompt } from '@/types/prompt';
 import { i18n } from '@/i18n';
 import { StaticItem } from '../../types';
 import { enKeyword } from '../../enKeyword';
+import { ARCHIVE_CONVERSATION_ITEM_ID } from '../../applyArchiveItemVisibility';
 
 /**
  * Fired when the user runs `/resume`. The session dropdown opens (browse/resume
@@ -88,6 +89,19 @@ export const getContextItems = (): StaticItem[] => [
       if (services.chatStream.isStreaming) services.chatStream.stop();
       services.chatStream.resetForSessionSwitch();
       services.session.resetToNewSession();
+    },
+  }),
+  // Right below "Clear conversation": archive the open session (the same archive the session list's button runs).
+  // The session stays open: the archived bar takes the input's place and offers a new session. Taken out of the panel by applyArchiveItemVisibility where it would do
+  // nothing. The Claude desktop app has no such command; it archives from the session's menu in its sidebar.
+  new StaticItem(ARCHIVE_CONVERSATION_ITEM_ID, i18n.t('commandPalette:context.archiveConversation'), {
+    keywords: [enKeyword('commandPalette:context.archiveConversation'), 'archive'],
+    disabled: false,
+    serviceAction: async (services) => {
+      const sessionId = services.session.currentSessionId;
+      if (!sessionId) return;
+      // A refused archive is shown as a toast by setSessionArchived.
+      await services.archive.setArchived(sessionId, true);
     },
   }),
   // Search-only: surfaces when the user types `/resume`. Opens the session

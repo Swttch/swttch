@@ -61,7 +61,8 @@
   },
   "archivedSession": {
     "message": "Esta sesión está archivada. Para seguir trabajando en ella, desarchívala.",
-    "unarchive": "Desarchivar"
+    "unarchive": "Desarchivar",
+    "newSession": "Nueva sesión"
   },
   "missingFolder": {
     "message": "La carpeta de trabajo ya no existe. Elige otra carpeta para continuar.",
@@ -75,6 +76,7 @@
     },
     "attachMenu": {
       "filesOrPhotos": "Agregar archivos o fotos",
+      "openInDesktop": "Abrir en Claude Desktop",
       "folder": "Agregar carpeta",
       "slashCommands": "Comandos con barra"
     },
@@ -326,7 +328,11 @@
       "submit": "Enviar",
       "placeholder": "Escribe tu propia respuesta aquí",
       "progress": "{{current}} de {{total}}",
-      "skipped": "Omitida"
+      "skipped": "Omitida",
+      "requested": "Solicitado",
+      "repliedInChat": "Respondió en el chat",
+      "questionCount_one": "{{count}} pregunta",
+      "questionCount_other": "{{count}} preguntas"
     }
   },
   "backgroundTasks": {
@@ -839,6 +845,11 @@
     "open": "Abrir",
     "newAnswer": "Nueva respuesta"
   },
+  "openInDesktopConfirm": {
+    "title": "Abrir en Claude Desktop",
+    "message": "La sesión se abre en la aplicación Claude Desktop. Si la aplicación no está en ejecución, se inicia primero.",
+    "confirm": "Abrir"
+  },
   "externalLink": {
     "copyAddress": "Copiar la dirección del enlace",
     "copyDone": "Dirección del enlace copiada",
@@ -861,6 +872,10 @@
       "notInListHint": "Esta sesión no está en la lista. Puede que se haya eliminado o que pertenezca a otra carpeta.",
       "archived": "Archivada",
       "resetToDesktop": "Restablecer los vínculos cambiados a mano a lo que registra la app de escritorio de Claude",
+      "desktopMenu": "Claude Desktop",
+      "syncWithDesktop": "Igualar al registro de Desktop",
+      "openInDesktop": "Abrir en Claude Desktop",
+      "openInDesktopNoSession": "Disponible cuando la sesión haya empezado",
       "resetSynced": "Nada que restablecer: los vínculos de esta sesión ya coinciden con los de la app de escritorio de Claude",
       "resetNoRecord": "Nada que restablecer: la app de escritorio de Claude no tiene ningún vínculo registrado para esta sesión",
       "searchPlaceholder": "Buscar sesiones",
@@ -1214,6 +1229,7 @@
       "startedByClaudeFrom": "Iniciada por Claude desde",
       "startedByClaude": "Iniciado por Claude desde otra sesión",
       "sessionNotStarted": "Sesión no iniciada",
+      "startingSession": "Iniciando una sesión",
       "sessionLookedUp": "Sesión consultada",
       "sessionTranscriptRead": "Transcripción de la sesión leída",
       "skillRan": "Skill ejecutado",

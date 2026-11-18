@@ -2,7 +2,8 @@
   "confirmDialog": {
     "confirm": "تأكيد",
     "cancel": "إلغاء",
-    "close": "إغلاق"
+    "close": "إغلاق",
+    "loading": "جارٍ التحميل…"
   },
   "renameTabDialog": {
     "title": "إعادة تسمية علامة التبويب",
@@ -219,6 +220,10 @@
     },
     "archiveSession": "أرشفة الجلسة",
     "unarchiveSession": "إلغاء أرشفة الجلسة",
+    "archivedToast": "تمت أرشفة \"{{title}}\"",
+    "archivedToastUntitled": "تمت أرشفة الجلسة",
+    "unarchivedToast": "تم إلغاء أرشفة \"{{title}}\"",
+    "unarchivedToastUntitled": "تم إلغاء أرشفة الجلسة",
     "startedSessions": {
       "show": "إظهار الجلسات التي بدأتها هذه الجلسة",
       "hide": "إخفاء الجلسات التي بدأتها هذه الجلسة"
@@ -372,6 +377,9 @@
       "openModelMenu": "اختيار النموذج",
       "rotateModel": "التبديل إلى النموذج التالي",
       "clearConversation": "مسح المحادثة",
+      "archiveConversation": "أرشفة المحادثة أو استعادتها",
+      "openInDesktop": "فتح الجلسة في Claude Desktop",
+      "openDevTools": "فتح أدوات المطورين",
       "openSideQuestion": "طرح سؤال جانبي (/btw)",
       "cycleTranscriptView": "تبديل عرض النص (عادي، التفكير، مفصّل، كلاسيكي)",
       "refreshSessionList": "تحديث قائمة الجلسات أثناء فتحها",

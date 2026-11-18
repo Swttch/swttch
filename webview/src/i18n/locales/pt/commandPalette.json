@@ -11,6 +11,7 @@
     "attachFile": "Anexar arquivo...",
     "mentionFile": "Mencionar arquivo deste projeto...",
     "clearConversation": "Limpar conversa",
+    "archiveConversation": "Arquivar conversa",
     "resumeConversation": "Retomar conversa",
     "showBackgroundTasks": "Fluxo de trabalho: Mostrar tarefas em segundo plano",
     "scheduleSend": "Agendar uma mensagem...",
@@ -64,7 +65,8 @@
     "permissions": "Permissões",
     "mcpServers": "Servidores MCP",
     "managePlugins": "Gerenciar plugins",
-    "openInTerminal": "Abrir Claude no Terminal"
+    "openInTerminal": "Abrir Claude no Terminal",
+    "openInDesktop": "Abrir no Claude Desktop (Code)"
   },
   "settings": {
     "switchAccount": "Trocar conta",

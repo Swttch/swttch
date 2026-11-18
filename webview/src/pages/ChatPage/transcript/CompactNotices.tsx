@@ -15,7 +15,7 @@ export function CompactDivider({ message }: { message: LoadedMessageDto }) {
   const { t } = useTranslation('chat');
   const dropped = message.compactMetadata?.cumulativeDroppedTokens;
   return (
-    <div className={`px-4 py-[25px] text-[0.9375rem] ${QUIET_TEXT}`} data-transcript-compact-divider>
+    <div className={`px-4 py-[1.5625rem] text-[0.9375rem] ${QUIET_TEXT}`} data-transcript-compact-divider>
       {typeof dropped === 'number' && dropped > 0
         ? t('transcript.compact.saved', { tokens: formatTokenCount(dropped) })
         : t('transcript.compact.title')}
@@ -28,7 +28,7 @@ export function CliNotice({ message }: { message: LoadedMessageDto }) {
   const { t } = useTranslation('chat');
   const [open, setOpen] = useState(false);
   return (
-    <div className="px-4 py-[17px]" data-transcript-notice>
+    <div className="px-4 py-[1.0625rem]" data-transcript-notice>
       <button
         type="button"
         aria-expanded={open}

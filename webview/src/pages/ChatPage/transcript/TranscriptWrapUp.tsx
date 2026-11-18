@@ -48,7 +48,7 @@ const Closing: FC<{ next: LoadedMessageDto | null; wrapUp: Record<string, unknow
       )}
       {/* The box holds the question and its answers, and the recap above them when there is a question. It stands
           clear of the reply above it: the desktop app leaves about a line and a half between the two. */}
-      <div className={hasQuestion ? 'pt-[24px]' : undefined} data-transcript-wrap-up-box>
+      <div className={hasQuestion ? 'pt-6' : undefined} data-transcript-wrap-up-box>
         <WrapUpBox
           input={hasQuestion ? wrapUp : { ...wrapUp, recap: undefined }}
           reply={reply}

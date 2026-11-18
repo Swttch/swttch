@@ -36,10 +36,10 @@ export function ReplaceTextRenderer(props: RendererProps) {
             ) : (
                 <div className="mt-1.5 flex flex-col gap-1">
                     <Container>
-                        <LabelValue label={t('jetbrains.replaceText.old')} maxHeight="max-h-[120px]">{oldText}</LabelValue>
+                        <LabelValue label={t('jetbrains.replaceText.old')} maxHeight="max-h-[7.5rem]">{oldText}</LabelValue>
                     </Container>
                     <Container>
-                        <LabelValue label={t('jetbrains.replaceText.new')} maxHeight="max-h-[120px]">{newText}</LabelValue>
+                        <LabelValue label={t('jetbrains.replaceText.new')} maxHeight="max-h-[7.5rem]">{newText}</LabelValue>
                     </Container>
                     {out && !isTrivialResult(out) && <RawJsonResult out={out} />}
                 </div>

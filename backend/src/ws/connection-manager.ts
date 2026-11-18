@@ -5,6 +5,7 @@ import { ClientEnv, MessageType, SessionActivity, isSameWorkingDir, type Session
 import { listsHold, type ListScope } from '../core/features/sessionListScope';
 import { disableIdleShutdown } from '../config/environment';
 import { Claude } from '../core/claude';
+import { recordTurnEnd } from '../core/features/turnEnds';
 
 const SESSION_CLEANUP_GRACE_MS = 30_000;
 /**
@@ -666,6 +667,8 @@ export class ConnectionManager {
       if (session.activity !== SessionActivity.Idle) {
         this.setSessionActivity(sessionId, SessionActivity.Done);
       }
+      // A process that died ends the turn for whoever waits for it, though no `result` will come.
+      recordTurnEnd(sessionId);
     }
 
     if (type === MessageType.CLI_EVENT) {
@@ -1077,6 +1080,10 @@ export class ConnectionManager {
     // A turn running in the Claude desktop app has no CLI under this backend, so no tab reports it;
     // the desktop app's own record says so. What a tab here reports for the session wins.
     for (const sessionId of this.desktopRunning) activity[sessionId] = SessionActivity.Running;
+    // A session another program works on (see sessionTranscriptFollower) shows as running while its transcript grows.
+    for (const sessionId of this.externalRunning) activity[sessionId] = SessionActivity.Running;
+    // One whose program answered and that the person has not looked at since is unread, which is `done`.
+    for (const sessionId of this.externalDone) if (activity[sessionId] === undefined) activity[sessionId] = SessionActivity.Done;
     for (const session of this.sessionRegistry.values()) {
       if (session.activity !== SessionActivity.Idle) {
         activity[session.sessionId] = session.activity;
@@ -1087,6 +1094,28 @@ export class ConnectionManager {
 
   /** Sessions with a turn in flight in the Claude desktop app (see desktopSessions.ts). */
   private desktopRunning = new Set<string>();
+
+  /** Sessions run by a program this backend does not run, whose transcript grew a moment ago. */
+  private externalRunning = new Set<string>();
+
+  /** Sessions another program ran whose last response the person has not looked at. */
+  private externalDone = new Set<string>();
+
+  /** Mark a session another program ran as unread (or read), and tell every connection when that moved. */
+  setExternalDone(sessionId: string, unread: boolean): void {
+    if (this.externalDone.has(sessionId) === unread) return;
+    if (unread) this.externalDone.add(sessionId);
+    else this.externalDone.delete(sessionId);
+    this.announceSessions();
+  }
+
+  /** Mark a session another program works on as running (or not), and tell every connection when that moved. */
+  setExternalRunning(sessionId: string, running: boolean): void {
+    if (this.externalRunning.has(sessionId) === running) return;
+    if (running) this.externalRunning.add(sessionId);
+    else this.externalRunning.delete(sessionId);
+    this.announceSessions();
+  }
 
   /** Record which sessions are running in the Claude desktop app, and tell every connection when that moved. */
   setDesktopRunning(sessionIds: ReadonlySet<string>): void {
@@ -1207,6 +1236,8 @@ export class ConnectionManager {
    * moment its tab becomes the visible one.
    */
   markSessionRead(sessionId: string): void {
+    // A session another program ran: its unread state is the one kept here, and it ends for every screen at once.
+    this.setExternalDone(sessionId, false);
     const session = this.sessionRegistry.get(sessionId);
     if (!session || session.activity !== SessionActivity.Done) return;
     this.setSessionActivity(sessionId, SessionActivity.Idle);

@@ -13,6 +13,8 @@ export enum IconType {
   Command = 'command',
   Clock = 'clock',
   Bookmark = 'bookmark',
+  /** The Claude logo, drawn at the right edge of a row that hands the work to the Claude Desktop app. */
+  Claude = 'claude',
 }
 
 // Panel Section Types

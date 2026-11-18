@@ -61,7 +61,8 @@
   },
   "archivedSession": {
     "message": "Esta sessão está arquivada. Para continuar trabalhando nela, desarquive-a.",
-    "unarchive": "Desarquivar"
+    "unarchive": "Desarquivar",
+    "newSession": "Nova sessão"
   },
   "missingFolder": {
     "message": "A pasta de trabalho não existe mais. Escolha outra pasta para continuar.",
@@ -75,6 +76,7 @@
     },
     "attachMenu": {
       "filesOrPhotos": "Adicionar arquivos ou fotos",
+      "openInDesktop": "Abrir no Claude Desktop",
       "folder": "Adicionar pasta",
       "slashCommands": "Comandos de barra"
     },
@@ -326,7 +328,11 @@
       "submit": "Enviar",
       "placeholder": "Digite sua própria resposta aqui",
       "progress": "{{current}} de {{total}}",
-      "skipped": "Ignorada"
+      "skipped": "Ignorada",
+      "requested": "Solicitado",
+      "repliedInChat": "Respondeu na conversa",
+      "questionCount_one": "{{count}} pergunta",
+      "questionCount_other": "{{count}} perguntas"
     }
   },
   "backgroundTasks": {
@@ -839,6 +845,11 @@
     "open": "Abrir",
     "newAnswer": "Nova resposta"
   },
+  "openInDesktopConfirm": {
+    "title": "Abrir no Claude Desktop",
+    "message": "A sessão será aberta no aplicativo Claude Desktop. Se o aplicativo não estiver em execução, ele será iniciado primeiro.",
+    "confirm": "Abrir"
+  },
   "externalLink": {
     "copyAddress": "Copiar endereço do link",
     "copyDone": "Endereço do link copiado",
@@ -861,6 +872,10 @@
       "notInListHint": "Esta sessão não está na lista. Ela pode ter sido excluída ou pertencer a outra pasta.",
       "archived": "Arquivada",
       "resetToDesktop": "Redefinir os vínculos alterados à mão para o que o app de desktop do Claude registra",
+      "desktopMenu": "Claude Desktop",
+      "syncWithDesktop": "Igualar ao registro do Desktop",
+      "openInDesktop": "Abrir no Claude Desktop",
+      "openInDesktopNoSession": "Disponível depois que a sessão começar",
       "resetSynced": "Nada a redefinir: os vínculos desta sessão já coincidem com os do app de desktop do Claude",
       "resetNoRecord": "Nada a redefinir: o app de desktop do Claude não registrou nenhum vínculo para esta sessão",
       "searchPlaceholder": "Pesquisar sessões",
@@ -1213,6 +1228,7 @@
       "startedByClaudeFrom": "Iniciada pelo Claude a partir de",
       "startedByClaude": "Iniciada pelo Claude a partir de outra sessão",
       "sessionNotStarted": "Sessão não iniciada",
+      "startingSession": "Iniciando sessão",
       "sessionLookedUp": "Consultou a sessão",
       "sessionTranscriptRead": "Transcrição da sessão lida",
       "skillRan": "Skill executada",

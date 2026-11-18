@@ -2,6 +2,8 @@ import { IconType } from '@/types/commandPalette';
 import { i18n } from '@/i18n';
 import { StaticItem } from '../../types';
 import { enKeyword } from '../../enKeyword';
+import { confirmAndOpenSessionInDesktop } from '@/hooks/useOpenSessionInDesktop';
+import toast from 'react-hot-toast';
 
 export const OPEN_MCP_MODAL_EVENT = 'open-mcp-modal';
 
@@ -45,6 +47,20 @@ export const getCustomizeItems = (): StaticItem[] => [
     serviceAction: async (services) => {
       const workingDir = services.session.workingDirectory ?? '';
       await services.adapter.openTerminal(workingDir);
+    },
+  }),
+  // The last row of the section: opens the session on screen in the Claude Desktop app, after a confirmation.
+  new StaticItem('open-in-desktop', i18n.t('commandPalette:customize.openInDesktop'), {
+    keywords: [enKeyword('commandPalette:customize.openInDesktop'), 'desktop'],
+    icon: IconType.Claude,
+    disabled: false,
+    serviceAction: async (services) => {
+      const sessionId = services.session.currentSessionId;
+      if (!sessionId) {
+        toast.error(i18n.t('chat:sessionRail.linked.openInDesktopNoSession'));
+        return;
+      }
+      await confirmAndOpenSessionInDesktop(services.ui.confirm, sessionId, services.session.nameSessionForDesktop);
     },
   }),
 ];

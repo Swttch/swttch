@@ -2,7 +2,8 @@
   "confirmDialog": {
     "confirm": "Bestätigen",
     "cancel": "Abbrechen",
-    "close": "Schließen"
+    "close": "Schließen",
+    "loading": "Wird geladen…"
   },
   "renameTabDialog": {
     "title": "Tab umbenennen",
@@ -215,6 +216,10 @@
     },
     "archiveSession": "Sitzung archivieren",
     "unarchiveSession": "Archivierung der Sitzung aufheben",
+    "archivedToast": "\"{{title}}\" archiviert",
+    "archivedToastUntitled": "Sitzung archiviert",
+    "unarchivedToast": "\"{{title}}\" wiederhergestellt",
+    "unarchivedToastUntitled": "Sitzung wiederhergestellt",
     "startedSessions": {
       "show": "Von dieser Sitzung gestartete Sitzungen anzeigen",
       "hide": "Von dieser Sitzung gestartete Sitzungen ausblenden"
@@ -368,6 +373,9 @@
       "openModelMenu": "Modell auswählen",
       "rotateModel": "Zum nächsten Modell wechseln",
       "clearConversation": "Unterhaltung löschen",
+      "archiveConversation": "Unterhaltung archivieren oder wiederherstellen",
+      "openInDesktop": "Sitzung in Claude Desktop öffnen",
+      "openDevTools": "Entwicklertools öffnen",
       "openSideQuestion": "Nebenfrage stellen (/btw)",
       "cycleTranscriptView": "Transkript-Ansicht wechseln (Normal, Denken, Ausführlich, Klassisch)",
       "refreshSessionList": "Sitzungsliste aktualisieren, solange sie geöffnet ist",

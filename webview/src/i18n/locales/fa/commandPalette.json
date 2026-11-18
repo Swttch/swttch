@@ -11,6 +11,7 @@
     "attachFile": "پیوست فایل...",
     "mentionFile": "اشاره به فایلی از این پروژه...",
     "clearConversation": "پاک کردن گفتگو",
+    "archiveConversation": "بایگانی گفتگو",
     "resumeConversation": "ازسرگیری گفتگو",
     "showBackgroundTasks": "جریان کاری: نمایش کارهای پس‌زمینه",
     "scheduleSend": "زمان‌بندی پیام...",
@@ -64,7 +65,8 @@
     "permissions": "مجوزها",
     "mcpServers": "سرورهای MCP",
     "managePlugins": "مدیریت پلاگین‌ها",
-    "openInTerminal": "باز کردن Claude در ترمینال"
+    "openInTerminal": "باز کردن Claude در ترمینال",
+    "openInDesktop": "باز کردن در Claude Desktop (Code)"
   },
   "settings": {
     "switchAccount": "تغییر حساب",

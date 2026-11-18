@@ -40,7 +40,7 @@ export function CreateNewFileRenderer(props: RendererProps) {
                     <>
                         <ResultCaption>{t('jetbrains.createNewFile.lineCount', {count: lineCount})}</ResultCaption>
                         <Container>
-                            <LabelValue maxHeight="max-h-[160px]">{text}</LabelValue>
+                            <LabelValue maxHeight="max-h-[10rem]">{text}</LabelValue>
                         </Container>
                     </>
                 )

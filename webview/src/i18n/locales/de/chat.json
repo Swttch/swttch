@@ -61,7 +61,8 @@
   },
   "archivedSession": {
     "message": "Diese Sitzung ist archiviert. Um darin weiterzuarbeiten, heben Sie die Archivierung auf.",
-    "unarchive": "Archivierung aufheben"
+    "unarchive": "Archivierung aufheben",
+    "newSession": "Neue Sitzung"
   },
   "missingFolder": {
     "message": "Der Arbeitsordner existiert nicht mehr. Wähle einen anderen Ordner, um fortzufahren.",
@@ -75,6 +76,7 @@
     },
     "attachMenu": {
       "filesOrPhotos": "Dateien oder Fotos hinzufügen",
+      "openInDesktop": "In Claude Desktop öffnen",
       "folder": "Ordner hinzufügen",
       "slashCommands": "Slash-Befehle"
     },
@@ -326,7 +328,11 @@
       "submit": "Übermitteln",
       "placeholder": "Gib hier deine eigene Antwort ein",
       "progress": "{{current}} von {{total}}",
-      "skipped": "Übersprungen"
+      "skipped": "Übersprungen",
+      "requested": "Angefragt",
+      "repliedInChat": "Im Chat geantwortet",
+      "questionCount_one": "{{count}} Frage",
+      "questionCount_other": "{{count}} Fragen"
     }
   },
   "backgroundTasks": {
@@ -839,6 +845,11 @@
     "open": "Öffnen",
     "newAnswer": "Neue Antwort"
   },
+  "openInDesktopConfirm": {
+    "title": "In Claude Desktop öffnen",
+    "message": "Die Sitzung wird in der Claude-Desktop-App geöffnet. Läuft die App nicht, wird sie zuerst gestartet.",
+    "confirm": "Öffnen"
+  },
   "externalLink": {
     "copyAddress": "Link-Adresse kopieren",
     "copyDone": "Link-Adresse kopiert",
@@ -861,6 +872,10 @@
       "notInListHint": "Diese Sitzung steht nicht in der Liste. Sie wurde möglicherweise gelöscht oder gehört zu einem anderen Ordner.",
       "archived": "Archiviert",
       "resetToDesktop": "Von Hand geänderte Verknüpfungen auf die Aufzeichnung der Claude-Desktop-App zurücksetzen",
+      "desktopMenu": "Claude Desktop",
+      "syncWithDesktop": "Mit Desktop-Aufzeichnung abgleichen",
+      "openInDesktop": "In Claude Desktop öffnen",
+      "openInDesktopNoSession": "Verfügbar, sobald die Sitzung gestartet ist",
       "resetSynced": "Nichts zurückzusetzen: Die Verknüpfungen dieser Sitzung stimmen bereits mit der Claude-Desktop-App überein",
       "resetNoRecord": "Nichts zurückzusetzen: Die Claude-Desktop-App hat keine Verknüpfung für diese Sitzung aufgezeichnet",
       "searchPlaceholder": "Sitzungen suchen",
@@ -1206,6 +1221,7 @@
       "startedByClaudeFrom": "Von Claude gestartet aus",
       "startedByClaude": "Von Claude aus einer anderen Sitzung gestartet",
       "sessionNotStarted": "Sitzung nicht gestartet",
+      "startingSession": "Sitzung wird gestartet",
       "sessionLookedUp": "Sitzung nachgeschlagen",
       "sessionTranscriptRead": "Sitzungstranskript gelesen",
       "skillRan": "Skill ausgeführt",

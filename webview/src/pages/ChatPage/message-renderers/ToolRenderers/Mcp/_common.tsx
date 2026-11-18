@@ -85,8 +85,8 @@ interface CollapsibleBoxProps {
  * look; `200` suits longer list content such as a mail list.
  */
 const collapsedHeightClasses: Record<number, string> = {
-    60: "overflow-hidden max-h-[60px] [mask-image:linear-gradient(to_bottom,black_50px,transparent_60px)]",
-    200: "overflow-hidden max-h-[200px] [mask-image:linear-gradient(to_bottom,black_185px,transparent_200px)]",
+    60: "overflow-hidden max-h-[3.75rem] [mask-image:linear-gradient(to_bottom,black_3.125rem,transparent_3.75rem)]",
+    200: "overflow-hidden max-h-[12.5rem] [mask-image:linear-gradient(to_bottom,black_11.5625rem,transparent_12.5rem)]",
 };
 
 /**
@@ -133,7 +133,7 @@ export const McpToolRow = (props: {label: string; children?: ReactNode}) => {
     // sideways, and no wrapper is added around the content.
     return (
         <div className={cn('group/wrap relative flex items-start gap-2 p-2 border-b border-border-subtle last:border-b-0', softWrap.blockClassName)}>
-            <span className="text-tool-label-fg uppercase text-[0.7692rem] min-w-[28px] pt-[1px]">
+            <span className="text-tool-label-fg uppercase text-[0.7692rem] min-w-[1.75rem] pt-[0.0625rem]">
                 {label}
             </span>
             {softWrap.button}

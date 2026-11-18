@@ -1,3 +1,4 @@
+import { getSessionsExistHandler, watchSessionsHandler } from './watchSessions';
 import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
@@ -29,6 +30,7 @@ import { rewindCodeHandler } from './rewindCode';
 import { forkSessionHandler } from './forkSession';
 import { logDebug } from '../../logging/log-level';
 import { renameSessionHandler } from './renameSession';
+import { updateSessionDesktopTitleHandler } from './updateSessionDesktopTitle';
 import { getAgentTranscriptHandler } from './getAgentTranscript';
 import { watchBackgroundTaskOutputHandler, unwatchBackgroundTaskOutputHandler } from './watchBackgroundTaskOutput';
 import { getSettingsHandler } from './getSettings';
@@ -200,6 +202,7 @@ import {
 } from './prompts';
 import { getSessionAssetsHandler } from './getSessionAssets';
 import { getSessionSendsHandler } from './getSessionSends';
+import { getSessionTailHandler } from './getSessionTail';
 import { getSessionParentTitleHandler } from './getSessionParentTitle';
 import { getDesktopSessionHandler } from './getDesktopSession';
 import { searchSessionHandler } from './searchSession';
@@ -305,6 +308,9 @@ export async function handleMessage(
       break;
     case MessageType.RENAME_SESSION:
       await renameSessionHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.UPDATE_SESSION_DESKTOP_TITLE:
+      await updateSessionDesktopTitleHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_AGENT_TRANSCRIPT:
       await getAgentTranscriptHandler(connectionId, message, connections, bridge);
@@ -860,6 +866,9 @@ export async function handleMessage(
     case MessageType.GET_SESSION_SENDS:
       await getSessionSendsHandler(connectionId, message, connections, bridge);
       break;
+    case MessageType.GET_SESSION_TAIL:
+      await getSessionTailHandler(connectionId, message, connections, bridge);
+      break;
     case MessageType.GET_SESSION_PARENT_TITLE:
       await getSessionParentTitleHandler(connectionId, message, connections, bridge);
       break;
@@ -889,6 +898,12 @@ export async function handleMessage(
       break;
     case MessageType.MARK_SESSION_READ:
       markSessionReadHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.WATCH_SESSIONS:
+      await watchSessionsHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_SESSIONS_EXIST:
+      await getSessionsExistHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.REPORT_SESSION_ACTIVITY:
       reportSessionActivityHandler(connectionId, message, connections, bridge);

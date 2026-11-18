@@ -61,7 +61,8 @@
   },
   "archivedSession": {
     "message": "此工作階段已封存。若要繼續在此工作階段中工作,請先取消封存。",
-    "unarchive": "取消封存"
+    "unarchive": "取消封存",
+    "newSession": "新增工作階段"
   },
   "missingFolder": {
     "message": "工作資料夾已不存在。請選擇其他資料夾以繼續。",
@@ -75,6 +76,7 @@
     },
     "attachMenu": {
       "filesOrPhotos": "新增檔案或照片",
+      "openInDesktop": "在 Claude 桌面版中開啟",
       "folder": "新增資料夾",
       "slashCommands": "斜線指令"
     },
@@ -326,7 +328,10 @@
       "submit": "提交",
       "placeholder": "在此輸入你的答案",
       "progress": "第 {{current}} 個，共 {{total}} 個",
-      "skipped": "已略過"
+      "skipped": "已略過",
+      "requested": "已請求",
+      "repliedInChat": "已在聊天中回覆",
+      "questionCount_other": "{{count}} 個問題"
     }
   },
   "backgroundTasks": {
@@ -839,6 +844,11 @@
     "open": "開啟",
     "newAnswer": "新回答"
   },
+  "openInDesktopConfirm": {
+    "title": "在 Claude 桌面版中開啟",
+    "message": "將在 Claude 桌面版應用程式中開啟此工作階段。若應用程式未執行，會先啟動。",
+    "confirm": "開啟"
+  },
   "externalLink": {
     "copyAddress": "複製連結位址",
     "copyDone": "已複製連結位址",
@@ -861,6 +871,10 @@
       "notInListHint": "此工作階段不在清單中。可能已被刪除,或屬於其他資料夾。",
       "archived": "已封存",
       "resetToDesktop": "將手動變更的關聯還原為 Claude 桌面版的記錄",
+      "desktopMenu": "Claude Desktop",
+      "syncWithDesktop": "與桌面版記錄保持一致",
+      "openInDesktop": "在 Claude 桌面版中開啟",
+      "openInDesktopNoSession": "工作階段開始後才能開啟",
       "resetSynced": "無需還原:此工作階段的關聯已與 Claude 桌面版的記錄一致",
       "resetNoRecord": "無需還原:Claude 桌面版沒有此工作階段的關聯記錄",
       "searchPlaceholder": "搜尋工作階段",
@@ -1188,6 +1202,7 @@
       "startedByClaudeFrom": "Claude 從以下工作階段啟動",
       "startedByClaude": "Claude 從另一個工作階段啟動",
       "sessionNotStarted": "工作階段未啟動",
+      "startingSession": "正在啟動工作階段",
       "sessionLookedUp": "已查詢工作階段",
       "sessionTranscriptRead": "已讀取工作階段逐字稿",
       "skillRan": "已執行 Skill",

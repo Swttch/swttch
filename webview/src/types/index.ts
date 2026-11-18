@@ -123,6 +123,13 @@ export class LoadedMessageDto {
   // and each Edit card was drawn for a frame without its diff, pulling the view up.
   rowKey?: string;
 
+  // UI-only: how many of the reply's content blocks the CLI has already written as entries of their own, which the
+  // next entry must keep and add to. It is kept on the reply, not read from a ref, because entries that arrive a few
+  // milliseconds apart (the calls of one parallel tool use) are handled before the first one's state update has run:
+  // each then read the count from before the others and replaced them, so only the last call stayed on screen and the
+  // results of the rest were drawn as bare boxes.
+  finalizedBlockCount?: number;
+
   // UI-only: whether the CLI wrote a file-history snapshot for this send, so the
   // code can be rewound to it. Arrives with `cliUuid` on SEND_RECORDED; for a
   // send read from the transcript the snapshot entry itself answers this instead.

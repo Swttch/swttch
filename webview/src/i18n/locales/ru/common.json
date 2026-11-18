@@ -2,7 +2,8 @@
   "confirmDialog": {
     "confirm": "Подтвердить",
     "cancel": "Отмена",
-    "close": "Закрыть"
+    "close": "Закрыть",
+    "loading": "Загрузка…"
   },
   "renameTabDialog": {
     "title": "Переименовать вкладку",
@@ -217,6 +218,10 @@
     },
     "archiveSession": "Архивировать сессию",
     "unarchiveSession": "Разархивировать сессию",
+    "archivedToast": "Сессия «{{title}}» архивирована",
+    "archivedToastUntitled": "Сессия архивирована",
+    "unarchivedToast": "Сессия «{{title}}» возвращена из архива",
+    "unarchivedToastUntitled": "Сессия возвращена из архива",
     "startedSessions": {
       "show": "Показать сессии, запущенные этой сессией",
       "hide": "Скрыть сессии, запущенные этой сессией"
@@ -370,6 +375,9 @@
       "openModelMenu": "Выбрать модель",
       "rotateModel": "Переключиться на следующую модель",
       "clearConversation": "Очистить беседу",
+      "archiveConversation": "Архивировать разговор или вернуть из архива",
+      "openInDesktop": "Открыть сеанс в Claude Desktop",
+      "openDevTools": "Открыть инструменты разработчика",
       "openSideQuestion": "Задать побочный вопрос (/btw)",
       "cycleTranscriptView": "Переключить вид переписки (обычный, размышления, подробный, классический)",
       "refreshSessionList": "Обновить список сессий, пока он открыт",

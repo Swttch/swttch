@@ -7,11 +7,12 @@ import { useTranslation } from '@/i18n';
  * Opens the embedded browser's DevTools.
  *
  * An action, not a setting: there is nothing to persist, so it is a button
- * rather than a toggle. It is also the ONLY way to reach DevTools — the plugin
- * binds no key to them. F12 used to, which meant the chat swallowed the IDE's
- * own F12 shortcuts, Alt+F12 (the Terminal tool window in WebStorm) included,
- * with no way to turn it off. Moving the entry point here costs a few clicks and
- * gives the keyboard back (#333).
+ * rather than a toggle. F12 used to open DevTools, which meant the chat swallowed
+ * the IDE's own F12 shortcuts, Alt+F12 (the Terminal tool window in WebStorm)
+ * included, with no way to turn it off, so the entry point moved here (#333).
+ * A Mac now also has Cmd+Option+I, the key its browsers use for the same thing: no
+ * IDE keymap binds it, so it takes nothing from the IDE (see devToolsShortcut).
+ * Elsewhere this button is still the only way in.
  */
 export function DevToolsRow() {
   const { t } = useTranslation('settings');

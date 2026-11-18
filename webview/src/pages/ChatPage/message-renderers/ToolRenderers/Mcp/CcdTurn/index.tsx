@@ -17,12 +17,11 @@ export const WRAP_UP_TOOL = 'mcp__ccd_turn__wrap_up';
 const BOX_CLASS = 'rounded-lg border border-border-default/30 px-4 py-3 text-[0.95rem] leading-[1.5]';
 
 /**
- * The slot every box of the `ccd_turn` tools sits in. The chat's scroll area already keeps 24px clear on its
- * right, so 24px on the start side makes the space equal on both sides and the box stands in the middle of the
- * chat rather than against its left edge.
+ * The slot every box of the `ccd_turn` tools sits in. `px-4` keeps the same space on both sides, so the box
+ * stands in the middle of the chat rather than against its left edge.
  */
 const TurnBoxSlot: FC<{ children: ReactNode; testId?: string }> = ({ children, testId }) => (
-  <div className="py-2" style={{ paddingInlineStart: '24px' }} data-testid={testId}>
+  <div className="px-4 py-2" data-testid={testId}>
     {children}
   </div>
 );
@@ -65,8 +64,8 @@ function PlanMark({ status, running }: { status: PlanItem['status']; running: bo
         className={`block h-4 w-4 shrink-0 rounded-full ${running ? 'animate-spin' : ''}`}
         style={{
           background: `conic-gradient(from 0deg, transparent 0, ${MARK_COLOR} 100%)`,
-          WebkitMask: 'radial-gradient(circle, transparent 5px, #000 6px)',
-          mask: 'radial-gradient(circle, transparent 5px, #000 6px)',
+          WebkitMask: 'radial-gradient(circle, transparent 0.3125rem, #000 0.375rem)',
+          mask: 'radial-gradient(circle, transparent 0.3125rem, #000 0.375rem)',
         }}
         aria-hidden="true"
       />
@@ -87,7 +86,7 @@ export function PlanBox({ plan, running = false }: { plan: PlanItem[]; running?:
           data-status={item.status}
           className={`flex items-start gap-2 ${item.status === 'completed' ? 'text-text-primary/50' : 'text-text-primary/80'}`}
         >
-          <span className="mt-[3px] flex">
+          <span className="mt-[0.1875rem] flex">
             <PlanMark status={item.status} running={running} />
           </span>
           <span className="min-w-0 break-words">{item.content}</span>
@@ -153,7 +152,7 @@ export function wrapUpAnswers(actions: unknown): string[] {
   return labels;
 }
 
-const KEY_CHIP = 'flex h-[18px] min-w-[18px] items-center justify-center rounded-[4px] border border-text-inverse/20 px-[3px] text-[0.75rem] leading-none text-text-inverse/70';
+const KEY_CHIP = 'flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-[0.25rem] border border-text-inverse/20 px-[0.1875rem] text-[0.75rem] leading-none text-text-inverse/70';
 
 /**
  * The box that closes a turn: the recap in dim text, the question under it, then the answers offered as
@@ -227,7 +226,7 @@ export const WrapUpBox: FC<{
                       to its right when the chips are gone. */}
                   <span className="pe-[0.25rem]">{answer}</span>
                   {primary && onAnswer && composerEmpty && (
-                    <span className="flex items-center gap-[2px]" aria-hidden="true">
+                    <span className="flex items-center gap-[0.125rem]" aria-hidden="true">
                       <span className={KEY_CHIP}>{isMac ? '⌘' : 'Ctrl'}</span>
                       <span className={KEY_CHIP}>↵</span>
                     </span>
