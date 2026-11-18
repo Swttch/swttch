@@ -2,7 +2,8 @@
   "confirmDialog": {
     "confirm": "Confirm",
     "cancel": "Cancel",
-    "close": "Close"
+    "close": "Close",
+    "loading": "Loading…"
   },
   "renameTabDialog": {
     "title": "Rename tab",

@@ -55,6 +55,13 @@ interface Props {
    */
   onDismiss?: () => void;
   /**
+   * What the dialog has to find out before it can ask. With it, the dialog opens in a loading state: the title is
+   * there, the body is a spinner with the word for loading, and the confirm button takes no input while Cancel works as
+   * ever. The dialog is ready when the call resolves. If the call throws, the body shows the reason as it was given, and
+   * the confirm button stays closed.
+   */
+  onReady?: () => Promise<void>;
+  /**
    * Runs when the confirm button is pressed; `checked` is the box's state at that moment, false when there is no box.
    *
    * It may be async. The dialog does not care which: it wraps the call so that a plain function and one that returns a
@@ -77,9 +84,37 @@ export function ConfirmDialog(props: Props) {
     variant = 'default',
     checkbox,
     onDismiss,
+    onReady,
     onConfirm,
     onCancel,
   } = props;
+
+  // Until `onReady` has resolved the dialog is loading; a dialog without one is ready from the start.
+  const [readiness, setReadiness] = useState<{ phase: 'loading' | 'ready' | 'failed'; error: string }>({
+    phase: onReady ? 'loading' : 'ready',
+    error: '',
+  });
+  const onReadyRef = useRef(onReady);
+  useEffect(() => {
+    const ready = onReadyRef.current;
+    if (!ready) return;
+    let cancelled = false;
+    (async () => ready())().then(
+      () => {
+        if (!cancelled) setReadiness({ phase: 'ready', error: '' });
+      },
+      (err: unknown) => {
+        console.error('[ConfirmDialog] The dialog could not get ready:', err);
+        if (!cancelled) {
+          setReadiness({ phase: 'failed', error: err instanceof Error ? err.message : String(err) });
+        }
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const confirmClosed = readiness.phase !== 'ready';
 
   // Where the caller distinguishes the two, leaving without answering is a
   // dismissal; otherwise it stays what it has always been — a cancel.
@@ -96,7 +131,7 @@ export function ConfirmDialog(props: Props) {
     };
   }, []);
   const handleConfirm = async () => {
-    if (busy) return;
+    if (busy || confirmClosed) return;
     setBusy(true);
     try {
       // Wrapped, so a sync callback and an async one take the same road, and a sync throw lands in the catch too.
@@ -214,8 +249,25 @@ export function ConfirmDialog(props: Props) {
           {/* pre-line so a message can break itself into paragraphs. Callers
               write plain strings, and without this a `\n\n` collapses into a
               space — one wall of text where two were intended. */}
-          <p className="text-sm text-[var(--tr-text)] whitespace-pre-line">{message}</p>
-          {checkbox && (
+          {readiness.phase === 'loading' && (
+            <div
+              data-testid="confirm-dialog-loading"
+              role="status"
+              className="flex items-center gap-2 text-sm text-[var(--tr-text)]"
+            >
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-text-primary/30 border-t-text-primary" />
+              {t('confirmDialog.loading')}
+            </div>
+          )}
+          {readiness.phase === 'failed' && (
+            <p data-testid="confirm-dialog-error" className="text-sm text-state-error-fg whitespace-pre-line">
+              {readiness.error}
+            </p>
+          )}
+          {readiness.phase === 'ready' && (
+            <p className="text-sm text-[var(--tr-text)] whitespace-pre-line">{message}</p>
+          )}
+          {readiness.phase === 'ready' && checkbox && (
             <div className="flex flex-col gap-1">
               <label
                 className={`flex items-center gap-2 text-xs text-text-secondary cursor-pointer select-none ${
@@ -258,9 +310,12 @@ export function ConfirmDialog(props: Props) {
             </button>
             <button
               ref={confirmButtonRef}
-              className={`${confirmButtonClass} relative`}
+              className={`${confirmButtonClass} relative inline-flex items-center gap-1.5 ${
+                confirmClosed ? 'pointer-events-none opacity-40' : ''
+              }`}
               disabled={busy}
               aria-busy={busy}
+              aria-disabled={confirmClosed}
               onClick={() => void handleConfirm()}
             >
               {/* The label stays (invisible) so the button keeps its width while the spinner takes its place. */}

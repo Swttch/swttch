@@ -2,7 +2,8 @@
   "confirmDialog": {
     "confirm": "Confirmer",
     "cancel": "Annuler",
-    "close": "Fermer"
+    "close": "Fermer",
+    "loading": "Chargement…"
   },
   "renameTabDialog": {
     "title": "Renommer l'onglet",

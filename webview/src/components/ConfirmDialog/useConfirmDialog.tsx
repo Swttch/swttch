@@ -10,6 +10,8 @@ export interface ConfirmOptions {
   variant?: 'default' | 'danger';
   /** A small opt-in under the message; read its state back with confirmWithCheckbox. */
   checkbox?: ConfirmCheckbox;
+  /** What the dialog has to find out before it can ask; see `ConfirmDialog`'s `onReady`. */
+  onReady?: () => Promise<void>;
   /**
    * Work to do on a yes, before the question is answered. The dialog stays open, busy, until it settles (see
    * `ConfirmDialog`'s `onConfirm`), and only then answers yes. Without it, a yes closes the dialog at once. An error
@@ -112,6 +114,7 @@ export function useConfirmDialog(): UseConfirmDialogReturn {
       cancelLabel={state.cancelLabel}
       variant={state.variant}
       checkbox={state.checkbox}
+      onReady={state.onReady}
       onDismiss={state.dismissable ? () => settle(ConfirmResult.Dismissed) : undefined}
       onConfirm={confirmAfterWork}
       onCancel={() => settle(ConfirmResult.Declined)}

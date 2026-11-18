@@ -2,7 +2,8 @@
   "confirmDialog": {
     "confirm": "Confirmar",
     "cancel": "Cancelar",
-    "close": "Fechar"
+    "close": "Fechar",
+    "loading": "Carregando…"
   },
   "renameTabDialog": {
     "title": "Renomear aba",

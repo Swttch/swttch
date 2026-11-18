@@ -2,7 +2,8 @@
   "confirmDialog": {
     "confirm": "تأیید",
     "cancel": "لغو",
-    "close": "بستن"
+    "close": "بستن",
+    "loading": "در حال بارگذاری…"
   },
   "renameTabDialog": {
     "title": "تغییر نام برگه",

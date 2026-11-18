@@ -2,7 +2,8 @@
   "confirmDialog": {
     "confirm": "Подтвердить",
     "cancel": "Отмена",
-    "close": "Закрыть"
+    "close": "Закрыть",
+    "loading": "Загрузка…"
   },
   "renameTabDialog": {
     "title": "Переименовать вкладку",

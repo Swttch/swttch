@@ -2,7 +2,8 @@
   "confirmDialog": {
     "confirm": "確認",
     "cancel": "取消",
-    "close": "關閉"
+    "close": "關閉",
+    "loading": "載入中…"
   },
   "renameTabDialog": {
     "title": "重新命名分頁",

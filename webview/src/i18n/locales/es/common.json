@@ -2,7 +2,8 @@
   "confirmDialog": {
     "confirm": "Confirmar",
     "cancel": "Cancelar",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "loading": "Cargando…"
   },
   "renameTabDialog": {
     "title": "Cambiar el nombre de la pestaña",

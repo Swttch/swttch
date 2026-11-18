@@ -2,7 +2,8 @@
   "confirmDialog": {
     "confirm": "تأكيد",
     "cancel": "إلغاء",
-    "close": "إغلاق"
+    "close": "إغلاق",
+    "loading": "جارٍ التحميل…"
   },
   "renameTabDialog": {
     "title": "إعادة تسمية علامة التبويب",
