@@ -65,7 +65,8 @@
     "permissions": "مجوزها",
     "mcpServers": "سرورهای MCP",
     "managePlugins": "مدیریت پلاگین‌ها",
-    "openInTerminal": "باز کردن Claude در ترمینال"
+    "openInTerminal": "باز کردن Claude در ترمینال",
+    "openInDesktop": "باز کردن در Claude Desktop (Code)"
   },
   "settings": {
     "switchAccount": "تغییر حساب",

@@ -65,7 +65,8 @@
     "permissions": "权限",
     "mcpServers": "MCP 服务器",
     "managePlugins": "管理插件",
-    "openInTerminal": "在终端中打开 Claude"
+    "openInTerminal": "在终端中打开 Claude",
+    "openInDesktop": "在 Claude 桌面版中打开 (Code)"
   },
   "settings": {
     "switchAccount": "切换账户",

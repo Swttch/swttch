@@ -65,7 +65,8 @@
     "permissions": "Berechtigungen",
     "mcpServers": "MCP-Server",
     "managePlugins": "Plugins verwalten",
-    "openInTerminal": "Claude im Terminal öffnen"
+    "openInTerminal": "Claude im Terminal öffnen",
+    "openInDesktop": "In Claude Desktop öffnen (Code)"
   },
   "settings": {
     "switchAccount": "Konto wechseln",

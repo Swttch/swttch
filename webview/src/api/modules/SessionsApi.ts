@@ -277,6 +277,20 @@ export class SessionsApi {
   }
 
   /**
+   * Put the title the session shows into its transcript for Claude Desktop to read, unless the transcript already
+   * carries a name. Resolves with whether a name was written.
+   */
+  async updateDesktopTitle(sessionId: string, title: string, workingDir?: string): Promise<{ written: boolean }> {
+    const dir = workingDir ?? this.getConfig().workingDir;
+    const response = await this.bridge.request<{ written?: boolean }>(MessageType.UPDATE_SESSION_DESKTOP_TITLE, {
+      sessionId,
+      title,
+      workingDir: dir,
+    });
+    return { written: response?.written === true };
+  }
+
+  /**
    * Activate (switch to) a session
    * POST /sessions/:id/activate
    */

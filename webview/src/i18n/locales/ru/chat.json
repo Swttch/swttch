@@ -76,6 +76,7 @@
     },
     "attachMenu": {
       "filesOrPhotos": "Добавить файлы или фото",
+      "openInDesktop": "Открыть в Claude Desktop",
       "folder": "Добавить папку",
       "slashCommands": "Слэш-команды"
     },
@@ -854,6 +855,11 @@
     "open": "Открыть",
     "newAnswer": "Новый ответ"
   },
+  "openInDesktopConfirm": {
+    "title": "Открыть в Claude Desktop",
+    "message": "Сеанс откроется в приложении Claude Desktop. Если приложение не запущено, сначала оно запустится.",
+    "confirm": "Открыть"
+  },
   "externalLink": {
     "copyAddress": "Копировать адрес ссылки",
     "copyDone": "Адрес ссылки скопирован",
@@ -876,6 +882,10 @@
       "notInListHint": "Этой сессии нет в списке. Возможно, она удалена или находится в другой папке.",
       "archived": "В архиве",
       "resetToDesktop": "Вернуть изменённые вручную связи к записям десктопного приложения Claude",
+      "desktopMenu": "Claude Desktop",
+      "syncWithDesktop": "Сверить с записью Desktop",
+      "openInDesktop": "Открыть в Claude Desktop",
+      "openInDesktopNoSession": "Доступно после начала сеанса",
       "resetSynced": "Нечего возвращать: связи этой сессии уже совпадают с записями десктопного приложения Claude",
       "resetNoRecord": "Нечего возвращать: десктопное приложение Claude не записало связей для этой сессии",
       "searchPlaceholder": "Поиск сессий",

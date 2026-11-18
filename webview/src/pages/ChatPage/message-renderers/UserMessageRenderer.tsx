@@ -159,7 +159,7 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
               {/* Folds the reply below this send; see `SendFoldToggle`. */}
               <SendFoldToggle />
               <MessageBox>
-                <div className="text-text-primary/80 text-[1rem] leading-relaxed whitespace-pre-wrap break-words">
+                <div className="text-[var(--tr-text)] text-[1rem] leading-relaxed whitespace-pre-wrap break-words">
                   <span className="text-text-primary/50">{'/'}</span>{parsedContent.commandName}
                   {parsedContent.text && (
                     <span className="text-text-primary/50">{' '}{parsedContent.text}</span>
@@ -217,7 +217,7 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
           <div className="flex items-start gap-2">
             <div className="min-w-0">
               <MessageBox>
-                <div className="text-text-primary/80 text-[1rem] leading-[1.5] whitespace-pre-wrap break-words">
+                <div className="text-[var(--tr-text)] text-[1rem] leading-[1.5] whitespace-pre-wrap break-words">
                   {unmergedToolResultText}
                 </div>
               </MessageBox>
@@ -262,7 +262,7 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
                 {parsedContent.replies.length > 0 && (
                   <ReplyQuotes replies={parsedContent.replies} followedByText={parsedContent.text !== ''} />
                 )}
-                <div className="text-text-primary/80 text-[1rem] leading-[1.5] whitespace-pre-wrap break-words">
+                <div className="text-[var(--tr-text)] text-[1rem] leading-[1.5] whitespace-pre-wrap break-words">
                   <UserMessageText text={parsedContent.text} />
                 </div>
               </MessageBox>

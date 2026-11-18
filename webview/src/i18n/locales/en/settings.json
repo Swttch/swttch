@@ -899,7 +899,7 @@
     },
     "devTools": {
       "label": "Developer tools",
-      "description": "Open the embedded browser's DevTools for the chat, in a separate window. There is no keyboard shortcut for this — open it from here.",
+      "description": "Open the embedded browser's DevTools for the chat, in a separate window. On a Mac, Cmd+Option+I does the same.",
       "unavailable": "Available when running inside an IDE. In a browser, use your browser's own developer tools.",
       "action": "Open"
     }

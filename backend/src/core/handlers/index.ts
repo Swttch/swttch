@@ -30,6 +30,7 @@ import { rewindCodeHandler } from './rewindCode';
 import { forkSessionHandler } from './forkSession';
 import { logDebug } from '../../logging/log-level';
 import { renameSessionHandler } from './renameSession';
+import { updateSessionDesktopTitleHandler } from './updateSessionDesktopTitle';
 import { getAgentTranscriptHandler } from './getAgentTranscript';
 import { watchBackgroundTaskOutputHandler, unwatchBackgroundTaskOutputHandler } from './watchBackgroundTaskOutput';
 import { getSettingsHandler } from './getSettings';
@@ -307,6 +308,9 @@ export async function handleMessage(
       break;
     case MessageType.RENAME_SESSION:
       await renameSessionHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.UPDATE_SESSION_DESKTOP_TITLE:
+      await updateSessionDesktopTitleHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_AGENT_TRANSCRIPT:
       await getAgentTranscriptHandler(connectionId, message, connections, bridge);

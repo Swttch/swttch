@@ -373,6 +373,8 @@
       "rotateModel": "次のモデルに切り替える",
       "clearConversation": "会話をクリア",
       "archiveConversation": "会話をアーカイブする、またはアーカイブから戻す",
+      "openInDesktop": "セッションを Claude デスクトップで開く",
+      "openDevTools": "デベロッパーツールを開く",
       "openSideQuestion": "横から質問する (/btw)",
       "cycleTranscriptView": "トランスクリプト表示を切り替える（通常、思考、詳細、クラシック）",
       "refreshSessionList": "セッション一覧が開いているときに更新",

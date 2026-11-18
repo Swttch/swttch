@@ -5,6 +5,7 @@ import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { TerminalIcon, LinkIcon } from './icons/PaletteIcons';
 import { HighlightedText } from './HighlightedText';
 import { cn } from '@/utils/cn';
+import claudeLogo from '@/assets/claude-logo.svg';
 
 interface Props {
   item: PanelItem;
@@ -130,6 +131,10 @@ export const PanelItemComponent = React.forwardRef<HTMLDivElement, Props>((props
 
         {hasRightTerminalIcon && (
           <TerminalIcon className="flex-shrink-0 text-[var(--secondary-text-color)]" />
+        )}
+
+        {item.icon === IconType.Claude && item.type === PanelItemType.Action && (
+          <img src={claudeLogo} alt="" className="h-4 w-4 flex-shrink-0" />
         )}
 
         {item.type === PanelItemType.Link && (

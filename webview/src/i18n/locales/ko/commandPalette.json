@@ -65,7 +65,8 @@
     "permissions": "권한",
     "mcpServers": "MCP 서버",
     "managePlugins": "플러그인 관리",
-    "openInTerminal": "터미널에서 Claude 열기"
+    "openInTerminal": "터미널에서 Claude 열기",
+    "openInDesktop": "Claude 데스크탑에서 열기 (Code)"
   },
   "settings": {
     "switchAccount": "계정 전환",

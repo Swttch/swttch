@@ -5,6 +5,7 @@ import { useTranslation } from '@/i18n';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { InputModeValues, type InputMode } from '@/types/chatInput';
 import type { PendingPlanApproval } from '../../../hooks/usePendingPlanApproval';
+import { rectMetrics } from '@/utils/zoomRects';
 
 interface Props {
   pending: PendingPlanApproval;
@@ -42,8 +43,7 @@ export function DesktopPlanCard({ pending, onApprove, onDeny }: Props) {
     const node = cardRef.current;
     if (!node || typeof ResizeObserver === 'undefined') return;
     const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-    const zoom = parseFloat(document.documentElement.style.zoom) || 1;
-    const observer = new ResizeObserver(([entry]) => setStacked(entry.contentRect.width / zoom < rem * 30));
+    const observer = new ResizeObserver(([entry]) => setStacked(rectMetrics().toFixed(entry.contentRect.width) < rem * 30));
     observer.observe(node);
     return () => observer.disconnect();
   }, []);

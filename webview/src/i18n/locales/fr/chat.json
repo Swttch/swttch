@@ -76,6 +76,7 @@
     },
     "attachMenu": {
       "filesOrPhotos": "Ajouter des fichiers ou des photos",
+      "openInDesktop": "Ouvrir dans Claude Desktop",
       "folder": "Ajouter le dossier",
       "slashCommands": "Commandes slash"
     },
@@ -844,6 +845,11 @@
     "open": "Ouvrir",
     "newAnswer": "Nouvelle réponse"
   },
+  "openInDesktopConfirm": {
+    "title": "Ouvrir dans Claude Desktop",
+    "message": "La session s'ouvre dans l'application Claude Desktop. Si l'application n'est pas lancée, elle démarre d'abord.",
+    "confirm": "Ouvrir"
+  },
   "externalLink": {
     "copyAddress": "Copier l’adresse du lien",
     "copyDone": "Adresse du lien copiée",
@@ -866,6 +872,10 @@
       "notInListHint": "Cette session n’est pas dans la liste. Elle a peut-être été supprimée ou appartient à un autre dossier.",
       "archived": "Archivée",
       "resetToDesktop": "Rétablir les liens modifiés à la main selon l’enregistrement de l’application de bureau Claude",
+      "desktopMenu": "Claude Desktop",
+      "syncWithDesktop": "Aligner sur l'enregistrement de Desktop",
+      "openInDesktop": "Ouvrir dans Claude Desktop",
+      "openInDesktopNoSession": "Disponible une fois la session démarrée",
       "resetSynced": "Rien à rétablir : les liens de cette session correspondent déjà à ceux de l’application de bureau Claude",
       "resetNoRecord": "Rien à rétablir : l’application de bureau Claude n’a enregistré aucun lien pour cette session",
       "searchPlaceholder": "Rechercher des sessions",

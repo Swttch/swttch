@@ -373,6 +373,8 @@
       "rotateModel": "رفتن به مدل بعدی",
       "clearConversation": "پاک کردن گفتگو",
       "archiveConversation": "بایگانی گفتگو یا بازگرداندن آن",
+      "openInDesktop": "باز کردن نشست در Claude Desktop",
+      "openDevTools": "باز کردن ابزارهای توسعه‌دهنده",
       "openSideQuestion": "پرسیدن سؤال جانبی (/btw)",
       "cycleTranscriptView": "تغییر نمای رونوشت (عادی، تفکر، مفصل، کلاسیک)",
       "refreshSessionList": "تازه‌سازی فهرست نشست‌ها هنگام باز بودن آن",

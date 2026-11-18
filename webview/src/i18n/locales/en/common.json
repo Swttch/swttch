@@ -373,6 +373,8 @@
       "rotateModel": "Switch to the next model",
       "clearConversation": "Clear the conversation",
       "archiveConversation": "Archive the conversation, or bring it back",
+      "openInDesktop": "Open the session in Claude Desktop",
+      "openDevTools": "Open developer tools",
       "openSideQuestion": "Ask a side question (/btw)",
       "cycleTranscriptView": "Switch the transcript view (Normal, Thinking, Verbose, Classic)",
       "refreshSessionList": "Refresh the session list while it is open",

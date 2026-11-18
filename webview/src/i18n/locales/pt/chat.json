@@ -76,6 +76,7 @@
     },
     "attachMenu": {
       "filesOrPhotos": "Adicionar arquivos ou fotos",
+      "openInDesktop": "Abrir no Claude Desktop",
       "folder": "Adicionar pasta",
       "slashCommands": "Comandos de barra"
     },
@@ -844,6 +845,11 @@
     "open": "Abrir",
     "newAnswer": "Nova resposta"
   },
+  "openInDesktopConfirm": {
+    "title": "Abrir no Claude Desktop",
+    "message": "A sessão será aberta no aplicativo Claude Desktop. Se o aplicativo não estiver em execução, ele será iniciado primeiro.",
+    "confirm": "Abrir"
+  },
   "externalLink": {
     "copyAddress": "Copiar endereço do link",
     "copyDone": "Endereço do link copiado",
@@ -866,6 +872,10 @@
       "notInListHint": "Esta sessão não está na lista. Ela pode ter sido excluída ou pertencer a outra pasta.",
       "archived": "Arquivada",
       "resetToDesktop": "Redefinir os vínculos alterados à mão para o que o app de desktop do Claude registra",
+      "desktopMenu": "Claude Desktop",
+      "syncWithDesktop": "Igualar ao registro do Desktop",
+      "openInDesktop": "Abrir no Claude Desktop",
+      "openInDesktopNoSession": "Disponível depois que a sessão começar",
       "resetSynced": "Nada a redefinir: os vínculos desta sessão já coincidem com os do app de desktop do Claude",
       "resetNoRecord": "Nada a redefinir: o app de desktop do Claude não registrou nenhum vínculo para esta sessão",
       "searchPlaceholder": "Pesquisar sessões",

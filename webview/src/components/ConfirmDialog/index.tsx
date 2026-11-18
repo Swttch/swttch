@@ -54,8 +54,16 @@ interface Props {
    * which only appears when this is set — all land here instead.
    */
   onDismiss?: () => void;
-  /** `checked` is the box's state at the moment of confirming; false when there is no box. */
-  onConfirm: (checked: boolean) => void;
+  /**
+   * Runs when the confirm button is pressed; `checked` is the box's state at that moment, false when there is no box.
+   *
+   * It may be async. The dialog does not care which: it wraps the call so that a plain function and one that returns a
+   * promise are handled the same way, and for as long as the call is pending the dialog is busy. The confirm button
+   * then shows a spinner in place of its label, and nothing closes the dialog (the buttons, Escape, the backdrop, the
+   * close button) nor runs the callback a second time. The dialog does not close itself when the call is done: the
+   * caller takes it down, as it always has. A call that throws is logged and the dialog is free again.
+   */
+  onConfirm: (checked: boolean) => void | Promise<void>;
   onCancel: () => void;
 }
 
@@ -75,7 +83,33 @@ export function ConfirmDialog(props: Props) {
 
   // Where the caller distinguishes the two, leaving without answering is a
   // dismissal; otherwise it stays what it has always been — a cancel.
-  const close = onDismiss ?? onCancel;
+  const closeWhenFree = onDismiss ?? onCancel;
+
+  // The yes has been given and its callback is still pending. The dialog may be taken down by the caller while the
+  // callback settles, so the flag is only cleared while the dialog is still on screen.
+  const [busy, setBusy] = useState(false);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+  const handleConfirm = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      // Wrapped, so a sync callback and an async one take the same road, and a sync throw lands in the catch too.
+      await (async () => onConfirm(checked))();
+    } catch (err) {
+      console.error('[ConfirmDialog] The confirm callback failed:', err);
+    } finally {
+      if (mountedRef.current) setBusy(false);
+    }
+  };
+  const close = () => {
+    if (!busy) closeWhenFree();
+  };
 
   const [checked, setChecked] = useState(checkbox?.defaultChecked ?? false);
   const locked = checkbox?.locked === true;
@@ -145,12 +179,13 @@ export function ConfirmDialog(props: Props) {
   const confirmButtonClass =
     variant === 'danger'
       ? 'px-4 py-2 rounded-lg text-sm font-medium bg-state-error-fg hover:bg-state-error-fg text-text-inverse transition-colors'
-      : 'px-4 py-2 rounded-lg text-sm font-medium bg-accent-primary-hover hover:bg-accent-primary text-text-primary transition-colors';
+      : 'px-4 py-2 rounded-lg text-sm font-medium bg-accent-primary-hover hover:bg-accent-primary text-white transition-colors';
 
   return (
     <Portal>
       <div
         data-testid="confirm-dialog-backdrop"
+        data-confirm-dialog
         className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-overlay-scrim"
         onClick={handleBackdropClick}
       >
@@ -164,7 +199,8 @@ export function ConfirmDialog(props: Props) {
           {onDismiss && (
             <button
               type="button"
-              onClick={onDismiss}
+              onClick={close}
+              disabled={busy}
               aria-label={t('confirmDialog.close')}
               title={t('confirmDialog.close')}
               className="absolute right-3 top-3 rounded p-1 text-text-tertiary hover:text-text-primary hover:bg-surface-tooltip transition-colors"
@@ -172,11 +208,13 @@ export function ConfirmDialog(props: Props) {
               <XMarkIcon className="h-4 w-4" />
             </button>
           )}
-          <h2 className="text-md font-semibold text-text-primary pr-6">{title}</h2>
+          {/* The texts of the dialog take the reply's colour (`--tr-text`), not the theme's text colours: in a JetBrains
+              IDE those are the editor's greys, which read as faded next to the reply text behind the dialog. */}
+          <h2 className="text-md font-semibold text-[var(--tr-text)] pr-6">{title}</h2>
           {/* pre-line so a message can break itself into paragraphs. Callers
               write plain strings, and without this a `\n\n` collapses into a
               space — one wall of text where two were intended. */}
-          <p className="text-sm text-text-secondary whitespace-pre-line">{message}</p>
+          <p className="text-sm text-[var(--tr-text)] whitespace-pre-line">{message}</p>
           {checkbox && (
             <div className="flex flex-col gap-1">
               <label
@@ -212,17 +250,27 @@ export function ConfirmDialog(props: Props) {
           )}
           <div className="flex justify-end gap-2 mt-2">
             <button
-              className="px-4 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-tooltip transition-colors"
+              className="px-4 py-2 rounded-lg text-sm font-medium text-[var(--tr-text)] hover:bg-surface-tooltip transition-colors disabled:opacity-40 disabled:pointer-events-none"
+              disabled={busy}
               onClick={onCancel}
             >
               {cancelLabel}
             </button>
             <button
               ref={confirmButtonRef}
-              className={confirmButtonClass}
-              onClick={() => onConfirm(checked)}
+              className={`${confirmButtonClass} relative`}
+              disabled={busy}
+              aria-busy={busy}
+              onClick={() => void handleConfirm()}
             >
-              {confirmLabel}
+              {/* The label stays (invisible) so the button keeps its width while the spinner takes its place. */}
+              <span className={busy ? 'invisible' : undefined}>{confirmLabel}</span>
+              {busy && (
+                <span
+                  data-testid="confirm-dialog-spinner"
+                  className="absolute inset-0 m-auto h-4 w-4 animate-spin rounded-full border-2 border-text-primary/30 border-t-text-primary"
+                />
+              )}
             </button>
           </div>
         </div>

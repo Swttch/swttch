@@ -19,6 +19,7 @@ vi.mock('@/contexts/ChatStreamContext', () => ({useChatStreamContext: () => ({me
 const sessionCtx = vi.hoisted(() => ({
     sessions: [] as unknown[],
     switchSession: undefined as unknown as (sessionId: string) => void,
+    nameSessionForDesktop: undefined as unknown as (sessionId: string) => Promise<void>,
 }));
 vi.mock('@/contexts/SessionContext', () => ({
     useSessionContext: () => ({
@@ -26,6 +27,7 @@ vi.mock('@/contexts/SessionContext', () => ({
         currentSessionId: 's1',
         sessions: sessionCtx.sessions,
         switchSession: sessionCtx.switchSession,
+        nameSessionForDesktop: sessionCtx.nameSessionForDesktop,
     }),
 }));
 // Whether the session-management MCP is installed: what decides if the rail draws the linked sessions.
@@ -118,6 +120,7 @@ beforeEach(() => {
     mcpInstalled = null;
     sessionCtx.sessions = [];
     sessionCtx.switchSession = vi.fn();
+    sessionCtx.nameSessionForDesktop = vi.fn(() => Promise.resolve());
 });
 
 describe('SessionRail', () => {
@@ -299,7 +302,11 @@ describe('SessionRail - the links the Claude desktop app records', () => {
         send.mockResolvedValue({status: 'ok'});
     });
 
-    const resetButton = () => screen.getByRole('button', {name: 'sessionRail.linked.resetToDesktop'});
+    /** The Claude button opens a menu; the row that matches the links to Desktop's records is in it. */
+    const resetButton = () => {
+        if (!screen.queryByRole('menu')) fireEvent.click(screen.getByRole('button', {name: 'sessionRail.linked.desktopMenu'}));
+        return screen.getByRole('menuitem', {name: 'sessionRail.linked.syncWithDesktop'});
+    };
 
     it('shows the parent the desktop app records where the package chose nothing', () => {
         sessionCtx.sessions = [linked('s1', 'This one', null, 0, 'p1'), linked('p1', 'The manager', null)];
@@ -348,7 +355,10 @@ describe('SessionRail - the Claude logo button while the desktop sync is off', (
         send.mockResolvedValue({status: 'ok'});
     });
 
-    const logoButton = () => screen.getByRole('button', {name: 'sessionRail.linked.resetToDesktop'});
+    const logoButton = () => {
+        if (!screen.queryByRole('menu')) fireEvent.click(screen.getByRole('button', {name: 'sessionRail.linked.desktopMenu'}));
+        return screen.getByRole('menuitem', {name: 'sessionRail.linked.syncWithDesktop'});
+    };
 
     it.each([
         ['the switch is off', false, true],
@@ -523,5 +533,56 @@ describe('SessionRail - changing the links by hand', () => {
         fireEvent.click(addButton('parent'));
         fireEvent.click(screen.getByRole('option', {name: /The manager/}));
         await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('A session cannot be its own parent.'));
+    });
+});
+
+describe('SessionRail - opening the session in the Claude desktop app', () => {
+    beforeEach(() => {
+        mcpInstalled = '0.4.0';
+        mockSponsor = true;
+        mockSync = true;
+        openUrl.mockClear();
+        sessionCtx.sessions = [linked('s1', 'This one', null)];
+    });
+
+    const openMenu = () => fireEvent.click(screen.getByRole('button', {name: 'sessionRail.linked.desktopMenu'}));
+
+    it('asks first, and hands the session to Desktop by its CLI session id only on a yes', async () => {
+        render(<SessionRail/>);
+        openRail();
+        openMenu();
+        fireEvent.click(screen.getByRole('menuitem', {name: 'sessionRail.linked.openInDesktop'}));
+        expect(openUrl).not.toHaveBeenCalled();
+        await act(async () => {
+            fireEvent.click(await screen.findByRole('button', {name: 'chat:openInDesktopConfirm.confirm'}));
+        });
+        expect(openUrl).toHaveBeenCalledWith('claude://resume?session=s1');
+        // The title Desktop reads is written before the session is handed over.
+        expect(sessionCtx.nameSessionForDesktop).toHaveBeenCalledWith('s1');
+        expect(vi.mocked(sessionCtx.nameSessionForDesktop).mock.invocationCallOrder[0])
+            .toBeLessThan(openUrl.mock.invocationCallOrder[0]);
+    });
+
+    it('still opens the session when the title could not be written', async () => {
+        sessionCtx.nameSessionForDesktop = vi.fn(() => Promise.reject(new Error('no CLI')));
+        render(<SessionRail/>);
+        openRail();
+        openMenu();
+        fireEvent.click(screen.getByRole('menuitem', {name: 'sessionRail.linked.openInDesktop'}));
+        await act(async () => {
+            fireEvent.click(await screen.findByRole('button', {name: 'chat:openInDesktopConfirm.confirm'}));
+        });
+        expect(openUrl).toHaveBeenCalledWith('claude://resume?session=s1');
+    });
+
+    it('does nothing when the question is declined', async () => {
+        render(<SessionRail/>);
+        openRail();
+        openMenu();
+        fireEvent.click(screen.getByRole('menuitem', {name: 'sessionRail.linked.openInDesktop'}));
+        await act(async () => {
+            fireEvent.click(await screen.findByRole('button', {name: 'confirmDialog.cancel'}));
+        });
+        expect(openUrl).not.toHaveBeenCalled();
     });
 });

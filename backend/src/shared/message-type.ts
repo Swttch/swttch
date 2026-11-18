@@ -115,6 +115,12 @@ export enum MessageType {
   /** Rename a session's title. */
   RENAME_SESSION = 'RENAME_SESSION',
   /**
+   * Writes the title the session shows into its transcript as a `custom-title` entry, so Claude Desktop reads the same
+   * name when the session is opened there by a deep link. Does nothing for a session that already has a `custom-title`.
+   * inbound webview→backend
+   */
+  UPDATE_SESSION_DESKTOP_TITLE = 'UPDATE_SESSION_DESKTOP_TITLE',
+  /**
    * Moves the sessions of a project folder that were started before the entrypoint was named (`sdk-cli`) to this
    * app's own entrypoint, so Claude Desktop's session import picks them up (#647). inbound webview→backend
    */

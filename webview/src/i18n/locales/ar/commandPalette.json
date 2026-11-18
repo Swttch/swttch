@@ -65,7 +65,8 @@
     "permissions": "الأذونات",
     "mcpServers": "خوادم MCP",
     "managePlugins": "إدارة الإضافات",
-    "openInTerminal": "فتح Claude في الطرفية"
+    "openInTerminal": "فتح Claude في الطرفية",
+    "openInDesktop": "فتح في Claude Desktop (Code)"
   },
   "settings": {
     "switchAccount": "تبديل الحساب",

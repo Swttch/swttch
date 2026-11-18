@@ -65,7 +65,8 @@
     "permissions": "權限",
     "mcpServers": "MCP 伺服器",
     "managePlugins": "管理外掛",
-    "openInTerminal": "在終端機中開啟 Claude"
+    "openInTerminal": "在終端機中開啟 Claude",
+    "openInDesktop": "在 Claude 桌面版中開啟 (Code)"
   },
   "settings": {
     "switchAccount": "切換帳戶",

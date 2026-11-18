@@ -6,6 +6,8 @@ import { useBridgeContext } from '@/contexts/BridgeContext';
 import { basename } from './basename';
 import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
+import claudeLogo from '@/assets/claude-logo.svg';
+import { useOpenSessionInDesktop } from '@/hooks/useOpenSessionInDesktop';
 
 interface Props {
   addFileAttachment: (absolutePath: string, fileName: string, size?: number) => void;
@@ -56,18 +58,24 @@ function SlashSquareIcon() {
   );
 }
 
+function ClaudeIcon() {
+  return <img src={claudeLogo} alt="" className="w-[15px] h-[15px] shrink-0" />;
+}
+
 interface ItemProps {
   icon: ReactNode;
   label: string;
   onClick: () => void;
+  disabled?: boolean;
 }
 
-function MenuItem({ icon, label, onClick }: ItemProps) {
+function MenuItem({ icon, label, onClick, disabled }: ItemProps) {
   return (
     <button
       type="button"
-      onClick={onClick}
-      className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-start text-sm font-normal text-text-primary hover:bg-surface-pressed whitespace-nowrap"
+      onClick={disabled ? undefined : onClick}
+      aria-disabled={disabled}
+      className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-start text-sm font-normal text-text-primary whitespace-nowrap ${disabled ? 'cursor-default opacity-40' : 'hover:bg-surface-pressed'}`}
     >
       <span className="text-text-secondary flex">{icon}</span>
       {label}
@@ -93,6 +101,7 @@ export function AttachMenu(props: Props) {
   const [isOpen, setIsOpen] = useState(false);
 
   const hide = useCallback(() => tippyRef.current?.hide(), []);
+  const { canOpen: canOpenInDesktop, open: openInDesktop, dialog: openInDesktopDialog } = useOpenSessionInDesktop();
 
   const pickFiles = useCallback(async () => {
     // A native dialog waits on the person, so the request has no clock: a pick
@@ -123,6 +132,7 @@ export function AttachMenu(props: Props) {
   }, [pickFiles]);
 
   return (
+    <>
     <Tippy
       placement="top-start"
       interactive
@@ -154,6 +164,17 @@ export function AttachMenu(props: Props) {
             label={t('chatInput.attachMenu.slashCommands')}
             onClick={() => { hide(); onSlashCommand(); }}
           />
+          {/*
+            This row, the Claude icon and the confirmation behind it are to move out of this menu when the composer is
+            refactored: the Claude icon then sits to the left of the model chip and opens the session in the Claude
+            Desktop app from there.
+          */}
+          <MenuItem
+            icon={<ClaudeIcon />}
+            label={t('chatInput.attachMenu.openInDesktop')}
+            disabled={!canOpenInDesktop}
+            onClick={() => { hide(); openInDesktop(); }}
+          />
         </div>
       )}
     >
@@ -166,5 +187,7 @@ export function AttachMenu(props: Props) {
         <PlusIcon />
       </button>
     </Tippy>
+    {openInDesktopDialog}
+    </>
   );
 }

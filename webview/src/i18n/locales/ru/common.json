@@ -375,6 +375,8 @@
       "rotateModel": "Переключиться на следующую модель",
       "clearConversation": "Очистить беседу",
       "archiveConversation": "Архивировать разговор или вернуть из архива",
+      "openInDesktop": "Открыть сеанс в Claude Desktop",
+      "openDevTools": "Открыть инструменты разработчика",
       "openSideQuestion": "Задать побочный вопрос (/btw)",
       "cycleTranscriptView": "Переключить вид переписки (обычный, размышления, подробный, классический)",
       "refreshSessionList": "Обновить список сессий, пока он открыт",

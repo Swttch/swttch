@@ -373,6 +373,8 @@
       "rotateModel": "Zum nächsten Modell wechseln",
       "clearConversation": "Unterhaltung löschen",
       "archiveConversation": "Unterhaltung archivieren oder wiederherstellen",
+      "openInDesktop": "Sitzung in Claude Desktop öffnen",
+      "openDevTools": "Entwicklertools öffnen",
       "openSideQuestion": "Nebenfrage stellen (/btw)",
       "cycleTranscriptView": "Transkript-Ansicht wechseln (Normal, Denken, Ausführlich, Klassisch)",
       "refreshSessionList": "Sitzungsliste aktualisieren, solange sie geöffnet ist",

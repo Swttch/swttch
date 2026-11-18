@@ -373,6 +373,8 @@
       "rotateModel": "Mudar para o próximo modelo",
       "clearConversation": "Limpar a conversa",
       "archiveConversation": "Arquivar a conversa ou desarquivá-la",
+      "openInDesktop": "Abrir a sessão no Claude Desktop",
+      "openDevTools": "Abrir ferramentas de desenvolvedor",
       "openSideQuestion": "Fazer uma pergunta paralela (/btw)",
       "cycleTranscriptView": "Alternar a visualização da transcrição (Normal, Raciocínio, Detalhada, Clássica)",
       "refreshSessionList": "Atualizar a lista de sessões enquanto ela estiver aberta",

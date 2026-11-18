@@ -10,6 +10,11 @@ import App from './App';
 import './index.css';
 import {isMobile} from "@/config/environment.ts";
 import { MOBILE_BASE_ZOOM, setZoomVariable } from "@/utils/zoom";
+import { installZoomRects } from './utils/zoomRects';
+
+// Before the first Tippy is placed: index.css cancels the UI zoom for poppers only where this Chromium reports
+// rectangles in screen pixels (see zoomRects).
+installZoomRects();
 
 // Capture the per-launch pairing code from `?pair=` BEFORE anything opens a
 // backend WebSocket or React Router mutates the URL. Resolves any already-known

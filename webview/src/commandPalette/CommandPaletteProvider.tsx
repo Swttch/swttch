@@ -28,6 +28,10 @@ import { isNewTabShortcut } from './isNewTabShortcut';
 import { isMac } from '@/config/environment';
 import { applyModelCapabilityFlags } from './applyModelCapabilityFlags';
 import { applyArchiveItemVisibility } from './applyArchiveItemVisibility';
+import { isOpenInDesktopShortcut } from './openInDesktopShortcut';
+import { isOpenDevToolsShortcut } from './devToolsShortcut';
+import { ClientEnv } from '@/shared';
+import { confirmAndOpenSessionInDesktop } from '@/hooks/useOpenSessionInDesktop';
 import { isArchiveShortcut, canToggleArchive, toggleArchiveOfOpenSession } from './archiveShortcut';
 import {
   ContextSection,
@@ -116,6 +120,7 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
 
       setSessionState: session.setSessionState,
       resetToNewSession: session.resetToNewSession,
+      nameSessionForDesktop: session.nameSessionForDesktop,
     },
     archive: {
       available: archivingAvailable,
@@ -158,6 +163,7 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
 
       setSessionState: session.setSessionState,
       resetToNewSession: session.resetToNewSession,
+      nameSessionForDesktop: session.nameSessionForDesktop,
     },
     archive: {
       available: archivingAvailable,
@@ -265,6 +271,31 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
       match: (e: KeyboardEvent) => isArchiveShortcut(e) && canToggleArchive(servicesRef.current),
       execute: async () => {
         await toggleArchiveOfOpenSession(servicesRef.current);
+      },
+    });
+
+    // Cmd+Option+I opens the IDE's DevTools for this chat (macOS, inside an IDE only: a browser tab has its own, which
+    // this leaves alone). The settings button does the same.
+    keyboardReg.register({
+      id: 'open-dev-tools',
+      match: (e: KeyboardEvent) => isOpenDevToolsShortcut(e) && getAdapter().type !== ClientEnv.BROWSER,
+      execute: async () => {
+        await getAdapter().openDevTools();
+      },
+    });
+
+    // Cmd/Ctrl+Option/Alt+Shift+O opens the open session in the Claude Desktop app, after a confirmation. Matched only
+    // where the session is saved, so elsewhere the keys are left alone.
+    keyboardReg.register({
+      id: 'open-in-desktop',
+      match: (e: KeyboardEvent) => isOpenInDesktopShortcut(e) && servicesRef.current.session.currentSessionId != null,
+      execute: async () => {
+        const sessionId = servicesRef.current.session.currentSessionId;
+        if (sessionId) await confirmAndOpenSessionInDesktop(
+          servicesRef.current.ui.confirm,
+          sessionId,
+          servicesRef.current.session.nameSessionForDesktop,
+        );
       },
     });
 

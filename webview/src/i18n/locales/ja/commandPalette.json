@@ -65,7 +65,8 @@
     "permissions": "権限",
     "mcpServers": "MCPサーバー",
     "managePlugins": "プラグインを管理",
-    "openInTerminal": "ターミナルでClaudeを開く"
+    "openInTerminal": "ターミナルでClaudeを開く",
+    "openInDesktop": "Claude デスクトップで開く (Code)"
   },
   "settings": {
     "switchAccount": "アカウントを切り替え",

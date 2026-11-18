@@ -31,6 +31,7 @@ function makeServices(input: string, inputMode: InputMode = InputModeValues.BYPA
       inputMode,
       setSessionState: vi.fn(),
       resetToNewSession: vi.fn(),
+      nameSessionForDesktop: vi.fn().mockResolvedValue(undefined),
     },
     adapter: {
       openNewTab: vi.fn().mockResolvedValue(undefined),

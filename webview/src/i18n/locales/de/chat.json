@@ -76,6 +76,7 @@
     },
     "attachMenu": {
       "filesOrPhotos": "Dateien oder Fotos hinzufügen",
+      "openInDesktop": "In Claude Desktop öffnen",
       "folder": "Ordner hinzufügen",
       "slashCommands": "Slash-Befehle"
     },
@@ -844,6 +845,11 @@
     "open": "Öffnen",
     "newAnswer": "Neue Antwort"
   },
+  "openInDesktopConfirm": {
+    "title": "In Claude Desktop öffnen",
+    "message": "Die Sitzung wird in der Claude-Desktop-App geöffnet. Läuft die App nicht, wird sie zuerst gestartet.",
+    "confirm": "Öffnen"
+  },
   "externalLink": {
     "copyAddress": "Link-Adresse kopieren",
     "copyDone": "Link-Adresse kopiert",
@@ -866,6 +872,10 @@
       "notInListHint": "Diese Sitzung steht nicht in der Liste. Sie wurde möglicherweise gelöscht oder gehört zu einem anderen Ordner.",
       "archived": "Archiviert",
       "resetToDesktop": "Von Hand geänderte Verknüpfungen auf die Aufzeichnung der Claude-Desktop-App zurücksetzen",
+      "desktopMenu": "Claude Desktop",
+      "syncWithDesktop": "Mit Desktop-Aufzeichnung abgleichen",
+      "openInDesktop": "In Claude Desktop öffnen",
+      "openInDesktopNoSession": "Verfügbar, sobald die Sitzung gestartet ist",
       "resetSynced": "Nichts zurückzusetzen: Die Verknüpfungen dieser Sitzung stimmen bereits mit der Claude-Desktop-App überein",
       "resetNoRecord": "Nichts zurückzusetzen: Die Claude-Desktop-App hat keine Verknüpfung für diese Sitzung aufgezeichnet",
       "searchPlaceholder": "Sitzungen suchen",

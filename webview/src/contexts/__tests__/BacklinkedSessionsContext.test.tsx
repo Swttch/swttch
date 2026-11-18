@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { MessageType, SessionActivity } from '@/shared';
@@ -107,14 +107,16 @@ describe('BacklinkedSessionsProvider', () => {
     activity = { 'cli-a': SessionActivity.Running };
     view.rerender(wrap(<Place id="local_a" label="card" />));
     await flush();
-    expect(screen.getByTestId('card').textContent).toBe('First name|running|-|there');
+    // The record is read again through a query that settles over a few turns of the event loop, so a single tick is
+    // not always enough on a busy machine: wait for the text that must appear, instead of reading it right away.
+    await waitFor(() => expect(screen.getByTestId('card').textContent).toBe('First name|running|-|there'));
     expect(readsOf('local_a')).toBe(2);
 
     records.local_a = { ...records.local_a, isArchived: true };
     activity = {};
     view.rerender(wrap(<Place id="local_a" label="card" />));
     await flush();
-    expect(screen.getByTestId('card').textContent).toBe('First name|idle|true|there');
+    await waitFor(() => expect(screen.getByTestId('card').textContent).toBe('First name|idle|true|there'));
   });
 
   it('shows the name and the activity of a session this app lists, which has no desktop record', async () => {

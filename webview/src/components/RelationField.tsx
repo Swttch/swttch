@@ -3,6 +3,7 @@ import {Portal} from "./Portal";
 import {Tooltip} from "./Tooltip";
 import {SessionActivity} from "@/shared";
 import {ActivityDot} from "@/components/SessionList/SessionItem";
+import {rectMetrics} from "@/utils/zoomRects";
 
 /** One page-like thing a relation points at: a session, here. */
 export interface RelationItem {
@@ -198,15 +199,16 @@ function RelationPicker({anchorRef, menuRef, candidates, searchPlaceholder, list
         if (!anchor) return;
         const rect = anchor.getBoundingClientRect();
         // <html> carries CSS zoom on some hosts: place in visual px, then divide by zoom (see components/Select).
-        const zoom = parseFloat(document.documentElement.style.zoom) || 1;
+        // Which pixels a rectangle is in depends on the Chromium (utils/zoomRects.ts); `rectMetrics` says how to convert.
+        const m = rectMetrics();
         const gap = 4;
         const pad = 8;
-        const height = Math.min(menuRef.current?.offsetHeight ?? 320, 320) * zoom;
-        const below = window.innerHeight - rect.bottom;
+        const height = m.fromLayout(Math.min(menuRef.current?.offsetHeight ?? 320, 320));
+        const below = m.viewH - rect.bottom;
         const up = below < height + gap && rect.top > below;
-        const width = Math.min(Math.max(rect.width, 280 * zoom), window.innerWidth - 2 * pad);
-        const left = Math.min(Math.max(pad, rect.left), window.innerWidth - width - pad);
-        setPos({left: left / zoom, top: (up ? rect.top - height - gap : rect.bottom + gap) / zoom, width: width / zoom});
+        const width = Math.min(Math.max(rect.width, m.fromLayout(280)), m.viewW - 2 * pad);
+        const left = Math.min(Math.max(pad, rect.left), m.viewW - width - pad);
+        setPos({left: m.toFixed(left), top: m.toFixed(up ? rect.top - height - gap : rect.bottom + gap), width: m.toFixed(width)});
     }, [anchorRef, menuRef, shown.length]);
 
     useEffect(() => {

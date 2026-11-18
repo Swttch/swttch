@@ -76,6 +76,7 @@
     },
     "attachMenu": {
       "filesOrPhotos": "إضافة ملفات أو صور",
+      "openInDesktop": "فتح في Claude Desktop",
       "folder": "إضافة مجلد",
       "slashCommands": "أوامر الشرطة المائلة"
     },
@@ -864,6 +865,11 @@
     "open": "فتح",
     "newAnswer": "إجابة جديدة"
   },
+  "openInDesktopConfirm": {
+    "title": "فتح في Claude Desktop",
+    "message": "ستُفتح الجلسة في تطبيق Claude Desktop. إذا لم يكن التطبيق قيد التشغيل فسيبدأ أولاً.",
+    "confirm": "فتح"
+  },
   "externalLink": {
     "copyAddress": "نسخ عنوان الرابط",
     "copyDone": "تم نسخ عنوان الرابط",
@@ -886,6 +892,10 @@
       "notInListHint": "هذه الجلسة غير موجودة في القائمة. ربما حُذفت أو تنتمي إلى مجلد آخر.",
       "archived": "مؤرشفة",
       "resetToDesktop": "إعادة الروابط التي غيّرتها يدويًا إلى ما يسجله تطبيق Claude لسطح المكتب",
+      "desktopMenu": "Claude Desktop",
+      "syncWithDesktop": "مطابقة سجل Desktop",
+      "openInDesktop": "فتح في Claude Desktop",
+      "openInDesktopNoSession": "متاح بعد بدء الجلسة",
       "resetSynced": "لا شيء لإعادته: روابط هذه الجلسة تطابق بالفعل ما في تطبيق Claude لسطح المكتب",
       "resetNoRecord": "لا شيء لإعادته: لا يوجد رابط مسجَّل لهذه الجلسة في تطبيق Claude لسطح المكتب",
       "searchPlaceholder": "البحث في الجلسات",

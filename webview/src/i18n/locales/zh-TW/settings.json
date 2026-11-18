@@ -895,7 +895,7 @@
     },
     "devTools": {
       "label": "開發人員工具",
-      "description": "在獨立視窗中開啟聊天內嵌瀏覽器的 DevTools。此功能沒有快速鍵，請由此開啟。",
+      "description": "在獨立視窗中開啟聊天內嵌瀏覽器的 DevTools。在 Mac 上也可以按 Cmd+Option+I 開啟。",
       "unavailable": "僅在 IDE 內執行時可用。在瀏覽器中，請使用你瀏覽器本身的 DevTools。",
       "action": "開啟"
     }

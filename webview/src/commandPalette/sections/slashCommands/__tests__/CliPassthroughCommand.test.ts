@@ -31,6 +31,7 @@ function makeServices(overrides: {
       inputMode: overrides.inputMode,
       setSessionState: vi.fn(),
       resetToNewSession: vi.fn(),
+      nameSessionForDesktop: vi.fn().mockResolvedValue(undefined),
     },
     archive: { available: true, isCurrentArchived: false, setArchived: vi.fn().mockResolvedValue(true) },
     adapter: {

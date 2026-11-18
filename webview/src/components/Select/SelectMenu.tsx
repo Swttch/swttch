@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useState, type RefObject } from 'react';
 import { Portal } from '../Portal';
 import type { SelectOption } from './types';
 import { useOptionPreview } from './useOptionPreview';
+import { rectMetrics } from '../../utils/zoomRects';
 
 /** Stable id for the active option, wired to the listbox's aria-activedescendant. */
 const OPTION_ID_PREFIX = 'select-option-';
@@ -83,20 +84,21 @@ export function SelectMenu(props: Props) {
     // visual px (promoting the unzoomed offsetWidth/Height by zoom), then divide
     // the final fixed offsets by zoom to cancel the context scaling. zoom is 1
     // on desktop, making this a no-op there.
-    const zoom = parseFloat(document.documentElement.style.zoom) || 1;
-    const menuHeight = (menu?.offsetHeight ?? 0) * zoom;
+    // Which pixels a rectangle is in depends on the Chromium (utils/zoomRects.ts); `rectMetrics` says how to convert.
+    const m = rectMetrics();
+    const menuHeight = m.fromLayout(menu?.offsetHeight ?? 0);
     // Right-align the menu to the trigger: when the list is wider than the
     // trigger it grows leftward, keeping its right edge flush with the trigger.
-    const menuWidth = Math.max((menu?.offsetWidth ?? 0) * zoom, rect.width);
-    const spaceBelow = window.innerHeight - rect.bottom;
+    const menuWidth = Math.max(m.fromLayout(menu?.offsetWidth ?? 0), rect.width);
+    const spaceBelow = m.viewH - rect.bottom;
     const openUp = spaceBelow < menuHeight + gap && rect.top > spaceBelow;
 
     const leftVisual = Math.max(viewportPadding, rect.right - menuWidth);
     const topVisual = openUp ? rect.top - menuHeight - gap : rect.bottom + gap;
     setPos({
-      left: leftVisual / zoom,
-      top: topVisual / zoom,
-      minWidth: rect.width / zoom,
+      left: m.toFixed(leftVisual),
+      top: m.toFixed(topVisual),
+      minWidth: m.toFixed(rect.width),
     });
   }, [anchorRef, menuRef, options]);
 

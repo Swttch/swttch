@@ -899,7 +899,7 @@
     },
     "devTools": {
       "label": "Entwicklertools",
-      "description": "Öffnet die DevTools des eingebetteten Browsers für den Chat in einem separaten Fenster. Dafür gibt es kein Tastenkürzel — öffnen Sie sie von hier aus.",
+      "description": "Öffnet die DevTools des eingebetteten Browsers für den Chat in einem separaten Fenster. Auf dem Mac öffnet sie auch Cmd+Option+I.",
       "unavailable": "Verfügbar, wenn die Anwendung in einer IDE läuft. Verwenden Sie in einem Browser dessen eigene Entwicklertools.",
       "action": "Öffnen"
     }

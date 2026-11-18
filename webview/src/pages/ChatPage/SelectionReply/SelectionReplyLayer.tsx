@@ -5,6 +5,7 @@ import { useChatInputFocus } from '@/contexts/ChatInputFocusContext';
 import { addReplyToComposer } from '@/utils/composerReplies';
 import { quoteLines } from '../message-renderers/utils/replyBlocks';
 import { ReplyComposerCard } from './ReplyComposerCard';
+import { rectMetrics } from '@/utils/zoomRects';
 
 interface Props {
   /** The chat transcript: only text selected inside it brings up the bar. */
@@ -29,8 +30,9 @@ const CARD_WIDTH = 380;
 
 /**
  * The page zoom (`zoom` on the root, the zoom control's doing: `applyZoom` in utils/zoom.ts writes it as the root's
- * inline style, and nothing else sets it). A range reports its place in screen pixels, but what a fixed element is
- * given is in the zoomed pixels, so every place taken from a range is divided by this.
+ * inline style, and nothing else sets it). The window's size (`innerWidth`, `innerHeight`) is in screen pixels, but what
+ * a fixed element is given is in the zoomed pixels, so the size is divided by this. A range's place is converted by
+ * `rectMetrics`, because the pixels a range reports it in depend on the Chromium.
  *
  * It is read off the inline style on purpose. `getComputedStyle` first brings the style of the whole page up to date,
  * and this is asked on every render and on every followed scroll (#645).
@@ -50,9 +52,11 @@ function anchorOf(range: Range): Anchor | null {
   const rect = range.getBoundingClientRect();
   if (rect.width === 0 && rect.height === 0) return null;
   // Out of sight (scrolled away): nothing to point at.
-  if (rect.bottom < 0 || rect.top > window.innerHeight) return null;
-  const zoom = pageZoom();
-  return { top: rect.top / zoom, bottom: rect.bottom / zoom, centerX: (rect.left + rect.width / 2) / zoom };
+  // A range's rectangle is in the pixels this Chromium reports rectangles in, which are not always screen pixels
+  // (utils/zoomRects.ts), so the window's size is taken in the same pixels and the place leaves as a fixed element's.
+  const m = rectMetrics();
+  if (rect.bottom < 0 || rect.top > m.viewH) return null;
+  return { top: m.toFixed(rect.top), bottom: m.toFixed(rect.bottom), centerX: m.toFixed(rect.left + rect.width / 2) };
 }
 
 function isEditable(node: Node | null): boolean {

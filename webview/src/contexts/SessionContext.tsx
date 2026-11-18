@@ -106,6 +106,11 @@ interface SessionContextValue {
   switchSession: (sessionId: string) => void;
   deleteSession: (sessionId: string) => Promise<void>;
   renameSession: (sessionId: string, title: string) => Promise<void>;
+  /**
+   * Writes the title this session shows into its transcript, for Claude Desktop to read when the session is opened
+   * there. Skipped by the backend when the transcript already has a name of its own.
+   */
+  nameSessionForDesktop: (sessionId: string) => Promise<void>;
   addNewSession: (sessionId: string, firstPrompt: string, handoff?: SessionHandoff) => void;
   setSessionState: (state: SessionState) => void;
   setWorkingDirectory: (dir: string | null) => void;
@@ -747,6 +752,13 @@ export function SessionProvider({ children }: SessionProviderProps) {
     }
   }, [api.sessions, directoryOfSession]);
 
+  const nameSessionForDesktop = useCallback(async (sessionId: string) => {
+    const session = sessionsRef.current.find((s) => s.id === sessionId);
+    const title = (session?.fullTitle || session?.title || '').trim();
+    if (!title) return;
+    await api.sessions.updateDesktopTitle(sessionId, title, directoryOfSession(sessionId));
+  }, [api.sessions, directoryOfSession]);
+
   const addNewSession = useCallback((
     sessionId: string,
     firstPrompt: string,
@@ -852,6 +864,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
     switchSession,
     deleteSession,
     renameSession,
+    nameSessionForDesktop,
     addNewSession,
     setSessionState,
     setWorkingDirectory,

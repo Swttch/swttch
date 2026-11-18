@@ -65,7 +65,8 @@
     "permissions": "Разрешения",
     "mcpServers": "MCP-серверы",
     "managePlugins": "Управление плагинами",
-    "openInTerminal": "Открыть Claude в терминале"
+    "openInTerminal": "Открыть Claude в терминале",
+    "openInDesktop": "Открыть в Claude Desktop (Code)"
   },
   "settings": {
     "switchAccount": "Сменить аккаунт",

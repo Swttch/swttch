@@ -1,4 +1,5 @@
-import {useMemo} from "react";
+import {useMemo, useRef} from "react";
+import type {Instance} from "tippy.js";
 import toast from "react-hot-toast";
 import {useTranslation} from "@/i18n";
 import {useSessionContext} from "@/contexts/SessionContext";
@@ -13,6 +14,8 @@ import {isArchivedMark} from "@/components/SessionList/archive";
 import {getRelativeTime} from "@/components/SessionList/utils";
 import {RelationField, type RelationItem} from "@/components/RelationField";
 import {Tooltip} from "@/components/Tooltip";
+import Tippy from "@tippyjs/react/headless";
+import {useOpenSessionInDesktop} from "@/hooks/useOpenSessionInDesktop";
 import claudeLogo from "@/assets/claude-logo.svg";
 import {Section} from "./Section";
 import {MessageType, type SessionActivityMap} from "@/shared";
@@ -106,31 +109,75 @@ export function LinkedSessionsSection() {
         }
     };
 
-    // The tooltip says what the button does now: reset the links, or why there is nothing to reset. It is not `disabled`
-    // because a disabled button gets no pointer events, and so no tooltip.
+    // The Claude button is always live: it opens a menu with the two things Claude Desktop is involved in here.
     //
+    // Matching Desktop's records: the tooltip on that row says what pressing it does now (reset the links, or why there
+    // is nothing to reset). The row is not `disabled` because a disabled button gets no pointer events, and so no tooltip.
     // While the sync is off nothing of the desktop app is shown, so there is nothing to reset and nothing to explain
-    // away. The button stays, drawn and worded as when it works, and a press opens the settings where the switch is.
+    // away. The row is drawn and worded as when it works, and a press opens the settings where the switch is.
     const canReset = apart.length > 0;
     const active = canReset || !syncOn;
     const resetHint = !active
         ? t(hasDesktopRecord ? 'sessionRail.linked.resetSynced' : 'sessionRail.linked.resetNoRecord')
         : t('sessionRail.linked.resetToDesktop');
+    const {canOpen, open: openInDesktop, dialog} = useOpenSessionInDesktop();
+    const tippyRef = useRef<Instance | null>(null);
+    const hideMenu = () => tippyRef.current?.hide();
+    const itemClass = 'flex w-full items-center rounded-lg px-2.5 py-1.5 text-start text-sm text-text-primary whitespace-nowrap';
     const resetButton = (
-        <Tooltip content={resetHint} placement="bottom">
-            <button
-                type="button"
-                aria-label={t('sessionRail.linked.resetToDesktop')}
-                aria-disabled={!active}
-                onClick={() => {
-                    if (!syncOn) void openSettingsAt(Route.SETTINGS_GENERAL);
-                    else if (canReset) void resetToDesktop();
-                }}
-                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${active ? 'hover:bg-surface-hover' : 'cursor-default opacity-40'}`}
+        <>
+            <Tippy
+                placement="bottom-end"
+                interactive
+                trigger="click"
+                offset={[0, 6]}
+                appendTo={() => document.body}
+                onCreate={(instance) => { tippyRef.current = instance; }}
+                render={(attrs) => (
+                    <div className="z-50 min-w-[200px] rounded-xl border border-border-default bg-surface-overlay p-1 shadow-lg" role="menu" data-session-rail-popover {...attrs}>
+                        <Tooltip content={resetHint} placement="left">
+                            <button
+                                type="button"
+                                role="menuitem"
+                                aria-disabled={!active}
+                                onClick={() => {
+                                    hideMenu();
+                                    if (!syncOn) void openSettingsAt(Route.SETTINGS_GENERAL);
+                                    else if (canReset) void resetToDesktop();
+                                }}
+                                className={`${itemClass} ${active ? 'hover:bg-surface-pressed' : 'cursor-default opacity-40'}`}
+                            >
+                                {t('sessionRail.linked.syncWithDesktop')}
+                            </button>
+                        </Tooltip>
+                        <Tooltip content={canOpen ? undefined : t('sessionRail.linked.openInDesktopNoSession')} placement="left">
+                            <button
+                                type="button"
+                                role="menuitem"
+                                aria-disabled={!canOpen}
+                                onClick={() => {
+                                    hideMenu();
+                                    if (canOpen) openInDesktop();
+                                }}
+                                className={`${itemClass} ${canOpen ? 'hover:bg-surface-pressed' : 'cursor-default opacity-40'}`}
+                            >
+                                {t('sessionRail.linked.openInDesktop')}
+                            </button>
+                        </Tooltip>
+                    </div>
+                )}
             >
-                <img src={claudeLogo} alt="" className="h-4 w-4"/>
-            </button>
-        </Tooltip>
+                <button
+                    type="button"
+                    aria-label={t('sessionRail.linked.desktopMenu')}
+                    aria-haspopup="menu"
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md hover:bg-surface-hover"
+                >
+                    <img src={claudeLogo} alt="" className="h-4 w-4"/>
+                </button>
+            </Tippy>
+            {dialog}
+        </>
     );
 
     return (

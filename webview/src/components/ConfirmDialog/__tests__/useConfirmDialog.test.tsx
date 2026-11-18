@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { useConfirmDialog } from '../useConfirmDialog';
 
@@ -146,5 +146,63 @@ describe('useConfirmDialog — confirmWithCheckbox', () => {
     });
 
     expect(read()).toBe('{"confirmed":false,"checked":false}');
+  });
+});
+
+describe('useConfirmDialog — onConfirm option', () => {
+  function WaitHost({ work, onResult }: { work: () => Promise<void>; onResult: (yes: boolean) => void }) {
+    const { confirmDialog, confirm } = useConfirmDialog();
+    return (
+      <>
+        <button onClick={async () => onResult(await confirm({ title: 'T', message: 'M', onConfirm: work }))}>
+          open
+        </button>
+        {confirmDialog}
+      </>
+    );
+  }
+
+  it('keeps the dialog open with a spinner until the work is done, then answers yes', async () => {
+    let finish: () => void = () => {};
+    const work = vi.fn(() => new Promise<void>((resolve) => { finish = resolve; }));
+    const onResult = vi.fn();
+    render(<WaitHost work={work} onResult={onResult} />);
+
+    await act(async () => { fireEvent.click(screen.getByText('open')); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Confirm' })); });
+
+    expect(work).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByTestId('confirm-dialog-spinner')).toBeInTheDocument();
+    expect(onResult).not.toHaveBeenCalled();
+
+    await act(async () => { finish(); });
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(onResult).toHaveBeenCalledWith(true);
+  });
+
+  it('still answers yes when the work throws', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const onResult = vi.fn();
+    render(<WaitHost work={() => Promise.reject(new Error('boom'))} onResult={onResult} />);
+
+    await act(async () => { fireEvent.click(screen.getByText('open')); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Confirm' })); });
+
+    expect(onResult).toHaveBeenCalledWith(true);
+    errors.mockRestore();
+  });
+
+  it('does not run the work when the question is declined', async () => {
+    const work = vi.fn(() => Promise.resolve());
+    const onResult = vi.fn();
+    render(<WaitHost work={work} onResult={onResult} />);
+
+    await act(async () => { fireEvent.click(screen.getByText('open')); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Cancel' })); });
+
+    expect(work).not.toHaveBeenCalled();
+    expect(onResult).toHaveBeenCalledWith(false);
   });
 });

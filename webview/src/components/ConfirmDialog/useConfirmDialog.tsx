@@ -10,6 +10,12 @@ export interface ConfirmOptions {
   variant?: 'default' | 'danger';
   /** A small opt-in under the message; read its state back with confirmWithCheckbox. */
   checkbox?: ConfirmCheckbox;
+  /**
+   * Work to do on a yes, before the question is answered. The dialog stays open, busy, until it settles (see
+   * `ConfirmDialog`'s `onConfirm`), and only then answers yes. Without it, a yes closes the dialog at once. An error
+   * thrown here is logged and does not take the yes back: a caller that needs the failure keeps it inside the work.
+   */
+  onConfirm?: (checked: boolean) => void | Promise<void>;
 }
 
 /** How the dialog was answered. */
@@ -85,6 +91,19 @@ export function useConfirmDialog(): UseConfirmDialogReturn {
     [state],
   );
 
+  // The dialog is busy for as long as this returns a pending promise; the answer is given once it has settled.
+  const confirmAfterWork = useCallback(
+    async (checked: boolean) => {
+      try {
+        await state?.onConfirm?.(checked);
+      } catch (err) {
+        console.error('[useConfirmDialog] The work on the confirmation failed:', err);
+      }
+      settle(ConfirmResult.Confirmed, checked);
+    },
+    [state, settle],
+  );
+
   const confirmDialog = state ? (
     <ConfirmDialog
       title={state.title}
@@ -94,7 +113,7 @@ export function useConfirmDialog(): UseConfirmDialogReturn {
       variant={state.variant}
       checkbox={state.checkbox}
       onDismiss={state.dismissable ? () => settle(ConfirmResult.Dismissed) : undefined}
-      onConfirm={(checked) => settle(ConfirmResult.Confirmed, checked)}
+      onConfirm={confirmAfterWork}
       onCancel={() => settle(ConfirmResult.Declined)}
     />
   ) : null;

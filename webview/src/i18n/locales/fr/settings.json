@@ -899,7 +899,7 @@
     },
     "devTools": {
       "label": "Outils de développement",
-      "description": "Ouvre les DevTools du navigateur intégré pour le chat, dans une fenêtre séparée. Il n'existe pas de raccourci clavier pour cela — ouvrez-les depuis ici.",
+      "description": "Ouvre les DevTools du navigateur intégré pour le chat, dans une fenêtre séparée. Sur Mac, Cmd+Option+I les ouvre aussi.",
       "unavailable": "Disponible lors de l'exécution dans un IDE. Dans un navigateur, utilisez les outils de développement propres à votre navigateur.",
       "action": "Ouvrir"
     }

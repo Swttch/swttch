@@ -377,6 +377,8 @@
       "rotateModel": "التبديل إلى النموذج التالي",
       "clearConversation": "مسح المحادثة",
       "archiveConversation": "أرشفة المحادثة أو استعادتها",
+      "openInDesktop": "فتح الجلسة في Claude Desktop",
+      "openDevTools": "فتح أدوات المطورين",
       "openSideQuestion": "طرح سؤال جانبي (/btw)",
       "cycleTranscriptView": "تبديل عرض النص (عادي، التفكير، مفصّل، كلاسيكي)",
       "refreshSessionList": "تحديث قائمة الجلسات أثناء فتحها",

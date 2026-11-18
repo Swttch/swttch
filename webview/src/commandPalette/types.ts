@@ -33,6 +33,8 @@ export interface CommandPaletteServices {
     inputMode: InputMode;
     setSessionState: (state: SessionState) => void;
     resetToNewSession: () => void;
+    /** Writes the shown title into the transcript for Claude Desktop (see `SessionContextValue`). */
+    nameSessionForDesktop: (sessionId: string) => Promise<void>;
   };
   /** Archiving the open session, which belongs to the session-management MCP (installed or not). */
   archive: {
