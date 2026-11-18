@@ -239,7 +239,7 @@ function Thumbnails({ pictures, onOpen }: { pictures: PictureRef[]; onOpen: (pic
             }}
             className="flex flex-shrink-0 cursor-zoom-in"
           >
-            <img src={picture.src} alt="" className="h-7 w-auto max-w-[56px] rounded-[3px] border border-border-default/70 object-contain" />
+            <img src={picture.src} alt="" className="h-7 w-auto max-w-[3.5rem] rounded-[0.1875rem] border border-border-default/70 object-contain" />
           </span>
         ))}
       </span>
@@ -677,7 +677,7 @@ export function StartedSessionCard({ call }: { call: ToolCall }) {
   const busy = starting || working;
   const state = notStarted ? 'not-started' : starting ? 'starting' : deleted ? 'deleted' : working ? 'working' : awaiting ? 'needs-input' : archived ? 'archived' : unread ? 'unread' : 'idle';
   return (
-    <div className="px-4 py-[11px]" data-transcript-started-session data-state={state}>
+    <div className="px-4 py-[0.6875rem]" data-transcript-started-session data-state={state}>
       <a
         href={href}
         rel="noreferrer"
@@ -870,8 +870,8 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
     // A capture on its own is shown open, as the desktop app shows it: its line has nothing to fold and no thumbnail,
     // since the picture itself is right under it.
     return (
-      <div className="px-4 pt-3 pb-[11px]" data-transcript-tool-run-single>
-        <div className="py-[10px] text-[0.9375rem] text-[var(--tr-muted)]">{rowLabel(calls[0], t).before}</div>
+      <div className="px-4 pt-3 pb-[0.6875rem]" data-transcript-tool-run-single>
+        <div className="py-[0.625rem] text-[0.9375rem] text-[var(--tr-muted)]">{rowLabel(calls[0], t).before}</div>
         <PlainDetail call={calls[0]} />
       </div>
     );
@@ -879,7 +879,7 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
 
   if (calls.length === 1) {
     return (
-      <div className="px-4 pt-3 pb-[11px]" data-transcript-tool-run-single>
+      <div className="px-4 pt-3 pb-[0.6875rem]" data-transcript-tool-run-single>
         <TranscriptToolRow
           calls={[calls[0]]}
           defaultOpen={verbose}
@@ -893,7 +893,7 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
   const summaryParts = groupLabelParts(calls, t);
 
   return (
-    <div className="px-4 pt-3 pb-[11px]" data-transcript-tool-run>
+    <div className="px-4 pt-3 pb-[0.6875rem]" data-transcript-tool-run>
       <button
         type="button"
         aria-expanded={open}

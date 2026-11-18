@@ -138,7 +138,7 @@ function SegmentView({ segment, endsTurn, onRetry, summary, summaryShown, liveTa
         </div>
       );
     case 'chapter':
-      return <h3 className="px-4 pb-[29px] pt-3 text-[1rem] font-semibold leading-relaxed text-[var(--tr-text)]">{segment.title}</h3>;
+      return <h3 className="px-4 pb-[1.8125rem] pt-3 text-[1rem] font-semibold leading-relaxed text-[var(--tr-text)]">{segment.title}</h3>;
   }
 }
 

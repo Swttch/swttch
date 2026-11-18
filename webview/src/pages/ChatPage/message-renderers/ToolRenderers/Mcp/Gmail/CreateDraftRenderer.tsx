@@ -20,7 +20,7 @@ const RecipientLine = (props: {label: string; values?: string[]}) => {
     if (!Array.isArray(values) || values.length === 0) return null;
     return (
         <div className="flex items-start gap-2 p-2 border-b border-border-subtle">
-            <span className="text-tool-label-fg uppercase text-[0.7692rem] min-w-[28px] pt-[1px]">
+            <span className="text-tool-label-fg uppercase text-[0.7692rem] min-w-[1.75rem] pt-[0.0625rem]">
                 {label}
             </span>
             <div className="flex-1 text-text-primary/80 text-[0.8461rem] break-words">

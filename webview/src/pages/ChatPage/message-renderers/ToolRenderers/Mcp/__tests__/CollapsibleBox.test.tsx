@@ -31,7 +31,7 @@ describe('CollapsibleBox', () => {
         render(<CollapsibleBox collapsedMaxHeight={60}>short</CollapsibleBox>);
         const box = screen.getByText('short');
         expect(box).not.toHaveClass('cursor-pointer');
-        expect(box).not.toHaveClass('max-h-[60px]');
+        expect(box).not.toHaveClass('max-h-[3.75rem]');
     });
 
     it('collapses and shows a fade mask when content overflows', () => {
@@ -39,7 +39,7 @@ describe('CollapsibleBox', () => {
         render(<CollapsibleBox collapsedMaxHeight={60}>tall content</CollapsibleBox>);
         const box = screen.getByText('tall content');
         expect(box).toHaveClass('cursor-pointer');
-        expect(box).toHaveClass('max-h-[60px]');
+        expect(box).toHaveClass('max-h-[3.75rem]');
         expect(box).toHaveClass('overflow-hidden');
     });
 
@@ -47,18 +47,18 @@ describe('CollapsibleBox', () => {
         stubScrollHeight(500);
         render(<CollapsibleBox collapsedMaxHeight={60}>tall content</CollapsibleBox>);
         const box = screen.getByText('tall content');
-        expect(box).toHaveClass('max-h-[60px]');
+        expect(box).toHaveClass('max-h-[3.75rem]');
         fireEvent.click(box);
-        expect(box).not.toHaveClass('max-h-[60px]');
+        expect(box).not.toHaveClass('max-h-[3.75rem]');
         fireEvent.click(box);
-        expect(box).toHaveClass('max-h-[60px]');
+        expect(box).toHaveClass('max-h-[3.75rem]');
     });
 
     it('uses the 200px preset clamp when collapsedMaxHeight is 200', () => {
         stubScrollHeight(500);
         render(<CollapsibleBox collapsedMaxHeight={200}>long list</CollapsibleBox>);
         const box = screen.getByText('long list');
-        expect(box).toHaveClass('max-h-[200px]');
+        expect(box).toHaveClass('max-h-[12.5rem]');
     });
 
     it('merges a custom className', () => {

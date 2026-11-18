@@ -4,4 +4,4 @@
  * One class for every place that draws one (a sent message, one held under a permission card, one waiting for its
  * turn to end), so they cannot drift apart.
  */
-export const USER_BUBBLE_CLASS = 'max-w-[37rem] min-w-0 rounded-2xl bg-surface-hover px-[16.8px] py-[13.5px]';
+export const USER_BUBBLE_CLASS = 'max-w-[37rem] min-w-0 rounded-2xl bg-surface-hover px-[1.05rem] py-[0.84375rem]';

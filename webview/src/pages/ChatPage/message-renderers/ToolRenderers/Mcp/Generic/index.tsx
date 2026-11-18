@@ -54,9 +54,9 @@ export const McpToolHeader = (props: {name: string; input?: Record<string, unkno
         : t(status === 'success' ? 'mcp.common.used' : 'mcp.common.using', {name: LABEL_MARK}).split(LABEL_MARK);
     const heading = (
         <>
-            {before && <span className="font-normal me-[3px]">{before}</span>}
+            {before && <span className="font-normal me-[0.1875rem]">{before}</span>}
             {label}
-            {after && <span className="font-normal ms-[3px]">{after}</span>}
+            {after && <span className="font-normal ms-[0.1875rem]">{after}</span>}
         </>
     );
 
@@ -64,9 +64,9 @@ export const McpToolHeader = (props: {name: string; input?: Record<string, unkno
         <ToolHeader name={heading}>
             <>
                 {/* The first element after the label and wording sits 2px further from it. */}
-                {status === 'error' && <div className="text-state-error-fg ms-[2px]">{t('mcp.common.failed')}</div>}
+                {status === 'error' && <div className="text-state-error-fg ms-[0.125rem]">{t('mcp.common.failed')}</div>}
                 {preview && (
-                    <div className={`truncate text-text-primary/60 text-[0.9230rem] font-mono${status === 'error' ? '' : ' ms-[2px]'}`}>
+                    <div className={`truncate text-text-primary/60 text-[0.9230rem] font-mono${status === 'error' ? '' : ' ms-[0.125rem]'}`}>
                         {preview}
                     </div>
                 )}

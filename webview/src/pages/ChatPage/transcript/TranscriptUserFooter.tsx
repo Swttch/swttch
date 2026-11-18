@@ -82,8 +82,8 @@ export function TranscriptUserFooter({
       {known && (
         <div className="inline-flex items-center gap-0.5">
           <Tooltip content={t('transcript.userFooter.read')} placement="top">
-            <span className="flex h-[22px] w-5 items-center justify-center">
-              <ReadIcon className="h-[14px] w-[14px]" />
+            <span className="flex h-[1.375rem] w-5 items-center justify-center">
+              <ReadIcon className="h-[0.875rem] w-[0.875rem]" />
             </span>
           </Tooltip>
           <Tooltip content={exact} placement="top">

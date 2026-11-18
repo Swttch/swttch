@@ -105,7 +105,7 @@ const ROW_TINT: Record<DiffLineType, string> = {
 /** The bar at a changed line's left edge: solid green for an added line, hatched pink for a removed one. */
 const ROW_BAR: Record<DiffLineType, string> = {
   [DiffLineType.Add]: 'bg-[rgb(55,169,68)]',
-  [DiffLineType.Delete]: 'bg-[repeating-linear-gradient(135deg,rgb(206,97,118)_0_2px,rgb(94,1,20)_2px_4px)]',
+  [DiffLineType.Delete]: 'bg-[repeating-linear-gradient(135deg,rgb(206,97,118)_0_0.125rem,rgb(94,1,20)_0.125rem_0.25rem)]',
   [DiffLineType.Context]: '',
 };
 
