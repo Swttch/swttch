@@ -135,44 +135,45 @@ export function useScrollFold(
       box.style.height = held;
     }
 
-    // Track scrollTop, but start counting from where the send crossed the top
-    // edge rather than from wherever it happened to pin.
+    // How far the send has gone past the top edge: how far its sentinel sits
+    // above that line, read again on every frame.
     //
-    // The two are the same thing while the user scrolls there by hand, and
-    // nothing else. Reopening a session jumps the container straight to the
-    // bottom or to the position it stored (`ChatPage`'s initial positioning),
-    // and the send pins after that jump, having crossed the edge without a
-    // single scroll event. Anchoring on that moment tells the fold the message
-    // has not moved yet, so it is drawn at full height and stays there, with no
-    // scrolling left below it to work the fold — the transcript opens under a
-    // bubble the user has to scroll up past and come back down to collapse.
+    // This used to be counted off scrollTop from the moment the send pinned,
+    // because reading a position on every frame is how the first version of
+    // this fold shuddered: it measured something the fold itself moves, so the
+    // bubble shrank, the thing measured shifted, the next frame read a new
+    // distance and folded again (#318). The sentinel is not such a thing. It
+    // sits above the bubble, and the fold changes only what comes after it —
+    // the bubble, and the spacer that keeps the slot the same length. Scrolling
+    // moves it by exactly as much as scrollTop changes, so while only the
+    // scroll moves, it gives the very number the count on scrollTop gave.
     //
-    // So the distance already travelled is measured once, off the sentinel,
-    // whose position is the very thing "pinned" was read from. Once only: it is
-    // taken before any listener is attached and never read again. Measuring it
-    // per frame would feed the fold its own output — the bubble shrinks, the
-    // content below rises, scrollHeight drops, the browser nudges scrollTop to
-    // keep the view in range, the sentinel lands somewhere new, and the next
-    // frame shrinks again, a loop visible as a shudder along the bubble's
-    // bottom edge. That is what scrollTop, which the fold cannot disturb, is
-    // here to avoid; every later reading stays a plain difference against the
-    // origin below.
+    // The two part when something above the send changes height, and there
+    // the count is the one that is wrong. The transcript window drops pages at
+    // the top and loads older ones above, and holds the reader's place by
+    // moving scrollTop by the height that came or went (`useScrollAnchor`);
+    // the browser's scroll anchoring does the same for anything else above.
+    // The send does not move on screen, yet a count from the pin took it to be
+    // a page closer and opened the bubble while it was still far above the
+    // edge, or a page further away and kept it shut (#704).
+    //
+    // Reading the send's actual place is also what keeps a reopened session
+    // right: the container jumps to the bottom or to the stored position and
+    // the send pins after that, already far past the edge, and the first
+    // reading says so (#445).
     //
     // Never negative: a sentinel still below the edge has not been passed at
     // all, and the bubble should open whole.
     const sentinel = sentinelRef.current;
-    const passed = sentinel
-      ? Math.max(
-          root.getBoundingClientRect().top + topInset - sentinel.getBoundingClientRect().top,
-          0,
-        )
-      : 0;
-    const origin = root.scrollTop - passed;
+    const pinnedAt = root.scrollTop;
+    const travelled = sentinel
+      ? () => Math.max(root.getBoundingClientRect().top + topInset - sentinel.getBoundingClientRect().top, 0)
+      : () => root.scrollTop - pinnedAt;
 
     let frame = 0;
     const measure = () => {
       frame = 0;
-      const height = start - (root.scrollTop - origin);
+      const height = start - travelled();
       // A scroll that does not change what is drawn keeps the state it had.
       //
       // "Pinned" is read off an observer as "my sentinel is above the top edge", and that holds for every send the
@@ -180,8 +181,8 @@ export function useScrollFold(
       // past the floor. A reply streaming in moves scrollTop on every word, and a new state each time redrew every
       // one of them and every bubble under them (#680) for a height that, clamped, had not moved.
       //
-      // The overshoot is not lost by skipping: the height is worked out from scrollTop on every frame, never from the
-      // state, so scrolling back still unfolds at the same point.
+      // The overshoot is not lost by skipping: the height is worked out from the sentinel on every frame, never from
+      // the state, so scrolling back still unfolds at the same point.
       setFold(prev => (
         prev.height !== null && prev.restingHeight === start && drawnFoldHeight(prev.height, start) === drawnFoldHeight(height, start)
           ? prev

@@ -3,15 +3,14 @@ import { renderHook, act } from '@testing-library/react';
 import { useScrollFold, FOLD_MAX_HEIGHT, FOLD_MIN_HEIGHT, PINNED_TOP_INSET } from '../useScrollFold';
 
 /**
- * Once the send is pinned the hook reads one number — the container's scrollTop
- * — so that is nearly all this has to fake. It deliberately does NOT model
- * element positions *per frame*: measuring those on every scroll is what made
- * the fold feed on its own output and shudder.
+ * The hook reads where the send's sentinel is against the top edge, so that is
+ * what this fakes, the way a browser draws it: the sentinel's place in the
+ * transcript minus scrollTop. Scrolling moves it, and so does a change of
+ * height above the send. The bubble is faked only as tall as it is; nothing
+ * here moves it, because the hook must not read it while scrolling.
  *
- * Positions are modelled for the single reading taken as the send pins, which
- * is where the fold learns how far the send had already travelled. The default
- * puts the sentinel exactly on the top edge — a send arriving there under its
- * own scrolling, which has travelled nothing yet.
+ * The default puts the sentinel exactly on the top edge — a send arriving there
+ * under its own scrolling, which has travelled nothing yet.
  */
 function harness(startAt = 1000, restingHeight = FOLD_MAX_HEIGHT, sentinelTop = PINNED_TOP_INSET) {
   const root = document.createElement('div');
@@ -25,9 +24,18 @@ function harness(startAt = 1000, restingHeight = FOLD_MAX_HEIGHT, sentinelTop = 
   bubble.getBoundingClientRect = () => ({ height: restingHeight }) as DOMRect;
   const bubbleRef = { current: bubble };
 
+  // How far down the scrolled content the sentinel sits.
+  let sentinelAt = sentinelTop + startAt;
   const sentinel = document.createElement('div');
-  sentinel.getBoundingClientRect = () => ({ top: sentinelTop }) as DOMRect;
+  sentinel.getBoundingClientRect = () => ({ top: sentinelAt - root.scrollTop }) as DOMRect;
   const sentinelRef = { current: sentinel };
+
+  const frame = () => {
+    act(() => {
+      root.dispatchEvent(new Event('scroll'));
+      vi.advanceTimersByTime(16);
+    });
+  };
 
   return {
     root,
@@ -36,10 +44,18 @@ function harness(startAt = 1000, restingHeight = FOLD_MAX_HEIGHT, sentinelTop = 
     /** Scroll the transcript by `px`; negative scrolls back up. */
     scrollBy(px: number) {
       root.scrollTop += px;
-      act(() => {
-        root.dispatchEvent(new Event('scroll'));
-        vi.advanceTimersByTime(16);
-      });
+      frame();
+    },
+    /**
+     * Make what is above the send `px` taller (negative: shorter) while the
+     * reader's place holds: scrollTop moves by as much, and nothing on screen
+     * moves, the send included. A page of the transcript window loaded or
+     * dropped above (`useScrollAnchor`), or the browser's scroll anchoring.
+     */
+    resizeAbove(px: number) {
+      sentinelAt += px;
+      root.scrollTop += px;
+      frame();
     },
   };
 }
@@ -130,37 +146,30 @@ describe('useScrollFold', () => {
     expect(result.current).toBe(FOLD_MAX_HEIGHT);
   });
 
-  it('measures on pin and never again while scrolling', () => {
-    // The shudder: folding shortens the document, the elements below shift, a
-    // position-based measurement returns something new, and the height
-    // oscillates frame to frame. Re-measuring during the scroll is how that
-    // gets in — so every element is read as the send pins and never after, and
-    // every frame beyond that is arithmetic on scrollTop.
+  it('reads the sentinel while scrolling, never the bubble it folds', () => {
+    // The shudder: measure something the fold moves, and the height chases its
+    // own output frame to frame. The bubble is what the fold moves, so it is
+    // read as the send pins — its box, and what its wrapper wears around the
+    // box, unfolded and then folded (`wrapLoss`) — and not while scrolling.
     //
-    // The bubble is read more than once as the fold comes on — its box, and what
-    // its wrapper wears around the box, unfolded and then folded (`wrapLoss`).
-    // That is still the pin and still not the scroll, which is the line this
-    // test holds: the count may be whatever the pin needs, and must not move
-    // while scrolling.
+    // The sentinel is read on every scrolled frame. The fold cannot move it: it
+    // sits above the bubble. That is what lets it catch a change of height above
+    // the send, which a count on scrollTop cannot see (#704).
     const h = harness();
     const bubble = vi.fn(() => ({ height: FOLD_MAX_HEIGHT }) as DOMRect);
-    const root = vi.fn(() => ({ top: 0 }) as DOMRect);
-    const sentinel = vi.fn(() => ({ top: PINNED_TOP_INSET }) as DOMRect);
     h.bubbleRef.current.getBoundingClientRect = bubble;
-    h.root.getBoundingClientRect = root;
-    h.sentinelRef.current.getBoundingClientRect = sentinel;
+    const sentinel = vi.spyOn(h.sentinelRef.current, 'getBoundingClientRect');
 
     renderHook(() => useScrollFold(h.root, true, h.bubbleRef, h.sentinelRef).height);
-    const onPin = [bubble, root, sentinel].map(fn => fn.mock.calls.length);
+    const onPin = bubble.mock.calls.length;
+    const sentinelOnPin = sentinel.mock.calls.length;
 
     h.scrollBy(100);
     h.scrollBy(100);
 
-    // The container and the sentinel are read once as it pins; the bubble as
-    // many times as the pin needs. Not one more of any across two scrolled frames.
-    expect(onPin.slice(1)).toEqual([1, 1]);
-    expect(onPin[0]).toBeGreaterThan(0);
-    expect([bubble, root, sentinel].map(fn => fn.mock.calls.length)).toEqual(onPin);
+    expect(onPin).toBeGreaterThan(0);
+    expect(bubble.mock.calls.length).toBe(onPin);
+    expect(sentinel.mock.calls.length).toBe(sentinelOnPin + 2);
   });
 
   it('starts already folded by whatever the send had scrolled past before pinning', () => {
@@ -191,6 +200,40 @@ describe('useScrollFold', () => {
     expect(result.current).toBe(FOLD_MAX_HEIGHT - 10);
 
     h.scrollBy(-10);
+    expect(result.current).toBe(FOLD_MAX_HEIGHT);
+  });
+
+  it('stays folded when a page above the send is dropped (#704)', () => {
+    // The transcript window lets go of a page at the top and holds the
+    // reader's place by taking its height off scrollTop. The send has not
+    // moved, so neither may the fold. Counted off scrollTop, the send read as
+    // 2000px closer than it was and opened while far above the edge.
+    const h = harness(5000);
+    const { result } = renderHook(() => useScrollFold(h.root, true, h.bubbleRef, h.sentinelRef).height);
+
+    h.scrollBy(600);
+    h.resizeAbove(-2000);
+    expect(Math.max(result.current ?? 0, FOLD_MIN_HEIGHT)).toBe(FOLD_MIN_HEIGHT);
+
+    // It opens on the way back up where the send really is.
+    h.scrollBy(-500);
+    expect(result.current).toBe(FOLD_MAX_HEIGHT - 100);
+    h.scrollBy(-100);
+    expect(result.current).toBe(FOLD_MAX_HEIGHT);
+  });
+
+  it('stays as it was when a page is added above the send (#704)', () => {
+    // The other way round: an older page lands above, and scrollTop grows by
+    // its height to hold the place. Counted off scrollTop, the send read as
+    // that much further away and stayed shut until it unpinned.
+    const h = harness(1000);
+    const { result } = renderHook(() => useScrollFold(h.root, true, h.bubbleRef, h.sentinelRef).height);
+
+    h.scrollBy(100);
+    h.resizeAbove(3000);
+    expect(result.current).toBe(FOLD_MAX_HEIGHT - 100);
+
+    h.scrollBy(-100);
     expect(result.current).toBe(FOLD_MAX_HEIGHT);
   });
 
@@ -229,8 +272,8 @@ describe('useScrollFold', () => {
   });
 
   it('measures once per frame however many scroll events arrive', () => {
-    // A trackpad outruns the compositor; one layout-free read is cheap but a
-    // setState per event is not.
+    // A trackpad outruns the compositor; a layout read and a setState per
+    // event is not cheap, one per frame is.
     const h = harness();
     const { result } = renderHook(() => useScrollFold(h.root, true, h.bubbleRef, h.sentinelRef).height);
 
