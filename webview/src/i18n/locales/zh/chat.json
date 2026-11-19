@@ -434,6 +434,15 @@
       "allowAndSwitchToAuto": "允许并切换到 Auto",
       "acceptEditsHint": "将此会话切换为接受编辑模式",
       "autoReviewsRest": "Auto 将审查本会话的其余操作。",
+      "sessionAllow": {
+        "edit": "本次会话中允许所有编辑",
+        "bash": "本次会话中允许所有 Bash 命令",
+        "read": "本次会话中允许所有读取",
+        "mcp": "本次会话中允许所有 {{scope}}",
+        "default": "本次会话中允许所有 {{tool}}"
+      },
+      "sessionAllowHint": "在本次会话结束前不再询问",
+      "sessionAllowEnableHint": "会先显示警告",
       "moreAllowOptions": "更多允许选项",
       "scope": {
         "session": "仅适用于此会话",

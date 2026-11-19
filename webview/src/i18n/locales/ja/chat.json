@@ -434,6 +434,15 @@
       "allowAndSwitchToAuto": "許可して Auto に切り替え",
       "acceptEditsHint": "このセッションを「編集を承認」モードに切り替えます",
       "autoReviewsRest": "このセッションの残りの操作は自動モードが確認します。",
+      "sessionAllow": {
+        "edit": "このセッション中はすべての編集を許可する",
+        "bash": "このセッション中はすべてのBashコマンドを許可する",
+        "read": "このセッション中はすべての読み込みを許可する",
+        "mcp": "このセッション中はすべての{{scope}}を許可する",
+        "default": "このセッション中はすべての{{tool}}を許可する"
+      },
+      "sessionAllowHint": "このセッションが終わるまで確認しません",
+      "sessionAllowEnableHint": "先に警告を表示します",
       "moreAllowOptions": "その他の許可オプション",
       "scope": {
         "session": "このセッションのみに適用されます",

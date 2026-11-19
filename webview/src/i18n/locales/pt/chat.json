@@ -435,6 +435,15 @@
       "allowAndSwitchToAuto": "Permitir e mudar para Auto",
       "acceptEditsHint": "Muda esta sessão para o modo Aceitar edições",
       "autoReviewsRest": "O modo Auto revisa o restante desta sessão.",
+      "sessionAllow": {
+        "edit": "Permitir todas as edições nesta sessão",
+        "bash": "Permitir todos os comandos do Bash nesta sessão",
+        "read": "Permitir todas as leituras nesta sessão",
+        "mcp": "Permitir todo(a) {{scope}} nesta sessão",
+        "default": "Permitir todo(a) {{tool}} nesta sessão"
+      },
+      "sessionAllowHint": "Não pergunta novamente até o fim desta sessão",
+      "sessionAllowEnableHint": "Mostra um aviso primeiro",
       "moreAllowOptions": "Mais opções de permissão",
       "scope": {
         "session": "Aplica-se apenas a esta sessão",

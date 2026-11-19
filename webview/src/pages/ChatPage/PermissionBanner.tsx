@@ -296,6 +296,11 @@ export function PermissionBanner(props: Props) {
         preview={desktopPreview}
         onApprove={onApprove}
         onApproveAlways={onApproveAlways ?? onApprove}
+        // The same three outcomes the classic prompt's session line has (sessionOption above): answerable, a link that turns
+        // the "Allow all command" switch on, or nothing.
+        onApproveForSession={sessionOption === 'enabled' ? onApproveForSession : undefined}
+        onEnableSessionAllow={sessionOption === 'locked' ? allowAll.enable : undefined}
+        keyboardPaused={allowAll.confirmOpen}
         onDeny={() => onDeny()}
       />
     );

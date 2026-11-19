@@ -9,6 +9,7 @@ import { alwaysAllowFromSuggestions, alwaysAllowScope } from '@/shared';
 import type { TranscriptViewMode } from '@/types/settings';
 import type { PendingPermission } from '../../../hooks/usePendingPermissions';
 import { getLastAllowChoice, setLastAllowChoice } from './lastAllowChoice';
+import { mcpToolSessionScopeLabel } from '../message-renderers/ToolRenderers/Mcp/humanize';
 
 /**
  * The tools whose permission prompt is drawn as the desktop app draws it, in the views that follow the
@@ -42,7 +43,32 @@ interface Props {
   onApprove: () => void | Promise<void>;
   /** Approve and install the narrow rule the CLI suggested, for this session. */
   onApproveAlways: () => void;
+  /**
+   * Approve and stop asking about this whole tool until the session ends (the classic prompt's "Yes, allow all … this
+   * session"). Given only for a request the CLI will keep a rule for; without it the menu offers nothing of the kind.
+   */
+  onApproveForSession?: () => void;
+  /**
+   * For a request the CLI will never keep a rule for: turn on "Allow all command in this session" (after its warning)
+   * and resolve to whether it was turned on. The request is then allowed, as the warning said all such requests would be.
+   * Which sessions and users may turn it on is that switch's own business (it is sponsor-gated beyond one session).
+   */
+  onEnableSessionAllow?: () => Promise<boolean>;
+  /** The warning that goes with {@link onEnableSessionAllow} is on screen: the keys belong to it, not to this card. */
+  keyboardPaused?: boolean;
   onDeny: () => void;
+}
+
+/** The menu line that says what "this session" allows: a tool's whole family, not only the request that asked. */
+function sessionAllowLabel(permission: PendingPermission, t: (key: string, values?: Record<string, unknown>) => string): string {
+  const { toolName } = permission;
+  if (toolName === 'Edit' || toolName === 'Write') return t('permissionBanner.card.sessionAllow.edit');
+  if (toolName === 'Bash') return t('permissionBanner.card.sessionAllow.bash');
+  if (toolName === 'Read') return t('permissionBanner.card.sessionAllow.read');
+  if (toolName.startsWith('mcp__')) {
+    return t('permissionBanner.card.sessionAllow.mcp', { scope: mcpToolSessionScopeLabel(toolName) });
+  }
+  return t('permissionBanner.card.sessionAllow.default', { tool: toolName });
 }
 
 /** The heading's question, in the words the desktop app asks it with for each kind of request. */
@@ -96,7 +122,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
  * button that leads is "Allow once".
  */
 export function DesktopPermissionCard(props: Props) {
-  const { permission, subtitle, preview, onApprove, onApproveAlways, onDeny } = props;
+  const { permission, subtitle, preview, onApprove, onApproveAlways, onApproveForSession, onEnableSessionAllow, keyboardPaused, onDeny } = props;
   const { t } = useTranslation('chat');
   const { inputMode, availableModes, setInputMode } = useSessionContext();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -162,6 +188,31 @@ export function DesktopPermissionCard(props: Props) {
       onSelect: allowAndAcceptEdits,
     });
   }
+  // "Allow all … this session": the tool's whole family until the session ends. A file change that can already be
+  // allowed by switching to Accept edits has that line above, which does the same thing, so it gets no second one.
+  if (!canAcceptEdits) {
+    if (onApproveForSession) {
+      menuItems.push({
+        key: 'session',
+        label: sessionAllowLabel(permission, t),
+        description: t('permissionBanner.card.sessionAllowHint'),
+        onSelect: onApproveForSession,
+      });
+    } else if (onEnableSessionAllow) {
+      // The CLI keeps no rule for this request, so the line is "turn the switch on" rather than a rule: it warns first, and
+      // only a turned-on switch answers this request and the ones after it.
+      menuItems.push({
+        key: 'enableSession',
+        label: sessionAllowLabel(permission, t),
+        description: t('permissionBanner.card.sessionAllowEnableHint'),
+        onSelect: () => {
+          void onEnableSessionAllow().then((turnedOn) => {
+            if (turnedOn) void onApprove();
+          });
+        },
+      });
+    }
+  }
   if (canSwitchToAuto) {
     menuItems.push({
       key: 'auto',
@@ -188,7 +239,7 @@ export function DesktopPermissionCard(props: Props) {
   // always. Never while the person is typing: Cmd+Enter there is "queue this message".
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented) return;
+      if (event.defaultPrevented || keyboardPaused) return;
       if (event.key === 'Escape') {
         if (menuOpen) {
           // Closing the menu uses this Escape: marking it handled keeps the composer's own
@@ -212,7 +263,7 @@ export function DesktopPermissionCard(props: Props) {
     // order the two were (re)subscribed in, so "handled" is visible to it.
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [menuOpen, onDeny, onApprove, onApproveAlways, alwaysAvailable]);
+  }, [menuOpen, onDeny, onApprove, onApproveAlways, alwaysAvailable, keyboardPaused]);
 
   const question = questionFor(permission, t);
 

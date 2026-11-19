@@ -435,6 +435,15 @@
       "allowAndSwitchToAuto": "Autoriser et passer en mode Auto",
       "acceptEditsHint": "Passe cette session en mode « Accepter les modifications »",
       "autoReviewsRest": "Le mode Auto examine le reste de cette session.",
+      "sessionAllow": {
+        "edit": "Autoriser toutes les modifications pour cette session",
+        "bash": "Autoriser toutes les commandes Bash pour cette session",
+        "read": "Autoriser toutes les lectures pour cette session",
+        "mcp": "Autoriser tous les {{scope}} pour cette session",
+        "default": "Autoriser tous les {{tool}} pour cette session"
+      },
+      "sessionAllowHint": "Ne redemande plus jusqu’à la fin de cette session",
+      "sessionAllowEnableHint": "Affiche d’abord un avertissement",
       "moreAllowOptions": "Plus d’options d’autorisation",
       "scope": {
         "session": "S’applique uniquement à cette session.",

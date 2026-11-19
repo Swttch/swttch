@@ -439,6 +439,15 @@
       "allowAndSwitchToAuto": "Allow and switch to Auto",
       "acceptEditsHint": "Switches this session to Accept edits",
       "autoReviewsRest": "Auto reviews the rest of this session.",
+      "sessionAllow": {
+        "edit": "Allow all edits this session",
+        "bash": "Allow all Bash commands this session",
+        "read": "Allow all reads this session",
+        "mcp": "Allow all {{scope}} this session",
+        "default": "Allow all {{tool}} this session"
+      },
+      "sessionAllowHint": "Doesn’t ask again until this session ends",
+      "sessionAllowEnableHint": "Shows a warning first",
       "moreAllowOptions": "More allow options",
       "scope": {
         "session": "Applies to this session only",
