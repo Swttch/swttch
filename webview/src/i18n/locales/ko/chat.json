@@ -434,6 +434,15 @@
       "allowAndSwitchToAuto": "허용하고 Auto 모드로 전환",
       "acceptEditsHint": "이 세션을 편집 수락 모드로 전환합니다",
       "autoReviewsRest": "이 세션의 나머지 작업을 자동으로 검토합니다.",
+      "sessionAllow": {
+        "edit": "이번 세션에서 모든 편집 허용",
+        "bash": "이번 세션에서 모든 Bash 명령어 허용",
+        "read": "이번 세션에서 모든 읽기 허용",
+        "mcp": "이번 세션에서 모든 {{scope}} 허용",
+        "default": "이번 세션에서 모든 {{tool}} 허용"
+      },
+      "sessionAllowHint": "이 세션이 끝날 때까지 다시 묻지 않습니다",
+      "sessionAllowEnableHint": "먼저 경고가 표시됩니다",
       "moreAllowOptions": "더 많은 허용 옵션",
       "scope": {
         "session": "이 세션에만 적용됩니다",

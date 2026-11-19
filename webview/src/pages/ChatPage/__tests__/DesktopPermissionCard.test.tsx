@@ -224,6 +224,126 @@ describe('DesktopPermissionCard — the menu', () => {
   });
 });
 
+// #705: "Allow all … this session" behind the arrow, the way the classic prompt has it as its second line.
+describe('DesktopPermissionCard — allowing a tool for the session', () => {
+  function setupWith(
+    p: PendingPermission,
+    extra: { onApproveForSession?: () => void; onEnableSessionAllow?: () => Promise<boolean>; keyboardPaused?: boolean },
+  ) {
+    const handlers = { onApprove: vi.fn(), onApproveAlways: vi.fn(), onDeny: vi.fn() };
+    render(
+      <DesktopPermissionCard
+        permission={p}
+        subtitle="List files"
+        preview={<pre data-testid="permission-command">ls -la</pre>}
+        {...handlers}
+        {...extra}
+      />,
+    );
+    return handlers;
+  }
+
+  it('offers it for a command, saying it is every Bash command and until the session ends', () => {
+    session.availableModes = ['ask_before_edit'];
+    const onApproveForSession = vi.fn();
+    const h = setupWith(permission({ suggestions: undefined }), { onApproveForSession });
+    fireEvent.click(screen.getByTestId('permission-more'));
+    const item = screen.getByTestId('permission-menu-session');
+    expect(item).toHaveTextContent('Allow all Bash commands this session');
+    expect(item).toHaveTextContent('until this session ends');
+
+    fireEvent.click(item);
+    expect(onApproveForSession).toHaveBeenCalledTimes(1);
+    // It is its own answer: neither the one-off nor the rule the CLI suggested.
+    expect(h.onApprove).not.toHaveBeenCalled();
+    expect(h.onApproveAlways).not.toHaveBeenCalled();
+  });
+
+  it('is there beside "Always allow" when the CLI suggested a rule, which is narrower', () => {
+    setupWith(permission(), { onApproveForSession: vi.fn() });
+    fireEvent.click(screen.getByTestId('permission-more'));
+    expect(screen.getByTestId('permission-menu-once')).toBeInTheDocument();
+    expect(screen.getByTestId('permission-menu-session')).toBeInTheDocument();
+  });
+
+  it('names the tool for the others: a read, an MCP tool, a fetch', () => {
+    session.availableModes = ['ask_before_edit'];
+    const names: Array<[Partial<PendingPermission>, string]> = [
+      [{ toolName: 'Read', input: { file_path: '/a/b.txt' } }, 'Allow all reads this session'],
+      [{ toolName: 'mcp__context7__resolve-library-id', input: { libraryName: 'react' } }, 'resolve-library-id'],
+      [{ toolName: 'WebFetch', input: { url: 'https://example.com' } }, 'Allow all WebFetch this session'],
+    ];
+    for (const [overrides, text] of names) {
+      setupWith(permission({ suggestions: undefined, ...overrides }), { onApproveForSession: vi.fn() });
+      fireEvent.click(screen.getByTestId('permission-more'));
+      expect(screen.getByTestId('permission-menu-session')).toHaveTextContent(text);
+      cleanup();
+    }
+  });
+
+  it('is not offered when the card was given no way to answer it', () => {
+    // A request the CLI keeps no rule for: the line would approve once and ask again on the next command.
+    session.availableModes = ['ask_before_edit'];
+    setupWith(permission({ suggestions: undefined, suppressAlwaysAllowRule: true }), {});
+    expect(screen.queryByTestId('permission-more')).not.toBeInTheDocument();
+  });
+
+  it('is not a second line beside "Always allow" (Accept edits) on a file change, which does the same', () => {
+    setupWith(
+      permission({ toolName: 'Edit', input: { file_path: '/a/x.txt', old_string: 'a', new_string: 'b' }, suggestions: undefined }),
+      { onApproveForSession: vi.fn() },
+    );
+    fireEvent.click(screen.getByTestId('permission-more'));
+    expect(screen.getByTestId('permission-menu-acceptEdits')).toBeInTheDocument();
+    expect(screen.queryByTestId('permission-menu-session')).not.toBeInTheDocument();
+  });
+
+  it('is offered for a file change where Accept edits is not on offer', () => {
+    session.inputMode = 'plan';
+    setupWith(
+      permission({ toolName: 'Write', input: { file_path: '/a/x.txt', content: 'b' }, suggestions: undefined }),
+      { onApproveForSession: vi.fn() },
+    );
+    fireEvent.click(screen.getByTestId('permission-more'));
+    expect(screen.getByTestId('permission-menu-session')).toHaveTextContent('Allow all edits this session');
+  });
+
+  describe('for a request the CLI keeps no rule for (turning the switch on)', () => {
+    const request = () => permission({ suggestions: undefined, suppressAlwaysAllowRule: true });
+
+    it('allows this request once the switch is turned on', async () => {
+      session.availableModes = ['ask_before_edit'];
+      const onEnableSessionAllow = vi.fn().mockResolvedValue(true);
+      const h = setupWith(request(), { onEnableSessionAllow });
+      fireEvent.click(screen.getByTestId('permission-more'));
+      expect(screen.getByTestId('permission-menu-enableSession')).toHaveTextContent('Shows a warning first');
+      fireEvent.click(screen.getByTestId('permission-menu-enableSession'));
+      await waitFor(() => expect(h.onApprove).toHaveBeenCalledTimes(1));
+      expect(onEnableSessionAllow).toHaveBeenCalledTimes(1);
+    });
+
+    it('answers nothing when the warning is cancelled', async () => {
+      session.availableModes = ['ask_before_edit'];
+      const onEnableSessionAllow = vi.fn().mockResolvedValue(false);
+      const h = setupWith(request(), { onEnableSessionAllow });
+      fireEvent.click(screen.getByTestId('permission-more'));
+      fireEvent.click(screen.getByTestId('permission-menu-enableSession'));
+      await waitFor(() => expect(onEnableSessionAllow).toHaveBeenCalledTimes(1));
+      await Promise.resolve();
+      expect(h.onApprove).not.toHaveBeenCalled();
+      expect(h.onDeny).not.toHaveBeenCalled();
+    });
+  });
+
+  it('leaves its keys alone while the warning is on screen', () => {
+    const h = setupWith(permission(), { keyboardPaused: true });
+    fireEvent.keyDown(window, { key: 'Escape' });
+    fireEvent.keyDown(window, { key: 'Enter', metaKey: true });
+    expect(h.onDeny).not.toHaveBeenCalled();
+    expect(h.onApprove).not.toHaveBeenCalled();
+  });
+});
+
 describe('DesktopPermissionCard — keys', () => {
   it('Escape closes an open menu and does nothing else', () => {
     const h = setup();

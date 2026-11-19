@@ -434,6 +434,15 @@
       "allowAndSwitchToAuto": "允許並切換至 Auto",
       "acceptEditsHint": "將此工作階段切換為接受編輯模式",
       "autoReviewsRest": "Auto 會審查本工作階段的其餘操作。",
+      "sessionAllow": {
+        "edit": "本次工作階段允許所有編輯",
+        "bash": "本次工作階段允許所有 Bash 指令",
+        "read": "本次工作階段允許所有讀取",
+        "mcp": "本次工作階段允許所有 {{scope}}",
+        "default": "本次工作階段允許所有 {{tool}}"
+      },
+      "sessionAllowHint": "在本次工作階段結束前不再詢問",
+      "sessionAllowEnableHint": "會先顯示警告",
       "moreAllowOptions": "更多允許選項",
       "scope": {
         "session": "僅適用於此工作階段",

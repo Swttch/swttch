@@ -48,6 +48,22 @@ When you confirm, the second option lights up straight away. Choosing it approve
 
 From then on, in this session, every safety question of this kind is answered with "allow" without a panel appearing. You will see the command run and its output, with no question in between.
 
+## On the new permission card
+
+In the Normal, Thinking and Verbose views, requests such as a command, a read or an edit come as a **card**. The card has **Deny** and an allow button, and the arrow (▾) at the right of the allow button opens the other ways to allow. The line that was the second option of the classic approval panel, "Yes, allow all … this session", is in that list.
+
+For a **request Claude Code keeps an answer for**, the list has one line that names the tool: **Allow all Bash commands this session** for a command, **Allow all reads this session** for a read, and the name of the tool for the rest, such as an MCP tool or a web fetch. Under the line it says "Doesn’t ask again until this session ends".
+
+![The permission card with the arrow at the right of the allow button open. It lists "Allow once", "Allow all Bash commands this session" (with "Doesn’t ask again until this session ends" under it) and "Allow and switch to Auto".](./assets/card-session-allow.png)
+
+Choosing it allows the request now, and the rest of this session does not ask about the same tool again. It is **every request of that tool**, not only this command. For a command that means any Bash command runs without asking, so choose it only in a session where you trust what Claude does. It ends with the session, and a new conversation asks again.
+
+If the allow button already says "Always allow", that is something else. "Always allow" saves the **narrow rule** Claude Code suggested (for example one particular command) in the place the card names.
+
+- **A file change** in Ask before edits mode has "Always allow" switch the session to Accept edits. That does the same thing, so there is no second line, and this line only shows where Accept edits is not available (for example in Plan mode).
+- **A safety check Claude Code keeps no answer for** has no such line outside Bypass permissions mode, for the same reason the classic approval panel leaves out its second option. In Bypass permissions mode the line is there with "Shows a warning first" under it. Choosing it opens the [warning](#enabling-it) above; once you confirm, this request is allowed and the app answers the same safety checks for the rest of the session. While the warning is open the card does not react to Esc or Cmd (Ctrl)+Enter.
+- **Keeping it on across sessions** is not here. It is a sponsor feature and is only turned on in the warning’s box and in Settings. See [Allow all command in all sessions](../086-allow_all_commands_in_all_sessions/en.md).
+
 ## The switch in the slash command panel
 
 Type `/` in the chat box to open the slash command panel. At the bottom of the **Model** section there is a switch, **Allow all command in this session**.

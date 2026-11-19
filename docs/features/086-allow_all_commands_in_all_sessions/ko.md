@@ -20,7 +20,7 @@
 
 ## 경고창에서 켜기
 
-경고창은 작업 도중에 만납니다. 바이패스 모드에서 흐려진 승인 항목의 **활성화**를 누르거나, 슬래시 커맨드 패널에서 **이번 세션에서 모든 명령어 허용**(영어 화면에서는 "Allow all command in this session")을 켤 때입니다. 이제 경고창의 본문 아래에 작은 상자 **모든 세션에서 활성화**(영어 화면에서는 "Enable in all sessions")가 있습니다. 후원자 기능을 뜻하는 파란 **S** 배지가 붙어 있고, 그 아래 한 줄이 상자를 켜면 무엇이 되는지 알려 줍니다.
+경고창은 작업 도중에 만납니다. 바이패스 모드에서 흐려진 승인 항목의 **활성화**(새 권한 카드에서는 허용 버튼 화살표 목록의 "이번 세션에서 모든 … 허용" 줄)를 누르거나, 슬래시 커맨드 패널에서 **이번 세션에서 모든 명령어 허용**(영어 화면에서는 "Allow all command in this session")을 켤 때입니다. 이제 경고창의 본문 아래에 작은 상자 **모든 세션에서 활성화**(영어 화면에서는 "Enable in all sessions")가 있습니다. 후원자 기능을 뜻하는 파란 **S** 배지가 붙어 있고, 그 아래 한 줄이 상자를 켜면 무엇이 되는지 알려 줍니다.
 
 ![경고창 "Enable “Allow all command in this session”?". 네 문단 아래에 파란 S 배지가 붙은 체크된 상자 "Enable in all sessions"와 그 아래 문장 "Every session you open from now on will start with this allowed. You can turn it off in Settings > Permissions under “Allow all command in all sessions”."가 있습니다. 버튼은 "Cancel"과 붉은 "Enable"입니다.](./assets/warning-checkbox-on.png)
 

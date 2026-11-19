@@ -20,7 +20,7 @@ Everything else about the feature stays as described in [Allow all command in th
 
 ## Turning it on from the warning
 
-You meet the warning in the middle of your work. Either you press **Enable** on a greyed-out approval option in bypass mode, or you switch on **Allow all command in this session** in the slash command panel. Under the text of the warning there is now a small box, **Enable in all sessions**, with the blue **S** badge that marks a sponsor feature. A line under it says what ticking it does.
+You meet the warning in the middle of your work. Either you press **Enable** on a greyed-out approval option in bypass mode (on the new permission card, the line "Allow all … this session" in the list behind the arrow of the allow button), or you switch on **Allow all command in this session** in the slash command panel. Under the text of the warning there is now a small box, **Enable in all sessions**, with the blue **S** badge that marks a sponsor feature. A line under it says what ticking it does.
 
 ![The warning "Enable “Allow all command in this session”?" with its four paragraphs. Under them is a ticked box "Enable in all sessions" with a blue S badge, and the line "Every session you open from now on will start with this allowed. You can turn it off in Settings > Permissions under “Allow all command in all sessions”." The buttons are "Cancel" and a red "Enable".](./assets/warning-checkbox-on.png)
 
