@@ -47,6 +47,10 @@ vi.mock('../AuthErrorBanner', () => ({ AuthErrorBanner: stub('auth') }));
 vi.mock('../BrowserPermissionBanner', () => ({ BrowserPermissionBanner: stub('browser') }));
 vi.mock('../MigrationBanner', () => ({ MigrationBanner: stub('migration') }));
 vi.mock('../BackgroundTasksPanel', () => ({ BackgroundTasksPanel: stub('bg') }));
+vi.mock('../BackgroundTasksPanel/useTaskPanelColumn', () => ({
+  TASK_PANEL_WIDTH_CSS: '24rem',
+  useTaskPanelColumn: () => false,
+}));
 vi.mock('../ScheduledMessagesPanel', () => ({
   ScheduledMessagesPanel: stub('sched'),
   ScheduledMessageEditOverlay: stub('schedEdit'),

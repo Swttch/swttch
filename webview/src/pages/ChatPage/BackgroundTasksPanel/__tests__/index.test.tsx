@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import type { WorkflowTask } from '@/shared';
 
@@ -63,6 +63,8 @@ vi.mock('@/components/AgentTranscriptModal', () => ({
   ),
 }));
 
+import { act } from '@testing-library/react';
+import { filePreviewPaneStore } from '@/utils/filePreviewPaneStore';
 import { BackgroundTasksPanel } from '../index';
 
 describe('BackgroundTasksPanel', () => {
@@ -97,5 +99,50 @@ describe('BackgroundTasksPanel', () => {
     fireEvent.mouseDown(screen.getByText('Cancel this task'));
 
     expect(closePanelMock).not.toHaveBeenCalled();
+  });
+
+  describe('as a column beside the chat (a wide window)', () => {
+    beforeEach(() => {
+      window.matchMedia = ((query: string) => ({
+        matches: true, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn(),
+      })) as unknown as typeof window.matchMedia;
+    });
+    afterEach(() => {
+      // @ts-expect-error back to the DOM without media queries
+      delete window.matchMedia;
+    });
+
+    it('does not close the panel on a click outside it, since the chat beside it stays usable', () => {
+      render(<BackgroundTasksPanel />);
+
+      fireEvent.mouseDown(document.body);
+
+      expect(closePanelMock).not.toHaveBeenCalled();
+    });
+
+    it('keeps no shadow over the chat', () => {
+      render(<BackgroundTasksPanel />);
+
+      expect(screen.getByText('demo task').closest('[tabindex="-1"]')?.className).not.toContain('shadow-2xl');
+    });
+  });
+
+  describe('with the preview pane', () => {
+    afterEach(() => filePreviewPaneStore.close());
+
+    it('closes the preview pane when the panel is open', () => {
+      filePreviewPaneStore.open('/a.txt');
+      render(<BackgroundTasksPanel />);
+
+      expect(filePreviewPaneStore.get()).toBeNull();
+    });
+
+    it('closes the panel when a file is opened in the preview pane meanwhile', () => {
+      render(<BackgroundTasksPanel />);
+
+      act(() => filePreviewPaneStore.open('/a.txt'));
+
+      expect(closePanelMock).toHaveBeenCalledTimes(1);
+    });
   });
 });

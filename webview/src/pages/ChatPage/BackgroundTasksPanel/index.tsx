@@ -7,6 +7,8 @@ import { useNow } from '@/hooks/useNow';
 import type { WorkflowTask } from '@/shared';
 import { useTranslation } from '@/i18n';
 import { AgentTranscriptModal } from '@/components/AgentTranscriptModal';
+import { filePreviewPaneStore } from '@/utils/filePreviewPaneStore';
+import { TASK_PANEL_WIDTH_CSS, useTaskPanelColumn } from './useTaskPanelColumn';
 import { WorkflowTaskSummary, WorkflowAgentsTable } from './WorkflowTaskSummary';
 
 function WorkflowTaskRow({
@@ -84,16 +86,29 @@ export function BackgroundTasksPanel() {
     const now = useNow(panelOpen && runningTasks.length > 0);
 
     const { cancelTask } = useBackgroundTaskActions();
+    // Beside the chat the panel is a column of its own: the chat stays usable, so a click in it must not
+    // close the panel and focus stays where it was. Narrower, it floats over the chat and does both.
+    const column = useTaskPanelColumn();
+
+    // Only one side panel at a time: opening this one closes the preview pane, and opening the preview
+    // pane while this one is open closes this one.
+    useEffect(() => {
+        if (!panelOpen) return;
+        filePreviewPaneStore.close();
+        return filePreviewPaneStore.subscribe(() => {
+            if (filePreviewPaneStore.get() !== null) closePanel();
+        });
+    }, [panelOpen, closePanel]);
 
     // When the panel opens, move focus into it so keystrokes (notably Escape)
     // act on the panel — closing it — instead of the chat input behind it. On
     // close, restore focus to wherever it was (e.g. the chat input).
     useEffect(() => {
-        if (!panelOpen) return;
+        if (!panelOpen || column) return;
         const prevFocus = document.activeElement as HTMLElement | null;
         panelRef.current?.focus();
         return () => prevFocus?.focus?.();
-    }, [panelOpen]);
+    }, [panelOpen, column]);
 
     // Click anywhere outside the panel closes it, matching the transcript
     // modal's own outside-click behavior below. Skipped while that modal is
@@ -105,7 +120,7 @@ export function BackgroundTasksPanel() {
     // `mousedown`, not `click`: a drag that starts inside the panel and ends
     // outside — e.g. selecting a row's prompt text — must not count.
     useEffect(() => {
-        if (!panelOpen || transcriptToolUseId) return;
+        if (!panelOpen || column || transcriptToolUseId) return;
         const handleMouseDown = (e: MouseEvent) => {
             if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
                 closePanel();
@@ -113,7 +128,7 @@ export function BackgroundTasksPanel() {
         };
         document.addEventListener('mousedown', handleMouseDown);
         return () => document.removeEventListener('mousedown', handleMouseDown);
-    }, [panelOpen, transcriptToolUseId, closePanel]);
+    }, [panelOpen, column, transcriptToolUseId, closePanel]);
 
     // The run window can be open with the panel shut (opened from a card in the
     // chat), so it is drawn on its own in that case.
@@ -136,7 +151,11 @@ export function BackgroundTasksPanel() {
                         closePanel();
                     }
                 }}
-                className="fixed end-0 top-0 bottom-0 w-[24rem] max-w-[92vw] z-40 flex flex-col bg-surface-raised border-s border-border-default shadow-2xl outline-none"
+                // Beside the chat it takes a column (no shadow, nothing under it); over it, it keeps its shadow.
+                className={`fixed end-0 top-0 bottom-0 z-40 flex flex-col bg-surface-raised border-s border-border-default outline-none ${
+                    column ? '' : 'max-w-[92vw] shadow-2xl'
+                }`}
+                style={{ width: column ? TASK_PANEL_WIDTH_CSS : '24rem' }}
             >
                 <div className="flex items-center justify-between px-4 h-[44px] border-b border-border-subtle shrink-0">
                     <div className="text-text-primary text-[1rem] font-semibold">{t('backgroundTasks.title')}</div>
