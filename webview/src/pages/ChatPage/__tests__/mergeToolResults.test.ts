@@ -122,6 +122,25 @@ describe('mergeToolResults', () => {
     expect(wf!.usage!.subagent_tokens).toBe(171500);
   });
 
+  it('keeps the <task-notification> in the list, still attached to its call, when asked to (the Transcript view draws it as a line)', () => {
+    const notif = '<task-notification>\n<task-id>w1</task-id>\n<tool-use-id>tool1</tool-use-id>\n<status>completed</status>\n<summary>Agent "demo" finished</summary>\n</task-notification>';
+    const notifMsg = {
+      uuid: 'u1',
+      type: LoadedMessageType.User,
+      origin: { kind: 'task-notification' },
+      message: { role: MessageRole.User, content: notif },
+      timestamp: '2026-01-01T00:00:02.000Z',
+    } as unknown as LoadedMessageDto;
+
+    const merged = mergeToolResults([assistantWithTool('a1', 'tool1', 'Agent'), notifMsg], { keepTaskNotices: true });
+
+    expect(merged.find(m => m.uuid === 'u1')).toBeDefined();
+    const block = getToolUseBlock(merged.find(m => m.uuid === 'a1')!);
+    expect((block!.workflowNotification as Record<string, any>).status).toBe('completed');
+    // The classic chat, which has no such line, still gets it hidden.
+    expect(mergeToolResults([assistantWithTool('a1', 'tool1', 'Agent'), notifMsg]).find(m => m.uuid === 'u1')).toBeUndefined();
+  });
+
   it('keeps a tool_result visible when its tool_use is not loaded (split by paging)', () => {
     // Only the tool_result user message is present — its tool_use sits on an
     // older, not-yet-loaded page. It must stay visible rather than vanish.

@@ -1,12 +1,13 @@
+import { useTranslation } from '@/i18n';
 import type { WorkflowAgent, WorkflowStatus } from '@/shared';
 import { Tooltip } from '@/components/Tooltip';
 import {
   agentDisplayName,
   agentDisplayStatus,
   agentDotClass,
-  formatDuration,
-  formatTokens,
+  formatTokensFor,
 } from '@/utils/workflowFormat';
+import { useDurationLabel } from '@/pages/ChatPage/BackgroundTasksPanel/WorkflowTaskSummary';
 
 interface Props {
   /** The CLI's own `workflow_progress[]` entry, whole (see WorkflowAgent). */
@@ -30,8 +31,10 @@ interface Props {
 export function AgentChip(props: Props) {
   const { agent, taskStatus, phaseTitle, agentId, selected, onSelect } = props;
   const status = agentDisplayStatus(agent.state, taskStatus);
-  const tokens = formatTokens(agent.tokens);
-  const duration = formatDuration(agent.durationMs);
+  const { i18n } = useTranslation('chat');
+  const tokens = formatTokensFor(i18n.language, agent.tokens);
+  const durationLabel = useDurationLabel();
+  const duration = durationLabel(agent.durationMs);
   const stats = [tokens, duration].filter(Boolean).join(' · ');
 
   return (

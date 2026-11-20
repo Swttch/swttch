@@ -75,6 +75,11 @@ function getContentBlocks(event: Record<string, unknown>): Array<Record<string, 
 
 /** Plain text of a user event whose content is a string or text-block array. */
 function getEventText(event: Record<string, unknown>): string {
+  // A notice that reached the CLI during a turn is written as an `attachment` entry that queued it.
+  const attachment = event['attachment'] as { type?: unknown; prompt?: unknown } | undefined;
+  if (event['type'] === 'attachment' && attachment?.type === 'queued_command' && typeof attachment.prompt === 'string') {
+    return attachment.prompt;
+  }
   const message = event['message'] as { content?: unknown } | undefined;
   const content = message?.content;
   if (typeof content === 'string') return content;
@@ -308,9 +313,16 @@ async function aggregateAgents(transcriptDir: string): Promise<WorkflowAgent[]> 
 
   const order: string[] = [];
   const results = new Map<string, unknown>();
+  // What a `started` record says of an agent: newer CLIs write the label the script gave it and the phase it is in.
+  const labels = new Map<string, { label?: string; phase?: string }>();
   for (const rec of journal) {
     const agentId = rec['agentId'];
     if (typeof agentId !== 'string') continue;
+    if (rec['type'] === 'started') {
+      const label = typeof rec['label'] === 'string' ? (rec['label'] as string) : undefined;
+      const phase = typeof rec['phase'] === 'string' ? (rec['phase'] as string) : undefined;
+      if (label || phase) labels.set(agentId, { label, phase });
+    }
     if (rec['type'] === 'started' && !order.includes(agentId)) order.push(agentId);
     if (rec['type'] === 'result') {
       results.set(agentId, rec['result']);
@@ -328,8 +340,11 @@ async function aggregateAgents(transcriptDir: string): Promise<WorkflowAgent[]> 
     // value would be indistinguishable from one the CLI sent; `reconstructed`
     // is what lets the webview tell the reader which of the two it is looking
     // at, and `state` carries the one lifecycle fact the journal does record.
+    const named = labels.get(agentId);
     agents.push({
       agentId,
+      ...(named?.label ? { label: named.label } : {}),
+      ...(named?.phase ? { phaseTitle: named.phase } : {}),
       state: results.has(agentId) ? 'done' : undefined,
       // The agent's return value, as journal.jsonl recorded it. It is the one
       // per-agent payload the CLI does persist, so it travels on untouched;
@@ -436,6 +451,10 @@ export function createWorkflowProjection(): WorkflowProjection {
         kept.push({ uuid, entry: withBlocks(entry, calls) });
         return;
       }
+      if (entry['type'] === 'attachment') {
+        if (getEventText(entry).includes('<task-notification>')) kept.push({ uuid, entry });
+        return;
+      }
       if (entry['type'] === 'user') {
         const blocks = getContentBlocks(entry);
         const wanted = blocks.filter(b => {
@@ -521,7 +540,7 @@ export async function reconstructWorkflowTasks(
   if (tasks.size === 0) return [];
 
   for (const msg of messages) {
-    if (msg['type'] !== 'user') continue;
+    if (msg['type'] !== 'user' && msg['type'] !== 'attachment') continue;
     for (const block of getContentBlocks(msg)) {
       if (block['type'] !== 'tool_result') continue;
       const toolUseId = block['tool_use_id'];
@@ -573,7 +592,13 @@ export async function reconstructWorkflowTasks(
     if (text.includes('<task-notification>')) {
       const toolUseId = parseXmlTag(text, 'tool-use-id');
       const task = toolUseId ? tasks.get(toolUseId) : undefined;
-      if (task) applyNotification(task, text);
+      if (task) {
+        applyNotification(task, text);
+        // None of the CLI's task_* events survives a reload, so the notice that closes a task is the only trace of
+        // when it ended. It is written when the CLI hands it over, which is the end for a task that was not waited on.
+        const endedAt = eventTimestamp(msg);
+        if (endedAt > 0 && task.endedAt === undefined) task.endedAt = endedAt;
+      }
     }
   }
 

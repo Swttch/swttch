@@ -32,7 +32,11 @@ import { logDebug } from '../../logging/log-level';
 import { renameSessionHandler } from './renameSession';
 import { updateSessionDesktopTitleHandler } from './updateSessionDesktopTitle';
 import { getAgentTranscriptHandler } from './getAgentTranscript';
-import { watchBackgroundTaskOutputHandler, unwatchBackgroundTaskOutputHandler } from './watchBackgroundTaskOutput';
+import {
+  watchBackgroundTaskOutputHandler,
+  unwatchBackgroundTaskOutputHandler,
+  loadEarlierBackgroundTaskOutputHandler,
+} from './watchBackgroundTaskOutput';
 import { getSettingsHandler } from './getSettings';
 import { saveSettingsHandler } from './saveSettings';
 import { getClaudeConfigDirHandler } from './getClaudeConfigDir';
@@ -320,6 +324,9 @@ export async function handleMessage(
       break;
     case MessageType.UNWATCH_BACKGROUND_TASK_OUTPUT:
       unwatchBackgroundTaskOutputHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.LOAD_EARLIER_BACKGROUND_TASK_OUTPUT:
+      loadEarlierBackgroundTaskOutputHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_SETTINGS:
       await getSettingsHandler(connectionId, message, connections, bridge, bridges);

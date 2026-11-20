@@ -3,7 +3,9 @@ import type { WorkflowTask } from '@/shared';
 import { Tooltip } from '@/components/Tooltip';
 import { useNow } from '@/hooks/useNow';
 import { WORKFLOW_STATUS_COLOR } from '@/utils/workflowFormat';
-import { taskDurationText } from '@/pages/ChatPage/BackgroundTasksPanel/WorkflowTaskSummary';
+import { taskDurationMs, useDurationLabel } from '@/pages/ChatPage/BackgroundTasksPanel/WorkflowTaskSummary';
+import { StopButton } from '@/pages/ChatPage/BackgroundTasksPanel/StopButton';
+import { useBackgroundTaskActions } from '@/hooks/useBackgroundTaskActions';
 
 const STATUS_LABEL_KEY = {
   running: 'backgroundTasks.statusRunning',
@@ -26,7 +28,8 @@ export function TaskStatusBadge(props: { task: WorkflowTask }) {
   const { t } = useTranslation('chat');
   const isRunning = task.status === 'running';
   const now = useNow(isRunning);
-  const duration = taskDurationText(task, now);
+  const durationLabel = useDurationLabel();
+  const duration = durationLabel(taskDurationMs(task, now));
   const label = t(STATUS_LABEL_KEY[task.status] ?? STATUS_LABEL_KEY.stopped);
 
   return (
@@ -43,5 +46,20 @@ export function TaskStatusBadge(props: { task: WorkflowTask }) {
       </Tooltip>
       {duration && <span className="tabular-nums">{duration}</span>}
     </span>
+  );
+}
+
+/**
+ * The badge beside a window's title and, while the task runs, the button that stops it just after the time: the short
+ * view has no strip with a cancel button, so the stop is where the running is shown.
+ */
+export function TaskStatusWithStop(props: { task: WorkflowTask }) {
+  const { task } = props;
+  const { cancelTask } = useBackgroundTaskActions();
+  return (
+    <>
+      <TaskStatusBadge task={task} />
+      {task.status === 'running' && <StopButton task={task} onCancel={cancelTask} />}
+    </>
   );
 }

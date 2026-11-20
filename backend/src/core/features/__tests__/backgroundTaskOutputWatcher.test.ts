@@ -56,6 +56,38 @@ describe('backgroundTaskOutputWatcher', () => {
     unwatchBackgroundTaskOutput('conn-1', file);
   });
 
+  it('pushes one page more of an agent record, before what was sent, each time earlier is asked for', async () => {
+    const { watchBackgroundTaskOutput, loadEarlierBackgroundTaskOutput, unwatchBackgroundTaskOutput } = await import(
+      '../backgroundTaskOutputWatcher'
+    );
+    const { connections, sent } = makeConnections();
+    const file = join(tmpDir, 'record.output');
+    const lines = Array.from({ length: 100 }, (_, i) =>
+      JSON.stringify({ type: i % 2 === 0 ? 'user' : 'assistant', uuid: `c-${i}` }),
+    );
+    await writeFile(file, lines.join('\n') + '\n');
+
+    watchBackgroundTaskOutput('conn-1', file, connections);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(sent[0].payload).toMatchObject({ truncated: true, startIndex: 60 });
+
+    loadEarlierBackgroundTaskOutput('conn-1', file, connections);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(sent[sent.length - 1].payload).toMatchObject({ truncated: true, startIndex: 20 });
+
+    loadEarlierBackgroundTaskOutput('conn-1', file, connections);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(sent[sent.length - 1].payload).toMatchObject({ truncated: false, startIndex: 0 });
+
+    // Not watching: nothing is sent.
+    const before = sent.length;
+    loadEarlierBackgroundTaskOutput('conn-other', file, connections);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(sent).toHaveLength(before);
+
+    unwatchBackgroundTaskOutput('conn-1', file);
+  });
+
   it('debounces rapid successive writes into one push', async () => {
     const { watchBackgroundTaskOutput, unwatchBackgroundTaskOutput } = await import('../backgroundTaskOutputWatcher');
     const { connections, sent } = makeConnections();

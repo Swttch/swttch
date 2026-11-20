@@ -34,22 +34,30 @@ import { formatTokens, workflowToolUses } from '@/utils/workflowFormat';
  * agent itself: its transcript lives in the workflow's directory, and the
  * token breakdown is computed from it.
  */
-export function DetailHeader(props: { source: WorkflowAgent | WorkflowTask; transcriptDir?: string }) {
-  const { source, transcriptDir } = props;
+export function DetailHeader(props: {
+  source: WorkflowAgent | WorkflowTask;
+  transcriptDir?: string;
+  /**
+   * The conversation is drawn right below (the Transcript view): its prompt is the first bubble and its answer the last
+   * message, so the rows that say both again are left out. A failure and the badge stay.
+   */
+  conversationShownBelow?: boolean;
+}) {
+  const { source, transcriptDir, conversationShownBelow = false } = props;
   // Split at a component boundary rather than a branch, so each side calls
   // only its own hooks: a workflow's agent fetches its transcript for the
   // token breakdown, and a task has no transcript of that kind to fetch and
   // should not be made to depend on a query client for one.
   return isWorkflowTask(source) ? (
-    <TaskHeader task={source} />
+    <TaskHeader task={source} conversationShownBelow={conversationShownBelow} />
   ) : (
-    <AgentHeader agent={source} transcriptDir={transcriptDir} />
+    <AgentHeader agent={source} transcriptDir={transcriptDir} conversationShownBelow={conversationShownBelow} />
   );
 }
 
 /** A workflow's agent: the CLI's `workflow_progress[]` entry. */
-function AgentHeader(props: { agent: WorkflowAgent; transcriptDir: string | undefined }) {
-  const { agent, transcriptDir } = props;
+function AgentHeader(props: { agent: WorkflowAgent; transcriptDir: string | undefined; conversationShownBelow: boolean }) {
+  const { agent, transcriptDir, conversationShownBelow } = props;
   const { t } = useTranslation('chat');
   const breakdown = useTokenBreakdown(agent, transcriptDir);
 
@@ -57,20 +65,26 @@ function AgentHeader(props: { agent: WorkflowAgent; transcriptDir: string | unde
     <HeaderLayout
       fields={fieldsFromAgent(agent)}
       meta={<MetaLines agent={agent} breakdown={breakdown} t={t} />}
+      conversationShownBelow={conversationShownBelow}
     />
   );
 }
 
 /** A backgrounded Agent/Task: its own task events. */
-function TaskHeader(props: { task: WorkflowTask }) {
-  const { task } = props;
+function TaskHeader(props: { task: WorkflowTask; conversationShownBelow: boolean }) {
+  const { task, conversationShownBelow } = props;
   const { t } = useTranslation('chat');
-  return <HeaderLayout fields={fieldsFromTask(task)} meta={metaFromTask(task, t)} />;
+  return <HeaderLayout fields={fieldsFromTask(task)} meta={metaFromTask(task, t)} conversationShownBelow={conversationShownBelow} />;
 }
 
-function HeaderLayout(props: { fields: DetailHeaderFields; meta?: React.ReactNode }) {
-  const { prompt, result, error, badge } = props.fields;
-  const { meta } = props;
+function HeaderLayout(props: { fields: DetailHeaderFields; meta?: React.ReactNode; conversationShownBelow: boolean }) {
+  const { error } = props.fields;
+  const { meta, conversationShownBelow } = props;
+  const badge = conversationShownBelow ? undefined : props.fields.badge;
+  // The conversation drawn below says which model ran (a line under the prompt, with what the badge's tooltip held),
+  // so the badge is not drawn again over it.
+  const prompt = conversationShownBelow ? undefined : props.fields.prompt;
+  const result = conversationShownBelow ? undefined : props.fields.result;
 
   // A rebuilt agent has none of this, because the CLI persists none of it. An
   // empty row of labels would be worse than no header at all.
@@ -110,6 +124,48 @@ function FieldRow(props: { label: string; value: string }) {
       <span className="min-w-0 flex-1 truncate text-text-secondary">{value}</span>
     </div>
   );
+}
+
+/**
+ * What the badge's tooltip says of how an agent ran, as short phrases to put one after another: the tool calls, the
+ * wait in the queue, a retry, and what the token figure is made of. Empty when there is nothing to say.
+ */
+export function runFactsOfAgent(
+  agent: WorkflowAgent,
+  breakdown: TokenBreakdown | undefined,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string[] {
+  const facts: string[] = [];
+  if (typeof agent.toolCalls === 'number') facts.push(t('backgroundTasks.agentDetail.tools', { count: agent.toolCalls }));
+  const queued = queueWaitMs(agent);
+  if (queued !== undefined) facts.push(t('backgroundTasks.agentDetail.queued', { value: formatShortDuration(queued) }));
+  if (typeof agent.attempt === 'number' && agent.attempt > 1) facts.push(t('backgroundTasks.agentDetail.attempt', { count: agent.attempt }));
+  if (breakdown) {
+    facts.push(
+      t('backgroundTasks.agentDetail.context', { value: formatTokens(breakdown.total) ?? '0' }),
+      t('backgroundTasks.agentDetail.in', { value: formatTokens(breakdown.input) ?? '0' }),
+      t('backgroundTasks.agentDetail.cache', {
+        written: formatTokens(breakdown.cacheWrite) ?? '0',
+        read: formatTokens(breakdown.cacheRead) ?? '0',
+      }),
+      t('backgroundTasks.agentDetail.out', { value: formatTokens(breakdown.output) ?? '0' }),
+    );
+  }
+  return facts;
+}
+
+/** The same for a workflow's agent, with its token breakdown read from its transcript. */
+export function useAgentRunFacts(agent: WorkflowAgent | undefined, transcriptDir: string | undefined): string[] {
+  const { t } = useTranslation('chat');
+  // The hook below needs an agent; an absent one has no id to look the transcript up by, so it finds nothing.
+  const breakdown = useTokenBreakdown(agent ?? {}, transcriptDir);
+  return useMemo(() => (agent ? runFactsOfAgent(agent, breakdown, t) : []), [agent, breakdown, t]);
+}
+
+/** What a backgrounded agent's own events say of how it ran. */
+export function runFactsOfTask(task: WorkflowTask, t: (key: string, options?: Record<string, unknown>) => string): string[] {
+  const toolUses = workflowToolUses(task.usage);
+  return typeof toolUses === 'number' ? [t('backgroundTasks.agentDetail.tools', { count: toolUses })] : [];
 }
 
 /** The metadata that hangs off the badge, one topic per line. */
@@ -178,7 +234,7 @@ function formatShortDuration(ms: number): string {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
-interface TokenBreakdown {
+export interface TokenBreakdown {
   total: number;
   input: number;
   cacheWrite: number;

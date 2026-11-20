@@ -341,7 +341,7 @@
     "empty": "Ainda não há fluxos de trabalho em segundo plano.",
     "running": "Em execução",
     "finishedCount": "Concluídos {{count}}",
-    "clear": "Limpar",
+    "clearFinished": "Limpar tarefas concluídas",
     "dismiss": "Dispensar",
     "cancelRunning": "Cancelar esta tarefa",
     "viewSimple": "Visualização simples",
@@ -367,6 +367,9 @@
     "agentsCount": "{{count}} agentes",
     "agentsCount_one": "{{count}} agente",
     "agentsCount_other": "{{count}} agentes",
+    "agentsRunning": "{{count}} agentes em execução",
+    "agentsRunning_one": "{{count}} agente em execução",
+    "agentsRunning_other": "{{count}} agentes em execução",
     "tokensLabel": "{{tokens}} tokens",
     "phasesLabel": "Fases",
     "tableHeader": {
@@ -1172,6 +1175,29 @@
       "viewAll": "Ver todos",
       "viewLess": "Mostrar menos"
     },
+    "taskNotice": {
+      "label": "{{noun}} em segundo plano {{status}}",
+      "labelNoStatus": "{{noun}} em segundo plano",
+      "noun": {
+        "agent": "agente",
+        "command": "comando",
+        "workflow": "fluxo de trabalho",
+        "task": "tarefa"
+      },
+      "failed": {
+        "agent": "agente em segundo plano falhou",
+        "command": "comando em segundo plano falhou",
+        "workflow": "fluxo de trabalho em segundo plano falhou",
+        "task": "tarefa em segundo plano falhou"
+      },
+      "commandCompleted": "comando em segundo plano concluído",
+      "status": {
+        "completed": "concluído",
+        "failed": "falhou",
+        "stopped": "parado"
+      },
+      "took": "levou {{elapsed}}"
+    },
     "tools": {
       "ranCommand": "Comando executado",
       "ranCommands_one": "{{count}} comando executado",
@@ -1205,6 +1231,7 @@
       "readAndEditedFile": "{{name}} lido e editado",
       "runningCommand": "Executando comando",
       "failedMark": "Falhou",
+      "viewInBackgroundTasks": "Ver nas tarefas em segundo plano",
       "stoppedMark": "Parado",
       "interruptedNote": "Interrompido",
       "exitCode": "Código de saída {{code}}",
@@ -1269,6 +1296,7 @@
       "searchedWeb": "Pesquisou na web",
       "stoppedTask": "Tarefa interrompida",
       "ranAgent": "Executou agente",
+      "ranWorkflow": "Workflow executado",
       "usedLabel": "Usou {{label}}",
       "ranAgents": "Executou {{count}} agentes",
       "view_normal": "Mudou para a visualização normal",

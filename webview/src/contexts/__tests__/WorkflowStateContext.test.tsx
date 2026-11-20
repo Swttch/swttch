@@ -54,6 +54,35 @@ describe('WorkflowStateContext', () => {
     expect(ctx.runningTasks).toHaveLength(0);
   });
 
+  it('lists the running tasks by when they started and the finished ones by when they ended, the newest first, as the desktop app does', () => {
+    // Three tasks started at once, in this order; the Bash one took longest, so it ended last.
+    emit({ toolUseId: 'agent', status: 'completed', startedAt: 1000, endedAt: 25_000 });
+    emit({ toolUseId: 'bash', status: 'completed', startedAt: 1100, endedAt: 61_000 });
+    emit({ toolUseId: 'workflow', status: 'completed', startedAt: 4000, endedAt: 26_000 });
+    emit({ toolUseId: 'run-old', status: 'running', startedAt: 90_000 });
+    emit({ toolUseId: 'run-new', status: 'running', startedAt: 95_000 });
+
+    expect(ctx.finishedTasks.map((t) => t.toolUseId)).toEqual(['bash', 'workflow', 'agent']);
+    expect(ctx.runningTasks.map((t) => t.toolUseId)).toEqual(['run-new', 'run-old']);
+    // The running ones are above the finished ones.
+    expect(ctx.tasks.map((t) => t.toolUseId)).toEqual(['run-new', 'run-old', 'bash', 'workflow', 'agent']);
+  });
+
+  it('takes the start for the end of a finished task that has none (one stopped without a notice)', () => {
+    emit({ toolUseId: 'stopped', status: 'stopped', startedAt: 5000 });
+    emit({ toolUseId: 'done', status: 'completed', startedAt: 1000, endedAt: 3000 });
+
+    expect(ctx.finishedTasks.map((t) => t.toolUseId)).toEqual(['stopped', 'done']);
+  });
+
+  it('puts a task with no times (one rebuilt after a reload) after the ones that have them, the latest arrival first', () => {
+    emit({ toolUseId: 'a', status: 'completed', startedAt: 0 });
+    emit({ toolUseId: 'b', status: 'completed', startedAt: 0 });
+    emit({ toolUseId: 'c', status: 'completed', startedAt: 500 });
+
+    expect(ctx.finishedTasks.map((t) => t.toolUseId)).toEqual(['c', 'b', 'a']);
+  });
+
   it('dismissTask hides a workflow from the panel but keeps it for the inline card', () => {
     emit({ toolUseId: 't1', status: 'stopped' });
     emit({ toolUseId: 't2', status: 'completed' });

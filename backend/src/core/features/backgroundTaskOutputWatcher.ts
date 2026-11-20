@@ -12,6 +12,8 @@ const DEBOUNCE_MS = 200;
 const RETRY_MS = 500;
 
 interface Watcher {
+  /** How many pages of an agent's record this subscriber has asked for; each push covers them all (see conversationWindow.ts). */
+  pages: number;
   fsWatcher?: FSWatcher;
   debounceTimer?: ReturnType<typeof setTimeout>;
   retryTimer?: ReturnType<typeof setTimeout>;
@@ -27,17 +29,19 @@ function key(connectionId: string, outputFile: string): string {
 }
 
 async function pushOutput(connectionId: string, outputFile: string, connections: ConnectionManager): Promise<void> {
+  const pages = watchers.get(key(connectionId, outputFile))?.pages ?? 1;
   // The CLI closes the log with `[exited with code N]` / `[killed]`, and for a
   // task whose owning CLI died that line is the only notice we ever get that it
   // is over. This file changing is the moment that line appears, so it is also
   // the moment to stop the panel claiming the task is still running.
   peekWorkflowTracker()?.settleByOutputFile(outputFile);
 
-  const result = await loadBackgroundTaskOutput({ outputFile });
+  const result = await loadBackgroundTaskOutput({ outputFile, pages });
   connections.sendTo(connectionId, MessageType.BACKGROUND_TASK_OUTPUT_CHANGED, {
     outputFile,
     text: result.text,
     truncated: result.truncated,
+    startIndex: result.startIndex,
   });
 }
 
@@ -57,7 +61,7 @@ export function watchBackgroundTaskOutput(
   const k = key(connectionId, outputFile);
   if (watchers.has(k)) return;
 
-  const entry: Watcher = {};
+  const entry: Watcher = { pages: 1 };
   watchers.set(k, entry);
 
   // Send the current content immediately so the caller doesn't have to wait
@@ -98,6 +102,22 @@ function tryStartWatching(
       tryStartWatching(connectionId, outputFile, connections, k, entry);
     }, RETRY_MS);
   }
+}
+
+/**
+ * Send one more page of an agent's record to a subscriber, ahead of what it holds: the page count goes up by one and
+ * the whole window is pushed again, so the subscriber never has to splice pages together. A no-op for a file this
+ * connection is not watching.
+ */
+export function loadEarlierBackgroundTaskOutput(
+  connectionId: string,
+  outputFile: string,
+  connections: ConnectionManager,
+): void {
+  const w = watchers.get(key(connectionId, outputFile));
+  if (!w) return;
+  w.pages += 1;
+  void pushOutput(connectionId, outputFile, connections);
 }
 
 /** Stop watching one connection's subscription to a task's output log. */

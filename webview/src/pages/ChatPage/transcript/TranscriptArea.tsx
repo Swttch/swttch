@@ -14,9 +14,8 @@ import { TranscriptAwaitingInput } from './TranscriptAwaitingInput';
 import { TranscriptHeldMessages } from './TranscriptHeldMessages';
 import { TranscriptHeldWorking } from './TranscriptHeldWorking';
 import { useReleaseHeldMessages } from '../../../hooks/useReleaseHeldMessages';
-import { TranscriptBackgroundWorking, useBackgroundTaskStart } from './TranscriptBackgroundWorking';
 import { TranscriptPendingMessages } from './TranscriptPendingMessages';
-import { runningActivity, type StreamingActivity } from './streamingActivity';
+import { isSameActivity, runningActivity, type StreamingActivity } from './streamingActivity';
 import { replyStartedIn } from './replyStarted';
 import { LiveActivityContext } from './LiveActivityContext';
 import { EmptyState } from '../EmptyState';
@@ -104,7 +103,6 @@ const TranscriptSection = memo(function TranscriptSection({
   isLast,
   streaming,
   awaitingInput,
-  backgroundWorking,
   lastBodyRef,
   mergedMessagesRef,
   onRetry,
@@ -119,7 +117,6 @@ const TranscriptSection = memo(function TranscriptSection({
   /** The turn is running and this is the section it writes into (false for every other section). */
   streaming: boolean;
   awaitingInput: boolean;
-  backgroundWorking: boolean;
   lastBodyRef: MutableRefObject<HTMLDivElement | null> | null;
   /** All the messages drawn, read only when an entry is clicked, for the console line. */
   mergedMessagesRef: RefObject<LoadedMessageDto[]>;
@@ -157,7 +154,7 @@ const TranscriptSection = memo(function TranscriptSection({
       )}
       {/* Sent while the card holds the turn: right after the latest message, above the calls still running, as in the desktop app. */}
       {awaitingInput && <TranscriptHeldMessages />}
-      <div ref={lastBodyRef ?? undefined} data-section-body data-after-send={section.head ? '' : undefined} className={`${section.body.length > 0 || (isLast && streaming) ? 'pt-[0.1875rem] ' : ''}${!isLast ? (section.body.length > 0 ? 'pb-[2.2188rem]' : 'pb-[0.8125rem]') : streaming || awaitingInput || backgroundWorking ? 'pb-0' : 'pb-[3.375rem]'}`}>
+      <div ref={lastBodyRef ?? undefined} data-section-body data-after-send={section.head ? '' : undefined} className={`${section.body.length > 0 || (isLast && streaming) ? 'pt-[0.1875rem] ' : ''}${!isLast ? (section.body.length > 0 ? 'pb-[2.2188rem]' : 'pb-[0.8125rem]') : streaming || awaitingInput ? 'pb-0' : 'pb-[3.375rem]'}`}>
         <TranscriptBody body={section.body} mergedMessagesRef={mergedMessagesRef} onRetry={onRetry} turnRunning={streaming} sectionKey={section.key} waiting={isLast ? <TranscriptPendingMessages /> : undefined} />
         {/* The turn's wrap-up is drawn here, after its last message, not where its call sits: a recap as text until the closing message begins, then the question and its answers. */}
         <TranscriptWrapUp body={section.body} next={nextHead} />
@@ -187,16 +184,7 @@ export function TranscriptArea(props: TranscriptAreaProps) {
   const liveActivity = useMemo(() => {
     const next = turnRunning ? runningActivity(streamMessages) : null;
     const before = liveRef.current;
-    const same =
-      next === before ||
-      (next !== null &&
-        before !== null &&
-        next.toolUseId === before.toolUseId &&
-        next.description === before.description &&
-        next.phrase === before.phrase &&
-        next.mark === before.mark &&
-        next.file?.name === before.file?.name &&
-        next.file?.creating === before.file?.creating);
+    const same = isSameActivity(next, before);
     if (!same) liveRef.current = next;
     return liveRef.current;
   }, [turnRunning, streamMessages]);
@@ -229,7 +217,6 @@ export function TranscriptArea(props: TranscriptAreaProps) {
   }, [releaseHeldMessages, dropReleasedHeldMessages]);
   useReleaseHeldMessages(awaitingInput || callRunning, settleHeldMessages);
   const heldCall = useMemo(() => (awaitingInput && turnRunning ? runningActivity(streamMessages) : null), [awaitingInput, turnRunning, streamMessages]);
-  const backgroundWorking = !isStreaming && !awaitingInput && useBackgroundTaskStart() !== null;
   const containerRef = useRef<HTMLDivElement>(null);
   // Whether the newest message's section has drawn nothing under it yet, so that the working line stands right under
   // a message bubble (it is then 15px closer, as the desktop app's is). Read from the screen: what a section has
@@ -313,7 +300,6 @@ export function TranscriptArea(props: TranscriptAreaProps) {
                   isLast={isLast}
                   streaming={isLast && isStreaming}
                   awaitingInput={isLast && awaitingInput}
-                  backgroundWorking={isLast && backgroundWorking}
                   lastBodyRef={isLast ? lastBodyRef : null}
                   mergedMessagesRef={mergedMessagesRef}
                   onRetry={onRetry}
@@ -331,7 +317,6 @@ export function TranscriptArea(props: TranscriptAreaProps) {
           <TranscriptHeldWorking activity={waitedCall} />
         </div>
       )}
-      {!isStreaming && <TranscriptBackgroundWorking hidden={awaitingInput} />}
       {/* A program this screen does not run works on the session (its turn is not streamed here): the session says so. */}
       {!isStreaming && <TranscriptExternalWorking sessionId={currentSessionId} />}
       {/* While a call is being waited on, the run of calls that holds it is the working indicator (see TranscriptToolRun); this line is for the rest of the turn, when the model thinks or writes. A dropped connection and the CLI's retries still say so here. */}

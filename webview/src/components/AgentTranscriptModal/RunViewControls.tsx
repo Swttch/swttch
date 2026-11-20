@@ -135,3 +135,26 @@ export function RunPlacementMenu(props: { placement: RunPlacement; onSelect?: (p
     </Tippy>
   );
 }
+
+/**
+ * The controls of a run window's title row, in their order: the short or detailed view, a tab of its own, and where
+ * the run opens. A subagent and a workflow share them, so the two windows cannot drift apart. Each is drawn only when
+ * its handler is given; nothing is drawn when none is.
+ */
+export function RunViewActions(props: {
+  variant: RunVariant;
+  onVariantChange?: (variant: RunVariant) => void;
+  onOpenInNewTab?: () => void;
+  placement?: RunPlacement;
+  onPlacementChange?: (placement: RunPlacement) => void;
+}) {
+  const { variant, onVariantChange, onOpenInNewTab, placement, onPlacementChange } = props;
+  if (!onVariantChange && !onOpenInNewTab && !placement) return null;
+  return (
+    <>
+      {onVariantChange && <RunVariantToggle variant={variant} onChange={onVariantChange} />}
+      {onOpenInNewTab && <OpenInNewTabButton onClick={onOpenInNewTab} />}
+      {placement && <RunPlacementMenu placement={placement} onSelect={onPlacementChange} />}
+    </>
+  );
+}

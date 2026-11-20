@@ -340,7 +340,7 @@
     "empty": "バックグラウンドワークフローはまだありません。",
     "running": "実行中",
     "finishedCount": "{{count}} 件完了",
-    "clear": "クリア",
+    "clearFinished": "完了したタスクをクリア",
     "dismiss": "閉じる",
     "cancelRunning": "このタスクをキャンセル",
     "viewSimple": "簡易表示",
@@ -366,6 +366,9 @@
     "agentsCount": "{{count}} エージェント",
     "agentsCount_one": "{{count}} エージェント",
     "agentsCount_other": "{{count}} エージェント",
+    "agentsRunning": "エージェント{{count}}件を実行中",
+    "agentsRunning_one": "エージェント{{count}}件を実行中",
+    "agentsRunning_other": "エージェント{{count}}件を実行中",
     "tokensLabel": "{{tokens}} トークン",
     "phasesLabel": "フェーズ",
     "tableHeader": {
@@ -1161,6 +1164,29 @@
       "viewAll": "すべて表示",
       "viewLess": "表示を減らす"
     },
+    "taskNotice": {
+      "label": "バックグラウンド {{noun}} {{status}}",
+      "labelNoStatus": "バックグラウンド{{noun}}",
+      "noun": {
+        "agent": "エージェント",
+        "command": "コマンド",
+        "workflow": "ワークフロー",
+        "task": "タスク"
+      },
+      "failed": {
+        "agent": "バックグラウンド エージェント 失敗",
+        "command": "バックグラウンド コマンド 失敗",
+        "workflow": "バックグラウンド ワークフロー 失敗",
+        "task": "バックグラウンド タスク 失敗"
+      },
+      "commandCompleted": "バックグラウンド コマンド 完了",
+      "status": {
+        "completed": "完了",
+        "failed": "失敗",
+        "stopped": "停止"
+      },
+      "took": "{{elapsed}}かかりました"
+    },
     "tools": {
       "ranCommand": "コマンドを実行",
       "ranCommands_other": "{{count}}個のコマンドを実行",
@@ -1182,6 +1208,7 @@
       "readAndEditedFile": "{{name}} を読み取り、編集",
       "runningCommand": "コマンドを実行中",
       "failedMark": "失敗",
+      "viewInBackgroundTasks": "バックグラウンドタスクで表示",
       "stoppedMark": "停止済み",
       "interruptedNote": "中断されました",
       "exitCode": "終了コード{{code}}",
@@ -1243,6 +1270,7 @@
       "searchedWeb": "ウェブを検索しました",
       "stoppedTask": "タスクを停止しました",
       "ranAgent": "エージェントを実行しました",
+      "ranWorkflow": "ワークフローを実行しました",
       "usedLabel": "{{label}}を使用しました",
       "ranAgents": "{{count}} 個のエージェントを実行しました",
       "view_normal": "標準ビューに切り替えました",

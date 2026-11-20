@@ -341,7 +341,7 @@
     "empty": "Noch keine Hintergrund-Workflows.",
     "running": "Läuft",
     "finishedCount": "{{count}} abgeschlossen",
-    "clear": "Leeren",
+    "clearFinished": "Abgeschlossene Aufgaben löschen",
     "dismiss": "Verwerfen",
     "cancelRunning": "Diese Aufgabe abbrechen",
     "viewSimple": "Einfache Ansicht",
@@ -367,6 +367,9 @@
     "agentsCount": "{{count}} Agenten",
     "agentsCount_one": "{{count}} Agent",
     "agentsCount_other": "{{count}} Agenten",
+    "agentsRunning": "{{count}} Agents laufen",
+    "agentsRunning_one": "{{count}} Agent läuft",
+    "agentsRunning_other": "{{count}} Agents laufen",
     "tokensLabel": "{{tokens}} Tokens",
     "phasesLabel": "Phasen",
     "tableHeader": {
@@ -1172,6 +1175,29 @@
       "viewAll": "Alle anzeigen",
       "viewLess": "Weniger anzeigen"
     },
+    "taskNotice": {
+      "label": "Hintergrund-{{noun}} {{status}}",
+      "labelNoStatus": "Hintergrund-{{noun}}",
+      "noun": {
+        "agent": "Agent",
+        "command": "Befehl",
+        "workflow": "Workflow",
+        "task": "Task"
+      },
+      "failed": {
+        "agent": "Hintergrund-Agent fehlgeschlagen",
+        "command": "Hintergrund-Befehl fehlgeschlagen",
+        "workflow": "Hintergrund-Workflow fehlgeschlagen",
+        "task": "Hintergrund-Task fehlgeschlagen"
+      },
+      "commandCompleted": "Hintergrund-Befehl abgeschlossen",
+      "status": {
+        "completed": "abgeschlossen",
+        "failed": "fehlgeschlagen",
+        "stopped": "gestoppt"
+      },
+      "took": "dauerte {{elapsed}}"
+    },
     "tools": {
       "ranCommand": "Befehl ausgeführt",
       "ranCommands_one": "{{count}} Befehl ausgeführt",
@@ -1199,6 +1225,7 @@
       "readAndEditedFile": "{{name}} gelesen und bearbeitet",
       "runningCommand": "Befehl wird ausgeführt",
       "failedMark": "Fehlgeschlagen",
+      "viewInBackgroundTasks": "In Hintergrundaufgaben anzeigen",
       "stoppedMark": "Gestoppt",
       "interruptedNote": "Unterbrochen",
       "exitCode": "Exit-Code {{code}}",
@@ -1262,6 +1289,7 @@
       "searchedWeb": "hat im Web gesucht",
       "stoppedTask": "Aufgabe gestoppt",
       "ranAgent": "Agent ausgeführt",
+      "ranWorkflow": "Workflow ausgeführt",
       "usedLabel": "{{label}} verwendet",
       "ranAgents": "{{count}} Agenten ausgeführt",
       "view_normal": "Zur Ansicht „Normal“ gewechselt",

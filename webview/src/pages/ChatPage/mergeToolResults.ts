@@ -51,8 +51,14 @@ function sameDeps(a: readonly unknown[], b: readonly unknown[]): boolean {
  * now-merged user messages from the rendered list.
  *
  * Returns a new array; the input messages and their nested blocks are never mutated.
+ *
+ * `keepTaskNotices` leaves the `<task-notification>` entries in the list even when they were attached to their call:
+ * the Transcript view draws each as a line where the notice arrived, which the classic chat never has.
  */
-export function mergeToolResults(messages: LoadedMessageDto[]): LoadedMessageDto[] {
+export function mergeToolResults(
+  messages: LoadedMessageDto[],
+  options: { keepTaskNotices?: boolean } = {},
+): LoadedMessageDto[] {
   // Phase 0: Collect progress entries grouped by parentToolUseID
   const progressMap = new Map<string, LoadedMessageDto[]>();
   for (const msg of messages) {
@@ -116,6 +122,17 @@ export function mergeToolResults(messages: LoadedMessageDto[]): LoadedMessageDto
   // object reference since uuid is optional.
   const mergedUserMsgs = new Set<LoadedMessageDto>();
   for (const msg of messages) {
+    // A notice that reached the CLI during a turn is written as an `attachment` entry that queued it. It is attached
+    // to its Workflow call like the other form, and stays in the list: the line that says a task ended is drawn from it.
+    if ((msg.type as string) === 'attachment') {
+      const prompt = (msg as unknown as { attachment?: { type?: string; prompt?: unknown } }).attachment;
+      if (prompt?.type === 'queued_command' && typeof prompt.prompt === 'string' && hasWorkflowNotification(prompt.prompt)) {
+        const notification = parseWorkflowNotification(prompt.prompt);
+        const toolUseBlock = notification?.toolUseId ? toolUseMap.get(notification.toolUseId) : undefined;
+        if (notification && toolUseBlock && !toolUseBlock.workflowNotification) toolUseBlock.workflowNotification = notification;
+      }
+      continue;
+    }
     if (msg.type !== LoadedMessageType.User) continue;
 
     // Phase 2-pre: Attach a dynamic-workflow <task-notification> to its Workflow
@@ -131,7 +148,7 @@ export function mergeToolResults(messages: LoadedMessageDto[]): LoadedMessageDto
       if (notification && toolUseBlock) {
         toolUseBlock.workflowNotification = notification;
         attachedTo(notification.toolUseId as string).push('workflow', msg);
-        mergedUserMsgs.add(msg);
+        if (!options.keepTaskNotices) mergedUserMsgs.add(msg);
         continue;
       }
     }

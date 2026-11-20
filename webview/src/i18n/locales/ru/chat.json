@@ -343,7 +343,7 @@
     "empty": "Пока нет фоновых рабочих процессов.",
     "running": "Выполняется",
     "finishedCount": "Завершено: {{count}}",
-    "clear": "Очистить",
+    "clearFinished": "Очистить завершённые задачи",
     "dismiss": "Скрыть",
     "cancelRunning": "Отменить эту задачу",
     "viewSimple": "Простой вид",
@@ -371,6 +371,9 @@
     "agentsCount_few": "{{count}} агента",
     "agentsCount_many": "{{count}} агентов",
     "agentsCount_other": "{{count}} агента",
+    "agentsRunning": "{{count}} агентов выполняется",
+    "agentsRunning_one": "{{count}} агент выполняется",
+    "agentsRunning_other": "{{count}} агентов выполняется",
     "tokensLabel": "{{tokens}} токенов",
     "phasesLabel": "Этапы",
     "tableHeader": {
@@ -1202,6 +1205,29 @@
       "viewAll": "Показать все",
       "viewLess": "Показать меньше"
     },
+    "taskNotice": {
+      "label": "{{noun}} в фоне: {{status}}",
+      "labelNoStatus": "{{noun}} в фоне",
+      "noun": {
+        "agent": "Агент",
+        "command": "Команда",
+        "workflow": "Рабочий процесс",
+        "task": "Задача"
+      },
+      "failed": {
+        "agent": "Агент в фоне: ошибка",
+        "command": "Команда в фоне: ошибка",
+        "workflow": "Рабочий процесс в фоне: ошибка",
+        "task": "Задача в фоне: ошибка"
+      },
+      "commandCompleted": "Команда в фоне: завершено",
+      "status": {
+        "completed": "завершено",
+        "failed": "ошибка",
+        "stopped": "остановлено"
+      },
+      "took": "заняло {{elapsed}}"
+    },
     "tools": {
       "ranCommand": "Выполнена команда",
       "ranCommands_one": "Выполнена {{count}} команда",
@@ -1241,6 +1267,7 @@
       "readAndEditedFile": "Прочитан и изменён {{name}}",
       "runningCommand": "Выполняется команда",
       "failedMark": "Ошибка",
+      "viewInBackgroundTasks": "Показать в фоновых задачах",
       "stoppedMark": "Остановлено",
       "interruptedNote": "Прервано",
       "exitCode": "Код выхода {{code}}",
@@ -1308,6 +1335,7 @@
       "searchedWeb": "Поиск в интернете выполнен",
       "stoppedTask": "Задача остановлена",
       "ranAgent": "Агент запущен",
+      "ranWorkflow": "Рабочий процесс запущен",
       "usedLabel": "Использовано: {{label}}",
       "ranAgents": "Запущено агентов: {{count}}",
       "view_normal": "Переключено на обычный вид",

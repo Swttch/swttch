@@ -100,7 +100,57 @@ function messages() {
   ] as Array<Record<string, unknown>>;
 }
 
+describe('reconstructWorkflowTasks, as a newer CLI writes it', () => {
+  it('names an agent and its phase from the journal and reads a notice that reached the CLI mid-turn', async () => {
+    const named = join(dir, 'named', 'subagents', 'workflows', 'wf_named-111');
+    mkdirSync(named, { recursive: true });
+    writeFileSync(
+      join(named, 'journal.jsonl'),
+      [
+        JSON.stringify({ type: 'launched' }),
+        JSON.stringify({ type: 'started', key: 'k', agentId: 'agent1', label: 'counter', phase: 'Phase 1' }),
+      ].join('\n'),
+    );
+    writeFileSync(join(named, 'agent-agent1.jsonl'), JSON.stringify({ type: 'user', timestamp: '2026-01-01T00:00:01.000Z', message: { role: 'user', content: 'go' } }));
+    const launched = `Workflow launched in background. Task ID: w9\nSummary: demo\nTranscript dir: ${named}\nScript file: ${named}/script.js`;
+    const prompt = [
+      '<task-notification>',
+      '<task-id>w9</task-id>',
+      '<tool-use-id>toolu_9</tool-use-id>',
+      '<status>killed</status>',
+      '<summary>Task "demo" was stopped by the user</summary>',
+      '</task-notification>',
+    ].join('\n');
+    const [t] = await reconstructWorkflowTasks([
+      {
+        type: 'assistant',
+        message: { role: 'assistant', content: [{ type: 'tool_use', id: 'toolu_9', name: 'Workflow', input: { script: "export const meta = { name: 'demo', phases: [{ title: 'Phase 1' }] }" } }] },
+      },
+      { type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_9', content: launched }] } },
+      { type: 'attachment', timestamp: '2026-01-01T00:00:20.000Z', attachment: { type: 'queued_command', prompt } },
+    ] as Array<Record<string, unknown>>);
+    expect(t.status).toBe('stopped');
+    expect(t.summary).toBe('Task "demo" was stopped by the user');
+    expect(t.endedAt).toBe(Date.parse('2026-01-01T00:00:20.000Z'));
+    expect(t.agents[0]).toMatchObject({ agentId: 'agent1', label: 'counter', phaseTitle: 'Phase 1' });
+  });
+});
+
 describe('reconstructWorkflowTasks', () => {
+  it('takes the time of the terminal <task-notification> for when the task ended, since no event survives to say it', async () => {
+    const withTimes = messages().map((m, i) =>
+      i === 2 ? { ...m, timestamp: '2026-01-01T00:00:30.000Z' } : m,
+    );
+    const [t] = await reconstructWorkflowTasks(withTimes);
+    expect(t.startedAt).toBe(Date.parse('2026-01-01T00:00:00.000Z'));
+    expect(t.endedAt).toBe(Date.parse('2026-01-01T00:00:30.000Z'));
+  });
+
+  it('leaves the end empty when the notification carries no time', async () => {
+    const [t] = await reconstructWorkflowTasks(messages());
+    expect(t.endedAt).toBeUndefined();
+  });
+
   it('rebuilds a finished workflow with agents, phases, status and usage', async () => {
     const tasks = await reconstructWorkflowTasks(messages());
     expect(tasks).toHaveLength(1);

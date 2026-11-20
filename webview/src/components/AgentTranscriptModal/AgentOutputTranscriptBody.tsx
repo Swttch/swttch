@@ -8,13 +8,11 @@ import { toInstance } from '@/dto/common';
 import { LoadedMessageDto } from '@/types';
 import { mergeToolResults } from '@/pages/ChatPage/mergeToolResults';
 import { mergeSplitThinkingMessages } from '@/pages/ChatPage/mergeSplitThinkingMessages';
-import { findNewestUserUuid } from '@/pages/ChatPage/paging';
-import { MessageBubble } from '@/pages/ChatPage/MessageBubble';
-import { StreamingIndicator } from '@/pages/ChatPage/StreamingIndicator';
-import { ScrollToBottomButton } from '@/components/ScrollToBottomButton';
-import { agentRearmKey } from './agentRearmKey';
+import { useAgentRearmKey } from './agentRearmKey';
 import { useGlideOnSend } from './useGlideOnSend';
 import { DETAIL_STORAGE_KEY } from './detailScroll';
+import { AgentTranscriptView } from './AgentTranscriptView';
+import { runFactsOfTask } from './AgentDetailHeader';
 
 interface Props {
   task: WorkflowTask;
@@ -46,7 +44,7 @@ export function AgentOutputTranscriptBody(props: Props) {
   const { t } = useTranslation('chat');
   const isRunning = task.status === 'running';
 
-  const { text, loading } = useBackgroundTaskOutput(outputFile);
+  const { text, loading, truncated, loadEarlier, loadingEarlier } = useBackgroundTaskOutput(outputFile);
 
   const messages = useMemo(() => {
     if (!text) return [];
@@ -58,8 +56,7 @@ export function AgentOutputTranscriptBody(props: Props) {
         try {
           return JSON.parse(line) as Record<string, unknown>;
         } catch {
-          // A truncated leading line (the backend caps by character count,
-          // which can cut a JSON line mid-way) or a stray non-JSON line —
+          // A stray non-JSON line, or the half-written last line of a record that is still being written —
           // skip it rather than let one bad line blank the whole transcript.
           return null;
         }
@@ -72,15 +69,15 @@ export function AgentOutputTranscriptBody(props: Props) {
   // The same auto-scroll as the main chat; see useAutoScroll.
   //
   // The placeholders below take the scrolling area's place, but only before
-  // the first entry: a push only ever brings the whole file as it is now, so
+  // the first entry: a push only ever brings the whole window as it is now, so
   // for one output file the text never goes back to loading or to empty.
-  const newestUserUuid = useMemo(() => findNewestUserUuid(messages), [messages]);
+  const rearmKey = useAgentRearmKey(messages, sendCount);
   const { scrollRef, showScrollButton, scrollToBottom } = useAutoScroll({
     resetKey: outputFile,
     storageKey: DETAIL_STORAGE_KEY,
     hasContent: messages.length > 0,
     isStreaming: isRunning,
-    rearmKey: agentRearmKey(newestUserUuid, sendCount),
+    rearmKey,
     repositionOnRemount: true,
   });
   useGlideOnSend(sendCount, scrollToBottom);
@@ -103,20 +100,14 @@ export function AgentOutputTranscriptBody(props: Props) {
   }
 
   return (
-    <div className="relative flex-1 min-h-0">
-      <div ref={scrollRef} className="h-full overflow-y-auto px-4 py-3 space-y-3">
-        {messages.map((message) => (
-          <MessageBubble key={message.uuid ?? `${message.type}-${message.timestamp}`} message={message} />
-        ))}
-        {/* Same cue the main chat shows below the latest bubble for the whole
-            span of a turn — here, the whole span of the agent still running,
-            regardless of whether its last parsed message already has text. */}
-        {isRunning && <StreamingIndicator />}
-      </div>
-
-      {showScrollButton && (
-        <ScrollToBottomButton onClick={scrollToBottom} placementClassName="bottom-3 start-1/2 -translate-x-1/2" />
-      )}
-    </div>
+    <AgentTranscriptView
+      messages={messages}
+      isRunning={isRunning}
+      hasEarlier={truncated}
+      loadingEarlier={loadingEarlier}
+      onLoadEarlier={loadEarlier}
+      scroll={{ scrollRef, showScrollButton, scrollToBottom }}
+      runFacts={runFactsOfTask(task, t)}
+    />
   );
 }

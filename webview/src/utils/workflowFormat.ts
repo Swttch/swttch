@@ -53,6 +53,18 @@ export function formatTokens(n?: number): string | undefined {
     return String(n);
 }
 
+/**
+ * A token count as the reader's language counts: Korean, Japanese and Chinese count by ten thousands ("8.1만"), the
+ * others by thousands as `formatTokens` does ("81.3k").
+ */
+export function formatTokensFor(language: string, n?: number): string | undefined {
+    if (n === undefined || n <= 0) return undefined;
+    if (/^(ko|ja|zh)/.test(language) && n >= 10000) {
+        return new Intl.NumberFormat(language, { notation: 'compact', maximumFractionDigits: 1 }).format(n);
+    }
+    return formatTokens(n);
+}
+
 /** Tailwind text color for a workflow/agent status. */
 export const WORKFLOW_STATUS_COLOR: Record<string, string> = {
     running: 'text-text-link',

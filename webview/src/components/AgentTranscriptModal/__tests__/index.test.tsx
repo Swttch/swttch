@@ -182,6 +182,8 @@ describe('AgentTranscriptModal', () => {
   it('shows the same summary info the panel card shows: status, agent count, tokens, description', () => {
     sendMock.mockResolvedValue({ status: 'ok', entries: [], truncated: false });
     renderModal(makeTask({ description: 'Explore two files in parallel' }));
+    // A workflow opens to the short view; the strip with all of this is the detailed one.
+    fireEvent.click(screen.getByText('Detailed view'));
 
     expect(screen.getByText('completed')).toBeInTheDocument();
     expect(screen.getByText('2 agents')).toBeInTheDocument();
@@ -191,6 +193,7 @@ describe('AgentTranscriptModal', () => {
   it('shows a cancel button only while running, and it calls cancelTask with the task', () => {
     sendMock.mockResolvedValue({ status: 'ok', entries: [], truncated: false });
     const { rerender } = renderModal(makeTask({ status: 'running' }));
+    fireEvent.click(screen.getByText('Detailed view'));
 
     const cancelButton = screen.getByText('Cancel this task');
     fireEvent.click(cancelButton);
@@ -571,5 +574,19 @@ describe('AgentTranscriptModal: a subagent\'s simple and detailed views', () => 
     expect(screen.queryByRole('button', { name: 'Detailed view' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Open in new tab' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Change view options' })).not.toBeInTheDocument();
+  });
+
+  it('has the stop button by the title in the short view while the task runs, and not after', () => {
+    sendMock.mockResolvedValue({ status: 'ok', entries: [], truncated: false });
+    const { rerender } = renderModal(makeTask({ status: 'running' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Cancel this task' })[0]);
+    expect(cancelTaskMock).toHaveBeenCalledWith(expect.objectContaining({ toolUseId: 'toolu_1' }));
+
+    rerender(
+      <QueryClientProvider client={createTestQueryClient()}>
+        <AgentTranscriptModal task={makeTask({ status: 'completed' })} onClose={vi.fn()} />
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByRole('button', { name: 'Cancel this task' })).not.toBeInTheDocument();
   });
 });

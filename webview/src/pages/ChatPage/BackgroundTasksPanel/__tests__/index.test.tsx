@@ -4,6 +4,8 @@ import type { WorkflowTask } from '@/shared';
 
 const closePanelMock = vi.fn();
 const cancelTaskMock = vi.fn();
+const clearFinishedMock = vi.fn();
+const dismissTaskMock = vi.fn();
 let panelOpen = true;
 let tasksById: Record<string, WorkflowTask> = {};
 
@@ -31,8 +33,8 @@ vi.mock('@/contexts/WorkflowStateContext', async () => {
         getByToolUseId: (id: string) => tasksById[id],
         runningTasks: Object.values(tasksById).filter((t) => t.status === 'running'),
         finishedTasks: Object.values(tasksById).filter((t) => t.status !== 'running'),
-        clearFinished: vi.fn(),
-        dismissTask: vi.fn(),
+        clearFinished: clearFinishedMock,
+        dismissTask: dismissTaskMock,
         panelOpen,
         openPanel: vi.fn(),
         closePanel: closePanelMock,
@@ -72,6 +74,109 @@ describe('BackgroundTasksPanel', () => {
     vi.clearAllMocks();
     panelOpen = true;
     tasksById = { t1: makeTask() };
+  });
+
+  describe('clearing what is finished', () => {
+    it('is an icon in the header, named for what it clears, as the desktop app has it', () => {
+      tasksById = { done: makeTask({ toolUseId: 'done', name: 'old task', status: 'completed' }) };
+      render(<BackgroundTasksPanel />);
+
+      fireEvent.click(screen.getByRole('button', { name: /clear finished tasks/i }));
+
+      expect(clearFinishedMock).toHaveBeenCalledTimes(1);
+      // No second, written-out button in the list.
+      expect(screen.queryByText(/^clear$/i)).not.toBeInTheDocument();
+    });
+
+    it('is not there when nothing is finished', () => {
+      tasksById = { t1: makeTask() };
+      render(<BackgroundTasksPanel />);
+
+      expect(screen.queryByRole('button', { name: /clear finished tasks/i })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('an agent in the list', () => {
+    it('is one line with its name and how long it took; a command is a line too, a workflow a card', () => {
+      tasksById = {
+        a: makeTask({ toolUseId: 'a', name: 'stop agent', taskType: 'local_agent', status: 'completed', startedAt: 1000, endedAt: 32000, description: 'Agent finished' }),
+        b: makeTask({ toolUseId: 'b', name: 'a script', taskType: 'local_bash', status: 'completed', startedAt: 1000, endedAt: 8000, description: 'Bash card text' }),
+        w: makeTask({ toolUseId: 'w', name: 'a flow', taskType: 'local_workflow', status: 'completed', startedAt: 1000, endedAt: 66000, description: 'Flow card text' }),
+      };
+      render(<BackgroundTasksPanel />);
+      const rows = screen.getAllByTestId('agent-task-row');
+      expect(rows).toHaveLength(2);
+      expect(rows[0].textContent).toContain('stop agent');
+      expect(rows[0].textContent).not.toContain('Agent finished');
+      expect(rows[1].textContent).toContain('a script');
+      expect(rows[1].textContent).not.toContain('Bash card text');
+      const card = screen.getByTestId('workflow-card');
+      expect(card.textContent).toContain('a flow');
+      expect(card.textContent).toContain('1m 5s');
+      // A finished workflow does not repeat what it was asked to be.
+      expect(card.textContent).not.toContain('Flow card text');
+    });
+
+    it('says a stopped agent was stopped, and a running one can be stopped from its line', () => {
+      tasksById = {
+        s: makeTask({ toolUseId: 's', name: 'was stopped', taskType: 'local_agent', status: 'stopped', startedAt: 1000, endedAt: 5000 }),
+        r: makeTask({ toolUseId: 'r', name: 'still going', taskType: 'local_agent', status: 'running', startedAt: Date.now() - 5000 }),
+      };
+      render(<BackgroundTasksPanel />);
+      const rows = screen.getAllByTestId('agent-task-row');
+      const stopped = rows.find((r) => r.textContent?.includes('was stopped'))?.textContent ?? '';
+      expect(stopped).toContain('Stopped');
+      // The status, a dot, then the time at its right.
+      expect(stopped).toMatch(/Stopped · 4s$/);
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel this task' }));
+      expect(cancelTaskMock).toHaveBeenCalledWith(expect.objectContaining({ toolUseId: 'r' }));
+    });
+  });
+
+  it('shows an agent\'s tokens beside its name', () => {
+    tasksById = {
+      a: makeTask({ toolUseId: 'a', name: 'counting', taskType: 'local_agent', status: 'completed', startedAt: 1000, endedAt: 3000, usage: { total_tokens: 81300 } }),
+    };
+    render(<BackgroundTasksPanel />);
+    expect(screen.getByTestId('agent-task-row').textContent).toContain('81.3k tokens');
+  });
+
+  it('counts the agents done in a workflow\'s phase and opens it to their times', () => {
+    tasksById = {
+      w: makeTask({
+        toolUseId: 'w',
+        name: 'a flow',
+        taskType: 'local_workflow',
+        status: 'completed',
+        startedAt: 1000,
+        endedAt: 9000,
+        phases: [{ title: 'Count' }],
+        agents: [{ type: 'workflow_agent', index: 0, label: 'counter', state: 'done', durationMs: 7000 }],
+      }),
+    };
+    render(<BackgroundTasksPanel />);
+    const phase = screen.getByRole('button', { name: /Count/ });
+    expect(phase.textContent).toContain('1/1');
+    fireEvent.click(phase);
+    expect(screen.getByTestId('workflow-card').textContent).toContain('counter');
+  });
+
+  it('takes a finished task out of the list from the X at the right of its time', () => {
+    tasksById = { a: makeTask({ toolUseId: 'a', name: 'done agent', taskType: 'local_agent', status: 'completed', startedAt: 1000, endedAt: 3000 }) };
+    dismissTaskMock.mockClear();
+    render(<BackgroundTasksPanel />);
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    expect(dismissTaskMock).toHaveBeenCalledWith('a');
+  });
+
+  it('labels what is finished with its count and folds it from the label', () => {
+    tasksById = { a: makeTask({ toolUseId: 'a', name: 'done agent', taskType: 'local_agent', status: 'completed', startedAt: 1000, endedAt: 3000 }) };
+    render(<BackgroundTasksPanel />);
+    const label = screen.getByRole('button', { name: /Finished 1/ });
+    expect(label.getAttribute('aria-expanded')).toBe('true');
+    fireEvent.click(label);
+    expect(label.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByTestId('agent-task-row')).toBeNull();
   });
 
   it('closes the panel on an outside click', () => {

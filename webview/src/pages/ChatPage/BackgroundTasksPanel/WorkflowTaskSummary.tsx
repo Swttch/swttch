@@ -1,4 +1,5 @@
 import { useTranslation } from '@/i18n';
+import { useFormatElapsed } from '../transcript/TranscriptActivity';
 import type { WorkflowTask } from '@/shared';
 import {
     agentDisplayName,
@@ -6,6 +7,7 @@ import {
     agentDotClass,
     formatDuration,
     formatTokens,
+    formatTokensFor,
     workflowAgentCount,
     workflowDurationMs,
     taskSubagentType,
@@ -37,18 +39,36 @@ interface Props {
  * have is truer then, and it is also all a task settled from its output log
  * has to go on.
  */
+/**
+ * A length of time in the words of the reader's language ("1분 5초", "1m 5s"), as the cards of the list say it, or
+ * undefined when there is nothing to say. The one way a window and a card write a time.
+ */
+export function useDurationLabel(): (ms?: number) => string | undefined {
+    const formatElapsed = useFormatElapsed();
+    return (ms) => (!ms || ms <= 0 ? undefined : formatElapsed(Math.max(0, Math.round(ms / 1000))));
+}
+
 export function taskDurationText(task: WorkflowTask, now: number): string | undefined {
+    return formatDuration(taskDurationMs(task, now));
+}
+
+/** How long the task has run or took, in milliseconds, by the rules above. */
+export function taskDurationMs(task: WorkflowTask, now: number): number | undefined {
     const isRunning = task.status === 'running';
     const clockMs = isRunning && task.startedAt > 0 ? now - task.startedAt : undefined;
     const spanMs =
         task.endedAt && task.startedAt > 0 && task.endedAt > task.startedAt ? task.endedAt - task.startedAt : undefined;
     const closedByCli = !!task.events?.task_notification?.['usage'];
+    // A task stopped with nothing but a notice to say when: the notice may have been written long after the stop
+    // (a reload of an old session writes it at the reload), so what its agents ran for is truer than the span.
+    const agentMs = task.agents.reduce((most, a) => Math.max(most, a.durationMs ?? 0), 0);
     const durationMs =
         clockMs ??
+        (!isRunning && !closedByCli && agentMs > 0 ? agentMs : undefined) ??
         (closedByCli ? undefined : spanMs) ??
         workflowDurationMs(task.usage) ??
         (isRunning ? now - task.startedAt : task.endedAt ? task.endedAt - task.startedAt : undefined);
-    return formatDuration(durationMs);
+    return durationMs;
 }
 
 /**
@@ -59,16 +79,17 @@ export function taskDurationText(task: WorkflowTask, now: number): string | unde
  */
 export function WorkflowTaskSummary(props: Props) {
     const { task, now, showPhases = true } = props;
-    const { t } = useTranslation('chat');
+    const { t, i18n } = useTranslation('chat');
 
     const isRunning = task.status === 'running';
     const statusColor = WORKFLOW_STATUS_COLOR[task.status] || 'text-text-primary/60';
     const agentCount = task.agents.length || workflowAgentCount(task.usage);
-    const duration = taskDurationText(task, now);
+    const durationLabel = useDurationLabel();
+    const duration = durationLabel(taskDurationMs(task, now));
     // Authoritative workflow-level total first; per-agent sum is only a fallback
     // (see WorkflowRenderer) so the header stays consistent with the agent table.
     const liveTokens = task.agents.reduce((sum, a) => sum + (a.tokens || 0), 0);
-    const tokens = formatTokens(workflowTokens(task.usage) || liveTokens);
+    const tokens = formatTokensFor(i18n.language, workflowTokens(task.usage) || liveTokens);
     const subagentType = taskSubagentType(task);
 
     return (

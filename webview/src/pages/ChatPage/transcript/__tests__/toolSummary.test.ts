@@ -151,13 +151,22 @@ describe('rowLabel', () => {
     expect(rowLabel(call('2', 'Bash'), t).before).toBe('ranCommand');
   });
 
-  // #673: the line over an agent call is the agent's own name; "Ran agent" is said on the card inside.
-  it('names an agent call by its description, then its type, and says "ran agent" only when it names nothing', () => {
-    expect(rowLabel(call('1', 'Agent', { description: 'Create directory', subagent_type: 'general-purpose' }), t)).toEqual(
-      expect.objectContaining({ before: 'Create directory' }),
-    );
-    expect(rowLabel(call('2', 'Agent', { subagent_type: 'general-purpose' }), t).before).toBe('general-purpose');
+  // The desktop app draws a call that is over as "Ran agent" and the agent's name after it, as it draws a read.
+  it('says "ran agent" and the agent\'s description, then its type, after it, and the words alone for a call that names nothing', () => {
+    expect(rowLabel(call('1', 'Agent', { description: 'Create directory', subagent_type: 'general-purpose' }), t)).toMatchObject({
+      before: 'ranAgent',
+      meta: 'Create directory',
+    });
+    expect(rowLabel(call('2', 'Agent', { subagent_type: 'general-purpose' }), t)).toMatchObject({ before: 'ranAgent', meta: 'general-purpose' });
     expect(rowLabel(call('3', 'Agent', {}), t).before).toBe('ranAgent');
+    expect(rowLabel(call('3', 'Agent', {}), t).meta).toBeUndefined();
+  });
+
+  it('says "ran workflow" and the name its script gave itself after it, as it does for an agent', () => {
+    const script = "export const meta = {\n  name: 'many-steps',\n  description: 'Tiny workflow',\n  phases: []\n}";
+    expect(rowLabel(call('1', 'Workflow', { script }), t)).toMatchObject({ before: 'ranWorkflow', meta: 'many-steps' });
+    expect(rowLabel(call('2', 'Workflow', {}), t).before).toBe('ranWorkflow');
+    expect(rowLabel(call('2', 'Workflow', {}), t).meta).toBeUndefined();
   });
 
   it('puts the name of a file where it falls in the label, so it can be drawn as a link', () => {

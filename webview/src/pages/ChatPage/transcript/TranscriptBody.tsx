@@ -15,6 +15,7 @@ import { parseContextUsage } from '@/utils/parseContextUsage';
 import { useSendActionsValue } from '../SendActionsContext';
 import { APP_EVENT_TOOL, buildSegments, PEER_MESSAGE_TOOL, type Segment } from './buildSegments';
 import { TranscriptToolRun } from './TranscriptToolRun';
+import { TranscriptTaskNotice } from './TranscriptTaskNotice';
 import { CliNotice, CompactDivider } from './CompactNotices';
 import { PlanBox } from '../message-renderers/ToolRenderers/Mcp/CcdTurn';
 import { planOfTurn } from '../message-renderers/ToolRenderers/Mcp/CcdTurn/planState';
@@ -139,6 +140,8 @@ function SegmentView({ segment, endsTurn, onRetry, summary, summaryShown, liveTa
       );
     case 'chapter':
       return <h3 className="px-4 pb-[1.8125rem] pt-3 text-[1rem] font-semibold leading-relaxed text-[var(--tr-text)]">{segment.title}</h3>;
+    case 'taskNotice':
+      return <TranscriptTaskNotice message={segment.message} />;
   }
 }
 
@@ -148,6 +151,7 @@ function entryOf(segment: Segment): LoadedMessageDto {
     case 'message':
     case 'blocks':
     case 'chapter':
+    case 'taskNotice':
       return segment.message;
     case 'tools':
       return segment.calls[0].message;

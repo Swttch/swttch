@@ -341,7 +341,7 @@
     "empty": "Aucun workflow en arrière-plan pour le moment.",
     "running": "En cours",
     "finishedCount": "{{count}} terminé(s)",
-    "clear": "Effacer",
+    "clearFinished": "Effacer les tâches terminées",
     "dismiss": "Ignorer",
     "cancelRunning": "Annuler cette tâche",
     "viewSimple": "Vue simple",
@@ -367,6 +367,9 @@
     "agentsCount": "{{count}} agents",
     "agentsCount_one": "{{count}} agent",
     "agentsCount_other": "{{count}} agents",
+    "agentsRunning": "{{count}} agents en cours",
+    "agentsRunning_one": "{{count}} agent en cours",
+    "agentsRunning_other": "{{count}} agents en cours",
     "tokensLabel": "{{tokens}} tokens",
     "phasesLabel": "Phases",
     "tableHeader": {
@@ -1172,6 +1175,29 @@
       "viewAll": "Tout afficher",
       "viewLess": "Afficher moins"
     },
+    "taskNotice": {
+      "label": "{{noun}} en arrière-plan {{status}}",
+      "labelNoStatus": "Arrière-plan {{noun}}",
+      "noun": {
+        "agent": "agent",
+        "command": "commande",
+        "workflow": "flux de travail",
+        "task": "tâche"
+      },
+      "failed": {
+        "agent": "agent en arrière-plan échoué",
+        "command": "commande en arrière-plan échoué",
+        "workflow": "flux de travail en arrière-plan échoué",
+        "task": "tâche en arrière-plan échoué"
+      },
+      "commandCompleted": "commande en arrière-plan terminé",
+      "status": {
+        "completed": "terminé",
+        "failed": "échoué",
+        "stopped": "arrêté"
+      },
+      "took": "a pris {{elapsed}}"
+    },
     "tools": {
       "ranCommand": "Commande exécutée",
       "ranCommands_one": "{{count}} commande exécutée",
@@ -1205,6 +1231,7 @@
       "readAndEditedFile": "{{name}} lu et modifié",
       "runningCommand": "Commande en cours d’exécution",
       "failedMark": "Échec",
+      "viewInBackgroundTasks": "Afficher dans les tâches en arrière-plan",
       "stoppedMark": "Arrêté",
       "interruptedNote": "Interrompu",
       "exitCode": "Code de sortie {{code}}",
@@ -1270,6 +1297,7 @@
       "searchedWeb": "A recherché sur le web",
       "stoppedTask": "Tâche arrêtée",
       "ranAgent": "A exécuté l'agent",
+      "ranWorkflow": "Workflow exécuté",
       "usedLabel": "Utilisé {{label}}",
       "ranAgents": "A exécuté {{count}} agents",
       "view_normal": "Passage à la vue normale effectué",

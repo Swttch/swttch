@@ -400,6 +400,13 @@ function withFile(key: string, call: ToolCall, t: TFunction): RowLabel {
   return { before: text.slice(0, at), fileName: baseName(path), after: text.slice(at + 1) };
 }
 
+/** The name a workflow's script gives itself (`export const meta = { name: 'many-steps', … }`), or '' when it gives none. */
+export function workflowNameOf(call: ToolCall): string {
+  const script = call.toolUse.input?.script;
+  if (typeof script !== 'string') return '';
+  return /\bname:\s*(['"`])([^'"`\n]+)\1/.exec(script)?.[2]?.trim() ?? '';
+}
+
 function plain(text: string): RowLabel {
   return { before: text, fileName: '', after: '' };
 }
@@ -411,6 +418,11 @@ function plain(text: string): RowLabel {
  * at its running wording and marks it failed beside it, so it is not reported as done when it was not.
  */
 export function rowLabel(call: ToolCall, t: TFunction): RowLabel {
+  // A workflow is "Ran workflow" and the name its script gave it, as an agent is "Ran agent" and its name.
+  if (call.toolUse.name === 'Workflow') {
+    const named = workflowNameOf(call);
+    return named ? { ...plain(t('transcript.tools.ranWorkflow', { ns: 'chat' })), meta: named } : plain(t('transcript.tools.ranWorkflow', { ns: 'chat' }));
+  }
   const kind = toolKindOf(call);
   switch (kind) {
     case 'command': {
@@ -445,10 +457,10 @@ export function rowLabel(call: ToolCall, t: TFunction): RowLabel {
     case 'webSearch':
       return { ...plain(t('transcript.tools.searchedWeb', { ns: 'chat' })), meta: inputString(call, 'query') };
     case 'agent': {
-      // The agent's own name is the line, as the desktop app draws it; "Ran agent" is said on the card inside once the
-      // line is opened (#673), so it is not said twice. A call that names nothing keeps the words.
+      // "Ran agent" and then the agent's name, as the desktop app draws a call that is over, the way it draws a read
+      // ("Read x"): the words quiet and the name after them. A call that names nothing keeps the words alone.
       const named = inputString(call, 'description') || inputString(call, 'subagent_type');
-      return named ? plain(named) : plain(t('transcript.tools.ranAgent', { ns: 'chat' }));
+      return named ? { ...plain(t('transcript.tools.ranAgent', { ns: 'chat' })), meta: named } : plain(t('transcript.tools.ranAgent', { ns: 'chat' }));
     }
     case 'stopTask':
       return plain(t('transcript.tools.stoppedTask', { ns: 'chat' }));

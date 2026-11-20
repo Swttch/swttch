@@ -3,6 +3,7 @@ import type { WorkflowTask } from '@/shared';
 import { useBackgroundTaskActions } from '@/hooks/useBackgroundTaskActions';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { useUnreachableAgents } from '@/hooks/useUnreachableAgents';
+import { useTranscriptViewMode } from '@/pages/ChatPage/message-renderers/transcriptViewMode';
 import { agentDisplayStatus } from '@/utils/workflowFormat';
 import { ModalTitleBar } from './ModalTitleBar';
 import { TaskSummaryHeader } from './TaskSummaryHeader';
@@ -10,10 +11,18 @@ import { AgentTabList } from './AgentTabList';
 import { DetailHeader } from './AgentDetailHeader';
 import { AgentComposer } from './AgentComposer';
 import { AgentTranscriptBody } from './AgentTranscriptBody';
+import { TaskStatusWithStop } from './TaskStatusBadge';
+import { RunViewActions, type RunPlacement, type RunVariant } from './RunViewControls';
 
 interface Props {
   task: WorkflowTask;
   onClose: () => void;
+  /** How much of the run is shown: the short one says how it is doing beside the title, the full one has the strip. */
+  variant?: RunVariant;
+  onVariantChange?: (variant: RunVariant) => void;
+  onOpenInNewTab?: () => void;
+  placement?: RunPlacement;
+  onPlacementChange?: (placement: RunPlacement) => void;
 }
 
 /**
@@ -25,7 +34,8 @@ interface Props {
  * live-refetch trigger).
  */
 export function WorkflowRunView(props: Props) {
-  const { task, onClose } = props;
+  const { task, onClose, variant = 'full', onVariantChange, onOpenInNewTab, placement, onPlacementChange } = props;
+  const isSimple = variant === 'simple';
   const [selectedAgentId, setSelectedAgentId] = useState<string | undefined>(task.agents[0]?.agentId);
   const { sendToAgent, stopAgent } = useBackgroundTaskActions();
   // Counts the messages sent from this view, so the transcript above the
@@ -41,6 +51,8 @@ export function WorkflowRunView(props: Props) {
   );
   const { inputMode } = useSessionContext();
   const unreachableAgents = useUnreachableAgents();
+  // In the Transcript view the agent's prompt is the first bubble of what is drawn below the header.
+  const inTranscriptView = useTranscriptViewMode() !== null;
 
   // Keep a valid selection if the agent list changes (e.g. more agents appear
   // as a running workflow progresses) and nothing was selected yet.
@@ -54,8 +66,21 @@ export function WorkflowRunView(props: Props) {
 
   return (
     <>
-      <ModalTitleBar task={task} onClose={onClose} />
-      <TaskSummaryHeader task={task} />
+      <ModalTitleBar
+        task={task}
+        onClose={onClose}
+        afterTitle={isSimple ? <TaskStatusWithStop task={task} /> : undefined}
+        actions={
+          <RunViewActions
+            variant={variant}
+            onVariantChange={onVariantChange}
+            onOpenInNewTab={onOpenInNewTab}
+            placement={placement}
+            onPlacementChange={onPlacementChange}
+          />
+        }
+      />
+      {!isSimple && <TaskSummaryHeader task={task} />}
       {/* Picker beside the transcript rather than above it (issue #425).
           Stacked, the two shared one column of height, so a workflow with
           many agents grew the picker until the transcript was left with
@@ -83,7 +108,9 @@ export function WorkflowRunView(props: Props) {
           />
         )}
         <div className="flex flex-1 min-h-0 min-w-0 flex-col sm:flex-initial sm:w-full sm:max-w-xl">
-          {selectedAgent && <DetailHeader source={selectedAgent} transcriptDir={task.transcriptDir} />}
+          {selectedAgent && (
+            <DetailHeader source={selectedAgent} transcriptDir={task.transcriptDir} conversationShownBelow={inTranscriptView} />
+          )}
           {/* Keyed by agent so each agent gets its own scroll state:
               without it, picking another agent kept the previous
               one's position and following state. */}

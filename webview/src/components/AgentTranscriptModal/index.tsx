@@ -122,6 +122,8 @@ function RunView(props: Props) {
   const { task, onClose } = props;
   // Which of its two views a subagent shows. The short one at first.
   const [subagentVariant, setSubagentVariant] = useState<RunVariant>('simple');
+  // A workflow opens to the short view too, as a subagent does.
+  const [workflowVariant, setWorkflowVariant] = useState<RunVariant>('simple');
   switch (task.taskType) {
     case 'local_bash':
       return <BashRunView task={task} onClose={onClose} />;
@@ -140,6 +142,16 @@ function RunView(props: Props) {
         />
       );
     default:
-      return <WorkflowRunView task={task} onClose={onClose} />;
+      return (
+        <WorkflowRunView
+          task={task}
+          onClose={onClose}
+          variant={workflowVariant}
+          onVariantChange={setWorkflowVariant}
+          // As for a subagent: this window is the "center" placement, and the others are drawn, not wired yet.
+          placement="center"
+          onOpenInNewTab={() => {}}
+        />
+      );
   }
 }

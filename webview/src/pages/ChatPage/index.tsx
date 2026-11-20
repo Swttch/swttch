@@ -1,3 +1,5 @@
+import { useOptionalWorkflowState } from '@/contexts/WorkflowStateContext';
+import { withLiveTaskNotices } from './liveTaskNotices';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } from 'react';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import { DictationProvider } from './ChatInput/DictationProvider';
@@ -330,10 +332,16 @@ function ChatPageContent() {
   // into the user messages it never wrote to the session file, so mergeToolResults
   // sees the same shape it would for any other conversation. mergeSplitThinkingMessages
   // rejoins a thinking stretch one response wrote as two session entries (#496).
-  const mergedMessages = useMemo(
-    () => mergeToolResults(mergeSplitThinkingMessages(hideCliNotes(restoreQueuedMessages(messages)))),
-    [messages],
-  );
+  const workflowState = useOptionalWorkflowState();
+  const liveEndedIds = workflowState?.liveEndedIds;
+  const taskList = workflowState?.tasks;
+  const mergedMessages = useMemo(() => {
+    const merged = mergeToolResults(mergeSplitThinkingMessages(hideCliNotes(restoreQueuedMessages(messages))), {
+      keepTaskNotices: transcriptViewMode !== null,
+    });
+    // The notice of a task whose end this screen saw, until the CLI's own is read back (next-gen view only).
+    return transcriptViewMode !== null ? withLiveTaskNotices(merged, taskList ?? [], liveEndedIds) : merged;
+  }, [messages, transcriptViewMode, taskList, liveEndedIds]);
 
   // One split, read by both the transcript and the send index. See the
   // `sections` prop on ChatMessageArea for why it is not computed there.

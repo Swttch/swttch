@@ -729,17 +729,29 @@ function NestedRequestRow({ call }: { call: ToolCall }) {
  * running whether or not this screen watched it start, so the line says so the same way it did before the reload:
  * the moving dots, the agent's name in the moving light, and the time it has been going (#673).
  */
+function agentNameOf(call: ToolCall): string {
+  const input = call.toolUse.input ?? {};
+  const named = typeof input.description === 'string' && input.description.trim() ? input.description : input.subagent_type;
+  return typeof named === 'string' ? named : '';
+}
+
 export function useRunningAgentLive(calls: ToolCall[]): { label: string; elapsed: string; mark: WorkingActivity } | undefined {
   const { t } = useTranslation('chat');
   const workflow = useOptionalWorkflowState();
   const formatElapsed = useFormatElapsed();
+  // A backgrounded workflow works beside the chat the way an agent does, and its call says so the same way.
+  const tracked = (call: ToolCall) => toolKindOf(call) === 'agent' || call.toolUse.name === 'Workflow';
   const running = calls
-    .map((call) => ({ call, task: toolKindOf(call) === 'agent' ? workflow?.getByToolUseId(call.toolUse.id) : undefined }))
+    .map((call) => ({ call, task: tracked(call) ? workflow?.getByToolUseId(call.toolUse.id) : undefined }))
     .find((entry) => entry.task?.status === 'running' && entry.task.startedAt > 0);
   const now = useNow(!!running);
   if (!running || !running.task) return undefined;
   return {
-    label: rowLabel(running.call, t).before || t('transcript.streaming.activity.agent'),
+    // The name alone, in the moving light: "Ran agent" is for the line once the call is over. A workflow has no
+    // description of its own to give, so it goes by the name its script gave it.
+    label:
+      (running.call.toolUse.name === 'Workflow' ? running.task.name : agentNameOf(running.call)) ||
+      t('transcript.streaming.activity.agent'),
     elapsed: formatElapsed(Math.max(0, Math.floor((now - running.task.startedAt) / 1000))),
     mark: 'default',
   };
@@ -756,6 +768,23 @@ function TurnElapsed() {
 }
 
 /** One call: a line that opens to its details. */
+/** What the CLI said about a workflow that was stopped or failed, with a way to the background tasks. */
+function EndNote({ text, onOpen }: { text: string; onOpen: () => void }) {
+  const { t } = useTranslation('chat');
+  return (
+    <div className="pb-2 text-[0.9375rem] text-[var(--tr-muted)]" data-testid="end-note">
+      <div className="line-clamp-3 whitespace-pre-wrap">{text}</div>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="mt-2 rounded-lg bg-surface-hover px-3 py-1.5 text-[0.9375rem] text-[var(--tr-text)] transition-colors hover:bg-surface-pressed"
+      >
+        {t('transcript.tools.viewInBackgroundTasks')}
+      </button>
+    </div>
+  );
+}
+
 function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive, liveToolUseId }: { calls: ToolCall[]; defaultOpen: boolean; inBox: boolean; live?: { label: string; elapsed: ReactNode; mark: WorkingActivity }; liveToolUseId?: string }) {
   const { t } = useTranslation('chat');
   const call = calls[0];
@@ -771,13 +800,36 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive, liveTool
   // The call the turn is waiting on, drawn as a line inside an opened run: the light moves across its words, as it
   // does on the line over the run, so opening the run does not make the work look idle.
   const waitedOn = liveToolUseId !== undefined && calls.some((c) => c.toolUse.id === liveToolUseId);
-  const label = rowLabel(call, t);
+  const baseLabel = rowLabel(call, t);
   const path = pathOf(call);
   const workflowState = useOptionalWorkflowState();
+  // A background task that was launched fine and failed later (a command that exited with a code, an agent that
+  // gave up) is marked failed on the call that started it, as the desktop app marks it. The call's own result only
+  // says it was launched.
+  const taskFailed = workflowState?.getByToolUseId(call.toolUse.id)?.status === 'failed';
+  // An agent that was stopped never finished its run, so as in the desktop app its line still says it is running
+  // ("Agent running x") and marks it stopped, where one that finished says "Ran agent x".
+  const taskStopped = workflowState?.getByToolUseId(call.toolUse.id)?.status === 'stopped';
+  const label = taskStopped && toolKindOf(call) === 'agent' ? { ...baseLabel, before: t('transcript.streaming.activity.agent') } : baseLabel;
   // An agent call opens to the card that leads to its run window. Where there is no window to lead to, there is
   // nothing to open, so the line does not fold open onto an empty space (#673).
   const agentWithoutWindow = !!workflowState && toolKindOf(call) === 'agent' && !openableAgentTask(workflowState, call);
-  const expandable = isExpandable(call) && !agentWithoutWindow;
+  // A run that is over ("Ran agent x", "Ran workflow x") does not fold open: the name is the way into its window.
+  const runTask =
+    workflowState && (toolKindOf(call) === 'agent' || call.toolUse.name === 'Workflow') ? openableAgentTask(workflowState, call) : undefined;
+  const overRun = runTask !== undefined && runTask.status !== 'running' && !!label.meta;
+  // A workflow that was stopped or failed carries the CLI's own sentence about it once the notice has come: the line
+  // opens to that sentence and a way to the background tasks, as in the desktop app.
+  const endNote =
+    call.toolUse.name === 'Workflow' && runTask && (runTask.status === 'stopped' || runTask.status === 'failed')
+      ? (call.toolUse as { workflowNotification?: { summary?: string } }).workflowNotification?.summary?.trim() || undefined
+      : undefined;
+  const finishedRun = overRun && endNote === undefined;
+  const expandable = (isExpandable(call) && !agentWithoutWindow && !finishedRun) || endNote !== undefined;
+  const hasEndNote = endNote !== undefined;
+  useEffect(() => {
+    if (hasEndNote) setOpen(true);
+  }, [hasEndNote]);
   const pictures = picturesOfCalls([call]);
   const [openPicture, thumbnailViewer] = useThumbnailViewer();
 
@@ -811,13 +863,34 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive, liveTool
                 </span>
               )}
               {label.after}
-              <RowMeta call={call} meta={label.meta} />
+              {overRun && runTask ? (
+                <span
+                  role="link"
+                  tabIndex={0}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    workflowState?.openTranscript(runTask.toolUseId);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.stopPropagation();
+                      workflowState?.openTranscript(runTask.toolUseId);
+                    }
+                  }}
+                  data-testid="finished-run-link"
+                  className={`ms-2 min-w-0 cursor-pointer truncate ${LINK_TEXT} hover:underline`}
+                >
+                  {label.meta}
+                </span>
+              ) : (
+                <RowMeta call={call} meta={label.meta} />
+              )}
             </span>
           )}
         </MorphText>
         {live && live.elapsed && <span className="flex-shrink-0">{live.elapsed}</span>}
-        {hasFailed(call) && toolKindOf(call) !== 'sessionStart' && <span className="flex-shrink-0 text-red-400">{t('transcript.tools.failedMark')}</span>}
-        {wasStopped(call) && <span className="flex-shrink-0">{t('transcript.tools.stoppedMark')}</span>}
+        {(hasFailed(call) || taskFailed) && toolKindOf(call) !== 'sessionStart' && <span className="flex-shrink-0 text-red-400">{t('transcript.tools.failedMark')}</span>}
+        {(wasStopped(call) || taskStopped) && <span className="flex-shrink-0">{t('transcript.tools.stoppedMark')}</span>}
         <LineStatsView stats={sumLineStats(calls)} />
         {expandable && <Chevron open={open} />}
         {(!open && inBox) && <Thumbnails pictures={pictures} onOpen={openPicture} />}
@@ -825,7 +898,15 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive, liveTool
       {thumbnailViewer}
       {/* A call of its own that read a picture shows the picture under its line at its own size, as the desktop app does; in a run, the lines carry thumbnails and the picture is under the call once it is opened. */}
       {!inBox && pictures.length > 0 && <div className="pb-2"><ResultPictures call={call} /></div>}
-      {open && expandable && <div className={inBox ? 'px-2' : ''}><ToolDetail calls={calls} withPictures={inBox} /></div>}
+      {open && expandable && (
+        <div className={inBox ? 'px-2' : ''}>
+          {endNote !== undefined && runTask ? (
+            <EndNote text={endNote} onOpen={() => workflowState?.openPanel(runTask.toolUseId)} />
+          ) : (
+            <ToolDetail calls={calls} withPictures={inBox} />
+          )}
+        </div>
+      )}
     </div>
   );
 }

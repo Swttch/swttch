@@ -340,7 +340,7 @@
     "empty": "尚無背景工作流程。",
     "running": "執行中",
     "finishedCount": "已完成 {{count}} 個",
-    "clear": "清除",
+    "clearFinished": "清除已完成的任務",
     "dismiss": "關閉",
     "cancelRunning": "取消此工作",
     "viewSimple": "簡潔檢視",
@@ -366,6 +366,9 @@
     "agentsCount": "{{count}} 個代理程式",
     "agentsCount_one": "{{count}} 個代理程式",
     "agentsCount_other": "{{count}} 個代理程式",
+    "agentsRunning": "{{count}} 個代理執行中",
+    "agentsRunning_one": "{{count}} 個代理執行中",
+    "agentsRunning_other": "{{count}} 個代理執行中",
     "tokensLabel": "{{tokens}} 個 token",
     "phasesLabel": "階段",
     "tableHeader": {
@@ -1161,6 +1164,29 @@
       "viewAll": "檢視全部",
       "viewLess": "收合"
     },
+    "taskNotice": {
+      "label": "背景{{noun}}{{status}}",
+      "labelNoStatus": "背景{{noun}}",
+      "noun": {
+        "agent": "代理",
+        "command": "指令",
+        "workflow": "工作流程",
+        "task": "任務"
+      },
+      "failed": {
+        "agent": "背景代理失敗",
+        "command": "背景指令失敗",
+        "workflow": "背景工作流程失敗",
+        "task": "背景任務失敗"
+      },
+      "commandCompleted": "背景指令已完成",
+      "status": {
+        "completed": "已完成",
+        "failed": "失敗",
+        "stopped": "已停止"
+      },
+      "took": "耗時 {{elapsed}}"
+    },
     "tools": {
       "ranCommand": "執行了指令",
       "ranCommands_other": "執行了 {{count}} 個指令",
@@ -1182,6 +1208,7 @@
       "readAndEditedFile": "讀取並編輯了 {{name}}",
       "runningCommand": "正在執行指令",
       "failedMark": "失敗",
+      "viewInBackgroundTasks": "在背景工作中查看",
       "stoppedMark": "已停止",
       "interruptedNote": "已中斷",
       "exitCode": "結束代碼 {{code}}",
@@ -1243,6 +1270,7 @@
       "searchedWeb": "已搜尋網路",
       "stoppedTask": "已停止工作",
       "ranAgent": "已執行代理",
+      "ranWorkflow": "已執行工作流程",
       "usedLabel": "已使用 {{label}}",
       "ranAgents": "已執行 {{count}} 個代理",
       "view_normal": "已切換到一般檢視",

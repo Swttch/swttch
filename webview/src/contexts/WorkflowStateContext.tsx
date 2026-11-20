@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
 import { useBridgeContext } from './BridgeContext';
 import { useSessionContext } from './SessionContext';
 import { MessageType } from '@/shared';
@@ -31,6 +31,12 @@ interface WorkflowStateValue {
   transcriptToolUseId: string | null;
   openTranscript: (toolUseId: string) => void;
   closeTranscript: () => void;
+  /**
+   * The tasks whose end this screen saw happen: heard running, then heard over. The CLI does not write the notice of
+   * a task's end into the chat until the session is read again, so the chat draws it from these (a task read back
+   * already over is not here: its notice is in the record).
+   */
+  liveEndedIds?: ReadonlySet<string>;
 }
 
 const WorkflowStateContext = createContext<WorkflowStateValue | null>(null);
@@ -51,10 +57,14 @@ export function WorkflowStateProvider({ children }: { children: ReactNode }) {
   const [panelOpen, setPanelOpen] = useState(false);
   const [focusedToolUseId, setFocusedToolUseId] = useState<string | null>(null);
   const [transcriptToolUseId, setTranscriptToolUseId] = useState<string | null>(null);
+  const heardRunningRef = useRef<Set<string>>(new Set());
+  const [liveEndedIds, setLiveEndedIds] = useState<ReadonlySet<string>>(new Set());
 
   // currentSessionId is derived from the URL (SSOT) — clear when it changes.
   useEffect(() => {
     setTaskMap(new Map());
+    heardRunningRef.current = new Set();
+    setLiveEndedIds(new Set());
     setDismissedIds(new Set());
     setPanelOpen(false);
     setFocusedToolUseId(null);
@@ -74,6 +84,11 @@ export function WorkflowStateProvider({ children }: { children: ReactNode }) {
     return subscribe(MessageType.WORKFLOW_PROGRESS, (message) => {
       const task = message.payload as unknown as WorkflowTask;
       if (!task?.toolUseId) return;
+      if (task.status === 'running') {
+        heardRunningRef.current.add(task.toolUseId);
+      } else if (heardRunningRef.current.has(task.toolUseId)) {
+        setLiveEndedIds((prev) => (prev.has(task.toolUseId) ? prev : new Set(prev).add(task.toolUseId)));
+      }
       setTaskMap((prev) => {
         const next = new Map(prev);
         next.set(task.toolUseId, task);
@@ -83,7 +98,20 @@ export function WorkflowStateProvider({ children }: { children: ReactNode }) {
   }, [isConnected, subscribe]);
 
   const value = useMemo<WorkflowStateValue>(() => {
-    const tasks = Array.from(taskMap.values());
+    // The newest first, as the desktop app lists them: a task still running by when it started, a finished one by
+    // when it ended (the one that took longest, of tasks started together, is above the others), and a finished
+    // task with no end by its start. The map holds them in the order they were first heard of (oldest first after
+    // a reload, which replays the record from its start), so that order is reversed to break ties, and a task
+    // with no times (one rebuilt after a reload) is taken to be older than any that has one.
+    const sortKey = (task: WorkflowTask): number =>
+      Math.max(task.status === 'running' ? task.startedAt : (task.endedAt ?? task.startedAt), 0);
+    const newestFirst = (list: WorkflowTask[]): WorkflowTask[] =>
+      list
+        .map((task, arrival) => ({ task, arrival }))
+        .sort((a, b) => sortKey(b.task) - sortKey(a.task) || b.arrival - a.arrival)
+        .map(({ task }) => task);
+    const all = Array.from(taskMap.values());
+    const tasks = [...newestFirst(all.filter((t) => t.status === 'running')), ...newestFirst(all.filter((t) => t.status !== 'running'))];
     // Panel lists exclude dismissed workflows; getByToolUseId (inline card) does
     // not — the card must always reflect the workflow's real status.
     const visible = tasks.filter((t) => !dismissedIds.has(t.toolUseId));
@@ -112,8 +140,9 @@ export function WorkflowStateProvider({ children }: { children: ReactNode }) {
       transcriptToolUseId,
       openTranscript,
       closeTranscript,
+      liveEndedIds,
     };
-  }, [taskMap, dismissedIds, panelOpen, openPanel, closePanel, focusedToolUseId, transcriptToolUseId, openTranscript, closeTranscript]);
+  }, [liveEndedIds, taskMap, dismissedIds, panelOpen, openPanel, closePanel, focusedToolUseId, transcriptToolUseId, openTranscript, closeTranscript]);
 
   return <WorkflowStateContext.Provider value={value}>{children}</WorkflowStateContext.Provider>;
 }

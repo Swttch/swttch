@@ -345,7 +345,7 @@
     "empty": "لا توجد مهام سير عمل بعد.",
     "running": "قيد التشغيل",
     "finishedCount": "اكتمل {{count}}",
-    "clear": "مسح",
+    "clearFinished": "مسح المهام المنتهية",
     "dismiss": "تجاهل",
     "cancelRunning": "إلغاء هذه المهمة",
     "viewSimple": "عرض مبسّط",
@@ -375,6 +375,9 @@
     "agentsCount_few": "{{count}} وكلاء",
     "agentsCount_many": "{{count}} وكيلاً",
     "agentsCount_other": "{{count}} وكيل",
+    "agentsRunning": "{{count}} وكيل قيد التشغيل",
+    "agentsRunning_one": "{{count}} وكيل قيد التشغيل",
+    "agentsRunning_other": "{{count}} وكيل قيد التشغيل",
     "tokensLabel": "{{tokens}} رمز",
     "phasesLabel": "المراحل",
     "tableHeader": {
@@ -1218,6 +1221,29 @@
       "viewAll": "عرض الكل",
       "viewLess": "عرض أقل"
     },
+    "taskNotice": {
+      "label": "{{noun}} في الخلفية: {{status}}",
+      "labelNoStatus": "{{noun}} في الخلفية",
+      "noun": {
+        "agent": "وكيل",
+        "command": "أمر",
+        "workflow": "سير عمل",
+        "task": "مهمة"
+      },
+      "failed": {
+        "agent": "وكيل في الخلفية: فشل",
+        "command": "أمر في الخلفية: فشل",
+        "workflow": "سير عمل في الخلفية: فشل",
+        "task": "مهمة في الخلفية: فشل"
+      },
+      "commandCompleted": "أمر في الخلفية: اكتمل",
+      "status": {
+        "completed": "اكتمل",
+        "failed": "فشل",
+        "stopped": "توقف"
+      },
+      "took": "استغرق {{elapsed}}"
+    },
     "tools": {
       "ranCommand": "تم تنفيذ أمر",
       "ranCommands_zero": "تم تنفيذ {{count}} أمر",
@@ -1269,6 +1295,7 @@
       "readAndEditedFile": "تمت قراءة {{name}} وتعديله",
       "runningCommand": "جارٍ تنفيذ أمر",
       "failedMark": "فشل",
+      "viewInBackgroundTasks": "عرض في المهام الخلفية",
       "stoppedMark": "أُوقف",
       "interruptedNote": "تمت المقاطعة",
       "exitCode": "رمز الخروج {{code}}",
@@ -1340,6 +1367,7 @@
       "searchedWeb": "تم البحث في الويب",
       "stoppedTask": "تم إيقاف المهمة",
       "ranAgent": "تم تشغيل وكيل",
+      "ranWorkflow": "تم تشغيل سير عمل",
       "usedLabel": "تم استخدام {{label}}",
       "ranAgents": "تم تشغيل {{count}} وكلاء",
       "view_normal": "تم التبديل إلى العرض العادي",

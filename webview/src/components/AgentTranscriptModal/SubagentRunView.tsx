@@ -5,16 +5,15 @@ import { useSessionContext } from '@/contexts/SessionContext';
 import { useTaskOutputFileLookup } from '@/hooks/useResolvedTaskOutputFile';
 import { agentAddressOf } from '@/hooks/useSendToAgent';
 import { useUnreachableAgents } from '@/hooks/useUnreachableAgents';
+import { useTranscriptViewMode } from '@/pages/ChatPage/message-renderers/transcriptViewMode';
 import { ModalTitleBar } from './ModalTitleBar';
 import { TaskSummaryHeader } from './TaskSummaryHeader';
-import { TaskStatusBadge } from './TaskStatusBadge';
+import { TaskStatusWithStop } from './TaskStatusBadge';
 import { DetailHeader } from './AgentDetailHeader';
 import { AgentComposer } from './AgentComposer';
 import { AgentOutputTranscriptBody } from './AgentOutputTranscriptBody';
 import {
-  OpenInNewTabButton,
-  RunPlacementMenu,
-  RunVariantToggle,
+  RunViewActions,
   type RunPlacement,
   type RunVariant,
 } from './RunViewControls';
@@ -63,6 +62,9 @@ interface Props {
 export function SubagentRunView(props: Props) {
   const { task, onClose, onBack, backLabel, variant = 'full', onVariantChange, onOpenInNewTab, placement, onPlacementChange } = props;
   const isSimple = variant === 'simple';
+  // In the Transcript view the prompt is the first bubble of the conversation and the answer is its last message,
+  // so the strip that says both again above it is left out, as the desktop app's agent panel has none.
+  const inTranscriptView = useTranscriptViewMode() !== null;
   const isRunning = task.status === 'running';
   const { sendToAgent, stopAgent } = useBackgroundTaskActions();
   // Counts the messages sent from this view, so the transcript above the
@@ -91,22 +93,22 @@ export function SubagentRunView(props: Props) {
         onTitleClick={() => console.log(task)}
         onBack={onBack}
         backLabel={backLabel}
-        afterTitle={isSimple ? <TaskStatusBadge task={task} /> : undefined}
+        afterTitle={isSimple ? <TaskStatusWithStop task={task} /> : undefined}
         actions={
-          (onVariantChange || onOpenInNewTab || placement) && (
-            <>
-              {onVariantChange && <RunVariantToggle variant={variant} onChange={onVariantChange} />}
-              {onOpenInNewTab && <OpenInNewTabButton onClick={onOpenInNewTab} />}
-              {placement && <RunPlacementMenu placement={placement} onSelect={onPlacementChange} />}
-            </>
-          )
+          <RunViewActions
+            variant={variant}
+            onVariantChange={onVariantChange}
+            onOpenInNewTab={onOpenInNewTab}
+            placement={placement}
+            onPlacementChange={onPlacementChange}
+          />
         }
       />
       {/* The simple view says how the task is doing beside the title, and
           has no strip under it. */}
       {!isSimple && <TaskSummaryHeader task={task} />}
       <div className="flex flex-1 min-h-0 flex-col">
-        {!isSimple && <DetailHeader source={task} />}
+        {!isSimple && !inTranscriptView && <DetailHeader source={task} />}
         <AgentOutputTranscriptBody task={task} outputFile={resolvedOutputFile} unavailable={outputUnavailable} sendCount={sendCount} />
         {agentAddress && (
           <AgentComposer

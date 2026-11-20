@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { ChevronDownIcon, ChevronRightIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { useFormatElapsed } from '../transcript/TranscriptActivity';
+import { Tooltip } from '@/components/Tooltip';
 import { Portal } from '@/components/Portal';
 import { useWorkflowState } from '@/contexts/WorkflowStateContext';
 import { useBackgroundTaskActions } from '@/hooks/useBackgroundTaskActions';
@@ -9,65 +11,100 @@ import { useTranslation } from '@/i18n';
 import { AgentTranscriptModal } from '@/components/AgentTranscriptModal';
 import { filePreviewPaneStore } from '@/utils/filePreviewPaneStore';
 import { TASK_PANEL_WIDTH_CSS, useTaskPanelColumn } from './useTaskPanelColumn';
-import { WorkflowTaskSummary, WorkflowAgentsTable } from './WorkflowTaskSummary';
+import { taskDurationMs } from './WorkflowTaskSummary';
+import { WorkflowCard } from './WorkflowCard';
+import { TaskTypeIcon } from './TaskTypeIcon';
+import { DismissButton } from './DismissButton';
+import { StopButton } from './StopButton';
+import { formatTokensFor, workflowTokens } from '@/utils/workflowFormat';
 
-function WorkflowTaskRow({
+/**
+ * An agent in the list, as the desktop app draws it: one line with its name and a way in, and at the right how long it
+ * took, or that it was stopped or failed. A running agent has the time it has run and a button to stop it.
+ */
+function AgentTaskRow({
     task,
     now,
     focused,
-    onDismiss,
     onCancel,
+    onDismiss,
     onOpenTranscript,
+    command = false,
 }: {
     task: WorkflowTask;
     now: number;
     focused: boolean;
-    onDismiss: (toolUseId: string) => void;
     onCancel: (task: WorkflowTask) => void;
+    onDismiss: (toolUseId: string) => void;
     onOpenTranscript: (task: WorkflowTask) => void;
+    /** A command is the same line with another icon and no tokens. */
+    command?: boolean;
 }) {
     const ref = useRef<HTMLDivElement>(null);
-    const { t } = useTranslation('chat');
+    const { t, i18n } = useTranslation('chat');
+    const formatElapsed = useFormatElapsed();
     useEffect(() => {
         if (focused) ref.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }, [focused]);
 
-    const isRunning = task.status === 'running';
+    const ms = taskDurationMs(task, now);
+    const elapsed = ms === undefined ? '' : formatElapsed(Math.max(0, Math.round(ms / 1000)));
+    // Where the time is known it is shown with the status, at the right of it (the desktop app shows the status alone).
+    const status =
+        task.status === 'stopped' ? t('backgroundTasks.statusStopped')
+        : task.status === 'failed' ? <span className="text-state-error-fg">{t('backgroundTasks.statusFailed')}</span>
+        : null;
+    // The status and the time are two things: a dot between them says so.
+    const right = (
+        <>
+            {status}
+            {status && elapsed ? ' · ' : ''}
+            {elapsed}
+        </>
+    );
+    const tokenCount = formatTokensFor(
+        i18n.language,
+        workflowTokens(task.usage) || task.agents.reduce((sum, a) => sum + (a.tokens || 0), 0),
+    );
 
     return (
         <div
             ref={ref}
             onClick={() => onOpenTranscript(task)}
-            className={`rounded-lg border bg-surface-base px-3 py-2.5 cursor-pointer hover:border-border-focus transition-colors ${
-                focused ? 'border-border-focus' : 'border-border-subtle'
+            data-testid="agent-task-row"
+            className={`group flex items-center gap-2 rounded-[11px] border bg-surface-hover px-[0.83rem] py-[0.775rem] cursor-pointer hover:bg-surface-pressed transition-colors ${
+                focused ? 'border-border-focus' : 'border-transparent'
             }`}
         >
-            <div className="flex items-center gap-2">
-                <div className="min-w-0 flex-1 text-text-primary text-[0.9230rem] font-semibold truncate">
-                    {task.name}
-                </div>
-                {/* Running: cancel the task (issue #330). Finished: it is over,
-                    so the same ✕ only takes the row out of the list. stopPropagation
-                    keeps this from also opening the transcript modal (issue #347). */}
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        isRunning ? onCancel(task) : onDismiss(task.toolUseId);
-                    }}
-                    className="shrink-0 p-0.5 rounded hover:bg-surface-hover transition-colors"
-                    title={isRunning ? t('backgroundTasks.cancelRunning') : t('backgroundTasks.dismiss')}
-                >
-                    <XMarkIcon className="w-3.5 h-3.5 text-text-tertiary hover:text-text-secondary" />
-                </button>
+            <div className="flex min-w-0 items-center gap-1.5 text-text-primary text-[0.9230rem]">
+                <TaskTypeIcon kind={command ? 'command' : 'agent'} />
+                <Tooltip content={task.name} placement="top">
+                    <span className="truncate">{task.name}</span>
+                </Tooltip>
+                <ChevronRightIcon className="h-3.5 w-3.5 flex-shrink-0 text-text-tertiary rtl:-scale-x-100" />
+                {!command && tokenCount && (
+                    <span className="ms-1 flex-shrink-0 whitespace-nowrap text-[0.8461rem] text-text-secondary">
+                        {t('backgroundTasks.tokensLabel', { tokens: tokenCount })}
+                    </span>
+                )}
             </div>
-
-            <div className="mt-0.5">
-                <WorkflowTaskSummary task={task} now={now} />
-            </div>
-
-            <WorkflowAgentsTable task={task} />
+            <div className="ms-auto flex-shrink-0 text-[0.8461rem] text-text-secondary">{right}</div>
+            {task.status !== 'running' && <DismissButton task={task} onDismiss={onDismiss} />}
+            {task.status === 'running' && <StopButton task={task} onCancel={onCancel} />}
         </div>
     );
+}
+
+/** An agent or a command is one compact line; a workflow is a card with its phases. */
+function TaskRow(props: React.ComponentProps<typeof AgentTaskRow>) {
+    switch (props.task.taskType) {
+        case 'local_agent':
+            return <AgentTaskRow {...props} />;
+        case 'local_bash':
+            return <AgentTaskRow {...props} command />;
+        default:
+            return <WorkflowCard {...props} />;
+    }
 }
 
 export function BackgroundTasksPanel() {
@@ -159,16 +196,30 @@ export function BackgroundTasksPanel() {
             >
                 <div className="flex items-center justify-between px-4 h-[44px] border-b border-border-subtle shrink-0">
                     <div className="text-text-primary text-[1rem] font-semibold">{t('backgroundTasks.title')}</div>
-                    <button
-                        onClick={closePanel}
-                        className="p-1 rounded hover:bg-surface-hover transition-colors"
-                        title={t('backgroundTasks.close')}
-                    >
-                        <XMarkIcon className="w-5 h-5 text-text-secondary" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                        {/* As the desktop app has it: clearing what is finished is an icon in the header, beside close. */}
+                        {finishedTasks.length > 0 && (
+                            <Tooltip content={t('backgroundTasks.clearFinished')} placement="bottom">
+                                <button
+                                    onClick={clearFinished}
+                                    aria-label={t('backgroundTasks.clearFinished')}
+                                    className="p-1 rounded hover:bg-surface-hover transition-colors"
+                                >
+                                    <TrashIcon className="w-5 h-5 text-text-secondary" />
+                                </button>
+                            </Tooltip>
+                        )}
+                        <button
+                            onClick={closePanel}
+                            className="p-1 rounded hover:bg-surface-hover transition-colors"
+                            title={t('backgroundTasks.close')}
+                        >
+                            <XMarkIcon className="w-5 h-5 text-text-secondary" />
+                        </button>
+                    </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-3 space-y-4">
+                <div className="flex-1 overflow-y-auto p-[0.83rem] space-y-4">
                     {runningTasks.length === 0 && finishedTasks.length === 0 && (
                         <div className="text-text-primary/50 text-[0.9230rem] text-center mt-8">
                             {t('backgroundTasks.empty')}
@@ -176,16 +227,16 @@ export function BackgroundTasksPanel() {
                     )}
 
                     {runningTasks.length > 0 && (
-                        <section className="space-y-2">
-                            <div className="text-[0.7692rem] uppercase tracking-wide text-text-tertiary">{t('backgroundTasks.running')}</div>
+                        <section className="space-y-[0.556rem]">
+                            <div className="px-1 text-[0.9230rem] text-text-tertiary">{t('backgroundTasks.running')} {runningTasks.length}</div>
                             {runningTasks.map((task) => (
-                                <WorkflowTaskRow
+                                <TaskRow
                                     key={task.toolUseId}
                                     task={task}
                                     now={now}
                                     focused={task.toolUseId === focusedToolUseId}
-                                    onDismiss={dismissTask}
                                     onCancel={cancelTask}
+                                    onDismiss={dismissTask}
                                     onOpenTranscript={(t) => openTranscript(t.toolUseId)}
                                 />
                             ))}
@@ -193,30 +244,24 @@ export function BackgroundTasksPanel() {
                     )}
 
                     {finishedTasks.length > 0 && (
-                        <section className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <button
-                                    onClick={() => setShowFinished((v) => !v)}
-                                    className="text-[0.7692rem] uppercase tracking-wide text-text-tertiary hover:text-text-secondary transition-colors"
-                                >
-                                    {t('backgroundTasks.finishedCount', { count: finishedTasks.length })} {showFinished ? '▾' : '▸'}
-                                </button>
-                                <button
-                                    onClick={clearFinished}
-                                    className="text-[0.8461rem] text-text-secondary hover:text-text-primary transition-colors"
-                                >
-                                    {t('backgroundTasks.clear')}
-                                </button>
-                            </div>
+                        <section className="space-y-[0.556rem]">
+                            <button
+                                onClick={() => setShowFinished((v) => !v)}
+                                aria-expanded={showFinished}
+                                className="flex items-center gap-1.5 px-1 text-[0.9230rem] text-text-tertiary hover:text-text-secondary transition-colors"
+                            >
+                                <ChevronDownIcon className={`h-3.5 w-3.5 transition-transform ${showFinished ? '' : '-rotate-90 rtl:rotate-90'}`} />
+                                {t('backgroundTasks.finishedCount', { count: finishedTasks.length })}
+                            </button>
                             {showFinished &&
                                 finishedTasks.map((task) => (
-                                    <WorkflowTaskRow
+                                    <TaskRow
                                         key={task.toolUseId}
                                         task={task}
                                         now={now}
                                         focused={task.toolUseId === focusedToolUseId}
-                                        onDismiss={dismissTask}
-                                    onCancel={cancelTask}
+                                        onCancel={cancelTask}
+                                    onDismiss={dismissTask}
                                     onOpenTranscript={(t) => openTranscript(t.toolUseId)}
                                     />
                                 ))}

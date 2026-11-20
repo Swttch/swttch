@@ -154,6 +154,8 @@ export enum MessageType {
   WATCH_BACKGROUND_TASK_OUTPUT = 'WATCH_BACKGROUND_TASK_OUTPUT',
   /** Unsubscribe from a background Bash task's output log (e.g. the detail modal closed). inbound webview→backend */
   UNWATCH_BACKGROUND_TASK_OUTPUT = 'UNWATCH_BACKGROUND_TASK_OUTPUT',
+  /** Ask for one more page of a watched agent's record, before what the webview holds — the backend answers with BACKGROUND_TASK_OUTPUT_CHANGED carrying the larger window. inbound webview→backend */
+  LOAD_EARLIER_BACKGROUND_TASK_OUTPUT = 'LOAD_EARLIER_BACKGROUND_TASK_OUTPUT',
   /** A watched background Bash task's output log changed on disk — carries the full current text. outbound backend→webview */
   BACKGROUND_TASK_OUTPUT_CHANGED = 'BACKGROUND_TASK_OUTPUT_CHANGED',
 

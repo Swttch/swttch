@@ -3,10 +3,11 @@ import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { MessageType } from '../../shared';
 import { loadWorkflowAgentTranscript } from '../features/loadWorkflowAgentTranscript';
+import { sanitizePages } from '../features/conversationWindow';
 import { Claude } from '../claude';
 
 /**
- * GET_AGENT_TRANSCRIPT — load one workflow agent's full transcript (raw JSONL
+ * GET_AGENT_TRANSCRIPT — load one workflow agent's transcript, the last `pages` pages of it (raw JSONL
  * entries) for the Background tasks detail modal (issue #347).
  */
 export async function getAgentTranscriptHandler(
@@ -20,6 +21,7 @@ export async function getAgentTranscriptHandler(
       transcriptDir?: string;
       agentId?: string;
       workingDir?: string;
+      pages?: number;
     } | undefined;
     const transcriptDir = payload?.transcriptDir;
     const agentId = payload?.agentId;
@@ -32,12 +34,14 @@ export async function getAgentTranscriptHandler(
     const result = await loadWorkflowAgentTranscript({
       transcriptDir: transcriptDir ?? '',
       agentId: agentId ?? '',
+      pages: sanitizePages(payload?.pages),
     });
     connections.sendTo(connectionId, MessageType.ACK, {
       requestId: message.requestId,
       status: 'ok',
       entries: result.entries,
       truncated: result.truncated,
+      startIndex: result.startIndex,
     });
   } catch (err) {
     connections.sendTo(connectionId, MessageType.ACK, {
