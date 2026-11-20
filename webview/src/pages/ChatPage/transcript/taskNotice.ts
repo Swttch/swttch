@@ -16,6 +16,11 @@ export interface TaskNotice {
   durationMs: number | null;
   /** The call that started the task, which is what the background tasks panel knows the task by. */
   toolUseId: string | null;
+  /**
+   * The task's own id (an agent's is its agent id). The same agent notifies again each time a message resumes it, and
+   * those notices carry the id of the call that resumed it, not the one that started it: this is what still names it.
+   */
+  taskId: string | null;
 }
 
 /**
@@ -105,5 +110,6 @@ export function taskNoticeOf(message: LoadedMessageDto): TaskNotice | null {
     reason,
     durationMs: typeof duration === 'number' && Number.isFinite(duration) ? duration : null,
     toolUseId: notification.toolUseId ?? null,
+    taskId: notification.taskId ?? null,
   };
 }

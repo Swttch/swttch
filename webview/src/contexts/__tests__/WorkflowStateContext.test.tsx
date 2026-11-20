@@ -19,6 +19,12 @@ vi.mock('../SessionContext', () => ({
   useSessionContext: () => ({ currentSessionId: mockSessionId }),
 }));
 
+// The place pinned as the default for the project, which is where a run opens when it is clicked.
+let mockPinned: string | null = null;
+vi.mock('../SettingsContext', () => ({
+  useSettingsOrNull: () => ({ settings: { runViewPlacement: mockPinned } }),
+}));
+
 let ctx: ReturnType<typeof useWorkflowState>;
 function Harness() {
   ctx = useWorkflowState();
@@ -36,6 +42,7 @@ function emit(task: Partial<WorkflowTask> & Pick<WorkflowTask, 'toolUseId'>) {
 beforeEach(() => {
   capturedHandler = null;
   mockSessionId = 's1';
+  mockPinned = null;
   render(
     <WorkflowStateProvider>
       <Harness />
@@ -118,5 +125,57 @@ describe('WorkflowStateContext', () => {
 
     act(() => ctx.closeTranscript());
     expect(ctx.transcriptToolUseId).toBeNull();
+  });
+
+  // #667: a run opens inside the panel, whatever it is; one the app does not track falls back to the window.
+  it('opens an agent, a workflow and a command in the panel, and closing the panel ends the run view', () => {
+    emit({ toolUseId: 'a', taskType: 'local_agent' });
+    emit({ toolUseId: 'w', taskType: 'local_workflow' });
+    emit({ toolUseId: 'b', taskType: 'local_bash' });
+
+    act(() => ctx.openRun('a'));
+    expect(ctx.sideRunToolUseId).toBe('a');
+    expect(ctx.panelOpen).toBe(true);
+    expect(ctx.transcriptToolUseId).toBeNull();
+
+    act(() => ctx.closeRunInSide());
+    expect(ctx.sideRunToolUseId).toBeNull();
+    expect(ctx.panelOpen).toBe(true);
+
+    act(() => ctx.openRun('w'));
+    expect(ctx.sideRunToolUseId).toBe('w');
+    expect(ctx.transcriptToolUseId).toBeNull();
+
+    act(() => ctx.openRun('b'));
+    expect(ctx.sideRunToolUseId).toBe('b');
+
+    act(() => ctx.openRun('unknown'));
+    expect(ctx.transcriptToolUseId).toBe('unknown');
+
+    act(() => ctx.openRun('a'));
+    act(() => ctx.closePanel());
+    expect(ctx.sideRunToolUseId).toBeNull();
+  });
+
+  // The pin on a row of the view options menu: where a click on a run opens it.
+  it('opens a run in the window when "View in center" is the pinned default, and beside the chat for any other pin', () => {
+    const open = (pinned: string | null) => {
+      mockPinned = pinned;
+      render(
+        <WorkflowStateProvider>
+          <Harness />
+        </WorkflowStateProvider>,
+      );
+      emit({ toolUseId: 'a', taskType: 'local_agent' });
+      act(() => ctx.openRun('a'));
+      return { side: ctx.sideRunToolUseId, window: ctx.transcriptToolUseId };
+    };
+
+    expect(open('center')).toEqual({ side: null, window: 'a' });
+    // The page and the tab are not built yet, so those pins open beside the chat, as no pin does.
+    expect(open('page')).toEqual({ side: 'a', window: null });
+    expect(open('tab')).toEqual({ side: 'a', window: null });
+    expect(open('side')).toEqual({ side: 'a', window: null });
+    expect(open(null)).toEqual({ side: 'a', window: null });
   });
 });

@@ -351,6 +351,7 @@
     "placementCenter": "居中查看",
     "placementPage": "全页查看",
     "placementTab": "新标签页",
+    "setAsDefault": "设为默认",
     "statusRunning": "运行中",
     "statusCompleted": "已完成",
     "statusFailed": "失败",
@@ -405,7 +406,12 @@
       "context": "上下文 {{value}}",
       "in": "输入 {{value}}",
       "cache": "缓存 +{{written}} / 复用 {{read}}",
-      "out": "输出 {{value}}"
+      "out": "输出 {{value}}",
+      "noResult": {
+        "failed": "没有结果。代理失败。",
+        "stopped": "没有结果。代理已停止。",
+        "ended": "没有结果。代理已结束。"
+      }
     }
   },
   "scheduledMessages": {

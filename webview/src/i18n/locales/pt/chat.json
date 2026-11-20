@@ -352,6 +352,7 @@
     "placementCenter": "Visualização central",
     "placementPage": "Página inteira",
     "placementTab": "Nova guia",
+    "setAsDefault": "Tornar padrão",
     "statusRunning": "Em execução",
     "statusCompleted": "Concluído",
     "statusFailed": "Falhou",
@@ -406,7 +407,12 @@
       "context": "contexto {{value}}",
       "in": "entrada {{value}}",
       "cache": "cache +{{written}} / {{read}} reutilizado",
-      "out": "saída {{value}}"
+      "out": "saída {{value}}",
+      "noResult": {
+        "failed": "Sem resultado. O agente falhou.",
+        "stopped": "Sem resultado. O agente foi interrompido.",
+        "ended": "Sem resultado. O agente terminou."
+      }
     }
   },
   "scheduledMessages": {

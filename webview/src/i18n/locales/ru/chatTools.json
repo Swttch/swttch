@@ -22,7 +22,10 @@
     "to": "Кому: {{to}}",
     "sent": "Сообщение отправлено",
     "delivered": "Доставлено",
-    "anotherSession": "другая сессия"
+    "anotherSession": "другая сессия",
+    "agentSending": "Отправка сообщения агенту",
+    "agentSent": "Сообщение отправлено агенту",
+    "sessionSending": "Отправка сообщения в другую сессию"
   },
   "attachments": {
     "imageAlt": "Изображение {{index}}",

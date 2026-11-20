@@ -171,7 +171,7 @@ function SendBubble({ message, sectionKey }: Props) {
         {hasBubble && (
           <div className={USER_BUBBLE_CLASS}>
             {parsed.replies.length > 0 && <ReplyQuotes replies={parsed.replies} followedByText={parsed.text !== ''} />}
-            <FoldedText className="text-[var(--tr-text)] text-[1rem] leading-[1.5] whitespace-pre-wrap break-words">
+            <FoldedText className="text-[var(--tr-text)] text-[1rem] leading-[1.5] whitespace-pre-wrap [overflow-wrap:anywhere]">
               {isCommand ? (
                 <>
                   <span className="text-text-primary/50">{'/'}</span>

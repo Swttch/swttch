@@ -26,7 +26,7 @@ export function TranscriptHeldMessages({ atEnd = false }: { atEnd?: boolean } = 
           data-transcript-held-message
         >
           <div className={USER_BUBBLE_CLASS}>
-            <div className="text-text-primary/80 text-[1rem] leading-[1.5] whitespace-pre-wrap break-words">{message.content}</div>
+            <div className="text-text-primary/80 text-[1rem] leading-[1.5] whitespace-pre-wrap [overflow-wrap:anywhere]">{message.content}</div>
           </div>
           {/* Only the first one is offered, the one that goes next. */}
           {index === 0 && (

@@ -69,7 +69,7 @@ export function TranscriptPendingMessages() {
       {sentWhileRunning.map((sent: SentWhileRunning) => (
         <div key={sent.id} className="group flex flex-col items-end gap-1.5 pt-2 px-4 pb-[1.5875rem]" data-pending-sent-message>
           <div className={USER_BUBBLE_CLASS}>
-            <div className="text-text-primary/80 text-[1rem] leading-[1.5] whitespace-pre-wrap break-words">{sent.content}</div>
+            <div className="text-text-primary/80 text-[1rem] leading-[1.5] whitespace-pre-wrap [overflow-wrap:anywhere]">{sent.content}</div>
           </div>
           <div className="mt-[0.5437rem] flex items-center gap-1">
             <WaitingActions content={sent.content} onCancel={pendingCancelSupported ? () => cancelPendingMessage(sent.id) : undefined} />

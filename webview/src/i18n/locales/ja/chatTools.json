@@ -22,7 +22,10 @@
     "to": "宛先: {{to}}",
     "sent": "メッセージを送信",
     "delivered": "配送済み",
-    "anotherSession": "別のセッション"
+    "anotherSession": "別のセッション",
+    "agentSending": "エージェントにメッセージを送信中",
+    "agentSent": "エージェントにメッセージを送信しました",
+    "sessionSending": "別のセッションにメッセージを送信中"
   },
   "attachments": {
     "imageAlt": "画像 {{index}}",

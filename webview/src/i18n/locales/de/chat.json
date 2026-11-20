@@ -352,6 +352,7 @@
     "placementCenter": "In der Mitte anzeigen",
     "placementPage": "Ganzseitenansicht",
     "placementTab": "Neuer Tab",
+    "setAsDefault": "Als Standard festlegen",
     "statusRunning": "Läuft",
     "statusCompleted": "Abgeschlossen",
     "statusFailed": "Fehlgeschlagen",
@@ -406,7 +407,12 @@
       "context": "Kontext {{value}}",
       "in": "Eingabe {{value}}",
       "cache": "Cache +{{written}} / {{read}} wiederverwendet",
-      "out": "Ausgabe {{value}}"
+      "out": "Ausgabe {{value}}",
+      "noResult": {
+        "failed": "Kein Ergebnis. Der Agent ist fehlgeschlagen.",
+        "stopped": "Kein Ergebnis. Der Agent wurde gestoppt.",
+        "ended": "Kein Ergebnis. Der Agent hat die Ausführung beendet."
+      }
     }
   },
   "scheduledMessages": {

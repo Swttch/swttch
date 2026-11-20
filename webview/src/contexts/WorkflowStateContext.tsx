@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
 import { useBridgeContext } from './BridgeContext';
 import { useSessionContext } from './SessionContext';
+import { useSettingsOrNull } from './SettingsContext';
+import { SettingKey } from '@/types/settings';
 import { MessageType } from '@/shared';
 import type { WorkflowTask } from '@/shared';
 
@@ -32,6 +34,20 @@ interface WorkflowStateValue {
   openTranscript: (toolUseId: string) => void;
   closeTranscript: () => void;
   /**
+   * The subagent whose run is shown inside the Background tasks panel, in place of its list (#667). `null` is the
+   * list. Closing the panel or changing session puts it back to the list.
+   */
+  sideRunToolUseId: string | null;
+  /** Opens the panel on this subagent's run. */
+  openRunInSide: (toolUseId: string) => void;
+  /** Back to the panel's list. */
+  closeRunInSide: () => void;
+  /**
+   * The way into a task's run from a line in the chat or the list: a subagent opens in the panel beside the chat,
+   * anything else (a workflow, a command) in the window over it.
+   */
+  openRun: (toolUseId: string) => void;
+  /**
    * The tasks whose end this screen saw happen: heard running, then heard over. The CLI does not write the notice of
    * a task's end into the chat until the session is read again, so the chat draws it from these (a task read back
    * already over is not here: its notice is in the record).
@@ -57,6 +73,7 @@ export function WorkflowStateProvider({ children }: { children: ReactNode }) {
   const [panelOpen, setPanelOpen] = useState(false);
   const [focusedToolUseId, setFocusedToolUseId] = useState<string | null>(null);
   const [transcriptToolUseId, setTranscriptToolUseId] = useState<string | null>(null);
+  const [sideRunToolUseId, setSideRunToolUseId] = useState<string | null>(null);
   const heardRunningRef = useRef<Set<string>>(new Set());
   const [liveEndedIds, setLiveEndedIds] = useState<ReadonlySet<string>>(new Set());
 
@@ -69,15 +86,37 @@ export function WorkflowStateProvider({ children }: { children: ReactNode }) {
     setPanelOpen(false);
     setFocusedToolUseId(null);
     setTranscriptToolUseId(null);
+    setSideRunToolUseId(null);
   }, [currentSessionId]);
 
   const openPanel = useCallback((toolUseId?: string) => {
     setFocusedToolUseId(toolUseId ?? null);
     setPanelOpen(true);
   }, []);
-  const closePanel = useCallback(() => setPanelOpen(false), []);
+  const closePanel = useCallback(() => {
+    setPanelOpen(false);
+    setSideRunToolUseId(null);
+  }, []);
+  const openRunInSide = useCallback((toolUseId: string) => {
+    setFocusedToolUseId(toolUseId);
+    setSideRunToolUseId(toolUseId);
+    setPanelOpen(true);
+  }, []);
+  const closeRunInSide = useCallback(() => setSideRunToolUseId(null), []);
   const openTranscript = useCallback((toolUseId: string) => setTranscriptToolUseId(toolUseId), []);
   const closeTranscript = useCallback(() => setTranscriptToolUseId(null), []);
+  // Where a run opens when it is clicked: the place pinned as the default for the project (the view options menu's
+  // pin), else beside the chat. Only the window and the panel exist so far; the page and the tab, pinned or not, are
+  // not built yet and open beside the chat.
+  const pinnedPlacement = useSettingsOrNull()?.settings[SettingKey.RUN_VIEW_PLACEMENT] ?? null;
+  const openRun = useCallback(
+    (toolUseId: string) => {
+      // A run opens in the side panel, whatever it is: an agent, a workflow or a command.
+      if (!taskMap.has(toolUseId) || pinnedPlacement === 'center') openTranscript(toolUseId);
+      else openRunInSide(toolUseId);
+    },
+    [taskMap, openRunInSide, openTranscript, pinnedPlacement],
+  );
 
   useEffect(() => {
     if (!isConnected) return;
@@ -140,9 +179,13 @@ export function WorkflowStateProvider({ children }: { children: ReactNode }) {
       transcriptToolUseId,
       openTranscript,
       closeTranscript,
+      sideRunToolUseId,
+      openRunInSide,
+      closeRunInSide,
+      openRun,
       liveEndedIds,
     };
-  }, [liveEndedIds, taskMap, dismissedIds, panelOpen, openPanel, closePanel, focusedToolUseId, transcriptToolUseId, openTranscript, closeTranscript]);
+  }, [sideRunToolUseId, openRunInSide, closeRunInSide, openRun, liveEndedIds, taskMap, dismissedIds, panelOpen, openPanel, closePanel, focusedToolUseId, transcriptToolUseId, openTranscript, closeTranscript]);
 
   return <WorkflowStateContext.Provider value={value}>{children}</WorkflowStateContext.Provider>;
 }

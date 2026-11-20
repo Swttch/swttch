@@ -24,6 +24,7 @@ describe('taskNoticeOf', () => {
       reason: null,
       durationMs: 78000,
       toolUseId: 'u1',
+      taskId: 't1',
     });
   });
 

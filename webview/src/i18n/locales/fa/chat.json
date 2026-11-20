@@ -352,6 +352,7 @@
     "placementCenter": "نمایش در مرکز",
     "placementPage": "نمای تمام‌صفحه",
     "placementTab": "تب جدید",
+    "setAsDefault": "پیش‌فرض شود",
     "statusRunning": "در حال اجرا",
     "statusCompleted": "تکمیل‌شده",
     "statusFailed": "ناموفق",
@@ -406,7 +407,12 @@
       "context": "زمینه {{value}}",
       "in": "ورودی {{value}}",
       "cache": "کش +{{written}} / {{read}} بازاستفاده",
-      "out": "خروجی {{value}}"
+      "out": "خروجی {{value}}",
+      "noResult": {
+        "failed": "نتیجه‌ای وجود ندارد. عامل ناموفق بود.",
+        "stopped": "نتیجه‌ای وجود ندارد. عامل متوقف شد.",
+        "ended": "نتیجه‌ای وجود ندارد. عامل پایان یافت."
+      }
     }
   },
   "scheduledMessages": {

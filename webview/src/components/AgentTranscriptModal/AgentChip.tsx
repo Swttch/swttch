@@ -8,6 +8,7 @@ import {
   formatTokensFor,
 } from '@/utils/workflowFormat';
 import { useDurationLabel } from '@/pages/ChatPage/BackgroundTasksPanel/WorkflowTaskSummary';
+import { stackedClasses } from './stackedClasses';
 
 interface Props {
   /** The CLI's own `workflow_progress[]` entry, whole (see WorkflowAgent). */
@@ -19,6 +20,8 @@ interface Props {
   agentId: string;
   selected: boolean;
   onSelect: (agentId: string) => void;
+  /** Drawn in the stacked shape whatever the width of the window is (see AgentTabList). */
+  stacked?: boolean;
 }
 
 /**
@@ -29,7 +32,8 @@ interface Props {
  * here without touching the transport (issue #425 follow-up).
  */
 export function AgentChip(props: Props) {
-  const { agent, taskStatus, phaseTitle, agentId, selected, onSelect } = props;
+  const { agent, taskStatus, phaseTitle, agentId, selected, onSelect, stacked } = props;
+  const sm = stackedClasses(stacked);
   const status = agentDisplayStatus(agent.state, taskStatus);
   const { i18n } = useTranslation('chat');
   const tokens = formatTokensFor(i18n.language, agent.tokens);
@@ -52,18 +56,18 @@ export function AgentChip(props: Props) {
           console.log('[workflow agent]', agent);
           onSelect(agentId);
         }}
-        className={`flex shrink-0 items-center gap-1.5 px-2.5 py-1 rounded-md text-sm transition-colors max-w-64 sm:w-full sm:max-w-none sm:items-start ${
+        className={sm(`flex shrink-0 items-center gap-1.5 px-2.5 py-1 rounded-md text-sm transition-colors max-w-64 sm:w-full sm:max-w-none sm:items-start ${
           selected
             ? 'bg-surface-hover text-text-primary'
             : 'text-text-secondary hover:bg-surface-hover hover:text-text-primary'
-        }`}
+        }`)}
       >
-        <AgentStatusDot status={status} />
+        <AgentStatusDot status={status} stacked={stacked} />
         {/* In a row the chip is one line and the stats follow the name. As a
             sidebar the column is too narrow for both, and the name is what the
             reader is scanning for, so the stats drop to a second line instead
             of truncating it. */}
-        <span className="flex min-w-0 flex-1 items-center gap-1.5 sm:flex-col sm:items-start sm:gap-0">
+        <span className={sm('flex min-w-0 flex-1 items-center gap-1.5 sm:flex-col sm:items-start sm:gap-0')}>
           <span className="max-w-full truncate">{agentDisplayName(agent, phaseTitle)}</span>
           {stats && <span className="shrink-0 text-xs text-text-tertiary tabular-nums">{stats}</span>}
         </span>
@@ -78,17 +82,18 @@ export function AgentChip(props: Props) {
  * nothing about whether anything is still happening. Both shapes occupy the
  * same 12px box so a chip does not shift sideways the moment its agent finishes.
  */
-function AgentStatusDot(props: { status: 'running' | 'done' | 'stopped' }) {
-  const { status } = props;
+function AgentStatusDot(props: { status: 'running' | 'done' | 'stopped'; stacked?: boolean }) {
+  const { status, stacked } = props;
+  const sm = stackedClasses(stacked);
   if (status !== 'running') {
     return (
-      <span className="inline-flex w-3 h-3 shrink-0 items-center justify-center sm:mt-1">
+      <span className={sm('inline-flex w-3 h-3 shrink-0 items-center justify-center sm:mt-1')}>
         <span className={`inline-block w-1.5 h-1.5 rounded-full ${agentDotClass(status)}`} />
       </span>
     );
   }
   return (
-    <span className="relative inline-flex w-3 h-3 shrink-0 items-center justify-center text-text-link sm:mt-1">
+    <span className={sm('relative inline-flex w-3 h-3 shrink-0 items-center justify-center text-text-link sm:mt-1')}>
       <span className="absolute inset-0 rounded-full border border-current border-e-transparent border-b-transparent animate-spin" />
       <span className="inline-block w-1.5 h-1.5 rounded-full bg-current" />
     </span>

@@ -11,12 +11,17 @@ import { AgentTabList } from './AgentTabList';
 import { DetailHeader } from './AgentDetailHeader';
 import { AgentComposer } from './AgentComposer';
 import { AgentTranscriptBody } from './AgentTranscriptBody';
-import { TaskStatusWithStop } from './TaskStatusBadge';
-import { RunViewActions, type RunPlacement, type RunVariant } from './RunViewControls';
+import { TaskStatusWithStop, TaskStopAction } from './TaskStatusBadge';
+import { RunViewActions, type RunPlacement, type RunSurface, type RunVariant } from './RunViewControls';
 
 interface Props {
   task: WorkflowTask;
   onClose: () => void;
+  /** Where this view is drawn: its title row follows it, and in the side panel the agents are stacked, not beside. */
+  surface?: RunSurface;
+  /** When given, a back chevron sits before the title; the side panel goes back to its task list with it. */
+  onBack?: () => void;
+  backLabel?: string;
   /** How much of the run is shown: the short one says how it is doing beside the title, the full one has the strip. */
   variant?: RunVariant;
   onVariantChange?: (variant: RunVariant) => void;
@@ -34,8 +39,9 @@ interface Props {
  * live-refetch trigger).
  */
 export function WorkflowRunView(props: Props) {
-  const { task, onClose, variant = 'full', onVariantChange, onOpenInNewTab, placement, onPlacementChange } = props;
+  const { task, onClose, surface = 'modal', onBack, backLabel, variant = 'full', onVariantChange, onOpenInNewTab, placement, onPlacementChange } = props;
   const isSimple = variant === 'simple';
+  const compact = surface === 'panel';
   const [selectedAgentId, setSelectedAgentId] = useState<string | undefined>(task.agents[0]?.agentId);
   const { sendToAgent, stopAgent } = useBackgroundTaskActions();
   // Counts the messages sent from this view, so the transcript above the
@@ -69,15 +75,23 @@ export function WorkflowRunView(props: Props) {
       <ModalTitleBar
         task={task}
         onClose={onClose}
-        afterTitle={isSimple ? <TaskStatusWithStop task={task} /> : undefined}
+        surface={surface}
+        onBack={onBack}
+        backLabel={backLabel}
+        // In the panel the stop button leaves the title for the left end of the buttons on the right.
+        afterTitle={isSimple ? <TaskStatusWithStop task={task} hideStop={compact} /> : undefined}
         actions={
-          <RunViewActions
-            variant={variant}
-            onVariantChange={onVariantChange}
-            onOpenInNewTab={onOpenInNewTab}
-            placement={placement}
-            onPlacementChange={onPlacementChange}
-          />
+          <>
+            {compact && isSimple && <TaskStopAction task={task} />}
+            <RunViewActions
+              collapsed={compact}
+              variant={variant}
+              onVariantChange={onVariantChange}
+              onOpenInNewTab={onOpenInNewTab}
+              placement={placement}
+              onPlacementChange={onPlacementChange}
+            />
+          </>
         }
       />
       {!isSimple && <TaskSummaryHeader task={task} />}
@@ -98,16 +112,17 @@ export function WorkflowRunView(props: Props) {
           `flex-1`, so the picker is what shrinks. `flex-initial` keeps
           the transcript shrinkable for after the picker has bottomed out
           at its `min-w`. */}
-      <div className="flex flex-1 min-h-0 flex-col sm:flex-row">
+      <div className={`flex flex-1 min-h-0 flex-col${compact ? '' : ' sm:flex-row'}`}>
         {task.agents.length > 0 && (
           <AgentTabList
             agents={task.agents}
             taskStatus={task.status}
             selectedAgentId={selectedAgentId}
             onSelect={setSelectedAgentId}
+            stacked={compact}
           />
         )}
-        <div className="flex flex-1 min-h-0 min-w-0 flex-col sm:flex-initial sm:w-full sm:max-w-xl">
+        <div className={`flex flex-1 min-h-0 min-w-0 flex-col${compact ? '' : ' sm:flex-initial sm:w-full sm:max-w-xl'}`}>
           {selectedAgent && (
             <DetailHeader source={selectedAgent} transcriptDir={task.transcriptDir} conversationShownBelow={inTranscriptView} />
           )}

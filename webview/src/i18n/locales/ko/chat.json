@@ -351,6 +351,7 @@
     "placementCenter": "중앙에서 보기",
     "placementPage": "전체 페이지 보기",
     "placementTab": "새로운 탭",
+    "setAsDefault": "기본으로 설정",
     "statusRunning": "실행 중",
     "statusCompleted": "완료",
     "statusFailed": "실패",
@@ -405,7 +406,12 @@
       "context": "컨텍스트 {{value}}",
       "in": "입력 {{value}}",
       "cache": "캐시 +{{written}} / {{read}} 재사용",
-      "out": "출력 {{value}}"
+      "out": "출력 {{value}}",
+      "noResult": {
+        "failed": "결과가 없습니다. 에이전트가 실패했습니다.",
+        "stopped": "결과가 없습니다. 에이전트가 중지되었습니다.",
+        "ended": "결과가 없습니다. 에이전트가 종료되었습니다."
+      }
     }
   },
   "scheduledMessages": {

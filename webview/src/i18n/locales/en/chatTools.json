@@ -22,7 +22,10 @@
     "to": "To: {{to}}",
     "sent": "Message sent",
     "delivered": "Delivered",
-    "anotherSession": "another session"
+    "anotherSession": "another session",
+    "agentSending": "Messaging agent",
+    "agentSent": "Messaged agent",
+    "sessionSending": "Messaging another session"
   },
   "attachments": {
     "imageAlt": "Image {{index}}",

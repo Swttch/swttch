@@ -22,7 +22,10 @@
     "to": "إلى: {{to}}",
     "sent": "تم إرسال الرسالة",
     "delivered": "تم التسليم",
-    "anotherSession": "جلسة أخرى"
+    "anotherSession": "جلسة أخرى",
+    "agentSending": "جارٍ إرسال رسالة إلى الوكيل",
+    "agentSent": "تم إرسال رسالة إلى الوكيل",
+    "sessionSending": "جارٍ إرسال رسالة إلى جلسة أخرى"
   },
   "attachments": {
     "imageAlt": "صورة {{index}}",

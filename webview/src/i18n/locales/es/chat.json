@@ -352,6 +352,7 @@
     "placementCenter": "Vista centrada",
     "placementPage": "Página completa",
     "placementTab": "Pestaña nueva",
+    "setAsDefault": "Establecer como predeterminado",
     "statusRunning": "En ejecución",
     "statusCompleted": "Completado",
     "statusFailed": "Error",
@@ -406,7 +407,12 @@
       "context": "contexto {{value}}",
       "in": "entrada {{value}}",
       "cache": "caché +{{written}} / {{read}} reutilizado",
-      "out": "salida {{value}}"
+      "out": "salida {{value}}",
+      "noResult": {
+        "failed": "No hay resultado. El agente falló.",
+        "stopped": "No hay resultado. Se detuvo el agente.",
+        "ended": "No hay resultado. El agente finalizó."
+      }
     }
   },
   "scheduledMessages": {

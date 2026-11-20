@@ -352,6 +352,7 @@
     "placementCenter": "View in center",
     "placementPage": "Full page view",
     "placementTab": "New tab",
+    "setAsDefault": "Make default",
     "statusRunning": "Running",
     "statusCompleted": "Completed",
     "statusFailed": "Failed",
@@ -406,7 +407,12 @@
       "context": "context {{value}}",
       "in": "in {{value}}",
       "cache": "cache +{{written}} / {{read}} reused",
-      "out": "out {{value}}"
+      "out": "out {{value}}",
+      "noResult": {
+        "failed": "No result. The agent failed.",
+        "stopped": "No result. The agent was stopped.",
+        "ended": "No result. The agent ended."
+      }
     }
   },
   "scheduledMessages": {

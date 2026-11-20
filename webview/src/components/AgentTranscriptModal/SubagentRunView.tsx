@@ -8,13 +8,14 @@ import { useUnreachableAgents } from '@/hooks/useUnreachableAgents';
 import { useTranscriptViewMode } from '@/pages/ChatPage/message-renderers/transcriptViewMode';
 import { ModalTitleBar } from './ModalTitleBar';
 import { TaskSummaryHeader } from './TaskSummaryHeader';
-import { TaskStatusWithStop } from './TaskStatusBadge';
+import { TaskStatusWithStop, TaskStopAction } from './TaskStatusBadge';
 import { DetailHeader } from './AgentDetailHeader';
 import { AgentComposer } from './AgentComposer';
 import { AgentOutputTranscriptBody } from './AgentOutputTranscriptBody';
 import {
   RunViewActions,
   type RunPlacement,
+  type RunSurface,
   type RunVariant,
 } from './RunViewControls';
 
@@ -38,6 +39,8 @@ interface Props {
   variant?: RunVariant;
   /** When given, the title row offers the word button that switches between the two. */
   onVariantChange?: (variant: RunVariant) => void;
+  /** Where this view is drawn: its title row follows it, and the panel's body is tighter all the way down. */
+  surface?: RunSurface;
   /** When given, the title row has a button that opens this run in a tab of its own. */
   onOpenInNewTab?: () => void;
   /**
@@ -60,8 +63,9 @@ interface Props {
  * one agent.
  */
 export function SubagentRunView(props: Props) {
-  const { task, onClose, onBack, backLabel, variant = 'full', onVariantChange, onOpenInNewTab, placement, onPlacementChange } = props;
+  const { task, onClose, onBack, backLabel, variant = 'full', onVariantChange, surface = 'modal', onOpenInNewTab, placement, onPlacementChange } = props;
   const isSimple = variant === 'simple';
+  const compact = surface === 'panel';
   // In the Transcript view the prompt is the first bubble of the conversation and the answer is its last message,
   // so the strip that says both again above it is left out, as the desktop app's agent panel has none.
   const inTranscriptView = useTranscriptViewMode() !== null;
@@ -84,24 +88,34 @@ export function SubagentRunView(props: Props) {
   // An agent can be spoken to for as long as it exists — a finished one is
   // resumed by the message, which is how the CLI itself describes it.
   const agentAddress = agentAddressOf(task);
+  // Not every agent can be: one that was stopped is not resumed by a message, and the CLI answers one with "was
+  // stopped and not resumed". So the composer is not drawn for a stopped agent, nor for one that a send has already
+  // found unreachable, rather than left there to fail.
+  const canMessage = !!agentAddress && task.status !== 'stopped' && !unreachableAgents.has(agentAddress);
 
   return (
     <>
       <ModalTitleBar
         task={task}
         onClose={onClose}
+        surface={surface}
         onTitleClick={() => console.log(task)}
         onBack={onBack}
         backLabel={backLabel}
-        afterTitle={isSimple ? <TaskStatusWithStop task={task} /> : undefined}
+        // In the panel the stop button leaves the title for the left end of the buttons on the right.
+        afterTitle={isSimple ? <TaskStatusWithStop task={task} hideStop={compact} /> : undefined}
         actions={
-          <RunViewActions
-            variant={variant}
-            onVariantChange={onVariantChange}
-            onOpenInNewTab={onOpenInNewTab}
-            placement={placement}
-            onPlacementChange={onPlacementChange}
-          />
+          <>
+            {compact && isSimple && <TaskStopAction task={task} />}
+            <RunViewActions
+              collapsed={compact}
+              variant={variant}
+              onVariantChange={onVariantChange}
+              onOpenInNewTab={onOpenInNewTab}
+              placement={placement}
+              onPlacementChange={onPlacementChange}
+            />
+          </>
         }
       />
       {/* The simple view says how the task is doing beside the title, and
@@ -109,8 +123,8 @@ export function SubagentRunView(props: Props) {
       {!isSimple && <TaskSummaryHeader task={task} />}
       <div className="flex flex-1 min-h-0 flex-col">
         {!isSimple && !inTranscriptView && <DetailHeader source={task} />}
-        <AgentOutputTranscriptBody task={task} outputFile={resolvedOutputFile} unavailable={outputUnavailable} sendCount={sendCount} />
-        {agentAddress && (
+        <AgentOutputTranscriptBody compact={compact} task={task} outputFile={resolvedOutputFile} unavailable={outputUnavailable} sendCount={sendCount} />
+        {canMessage && agentAddress && (
           <AgentComposer
             agentId={agentAddress}
             isRunning={isRunning}

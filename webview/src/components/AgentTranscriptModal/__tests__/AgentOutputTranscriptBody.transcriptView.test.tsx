@@ -59,6 +59,17 @@ describe('AgentOutputTranscriptBody in the chat view modes', () => {
     expect(document.querySelector('[data-send-section],[data-seg="blocks"]')).toBeInTheDocument();
   });
 
+  it('says "No result" under a finished agent whose record ends on a call, not under one that answered', () => {
+    mode = 'normal';
+    const call = (id: string) => ({ type: 'assistant', uuid: `a-${id}`, message: { role: 'assistant', content: [{ type: 'tool_use', id, name: 'Bash', input: { command: id, description: id } }] } });
+    const result = (id: string) => ({ type: 'user', uuid: `r-${id}`, message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'ok' }] }, toolUseResult: { stdout: 'ok' } });
+    open(false, [call('t1'), result('t1'), call('t2'), result('t2')]);
+    expect(document.querySelector('[data-transcript-no-result="ended"]')).toBeInTheDocument();
+    cleanup();
+    open(false, []);
+    expect(document.querySelector('[data-transcript-no-result]')).toBeNull();
+  });
+
   it('says which model the agent ran on under the prompt, as the desktop app does', () => {
     mode = 'normal';
     open();

@@ -73,6 +73,30 @@ export function withoutHarnessFrame(message: LoadedMessageDto): LoadedMessageDto
 }
 
 /**
+ * What the CLI writes into an agent's record when a message is sent to it while it works: the message in a frame of the
+ * harness's ("The coordinator sent a message while you were working: ... Address this before completing your current
+ * task."), marked `isMeta`, since the model is the reader. The person did send the text inside it, so it is drawn as a
+ * sent message with only that text.
+ */
+const COORDINATOR_FRAME =
+  /^The coordinator sent a message while you were working:\n([\s\S]*?)\n*Address this before completing your current task\.\s*$/;
+
+/** The message as one that was sent, with its frame off, or the message itself when it is not that. Drawn only, never stored. */
+export function asSentMessage(message: LoadedMessageDto): LoadedMessageDto {
+  if (message.type !== 'user' || message.isMeta !== true || !message.message) return message;
+  const content = message.message.content as unknown;
+  if (typeof content !== 'string') return message;
+  const match = COORDINATOR_FRAME.exec(content);
+  if (!match) return message;
+  const copy = Object.assign(Object.create(Object.getPrototypeOf(message)), message) as LoadedMessageDto;
+  copy.isMeta = false;
+  copy.message = Object.assign(Object.create(Object.getPrototypeOf(message.message)), message.message, {
+    content: match[1].trim(),
+  });
+  return copy;
+}
+
+/**
  * The model the agent ran on, as its own record says it (the first reply carries the full id), written the way the
  * desktop app writes it under the prompt: "Haiku 5.5". Null until the agent has answered once.
  */
@@ -106,6 +130,10 @@ interface Props {
   scroll: AgentTranscriptScroll;
   /** How the agent ran (tool calls, wait, tokens), said beside the model when there is something to say. */
   runFacts?: string[];
+  /** Tighter sides, for the side panel: the same 0.5rem the title row has. */
+  compact?: boolean;
+  /** How the task ended, when it is over: what the note says when the record ends with no answer. */
+  endStatus?: 'completed' | 'failed' | 'stopped';
 }
 
 /**
@@ -118,7 +146,7 @@ interface Props {
  * where they are when it arrives.
  */
 export function AgentTranscriptView(props: Props) {
-  const { messages, isRunning, hasEarlier, loadingEarlier, onLoadEarlier, scroll, runFacts = [] } = props;
+  const { messages, isRunning, hasEarlier, loadingEarlier, onLoadEarlier, scroll, runFacts = [], endStatus } = props;
   const { scrollRef, showScrollButton, scrollToBottom } = scroll;
   const { t } = useTranslation('chat');
   // "Model" is the settings screen's word for it, which every language already has.
@@ -130,6 +158,8 @@ export function AgentTranscriptView(props: Props) {
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
   const model = useMemo(() => (viewMode === null ? null : modelOfRecord(messages)), [viewMode, messages]);
+  // The record with each message that was sent to the agent while it worked as one that was sent, not the CLI's frame.
+  const record = useMemo(() => messages.map(asSentMessage), [messages]);
 
   // Once the agent is over, one line says what it did in all, in the words of the lines over its runs of calls.
   // Not while earlier pages are not loaded: the calls in them would not be counted, and a count that is too small is
@@ -139,6 +169,21 @@ export function AgentTranscriptView(props: Props) {
     const calls = buildSegments(messages).flatMap((segment) => (segment.kind === 'tools' ? segment.calls : []));
     return calls.length > 0 ? groupLabel(calls, t) : null;
   }, [viewMode, isRunning, hasEarlier, messages, t]);
+
+  // A task that is over with no answer at the end of its record (it was stopped mid-call, or died) says so, as the
+  // desktop app does with "No result", rather than ending on the last call as if nothing were missing.
+  const noResult = useMemo(() => {
+    if (viewMode === null || isRunning || hasEarlier || !endStatus) return null;
+    // The answer is the last thing the agent said since it was last spoken to: a notice that came in after it (an
+    // entry that is not a message sent to it) does not hide it, a message sent to it that it never answered does.
+    const sinceSend = [...record].reverse().find((m) => m.type === 'assistant' || isUserSend(m));
+    const content = sinceSend?.type === 'assistant' ? (sinceSend.message?.content as unknown) : undefined;
+    const blocks = Array.isArray(content) ? (content as { type?: string; text?: unknown }[]) : [];
+    const tail = blocks[blocks.length - 1];
+    const answered = typeof content === 'string' ? content.trim() !== '' : tail?.type === 'text' && typeof tail.text === 'string' && tail.text.trim() !== '';
+    if (answered) return null;
+    return endStatus === 'failed' ? 'failed' : endStatus === 'stopped' ? 'stopped' : 'ended';
+  }, [viewMode, isRunning, hasEarlier, endStatus, record]);
 
   // The call the agent is waiting on, read from its own record as the chat reads it from its own, so that the run of
   // calls that holds it says what it is doing and for how long. The same object is kept while the call is the same.
@@ -150,16 +195,16 @@ export function AgentTranscriptView(props: Props) {
   }, [viewMode, isRunning, messages]);
   // Its seconds count from the newest message it was sent (its prompt, or what resumed it), not from the chat's turn.
   const turnStartedAt = useMemo(() => {
-    const sent = [...messages].reverse().find(isUserSend);
+    const sent = [...record].reverse().find(isUserSend);
     const at = sent?.timestamp ? Date.parse(sent.timestamp) : NaN;
     return Number.isNaN(at) ? null : at;
-  }, [messages]);
+  }, [record]);
   const sections = useMemo(
     () =>
       viewMode === null
         ? []
-        : groupIntoSendSections(messages.filter((message) => !isNoteForClaude(message)).map(withoutHarnessFrame)),
-    [viewMode, messages],
+        : groupIntoSendSections(record.filter((message) => !isNoteForClaude(message)).map(withoutHarnessFrame)),
+    [viewMode, record],
   );
 
   // Asking for the page before: the height and position are kept, and once the page has arrived (the first message is
@@ -183,7 +228,12 @@ export function AgentTranscriptView(props: Props) {
     <div className="relative flex-1 min-h-0">
       {/* absolute inset-0 rather than h-full: a percentage height inside a flex item sized by flex-grow does not
           reliably resolve. */}
-      <div ref={scrollRef} className="absolute inset-0 overflow-y-auto px-4 py-3 space-y-3">
+      <div ref={scrollRef} className={`absolute inset-0 overflow-y-auto py-3 ${
+          // The Transcript view's own lines carry their sides and their spacing, so the area adds neither; in the side
+          // panel they keep the same px-4 sides as the modal.
+          viewMode === null ? 'px-4 space-y-3' : ''
+        }`}
+      >
         {hasEarlier && (
           <div className="flex justify-center py-2">
             {loadingEarlier ? (
@@ -233,8 +283,13 @@ export function AgentTranscriptView(props: Props) {
             </TurnClockContext.Provider>
           </LiveActivityContext.Provider>
         )}
+        {noResult && (
+          <div className="px-4 pb-3 text-[0.9375rem] text-[var(--tr-muted)]" data-transcript-no-result={noResult}>
+            {t(`backgroundTasks.agentDetail.noResult.${noResult}`)}
+          </div>
+        )}
         {ranSummary && (
-          <div className="px-4 pt-2 pb-3 text-[0.9375rem] text-[var(--tr-muted)]" data-transcript-ran-summary>
+          <div className="px-4 pb-3 text-[0.9375rem] text-[var(--tr-muted)]" data-transcript-ran-summary>
             {ranSummary}
           </div>
         )}

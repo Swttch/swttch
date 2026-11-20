@@ -352,6 +352,7 @@
     "placementCenter": "Vue centrée",
     "placementPage": "Pleine page",
     "placementTab": "Nouvel onglet",
+    "setAsDefault": "Définir par défaut",
     "statusRunning": "En cours",
     "statusCompleted": "Terminé",
     "statusFailed": "Échec",
@@ -406,7 +407,12 @@
       "context": "contexte {{value}}",
       "in": "entrée {{value}}",
       "cache": "cache +{{written}} / {{read}} réutilisé",
-      "out": "sortie {{value}}"
+      "out": "sortie {{value}}",
+      "noResult": {
+        "failed": "Aucun résultat. L’agent a échoué.",
+        "stopped": "Aucun résultat. L’agent a été arrêté.",
+        "ended": "Aucun résultat. L’agent a terminé."
+      }
     }
   },
   "scheduledMessages": {

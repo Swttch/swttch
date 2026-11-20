@@ -53,13 +53,19 @@ export function TaskStatusBadge(props: { task: WorkflowTask }) {
  * The badge beside a window's title and, while the task runs, the button that stops it just after the time: the short
  * view has no strip with a cancel button, so the stop is where the running is shown.
  */
-export function TaskStatusWithStop(props: { task: WorkflowTask }) {
-  const { task } = props;
-  const { cancelTask } = useBackgroundTaskActions();
+export function TaskStatusWithStop(props: { task: WorkflowTask; hideStop?: boolean }) {
+  const { task, hideStop = false } = props;
   return (
     <>
       <TaskStatusBadge task={task} />
-      {task.status === 'running' && <StopButton task={task} onCancel={cancelTask} />}
+      {!hideStop && <TaskStopAction task={task} />}
     </>
   );
+}
+
+/** The button that stops the task, drawn only while it runs. Lives apart from the badge so a title row can seat it elsewhere. */
+export function TaskStopAction(props: { task: WorkflowTask }) {
+  const { task } = props;
+  const { cancelTask } = useBackgroundTaskActions();
+  return task.status === 'running' ? <StopButton task={task} onCancel={cancelTask} /> : null;
 }

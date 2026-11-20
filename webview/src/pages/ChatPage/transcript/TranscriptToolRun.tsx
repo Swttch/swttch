@@ -12,6 +12,7 @@ import { useTranscriptViewMode } from '../message-renderers/transcriptViewMode';
 import { APP_EVENT_TOOL, type ToolCall } from './buildSegments';
 import { useNow } from '@/hooks/useNow';
 import { useOptionalWorkflowState } from '@/contexts/WorkflowStateContext';
+import { agentAddressOf } from '@/hooks/useSendToAgent';
 import { ActivityGlyph, useActivityLabel, useFormatElapsed, useTurnSeconds } from './TranscriptActivity';
 import { LiveActivityContext } from './LiveActivityContext';
 import { MorphText } from './MorphText';
@@ -41,6 +42,7 @@ import {
   hasFailed,
   wasStopped,
   imagesOfResult,
+  isAgentMessage,
   isExpandable,
   pathOf,
   renameOutcome,
@@ -318,9 +320,10 @@ function ResultPictures({ call }: { call: ToolCall }) {
 }
 
 /** Text that is written in markdown (a message from another session, one sent to it), in the quiet grey of a detail. */
-function MarkdownDetail({ text, message }: { text: string; message: LoadedMessageDto }) {
+function MarkdownDetail({ text, message, bare = false }: { text: string; message: LoadedMessageDto; bare?: boolean }) {
+  // `bare` is for text that sits in a box which has its own padding: no sides or room below of its own.
   return (
-    <div className="transcript-prose px-1 pb-3">
+    <div className={bare ? 'transcript-prose' : 'transcript-prose px-1 pb-3'}>
       <StreamingMessage plain content={text} isStreaming={false} className="text-[0.9375rem] leading-[1.5] text-[var(--tr-soft)]" message={message} />
     </div>
   );
@@ -391,10 +394,19 @@ function SentMessageDetail({ call }: { call: ToolCall }) {
   const { t } = useTranslation('chatTools');
   const text = typeof call.toolUse.input?.message === 'string' ? (call.toolUse.input.message as string) : '';
   const delivery = parseSessionDelivery(toolResultText(call.toolUse.tool_result as LoadedMessageDto | undefined)).delivery;
+  const toAgent = isAgentMessage(call);
   return (
-    <div className="px-1 pb-3">
+    // A box goes to the row's own sides; the plain text of a message to a session keeps the small inset.
+    <div className={toAgent ? 'pb-3' : 'px-1 pb-3'}>
       {delivery && <div className="pb-2 text-[0.9375rem] text-[var(--tr-muted)]">{delivery === 'delivered' ? t('sendMessage.delivered') : delivery}</div>}
-      <MarkdownDetail text={text} message={call.message} />
+      {/* What was said to an agent sits in a box of its own, as the desktop app draws it. */}
+      {toAgent ? (
+        <div className={`rounded-xl border ${BOX_BORDER} px-4 py-3`} data-testid="agent-message-box">
+          <MarkdownDetail text={text} message={call.message} bare />
+        </div>
+      ) : (
+        <MarkdownDetail text={text} message={call.message} />
+      )}
     </div>
   );
 }
@@ -480,7 +492,7 @@ export function AgentRunLink({ call }: { call: ToolCall }) {
     <button
       type="button"
       data-testid="agent-run-link"
-      onClick={() => workflow.openTranscript(task.toolUseId)}
+      onClick={() => workflow.openRun(task.toolUseId)}
       className={`group mb-2 flex w-full items-baseline gap-2 rounded-lg border ${BOX_BORDER} px-3 py-2 text-start text-[0.9375rem] ${SUMMARY_TEXT}`}
     >
       {/* While the agent works the words carry the same moving light as the working line. */}
@@ -580,7 +592,26 @@ function RowMeta({ call, meta }: { call: ToolCall; meta?: string }) {
   // The name the session has now comes first: a message sent to a session that was renamed since says the new name.
   const looked = useBacklinkedSession(isSent ? to : '')?.title;
   const shown = isSent ? looked || answered || meta : meta;
+  // The agent a message went to is a way into that agent's run, as the agent's own line is, where the chat tracks it.
+  const workflow = useOptionalWorkflowState();
+  const agentTask = isSent && shown && isAgentMessage(call) ? workflow?.tasks.find((task) => agentAddressOf(task) === to) : undefined;
   if (!shown) return null;
+  if (agentTask && workflow) {
+    return (
+      <button
+        type="button"
+        data-testid="agent-message-target"
+        className={`ms-2 ${LINK_TEXT} hover:underline`}
+        // The row toggles open on a click; going to the agent is not that.
+        onClick={(event) => {
+          event.stopPropagation();
+          workflow.openRun(agentTask.toolUseId);
+        }}
+      >
+        {shown}
+      </button>
+    );
+  }
   // The session a message came from is a way into that session, named by the title it has now.
   const fromInput = call.toolUse.input?.from;
   const from = toolKindOf(call) === 'receivedMessage' && typeof fromInput === 'string' ? fromInput : '';
@@ -800,9 +831,10 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive, liveTool
   // The call the turn is waiting on, drawn as a line inside an opened run: the light moves across its words, as it
   // does on the line over the run, so opening the run does not make the work look idle.
   const waitedOn = liveToolUseId !== undefined && calls.some((c) => c.toolUse.id === liveToolUseId);
-  const baseLabel = rowLabel(call, t);
   const path = pathOf(call);
   const workflowState = useOptionalWorkflowState();
+  // A message to an agent by its id says the name the agent has, where the chat knows it.
+  const baseLabel = rowLabel(call, t, (to) => workflowState?.tasks.find((task) => agentAddressOf(task) === to)?.name);
   // A background task that was launched fine and failed later (a command that exited with a code, an agent that
   // gave up) is marked failed on the call that started it, as the desktop app marks it. The call's own result only
   // says it was launched.
@@ -869,12 +901,12 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive, liveTool
                   tabIndex={0}
                   onClick={(event) => {
                     event.stopPropagation();
-                    workflowState?.openTranscript(runTask.toolUseId);
+                    workflowState?.openRun(runTask.toolUseId);
                   }}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter') {
                       event.stopPropagation();
-                      workflowState?.openTranscript(runTask.toolUseId);
+                      workflowState?.openRun(runTask.toolUseId);
                     }
                   }}
                   data-testid="finished-run-link"

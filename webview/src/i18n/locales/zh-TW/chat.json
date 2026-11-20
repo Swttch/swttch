@@ -351,6 +351,7 @@
     "placementCenter": "置中檢視",
     "placementPage": "全頁檢視",
     "placementTab": "新分頁",
+    "setAsDefault": "設為預設",
     "statusRunning": "執行中",
     "statusCompleted": "已完成",
     "statusFailed": "失敗",
@@ -405,7 +406,12 @@
       "context": "上下文 {{value}}",
       "in": "輸入 {{value}}",
       "cache": "快取 +{{written}} / 重用 {{read}}",
-      "out": "輸出 {{value}}"
+      "out": "輸出 {{value}}",
+      "noResult": {
+        "failed": "沒有結果。代理失敗。",
+        "stopped": "沒有結果。代理已停止。",
+        "ended": "沒有結果。代理已結束。"
+      }
     }
   },
   "scheduledMessages": {

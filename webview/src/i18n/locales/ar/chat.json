@@ -356,6 +356,7 @@
     "placementCenter": "عرض في المنتصف",
     "placementPage": "عرض بملء الصفحة",
     "placementTab": "علامة تبويب جديدة",
+    "setAsDefault": "اجعله افتراضيًا",
     "statusRunning": "قيد التشغيل",
     "statusCompleted": "مكتمل",
     "statusFailed": "فشل",
@@ -418,7 +419,12 @@
       "context": "السياق {{value}}",
       "in": "إدخال {{value}}",
       "cache": "ذاكرة مؤقتة +{{written}} / {{read}} معاد استخدامها",
-      "out": "إخراج {{value}}"
+      "out": "إخراج {{value}}",
+      "noResult": {
+        "failed": "لا توجد نتيجة. فشل الوكيل.",
+        "stopped": "لا توجد نتيجة. تم إيقاف الوكيل.",
+        "ended": "لا توجد نتيجة. انتهى الوكيل."
+      }
     }
   },
   "scheduledMessages": {

@@ -354,6 +354,7 @@
     "placementCenter": "Просмотр по центру",
     "placementPage": "Во всю страницу",
     "placementTab": "Новая вкладка",
+    "setAsDefault": "Сделать по умолчанию",
     "statusRunning": "Выполняется",
     "statusCompleted": "Завершено",
     "statusFailed": "Ошибка",
@@ -412,7 +413,12 @@
       "context": "контекст {{value}}",
       "in": "ввод {{value}}",
       "cache": "кэш +{{written}} / {{read}} повторно",
-      "out": "вывод {{value}}"
+      "out": "вывод {{value}}",
+      "noResult": {
+        "failed": "Нет результата. Агент завершился с ошибкой.",
+        "stopped": "Нет результата. Агент остановлен.",
+        "ended": "Нет результата. Агент завершил работу."
+      }
     }
   },
   "scheduledMessages": {

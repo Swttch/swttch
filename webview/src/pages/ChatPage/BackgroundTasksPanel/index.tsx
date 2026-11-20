@@ -9,6 +9,8 @@ import { useNow } from '@/hooks/useNow';
 import type { WorkflowTask } from '@/shared';
 import { useTranslation } from '@/i18n';
 import { AgentTranscriptModal } from '@/components/AgentTranscriptModal';
+import { SIDE_PANEL_HEADER_CLASS, type RunVariant } from '@/components/AgentTranscriptModal/RunViewControls';
+import { SideRun } from './SideRun';
 import { filePreviewPaneStore } from '@/utils/filePreviewPaneStore';
 import { TASK_PANEL_WIDTH_CSS, useTaskPanelColumn } from './useTaskPanelColumn';
 import { taskDurationMs } from './WorkflowTaskSummary';
@@ -111,14 +113,22 @@ export function BackgroundTasksPanel() {
     const { t } = useTranslation('chat');
     const {
         panelOpen, closePanel, runningTasks, finishedTasks, clearFinished, dismissTask, focusedToolUseId, getByToolUseId,
-        transcriptToolUseId, openTranscript, closeTranscript,
+        transcriptToolUseId, openTranscript, closeTranscript, sideRunToolUseId, closeRunInSide, openRun,
     } = useWorkflowState();
     const [showFinished, setShowFinished] = useState(true);
+    // A run in the panel opens to the short view, like the window does; the word button flips it.
+    const [sideVariant, setSideVariant] = useState<RunVariant>('simple');
     // Only the id is kept (in the shared state, so a card in the chat can open
     // the window too), and the task is looked up again each render: the modal
     // keeps showing the live WorkflowTask (updated agents/stats) as the workflow
     // progresses instead of a frozen snapshot taken at click time (issue #347).
     const transcriptTask = transcriptToolUseId ? getByToolUseId(transcriptToolUseId) ?? null : null;
+    // A subagent opened from the chat or the list takes the panel's place in it, with a way back to the list.
+    const sideTask = sideRunToolUseId ? getByToolUseId(sideRunToolUseId) ?? null : null;
+    // The run is gone from the list (dismissed, or a different session): nothing to show, so the list is shown.
+    useEffect(() => {
+        if (sideRunToolUseId && !sideTask) closeRunInSide();
+    }, [sideRunToolUseId, sideTask, closeRunInSide]);
     const panelRef = useRef<HTMLDivElement>(null);
     const now = useNow(panelOpen && runningTasks.length > 0);
 
@@ -159,6 +169,10 @@ export function BackgroundTasksPanel() {
     useEffect(() => {
         if (!panelOpen || column || transcriptToolUseId) return;
         const handleMouseDown = (e: MouseEvent) => {
+            // The menus of the run view's title row (the More dropdown and the view options beside it) are drawn into
+            // <body>, outside the panel, yet are part of it: a press on one of their rows must not close the panel
+            // before the click lands, or the row's action (opening the run in the window) would never happen.
+            if ((e.target as Element).closest?.('[data-tippy-root], [role="menu"]')) return;
             if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
                 closePanel();
             }
@@ -185,7 +199,9 @@ export function BackgroundTasksPanel() {
                 onKeyDown={(e) => {
                     if (e.key === 'Escape') {
                         e.stopPropagation();
-                        closePanel();
+                        // One layer at a time: out of a run to the list, then out of the list.
+                        if (sideTask) closeRunInSide();
+                        else closePanel();
                     }
                 }}
                 // Beside the chat it takes a column (no shadow, nothing under it); over it, it keeps its shadow.
@@ -194,7 +210,24 @@ export function BackgroundTasksPanel() {
                 }`}
                 style={{ width: column ? TASK_PANEL_WIDTH_CSS : '24rem' }}
             >
-                <div className="flex items-center justify-between px-4 h-[44px] border-b border-border-subtle shrink-0">
+                {sideTask ? (
+                    <SideRun
+                        task={sideTask}
+                        variant={sideVariant}
+                        onVariantChange={setSideVariant}
+                        onBack={closeRunInSide}
+                        backLabel={t('backgroundTasks.title')}
+                        onClose={closePanel}
+                        // This is the "side" placement, and picking "center" moves the run into the window.
+                        onPlacementChange={(placement) => {
+                            if (placement !== 'center') return;
+                            closeRunInSide();
+                            openTranscript(sideTask.toolUseId);
+                        }}
+                    />
+                ) : (
+                    <>
+                <div className={`${SIDE_PANEL_HEADER_CLASS} border-b border-border-subtle`}>
                     <div className="text-text-primary text-[1rem] font-semibold">{t('backgroundTasks.title')}</div>
                     <div className="flex items-center gap-1">
                         {/* As the desktop app has it: clearing what is finished is an icon in the header, beside close. */}
@@ -219,7 +252,7 @@ export function BackgroundTasksPanel() {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-[0.83rem] space-y-4">
+                <div className="flex-1 overflow-y-auto p-2 space-y-4">
                     {runningTasks.length === 0 && finishedTasks.length === 0 && (
                         <div className="text-text-primary/50 text-[0.9230rem] text-center mt-8">
                             {t('backgroundTasks.empty')}
@@ -237,7 +270,7 @@ export function BackgroundTasksPanel() {
                                     focused={task.toolUseId === focusedToolUseId}
                                     onCancel={cancelTask}
                                     onDismiss={dismissTask}
-                                    onOpenTranscript={(t) => openTranscript(t.toolUseId)}
+                                    onOpenTranscript={(t) => openRun(t.toolUseId)}
                                 />
                             ))}
                         </section>
@@ -262,12 +295,14 @@ export function BackgroundTasksPanel() {
                                         focused={task.toolUseId === focusedToolUseId}
                                         onCancel={cancelTask}
                                     onDismiss={dismissTask}
-                                    onOpenTranscript={(t) => openTranscript(t.toolUseId)}
+                                    onOpenTranscript={(t) => openRun(t.toolUseId)}
                                     />
                                 ))}
                         </section>
                     )}
                 </div>
+                    </>
+                )}
             </div>
 
             {transcriptTask && (

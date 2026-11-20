@@ -56,6 +56,49 @@ describe('backgroundTaskOutputWatcher', () => {
     unwatchBackgroundTaskOutput('conn-1', file);
   });
 
+  it('keeps pushing while a log grows faster than the debounce, instead of waiting for it to pause', async () => {
+    // A timer that every change resets never fires while the changes keep coming closer than its length, so the pane
+    // showed what it had at the start until the output paused.
+    const { watchBackgroundTaskOutput, unwatchBackgroundTaskOutput } = await import('../backgroundTaskOutputWatcher');
+    const { connections, sent } = makeConnections();
+    const file = join(tmpDir, 'fast.output');
+    await writeFile(file, '');
+
+    watchBackgroundTaskOutput('conn-1', file, connections);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const first = sent.length;
+
+    // Ten writes, 50ms apart: 500ms of output with no pause as long as the debounce.
+    for (let i = 1; i <= 10; i++) {
+      await appendFile(file, `line ${i}\n`);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+
+    // Pushed during the run, not only after it.
+    expect(sent.length).toBeGreaterThan(first);
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    expect(String(sent[sent.length - 1].payload.text)).toContain('line 10');
+
+    unwatchBackgroundTaskOutput('conn-1', file);
+  });
+
+  it('sends what a file holds when its watch starts late, since changes before the watch are not reported', async () => {
+    // The file is not there when the subscription begins; it appears, with its text, before the retry that starts the
+    // watch. No further change comes (the command printed and went quiet), so only a push at that start shows it.
+    const { watchBackgroundTaskOutput, unwatchBackgroundTaskOutput } = await import('../backgroundTaskOutputWatcher');
+    const { connections, sent } = makeConnections();
+    const file = join(tmpDir, 'late.output');
+
+    watchBackgroundTaskOutput('conn-1', file, connections);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await writeFile(file, 'hello\nworld\n');
+    await new Promise((resolve) => setTimeout(resolve, 900)); // past the 500ms retry
+
+    expect(String(sent[sent.length - 1].payload.text)).toBe('hello\nworld\n');
+
+    unwatchBackgroundTaskOutput('conn-1', file);
+  });
+
   it('pushes one page more of an agent record, before what was sent, each time earlier is asked for', async () => {
     const { watchBackgroundTaskOutput, loadEarlierBackgroundTaskOutput, unwatchBackgroundTaskOutput } = await import(
       '../backgroundTaskOutputWatcher'

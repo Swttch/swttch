@@ -24,6 +24,8 @@ interface Props {
    * following back on, the way sending in the main chat does.
    */
   sendCount: number;
+  /** Tighter sides, for the side panel. */
+  compact?: boolean;
 }
 
 /**
@@ -40,7 +42,7 @@ interface Props {
  * bytes, so parsing the pushed text into entries is a frontend-only concern.
  */
 export function AgentOutputTranscriptBody(props: Props) {
-  const { task, outputFile, unavailable = false, sendCount } = props;
+  const { task, outputFile, unavailable = false, sendCount, compact } = props;
   const { t } = useTranslation('chat');
   const isRunning = task.status === 'running';
 
@@ -101,6 +103,8 @@ export function AgentOutputTranscriptBody(props: Props) {
 
   return (
     <AgentTranscriptView
+      compact={compact}
+      endStatus={task.status === 'running' ? undefined : task.status === 'failed' || task.status === 'stopped' ? task.status : 'completed'}
       messages={messages}
       isRunning={isRunning}
       hasEarlier={truncated}

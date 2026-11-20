@@ -9,7 +9,7 @@ let tracked: Record<string, object> = {};
 let provided = true;
 const openPanel = vi.fn();
 vi.mock('@/contexts/WorkflowStateContext', () => ({
-  useOptionalWorkflowState: () => (provided ? { getByToolUseId: (id: string) => tracked[id], openPanel } : null),
+  useOptionalWorkflowState: () => (provided ? { getByToolUseId: (id: string) => tracked[id], tasks: Object.values(tracked), openPanel } : null),
 }));
 
 import { TranscriptTaskNotice } from '../TranscriptTaskNotice';
@@ -28,7 +28,7 @@ function notice(summary: string, status = 'completed', durationMs: number | null
 }
 
 beforeEach(() => {
-  tracked = { u1: {} };
+  tracked = { u1: { toolUseId: 'u1', taskId: 't1' } };
   provided = true;
   openPanel.mockClear();
 });
@@ -69,8 +69,9 @@ describe('TranscriptTaskNotice', () => {
 
   describe('as a way into the background tasks panel', () => {
     it('opens the panel on its own task when clicked, as the desktop app does', () => {
+      tracked = {};
       const { container } = render(<TranscriptTaskNotice message={notice('Agent "final check" finished', 'completed', 78000, 'toolu_77')} />);
-      tracked = { toolu_77: {} };
+      tracked = { toolu_77: { toolUseId: 'toolu_77', taskId: 'other' } };
       const { container: again } = render(<TranscriptTaskNotice message={notice('Agent "final check" finished', 'completed', 78000, 'toolu_77')} />);
 
       const line = again.querySelector('[data-transcript-task-notice]') as HTMLElement;
@@ -87,9 +88,18 @@ describe('TranscriptTaskNotice', () => {
       expect((unknown.container.querySelector('[data-transcript-task-notice]') as HTMLElement).tagName).not.toBe('BUTTON');
 
       provided = false;
-      tracked = { u1: {} };
+      tracked = { u1: { toolUseId: 'u1', taskId: 't1' } };
       const none = render(<TranscriptTaskNotice message={notice('Agent "x" finished')} />);
       expect((none.container.querySelector('[data-transcript-task-notice]') as HTMLElement).tagName).not.toBe('BUTTON');
+    });
+
+    it('finds a resumed agent by its own id, when the notice names the call that resumed it', () => {
+      // The same agent notifies again each time a message resumes it, with the id of that message's call.
+      const { container } = render(<TranscriptTaskNotice message={notice('Agent "x" finished', 'completed', 78000, 'toolu_resume')} />);
+      const line = container.querySelector('[data-transcript-task-notice]') as HTMLElement;
+      expect(line.tagName).toBe('BUTTON');
+      fireEvent.click(line);
+      expect(openPanel).toHaveBeenCalledWith('u1');
     });
 
     it('is clickable for a failed task too', () => {

@@ -36,8 +36,12 @@ export function TranscriptTaskNotice({ message }: { message: LoadedMessageDto })
       ? null
       : t('transcript.taskNotice.took', { elapsed: formatElapsed(Math.max(0, Math.round(notice.durationMs / 1000))) });
 
-  const toolUseId = notice.toolUseId;
-  const opens = !!workflow && toolUseId !== null && workflow.getByToolUseId(toolUseId) !== undefined;
+  // The call that started the task finds it. A resumed agent's later notices name the call that resumed it instead, so
+  // those find it by the agent's own id.
+  const task =
+    (notice.toolUseId !== null ? workflow?.getByToolUseId(notice.toolUseId) : undefined) ??
+    (notice.taskId !== null ? workflow?.tasks.find((candidate) => candidate.taskId === notice.taskId) : undefined);
+  const opens = !!workflow && task !== undefined;
   // The space above and below is what the desktop app leaves around it (measured: 40px from one line of text to the next).
   const className = `flex w-full items-baseline px-4 py-[1.3125rem] text-start text-[0.9375rem] leading-[1.375rem] text-[var(--tr-muted)]${opens ? ' cursor-pointer transition-[filter] hover:brightness-[1.25]' : ''}`;
   const content = (
@@ -57,7 +61,7 @@ export function TranscriptTaskNotice({ message }: { message: LoadedMessageDto })
         type="button"
         className={className}
         data-transcript-task-notice={notice.status}
-        onClick={() => workflow.openPanel(toolUseId)}
+        onClick={() => workflow.openPanel(task.toolUseId)}
       >
         {content}
       </button>

@@ -351,6 +351,7 @@
     "placementCenter": "中央で表示",
     "placementPage": "フルページ表示",
     "placementTab": "新しいタブ",
+    "setAsDefault": "デフォルトに設定",
     "statusRunning": "実行中",
     "statusCompleted": "完了",
     "statusFailed": "失敗",
@@ -405,7 +406,12 @@
       "context": "コンテキスト {{value}}",
       "in": "入力 {{value}}",
       "cache": "キャッシュ +{{written}} / {{read}} 再利用",
-      "out": "出力 {{value}}"
+      "out": "出力 {{value}}",
+      "noResult": {
+        "failed": "結果はありません。エージェントが失敗しました。",
+        "stopped": "結果はありません。エージェントが停止されました。",
+        "ended": "結果はありません。エージェントが終了しました。"
+      }
     }
   },
   "scheduledMessages": {

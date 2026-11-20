@@ -28,6 +28,7 @@ vi.mock('@/contexts/WorkflowStateContext', async () => {
   return {
     useWorkflowState: () => {
       const [transcriptToolUseId, setTranscriptToolUseId] = useState<string | null>(null);
+      const [sideRunToolUseId, setSideRunToolUseId] = useState<string | null>(null);
       return {
         tasks: Object.values(tasksById),
         getByToolUseId: (id: string) => tasksById[id],
@@ -42,6 +43,11 @@ vi.mock('@/contexts/WorkflowStateContext', async () => {
         transcriptToolUseId,
         openTranscript: setTranscriptToolUseId,
         closeTranscript: () => setTranscriptToolUseId(null),
+        sideRunToolUseId,
+        openRunInSide: setSideRunToolUseId,
+        closeRunInSide: () => setSideRunToolUseId(null),
+        openRun: (id: string) =>
+          tasksById[id]?.taskType === 'local_agent' ? setSideRunToolUseId(id) : setTranscriptToolUseId(id),
       };
     },
   };
@@ -61,6 +67,18 @@ vi.mock('@/components/AgentTranscriptModal', () => ({
     <div data-testid="stub-modal">
       <button onClick={onClose}>stub-close</button>
       <button>Cancel this task</button>
+    </div>
+  ),
+}));
+
+// The real run view pulls in the Bridge and more; what matters here is which buttons the panel hands it.
+vi.mock('@/components/AgentTranscriptModal/SubagentRunView', () => ({
+  SubagentRunView: (p: { task: WorkflowTask; onBack: () => void; onClose: () => void; onPlacementChange: (placement: 'side' | 'center' | 'page' | 'tab') => void; onOpenInNewTab: () => void }) => (
+    <div data-testid="stub-run">
+      <span>{p.task.name}</span>
+      <button onClick={p.onBack}>stub-back</button>
+      <button onClick={() => p.onPlacementChange('center')}>stub-modal</button>
+      <button onClick={p.onClose}>stub-close-panel</button>
     </div>
   ),
 }));
@@ -204,6 +222,71 @@ describe('BackgroundTasksPanel', () => {
     fireEvent.mouseDown(screen.getByText('Cancel this task'));
 
     expect(closePanelMock).not.toHaveBeenCalled();
+  });
+
+  describe('a subagent run inside the panel', () => {
+    beforeEach(() => {
+      tasksById = { a: makeTask({ toolUseId: 'a', name: 'the agent', taskType: 'local_agent', status: 'running' }) };
+    });
+
+    it('takes the list\'s place when a subagent row is clicked, and back brings the list back', () => {
+      render(<BackgroundTasksPanel />);
+      fireEvent.click(screen.getByText('the agent'));
+      expect(screen.getByTestId('stub-run')).toBeInTheDocument();
+      expect(screen.queryByTestId('agent-task-row')).toBeNull();
+      expect(screen.queryByTestId('stub-modal')).toBeNull();
+
+      fireEvent.click(screen.getByText('stub-back'));
+      expect(screen.queryByTestId('stub-run')).toBeNull();
+      expect(screen.getByTestId('agent-task-row')).toBeInTheDocument();
+    });
+
+    it('moves into the window over the chat from its modal button, leaving the list', () => {
+      render(<BackgroundTasksPanel />);
+      fireEvent.click(screen.getByText('the agent'));
+      fireEvent.click(screen.getByText('stub-modal'));
+      expect(screen.queryByTestId('stub-run')).toBeNull();
+      expect(screen.getByTestId('stub-modal')).toBeInTheDocument();
+    });
+
+    it('goes back one layer on Escape, and closes the panel from the list', () => {
+      render(<BackgroundTasksPanel />);
+      fireEvent.click(screen.getByText('the agent'));
+      fireEvent.keyDown(screen.getByTestId('stub-run'), { key: 'Escape' });
+      expect(screen.queryByTestId('stub-run')).toBeNull();
+      expect(closePanelMock).not.toHaveBeenCalled();
+      fireEvent.keyDown(screen.getByTestId('agent-task-row'), { key: 'Escape' });
+      expect(closePanelMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('closes the panel from the run\'s close button', () => {
+      render(<BackgroundTasksPanel />);
+      fireEvent.click(screen.getByText('the agent'));
+      fireEvent.click(screen.getByText('stub-close-panel'));
+      expect(closePanelMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('over the chat (a narrow window), where a press outside the panel closes it', () => {
+    it('closes the panel on a press outside it', () => {
+      render(<BackgroundTasksPanel />);
+      fireEvent.mouseDown(document.body);
+      expect(closePanelMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not close it on a press on a menu of the run view, which is drawn outside the panel but is part of it', () => {
+      // The More dropdown and the view options beside it are drawn into <body>. Closing the panel on the press
+      // unmounted them before the click landed, so "View in center" never opened the window.
+      render(<BackgroundTasksPanel />);
+      const menu = document.createElement('div');
+      menu.setAttribute('role', 'menu');
+      const row = document.createElement('button');
+      menu.appendChild(row);
+      document.body.appendChild(menu);
+      fireEvent.mouseDown(row);
+      document.body.removeChild(menu);
+      expect(closePanelMock).not.toHaveBeenCalled();
+    });
   });
 
   describe('as a column beside the chat (a wide window)', () => {

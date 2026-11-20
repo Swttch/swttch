@@ -40,6 +40,13 @@ vi.mock('@/contexts/SettingsContext', () => ({
   useSettingsOrNull: () => null,
 }));
 
+// The tasks state is what the window moves a run to the side panel with; most tests draw the window on its own, with none.
+let mockWorkflow: { openRunInSide: ReturnType<typeof vi.fn> } | null = null;
+vi.mock('@/contexts/WorkflowStateContext', () => ({
+  useOptionalWorkflowState: () => mockWorkflow,
+  useWorkflowState: () => mockWorkflow,
+}));
+
 // The composer asks the conversation which agents can no longer be reached
 // (useUnreachableAgents). These tests are not about that, so it reads an empty
 // one — and an empty conversation means every agent is still reachable.
@@ -568,12 +575,36 @@ describe('AgentTranscriptModal: a subagent\'s simple and detailed views', () => 
     await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
   });
 
-  it('has the toggle, the new-tab button and the placement menu on a subagent only', () => {
+  it('moves the run to the side panel when "Side view" is picked, and does nothing for "View in center", where it already is', async () => {
+    const workflow = { openRunInSide: vi.fn() };
+    mockWorkflow = workflow;
+    try {
+      const onClose = vi.fn();
+      renderModal(agentTask(), onClose);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Change view options' }));
+      const items = await screen.findAllByRole('menuitemradio');
+      fireEvent.click(items[1]); // View in center
+      expect(onClose).not.toHaveBeenCalled();
+      expect(workflow.openRunInSide).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Change view options' }));
+      fireEvent.click((await screen.findAllByRole('menuitemradio'))[0]); // Side view
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(workflow.openRunInSide).toHaveBeenCalledWith('toolu_a');
+    } finally {
+      mockWorkflow = null;
+    }
+  });
+
+  it('has the toggle, the new-tab button and the placement menu on a background command too, and flips it', () => {
     renderModal(agentTask({ taskType: 'local_bash', taskId: 'b27yhtv6i' }));
 
-    expect(screen.queryByRole('button', { name: 'Detailed view' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Open in new tab' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Change view options' })).not.toBeInTheDocument();
+    // The short view first: no strip over the log, and the toggle offers the detailed one.
+    expect(screen.queryByRole('button', { name: 'Open in new tab' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Change view options' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Detailed view' }));
+    expect(screen.getByRole('button', { name: 'Simple view' })).toBeInTheDocument();
   });
 
   it('has the stop button by the title in the short view while the task runs, and not after', () => {

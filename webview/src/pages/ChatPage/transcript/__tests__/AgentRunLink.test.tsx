@@ -7,10 +7,10 @@ import type { ToolCall } from '../buildSegments';
 // window. The shared state is stubbed; what is asked of it is the open call.
 let tasks: Record<string, WorkflowTask> = {};
 let provided = true;
-const openTranscript = vi.fn();
+const openRun = vi.fn();
 vi.mock('@/contexts/WorkflowStateContext', () => ({
   useOptionalWorkflowState: () =>
-    provided ? { getByToolUseId: (id: string) => tasks[id], openTranscript } : null,
+    provided ? { getByToolUseId: (id: string) => tasks[id], openRun } : null,
 }));
 
 import { AgentRunLink, TranscriptToolRun, useRunningAgentLive } from '../TranscriptToolRun';
@@ -27,7 +27,7 @@ function callOf(input: Record<string, unknown>): ToolCall {
 beforeEach(() => {
   tasks = {};
   provided = true;
-  openTranscript.mockClear();
+  openRun.mockClear();
 });
 
 describe('AgentRunLink', () => {
@@ -38,7 +38,7 @@ describe('AgentRunLink', () => {
     expect(screen.getByText('Create directory')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('agent-run-link'));
 
-    expect(openTranscript).toHaveBeenCalledWith('toolu_a');
+    expect(openRun).toHaveBeenCalledWith('toolu_a');
   });
 
   it('words a running agent and a finished one differently, with the description in both', () => {
@@ -183,7 +183,7 @@ describe('a finished agent call', () => {
     expect(row.getAttribute('aria-expanded')).toBe('false');
 
     fireEvent.click(screen.getByTestId('finished-run-link'));
-    expect(openTranscript).toHaveBeenCalledWith('toolu_a');
+    expect(openRun).toHaveBeenCalledWith('toolu_a');
   });
 
   it('says a stopped agent is still running, marked stopped, as the desktop app does', () => {

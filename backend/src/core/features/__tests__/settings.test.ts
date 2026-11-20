@@ -811,6 +811,7 @@ describe('settings', () => {
         hideToolCalls: false,
         transcriptViewMode: 'normal',
         transcriptViewModeBySession: {},
+        runViewPlacement: null,
         includeNestedSessions: false,
         uiDirection: 'ltr',
         uiLanguage: null,
@@ -962,6 +963,7 @@ export default {
         hideToolCalls: false,
         transcriptViewMode: 'normal',
         transcriptViewModeBySession: {},
+        runViewPlacement: null,
         includeNestedSessions: false,
         uiDirection: 'ltr',
         uiLanguage: null,
@@ -1026,6 +1028,22 @@ export default {
       mockMkdir.mockResolvedValue(undefined);
       mockRename.mockResolvedValue(undefined);
       mockExistsSync.mockReturnValue(true);
+    });
+
+    // The pin on the view options menu: where a run opens by default, kept for the project.
+    it('keeps the pinned run placement in the project file, and refuses a place that does not exist', async () => {
+      mockReadFile.mockResolvedValue(JSON.stringify({ theme: 'dark' }));
+      let written = '';
+      mockWriteFile.mockImplementation((async (_p: string, content: string) => {
+        written = String(content);
+      }) as unknown as typeof writeFile);
+
+      const ok = await saveSettingToScope('runViewPlacement', 'center', 'project', '/proj');
+      expect(ok.status).toBe('ok');
+      expect(JSON.parse(written)).toEqual({ theme: 'dark', runViewPlacement: 'center' });
+
+      const refused = await saveSettingToScope('runViewPlacement', 'sideways', 'project', '/proj');
+      expect(refused.status).toBe('error');
     });
 
     // Resetting a key to the global value is expressed as value === null (the
