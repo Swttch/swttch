@@ -485,3 +485,91 @@ describe('AgentTranscriptModal scrolling', () => {
     expect(box.el.scrollTop).toBe(2000);
   });
 });
+
+// A backgrounded Agent opens in its simple view and can be switched to the
+// detailed one (#667). The simple view keeps the composer, so sending and
+// stopping are still there; it drops what the detailed view adds on top.
+describe('AgentTranscriptModal: a subagent\'s simple and detailed views', () => {
+  function agentTask(overrides: Partial<WorkflowTask> = {}): WorkflowTask {
+    return {
+      toolUseId: 'toolu_a',
+      taskType: 'local_agent',
+      taskId: 'a40be17f1967a0861',
+      name: 'Describe webview utils dir',
+      description: 'Describe the utils directory',
+      status: 'running',
+      startedAt: Date.now() - 5000,
+      phases: [],
+      agents: [],
+      events: { task_started: [{ prompt: 'List the files in utils' }] },
+      ...overrides,
+    };
+  }
+
+  function composer(): HTMLElement | null {
+    return document.querySelector('[contenteditable]');
+  }
+
+  it('opens in the simple view: no summary strip, no prompt row, no cancel button, the composer kept', () => {
+    renderModal(agentTask());
+
+    expect(screen.queryByText('Prompt')).not.toBeInTheDocument();
+    expect(screen.queryByText('Describe the utils directory')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cancel this task')).not.toBeInTheDocument();
+    expect(composer()).not.toBeNull();
+  });
+
+  it('says how the task is doing as a dot after the title, named by its tooltip text', () => {
+    renderModal(agentTask({ status: 'running' }));
+    expect(screen.getByRole('img', { name: 'Running' })).toBeInTheDocument();
+  });
+
+  it.each([
+    ['completed', 'Completed'],
+    ['failed', 'Failed'],
+    ['stopped', 'Stopped'],
+  ] as const)('names a %s task "%s"', (status, label) => {
+    renderModal(agentTask({ status }));
+    expect(screen.getByRole('img', { name: label })).toBeInTheDocument();
+  });
+
+  it('shows the prompt, the summary and the cancel button once switched to the detailed view, and back', () => {
+    renderModal(agentTask());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Detailed view' }));
+    expect(screen.getByText('Prompt')).toBeInTheDocument();
+    expect(screen.getByText('List the files in utils')).toBeInTheDocument();
+    expect(screen.getByText('Cancel this task')).toBeInTheDocument();
+    // The dot is the simple view's; the detailed one has its status strip.
+    expect(screen.queryByRole('img', { name: 'Running' })).not.toBeInTheDocument();
+    expect(composer()).not.toBeNull();
+
+    // The label is the view it goes to, so it now offers the way back.
+    fireEvent.click(screen.getByRole('button', { name: 'Simple view' }));
+    expect(screen.queryByText('Prompt')).not.toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Running' })).toBeInTheDocument();
+  });
+
+  it('offers the placement menu with the window\'s own placement ticked', async () => {
+    renderModal(agentTask());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Change view options' }));
+
+    expect(await screen.findByRole('menu')).toBeInTheDocument();
+    const items = screen.getAllByRole('menuitemradio');
+    expect(items.map((i) => i.textContent)).toEqual(['Side view', 'View in center', 'Full page view', 'New tab']);
+    expect(items.map((i) => i.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false', 'false']);
+
+    // Choosing closes the menu.
+    fireEvent.click(items[0]);
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
+  });
+
+  it('has the toggle, the new-tab button and the placement menu on a subagent only', () => {
+    renderModal(agentTask({ taskType: 'local_bash', taskId: 'b27yhtv6i' }));
+
+    expect(screen.queryByRole('button', { name: 'Detailed view' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Open in new tab' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Change view options' })).not.toBeInTheDocument();
+  });
+});
