@@ -30,6 +30,16 @@ question and send it down a different path. Your original conversation is left
 exactly as it was — nothing is deleted, and you can go back to it from the
 session list at any time.
 
+What goes back in the composer is the message as you see it in the chat. A slash
+command comes back as you typed it (`/compact`), and a note the app added for
+Claude around your words (when you addressed another session with `@@`, for
+example) is left out ([#719](https://github.com/Swttch/swttch/issues/719)).
+
+Some cards in the chat are output Claude Code wrote, not messages you sent: the
+"Compacted …" line `/compact` leaves at the end is one. Forking from one of
+these keeps the card in the new session and leaves the composer empty, since
+there is nothing in it to send again.
+
 This is for "that was the wrong question." You keep the context you built up and
 try again from the last point where things were still going well.
 
