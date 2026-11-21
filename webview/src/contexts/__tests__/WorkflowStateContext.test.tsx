@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, act } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { WorkflowStateProvider, useWorkflowState } from '../WorkflowStateContext';
 import type { WorkflowTask } from '@/shared';
 
@@ -12,6 +13,17 @@ const mockSubscribe = vi.fn((_type: string, cb: (msg: { payload: unknown }) => v
 
 vi.mock('../BridgeContext', () => ({
   useBridgeContext: () => ({ subscribe: mockSubscribe, isConnected: true }),
+}));
+
+// Where a run goes when its place is a tab of its own.
+const mockOpenTab = vi.fn();
+vi.mock('@/adapters', () => ({ getAdapter: () => ({ openTab: mockOpenTab }) }));
+
+// Where a run goes when its place is a page of this tab.
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('react-router-dom')>()),
+  useNavigate: () => mockNavigate,
 }));
 
 let mockSessionId: string | null = 's1';
@@ -43,10 +55,14 @@ beforeEach(() => {
   capturedHandler = null;
   mockSessionId = 's1';
   mockPinned = null;
+  mockOpenTab.mockReset().mockResolvedValue(undefined);
+  mockNavigate.mockReset();
   render(
-    <WorkflowStateProvider>
-      <Harness />
-    </WorkflowStateProvider>,
+    <MemoryRouter>
+      <WorkflowStateProvider>
+        <Harness />
+      </WorkflowStateProvider>
+    </MemoryRouter>,
   );
 });
 
@@ -162,9 +178,11 @@ describe('WorkflowStateContext', () => {
     const open = (pinned: string | null) => {
       mockPinned = pinned;
       render(
-        <WorkflowStateProvider>
-          <Harness />
-        </WorkflowStateProvider>,
+        <MemoryRouter>
+          <WorkflowStateProvider>
+            <Harness />
+          </WorkflowStateProvider>
+        </MemoryRouter>,
       );
       emit({ toolUseId: 'a', taskType: 'local_agent' });
       act(() => ctx.openRun('a'));
@@ -172,10 +190,44 @@ describe('WorkflowStateContext', () => {
     };
 
     expect(open('center')).toEqual({ side: null, window: 'a' });
-    // The page and the tab are not built yet, so those pins open beside the chat, as no pin does.
-    expect(open('page')).toEqual({ side: 'a', window: null });
-    expect(open('tab')).toEqual({ side: 'a', window: null });
     expect(open('side')).toEqual({ side: 'a', window: null });
     expect(open(null)).toEqual({ side: 'a', window: null });
+    // The page and the tab are elsewhere: nothing opens on this screen.
+    expect(open('page')).toEqual({ side: null, window: null });
+    expect(open('tab')).toEqual({ side: null, window: null });
+  });
+
+  it('opens a run in a tab of its own, at the page of the session and the task', () => {
+    emit({ toolUseId: 'toolu_1', taskType: 'local_agent' });
+    act(() => ctx.placeRun('toolu_1', 'tab'));
+
+    expect(mockOpenTab).toHaveBeenCalledWith('/runs/s1/toolu_1');
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(ctx.sideRunToolUseId).toBeNull();
+  });
+
+  it('moves this tab to the page of the run, and says it was moved there', () => {
+    emit({ toolUseId: 'toolu_1', taskType: 'local_agent' });
+    act(() => ctx.placeRun('toolu_1', 'page'));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/runs/s1/toolu_1', { state: { runPlacement: 'page' } });
+    expect(mockOpenTab).not.toHaveBeenCalled();
+  });
+
+  it('shows the run beside the chat when the tab cannot be opened, rather than swallow the click', async () => {
+    mockOpenTab.mockRejectedValue(new Error('Pop-up might be blocked'));
+    emit({ toolUseId: 'toolu_1', taskType: 'local_agent' });
+    await act(async () => ctx.placeRun('toolu_1', 'tab'));
+
+    expect(ctx.sideRunToolUseId).toBe('toolu_1');
+  });
+
+  it('keeps the run beside the chat when there is no session to address a page by', () => {
+    mockSessionId = null;
+    emit({ toolUseId: 'toolu_1', taskType: 'local_agent' });
+    act(() => ctx.placeRun('toolu_1', 'page'));
+
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(ctx.sideRunToolUseId).toBe('toolu_1');
   });
 });

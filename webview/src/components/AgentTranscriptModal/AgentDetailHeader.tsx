@@ -63,6 +63,7 @@ function AgentHeader(props: { agent: WorkflowAgent; transcriptDir: string | unde
 
   return (
     <HeaderLayout
+      errorAsBanner
       fields={fieldsFromAgent(agent)}
       meta={<MetaLines agent={agent} breakdown={breakdown} t={t} />}
       conversationShownBelow={conversationShownBelow}
@@ -77,9 +78,13 @@ function TaskHeader(props: { task: WorkflowTask; conversationShownBelow: boolean
   return <HeaderLayout fields={fieldsFromTask(task)} meta={metaFromTask(task, t)} conversationShownBelow={conversationShownBelow} />;
 }
 
-function HeaderLayout(props: { fields: DetailHeaderFields; meta?: React.ReactNode; conversationShownBelow: boolean }) {
+/**
+ * `errorAsBanner`: the failure (or the reason the agent was stopped) is a band across the row with a background, under
+ * the fields, and not a line of text among them. A workflow agent's header says it so; a single agent's keeps its line.
+ */
+function HeaderLayout(props: { fields: DetailHeaderFields; meta?: React.ReactNode; conversationShownBelow: boolean; errorAsBanner?: boolean }) {
   const { error } = props.fields;
-  const { meta, conversationShownBelow } = props;
+  const { meta, conversationShownBelow, errorAsBanner = false } = props;
   const badge = conversationShownBelow ? undefined : props.fields.badge;
   // The conversation drawn below says which model ran (a line under the prompt, with what the badge's tooltip held),
   // so the badge is not drawn again over it.
@@ -90,9 +95,12 @@ function HeaderLayout(props: { fields: DetailHeaderFields; meta?: React.ReactNod
   // empty row of labels would be worse than no header at all.
   if (!prompt && !result && !error && !badge) return null;
 
+  const banner = errorAsBanner && error;
+  const hasFields = !!(prompt || result || badge);
+
   return (
-    <div className="shrink-0 border-b border-border-subtle px-4 py-2 text-xs">
-      <div className="flex items-start gap-2">
+    <div className={banner ? 'shrink-0 border-b border-border-subtle text-xs' : 'shrink-0 border-b border-border-subtle px-4 py-2 text-xs'}>
+      <div className={`flex items-start gap-2${banner ? (hasFields ? ' px-4 py-2' : ' hidden') : ''}`}>
         {/* The labels are the CLI's own field names with `Preview` dropped, so
             the row says which field it is showing rather than inventing a word
             for it. */}
@@ -111,7 +119,14 @@ function HeaderLayout(props: { fields: DetailHeaderFields; meta?: React.ReactNod
       </div>
 
       {/* A failure is the one thing here that must not be a hover away. */}
-      {error && <div className="mt-1 whitespace-pre-wrap break-words text-state-error-fg">{error}</div>}
+      {error &&
+        (banner ? (
+          <div role="alert" className="whitespace-pre-wrap break-words bg-state-error-bg px-4 py-2 text-state-error-fg">
+            {error}
+          </div>
+        ) : (
+          <div className="mt-1 whitespace-pre-wrap break-words text-state-error-fg">{error}</div>
+        ))}
     </div>
   );
 }

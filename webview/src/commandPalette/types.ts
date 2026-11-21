@@ -46,7 +46,7 @@ export interface CommandPaletteServices {
     setArchived: (sessionId: string, archived: boolean) => Promise<boolean>;
   };
   adapter: {
-    openNewTab: () => Promise<void>;
+    newTab: () => Promise<void>;
     openSettings: () => Promise<void>;
     openTerminal: (workingDir: string) => Promise<void>;
   };

@@ -128,15 +128,20 @@ function RunView(props: Props) {
   // And so does a background command.
   const [bashVariant, setBashVariant] = useState<RunVariant>('simple');
   // Picking another place from the view options menu. This window is the "center" place, so picking it is nothing to do;
-  // "Side view" closes the window and opens the run beside the chat, the way the panel's "View in center" goes the
-  // other way. The page and the tab are drawn but not built yet. Without the tasks state (a window drawn on its own)
-  // there is no panel to move it to.
+  // any other closes the window and shows the run there, the way the panel's "View in center" goes the other way.
+  // Without the tasks state (a window drawn on its own) there is nowhere to move it to.
   const workflow = useOptionalWorkflowState();
   const onPlacementChange = workflow
     ? (placement: RunPlacement) => {
-        if (placement !== 'side') return;
+        if (placement === 'center') return;
         onClose();
-        workflow.openRunInSide(task.toolUseId);
+        workflow.placeRun(task.toolUseId, placement);
+      }
+    : undefined;
+  const onOpenInNewTab = workflow
+    ? () => {
+        onClose();
+        workflow.placeRun(task.toolUseId, 'tab');
       }
     : undefined;
   switch (task.taskType) {
@@ -147,10 +152,10 @@ function RunView(props: Props) {
           onClose={onClose}
           variant={bashVariant}
           onVariantChange={setBashVariant}
-          // This window is the "center" placement; "Side view" moves it to the panel (see onPlacementChange above).
+          // This window is the "center" placement; any other place moves it there (see onPlacementChange above).
           placement="center"
           onPlacementChange={onPlacementChange}
-          onOpenInNewTab={() => {}}
+          onOpenInNewTab={onOpenInNewTab}
         />
       );
     case 'local_agent':
@@ -160,12 +165,10 @@ function RunView(props: Props) {
           onClose={onClose}
           variant={subagentVariant}
           onVariantChange={setSubagentVariant}
-          // This window is the "center" placement; "Side view" moves it to the panel (see onPlacementChange above).
-          // Opening in a tab, and the page and tab placements, are drawn but not wired yet: the pages they go to
-          // come in later steps of #667.
+          // This window is the "center" placement; any other place moves it there (see onPlacementChange above).
           placement="center"
           onPlacementChange={onPlacementChange}
-          onOpenInNewTab={() => {}}
+          onOpenInNewTab={onOpenInNewTab}
         />
       );
     default:
@@ -175,10 +178,10 @@ function RunView(props: Props) {
           onClose={onClose}
           variant={workflowVariant}
           onVariantChange={setWorkflowVariant}
-          // As for a subagent: this window is the "center" placement; "Side view" moves it to the panel.
+          // As for a subagent: this window is the "center" placement.
           placement="center"
           onPlacementChange={onPlacementChange}
-          onOpenInNewTab={() => {}}
+          onOpenInNewTab={onOpenInNewTab}
         />
       );
   }

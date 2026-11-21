@@ -12,7 +12,7 @@ import { AgentTranscriptModal } from '@/components/AgentTranscriptModal';
 import { SIDE_PANEL_HEADER_CLASS, type RunVariant } from '@/components/AgentTranscriptModal/RunViewControls';
 import { SideRun } from './SideRun';
 import { filePreviewPaneStore } from '@/utils/filePreviewPaneStore';
-import { TASK_PANEL_WIDTH_CSS, useTaskPanelColumn } from './useTaskPanelColumn';
+import { maxTaskPanelWidth, taskPanelWidthStore, useTaskPanelColumn, useTaskPanelWidthCss } from './useTaskPanelColumn';
 import { taskDurationMs } from './WorkflowTaskSummary';
 import { WorkflowCard } from './WorkflowCard';
 import { TaskTypeIcon } from './TaskTypeIcon';
@@ -113,7 +113,7 @@ export function BackgroundTasksPanel() {
     const { t } = useTranslation('chat');
     const {
         panelOpen, closePanel, runningTasks, finishedTasks, clearFinished, dismissTask, focusedToolUseId, getByToolUseId,
-        transcriptToolUseId, openTranscript, closeTranscript, sideRunToolUseId, closeRunInSide, openRun,
+        transcriptToolUseId, closeTranscript, sideRunToolUseId, closeRunInSide, openRun, placeRun,
     } = useWorkflowState();
     const [showFinished, setShowFinished] = useState(true);
     // A run in the panel opens to the short view, like the window does; the word button flips it.
@@ -136,6 +136,8 @@ export function BackgroundTasksPanel() {
     // Beside the chat the panel is a column of its own: the chat stays usable, so a click in it must not
     // close the panel and focus stays where it was. Narrower, it floats over the chat and does both.
     const column = useTaskPanelColumn();
+    const columnWidth = useTaskPanelWidthCss();
+    const drag = useRef<{ startX: number; startWidth: number } | null>(null);
 
     // Only one side panel at a time: opening this one closes the preview pane, and opening the preview
     // pane while this one is open closes this one.
@@ -208,8 +210,39 @@ export function BackgroundTasksPanel() {
                 className={`fixed end-0 top-0 bottom-0 z-40 flex flex-col bg-surface-raised border-s border-border-default outline-none ${
                     column ? '' : 'max-w-[92vw] shadow-2xl'
                 }`}
-                style={{ width: column ? TASK_PANEL_WIDTH_CSS : '24rem' }}
+                style={{ width: column ? columnWidth : '24rem' }}
             >
+                {column && (
+                    // The handle on the panel's start edge: drag it to widen or narrow the panel, double-click to put it back.
+                    <div
+                        role="separator"
+                        aria-orientation="vertical"
+                        aria-label={t('filePreview.resize')}
+                        className="group/resize absolute inset-y-0 start-0 z-10 w-[calc(8px/var(--ui-zoom,1))] -translate-x-1/2 cursor-col-resize touch-none rtl:translate-x-1/2"
+                        onPointerDown={(e) => {
+                            e.preventDefault();
+                            e.currentTarget.setPointerCapture(e.pointerId);
+                            // In screen pixels: the pointer reports them, and the stored width is kept in them too.
+                            const rect = panelRef.current?.getBoundingClientRect();
+                            drag.current = { startX: e.clientX, startWidth: rect?.width ?? 0 };
+                        }}
+                        onPointerMove={(e) => {
+                            const start = drag.current;
+                            if (!start || !e.currentTarget.hasPointerCapture(e.pointerId)) return;
+                            const rtl = getComputedStyle(e.currentTarget).direction === 'rtl';
+                            const delta = rtl ? e.clientX - start.startX : start.startX - e.clientX;
+                            const next = start.startWidth + delta;
+                            taskPanelWidthStore.set(Math.min(maxTaskPanelWidth(window.innerWidth), next));
+                        }}
+                        onPointerUp={(e) => {
+                            drag.current = null;
+                            e.currentTarget.releasePointerCapture(e.pointerId);
+                        }}
+                        onDoubleClick={() => taskPanelWidthStore.set(null)}
+                    >
+                        <div className="absolute start-1/2 top-1/2 h-[calc(42px/var(--ui-zoom,1))] w-[calc(3px/var(--ui-zoom,1))] -translate-x-1/2 -translate-y-1/2 rounded-full bg-transparent transition-colors group-hover/resize:bg-text-primary/35 group-active/resize:bg-text-primary/50" />
+                    </div>
+                )}
                 {sideTask ? (
                     <SideRun
                         task={sideTask}
@@ -218,12 +251,14 @@ export function BackgroundTasksPanel() {
                         onBack={closeRunInSide}
                         backLabel={t('backgroundTasks.title')}
                         onClose={closePanel}
-                        // This is the "side" placement, and picking "center" moves the run into the window.
+                        // This is the "side" placement; picking any other moves the run there and takes it off the panel.
                         onPlacementChange={(placement) => {
-                            if (placement !== 'center') return;
+                            if (placement === 'side') return;
                             closeRunInSide();
-                            openTranscript(sideTask.toolUseId);
+                            placeRun(sideTask.toolUseId, placement);
                         }}
+                        // A tab of its own is another view of the run, so the panel keeps showing it.
+                        onOpenInNewTab={() => placeRun(sideTask.toolUseId, 'tab')}
                     />
                 ) : (
                     <>

@@ -228,12 +228,17 @@ export function AgentTranscriptView(props: Props) {
     <div className="relative flex-1 min-h-0">
       {/* absolute inset-0 rather than h-full: a percentage height inside a flex item sized by flex-grow does not
           reliably resolve. */}
-      <div ref={scrollRef} className={`absolute inset-0 overflow-y-auto py-3 ${
-          // The Transcript view's own lines carry their sides and their spacing, so the area adds neither; in the side
-          // panel they keep the same px-4 sides as the modal.
-          viewMode === null ? 'px-4 space-y-3' : ''
-        }`}
-      >
+      <div ref={scrollRef} className="absolute inset-0 overflow-y-auto py-3">
+        {/* The column the main chat's transcript stands in: its width stops at the chat column's maximum and it is
+            centred, so a run drawn on a wide page (not in a window or the side panel, which are narrower than that)
+            reads at the same measure. The scroll area stays full width, so its scrollbar sits at the page's edge. */}
+        <div
+          className={`mx-auto w-full max-w-[calc(var(--chat-column-max,70rem)_-_var(--chat-column-px,2rem))] ${
+            // The Transcript view's own lines carry their sides and their spacing, so the area adds neither; in the
+            // side panel they keep the same px-4 sides as the modal.
+            viewMode === null ? 'px-4 space-y-3' : ''
+          }`}
+        >
         {hasEarlier && (
           <div className="flex justify-center py-2">
             {loadingEarlier ? (
@@ -304,6 +309,7 @@ export function AgentTranscriptView(props: Props) {
               <WorkingMark />
             </div>
           ) : null)}
+        </div>
       </div>
 
       {showScrollButton && (

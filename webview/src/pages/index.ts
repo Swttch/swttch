@@ -4,3 +4,4 @@ export * from './ProjectSelectorPage';
 export * from './SwitchAccountPage';
 export * from './SessionPanelPage';
 export * from './DiffPage';
+export * from './RunPage';

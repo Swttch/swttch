@@ -14,7 +14,7 @@ import { useClaudeSettings } from './ClaudeSettingsContext';
 import { getAdapter, onBridgeReady } from '../adapters';
 import { getLogForwarder } from '../api/logging';
 import { toTitle } from '../mappers/sessionTransformer';
-import { Route, routeToPath, sessionToPath, parseSessionIdFromPath, withWorkingDir, withRootDir } from '../router/routes';
+import { Route, routeToPath, sessionToPath, parseSessionIdFromPath, parseRunFromPath, withWorkingDir, withRootDir } from '../router/routes';
 import { InputMode, getAvailableModes, resolveConfiguredInputMode, FALLBACK_INPUT_MODE } from '../types/chatInput';
 import {isJetBrains} from "@/config/environment.ts";
 import { MessageType } from '@/shared';
@@ -102,7 +102,7 @@ interface SessionContextValue {
    */
   scopeDirCount: number | null;
   resetToNewSession: () => void;
-  openNewTab: () => void;
+  newTab: () => void;
   switchSession: (sessionId: string) => void;
   deleteSession: (sessionId: string) => Promise<void>;
   renameSession: (sessionId: string, title: string) => Promise<void>;
@@ -220,7 +220,9 @@ export function SessionProvider({ children }: SessionProviderProps) {
 
   // currentSessionId is derived from URL (SSOT)
   const bg = location.state?.backgroundLocation;
-  const currentSessionId = parseSessionIdFromPath(bg?.pathname ?? location.pathname);
+  const currentPathname = bg?.pathname ?? location.pathname;
+  // A run page is about the session that started the task, whose own page it is not under (see Route.RUN).
+  const currentSessionId = parseSessionIdFromPath(currentPathname) ?? parseRunFromPath(currentPathname)?.sessionId ?? null;
 
 
   const [sessions, setSessions] = useState<SessionMetaDto[]>([]);
@@ -668,8 +670,8 @@ export function SessionProvider({ children }: SessionProviderProps) {
     });
   }, [api.sessions, navigateToNewSession]);
 
-  const openNewTab = useCallback(() => {
-    getAdapter().openNewTab().catch(error => {
+  const newTab = useCallback(() => {
+    getAdapter().newTab().catch(error => {
       console.error('[SessionContext] Failed to open new tab:', error);
     });
   }, []);
@@ -860,7 +862,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
     hasMoreSessions: nextSessionOffset !== null,
     scopeDirCount,
     resetToNewSession,
-    openNewTab,
+    newTab,
     switchSession,
     deleteSession,
     renameSession,

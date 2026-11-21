@@ -60,6 +60,11 @@ export enum Route {
   // window of its own — an IDE editor tab, or a browser tab — where the only
   // thing carried across is this URL.
   DIFF = 'diff/:tool_use_id',
+  // The run of one background task (a sub-agent, a workflow, a command) as a page of its own: a tab, or the
+  // current tab moved there. It names the session that started the task, so the page attaches to that session and
+  // can message and stop the task the way the side panel does (#667). Deliberately NOT under `/sessions/`: the IDE
+  // reads a tab at `/sessions/<id>...` as a tab on that conversation, and would label this one with its name.
+  RUN = 'runs/:session_id/:tool_use_id',
   SETTINGS = 'settings',
   SETTINGS_GENERAL = 'settings/general',
   SETTINGS_APPEARANCE = 'settings/appearance',
@@ -126,6 +131,11 @@ export const ROUTE_META: Record<Route, RouteMeta> = {
   [Route.DIFF]: {
     path: '/diff/:tool_use_id',
     label: 'Review Edit',
+    icon: null,
+  },
+  [Route.RUN]: {
+    path: '/runs/:session_id/:tool_use_id',
+    label: 'Run',
     icon: null,
   },
   [Route.SWITCH_ACCOUNT]: {
@@ -274,6 +284,11 @@ export const ICON_COMPONENTS: Record<IconName, ComponentType<SVGProps<SVGSVGElem
 export function pathToRoute(pathname: string): Route {
   const path = pathname || '/sessions/new';
 
+  // 실행 화면 라우트: /runs/{sessionId}/{toolUseId}
+  if (parseRunFromPath(path)) {
+    return Route.RUN;
+  }
+
   // 동적 세션 라우트: /sessions/{id} (단, /sessions/new 제외)
   if (path.startsWith('/sessions/') && path !== '/sessions/new') {
     return Route.SESSION;
@@ -302,6 +317,27 @@ export function parseSessionIdFromPath(pathname: string): string | null {
     return pathname.slice('/sessions/'.length) || null;
   }
   return null;
+}
+
+/**
+ * The session and the task a run page is about, or null when the path is not one.
+ * `/runs/{sessionId}/{toolUseId}`.
+ */
+export function parseRunFromPath(pathname: string): { sessionId: string; toolUseId: string } | null {
+  const match = /^\/runs\/([^/]+)\/([^/]+)\/?$/.exec(pathname);
+  if (!match) return null;
+  // An address typed or pasted by hand can hold a broken escape (`%E0%A4%A`), which `decodeURIComponent` refuses by
+  // throwing; that would take the whole route lookup down, so such a path is simply not a run page.
+  try {
+    return { sessionId: decodeURIComponent(match[1]), toolUseId: decodeURIComponent(match[2]) };
+  } catch {
+    return null;
+  }
+}
+
+/** The run page path of the task [toolUseId] that session [sessionId] started. */
+export function runToPath(sessionId: string, toolUseId: string): string {
+  return `/runs/${encodeURIComponent(sessionId)}/${encodeURIComponent(toolUseId)}`;
 }
 
 /**

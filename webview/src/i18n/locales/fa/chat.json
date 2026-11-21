@@ -379,6 +379,11 @@
       "tools": "ابزارها",
       "time": "زمان"
     },
+    "runPage": {
+      "loading": "در حال باز کردن اجرا…",
+      "notFound": "این اجرا در نشست پیدا نشد.",
+      "backToSession": "بازگشت به نشست"
+    },
     "transcriptModal": {
       "title": "{{name}}",
       "noAgents": "هنوز ایجنتی وجود ندارد.",

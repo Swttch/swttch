@@ -20,7 +20,7 @@ vi.mock('@/components/AgentTranscriptModal/BashRunView', () => ({
 import { SideRun } from '../SideRun';
 
 const task = (taskType: string) => ({ taskType, toolUseId: 't', name: 'x' }) as unknown as WorkflowTask;
-const props = { variant: 'simple' as const, onVariantChange: vi.fn(), onBack: vi.fn(), backLabel: 'Background tasks', onClose: vi.fn(), onPlacementChange: vi.fn() };
+const props = { variant: 'simple' as const, onVariantChange: vi.fn(), onBack: vi.fn(), backLabel: 'Background tasks', onClose: vi.fn(), onPlacementChange: vi.fn(), onOpenInNewTab: vi.fn() };
 
 describe('SideRun', () => {
   it('draws a single agent with the agent view, in the panel form of the title row', () => {

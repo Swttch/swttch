@@ -532,12 +532,10 @@ export enum MessageType {
    * done by the backend itself in a browser.
    */
   REVEAL_FILE = 'REVEAL_FILE',
-  /** Open a new Claude Code editor tab in the IDE. */
-  OPEN_NEW_TAB = 'OPEN_NEW_TAB',
-  /** Open a specific session (focus/route to it). */
-  OPEN_SESSION = 'OPEN_SESSION',
-  /** Open the settings screen. */
-  OPEN_SETTINGS = 'OPEN_SETTINGS',
+  /** Open a tab of its own, whatever is open already (`{ path?, workingDir? }`; no path is a new conversation). inbound webview→backend, Node→Kotlin */
+  NEW_TAB = 'NEW_TAB',
+  /** Open the page at `path` (`{ path, workingDir? }`), or go to the tab that is already showing it. inbound webview→backend, Node→Kotlin */
+  OPEN_TAB = 'OPEN_TAB',
   /** Open a terminal at the working directory. */
   OPEN_TERMINAL = 'OPEN_TERMINAL',
   /**

@@ -378,6 +378,11 @@
       "tools": "工具",
       "time": "時間"
     },
+    "runPage": {
+      "loading": "正在開啟執行…",
+      "notFound": "在此工作階段中找不到這個執行。",
+      "backToSession": "返回工作階段"
+    },
     "transcriptModal": {
       "title": "{{name}}",
       "noAgents": "尚無代理程式。",

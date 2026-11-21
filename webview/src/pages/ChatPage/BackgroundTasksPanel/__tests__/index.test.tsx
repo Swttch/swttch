@@ -21,6 +21,8 @@ function makeTask(overrides: Partial<WorkflowTask> = {}): WorkflowTask {
   };
 }
 
+const placeRunMock = vi.fn();
+
 // The open run window lives in the shared state (so a card in the chat can open
 // it), so the stand-in keeps it in state of its own, the way the real provider does.
 vi.mock('@/contexts/WorkflowStateContext', async () => {
@@ -46,6 +48,11 @@ vi.mock('@/contexts/WorkflowStateContext', async () => {
         sideRunToolUseId,
         openRunInSide: setSideRunToolUseId,
         closeRunInSide: () => setSideRunToolUseId(null),
+        placeRun: (id: string, placement: string) => {
+          if (placement === 'center') setTranscriptToolUseId(id);
+          else if (placement === 'side') setSideRunToolUseId(id);
+          else placeRunMock(id, placement);
+        },
         openRun: (id: string) =>
           tasksById[id]?.taskType === 'local_agent' ? setSideRunToolUseId(id) : setTranscriptToolUseId(id),
       };

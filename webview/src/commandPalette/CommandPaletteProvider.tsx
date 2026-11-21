@@ -128,7 +128,7 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
       setArchived: session.setSessionArchived,
     },
     adapter: {
-      openNewTab: () => getAdapter().openNewTab(),
+      newTab: () => getAdapter().newTab(),
       openSettings: () => openSettingsAt(Route.SETTINGS_GENERAL),
       openTerminal: (workingDir) => getAdapter().openTerminal(workingDir),
     },
@@ -171,7 +171,7 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
       setArchived: session.setSessionArchived,
     },
     adapter: {
-      openNewTab: () => getAdapter().openNewTab(),
+      newTab: () => getAdapter().newTab(),
       openSettings: () => openSettingsAt(Route.SETTINGS_GENERAL),
       openTerminal: (workingDir) => getAdapter().openTerminal(workingDir),
     },

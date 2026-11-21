@@ -291,8 +291,19 @@ class NodeProcessManager(
             newContent: String,
         )
         suspend fun createSession(workingDir: String)
-        suspend fun openNewTab(workingDir: String)
-        suspend fun openSession(sessionId: String, workingDir: String?)
+        /**
+         * Open a tab of its own, whatever is open already.
+         *
+         * @param path the page it lands on; null for a new conversation.
+         */
+        suspend fun newTab(workingDir: String, path: String? = null)
+        /**
+         * Open the page at [path], or go to the tab already showing it.
+         *
+         * @param path the page's address, e.g. "/sessions/<id>" or "/settings/sponsor".
+         * @param workingDir the project the tab belongs to; null for the project this handler serves.
+         */
+        suspend fun openTab(path: String, workingDir: String? = null)
 
         /**
          * Name the tab [panelId], or clear the name when [name] is blank so the
@@ -338,8 +349,6 @@ class NodeProcessManager(
          * [ClipboardContents.EMPTY], which costs the user one paste.
          */
         suspend fun getClipboard(): ClipboardContents
-        /** @param path settings page to land on (e.g. "/settings/sponsor"); null → landing page. */
-        suspend fun openSettings(workingDir: String, path: String? = null)
         suspend fun openTerminal(workingDir: String)
 
         /**

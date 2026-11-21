@@ -286,22 +286,19 @@ export class BrowserBridge implements Bridge {
     // no-op: handled by session reset in browser mode
   }
 
-  async openNewTab(_workingDir?: string): Promise<void> {
-    // no-op: no IDE tab management in browser mode
+  async newTab(_workingDir?: string, _path?: string): Promise<void> {
+    // no-op here: a browser tab is the page's own to open (window.open in BrowserAdapter),
+    // so the request that reaches this backend came from a client that already did it.
   }
 
-  async openSession(_sessionId: string, _workingDir?: string): Promise<void> {
-    // no-op: browser mode navigates to the session via URL
+  async openTab(_path: string, _workingDir?: string): Promise<void> {
+    // no-op here for the same reason: the page opens or reuses its own browser tab.
   }
 
   async setTabName(_panelId: string, _name: string): Promise<void> {
     // no-op: the name labels an IDE tab, and browser mode has none. A browser
     // client can still be told to rename (the tunnel shares one session with
     // the IDE), so this is silent rather than an error.
-  }
-
-  async openSettings(_workingDir?: string, _path?: string): Promise<void> {
-    // no-op: browser mode opens the settings tab client-side via window.open
   }
 
   async openUrl(url: string): Promise<void> {

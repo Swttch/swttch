@@ -1,5 +1,5 @@
 import { getAdapter } from '@/adapters';
-import { Route } from '@/router';
+import { Route, routeToPath } from '@/router';
 import { DEFAULT_SETTINGS, OpenSettingsMode, SettingKey, type SettingsState } from '@/types/settings';
 
 /**
@@ -80,7 +80,7 @@ function requestOverlay(route: Route): void {
 export async function openSettingsAt(route: Route): Promise<void> {
   if (resolveOpenMode() === OpenSettingsMode.NEW_TAB) {
     try {
-      await getAdapter().openSettings(route);
+      await getAdapter().openTab(routeToPath(route));
       return;
     } catch (err) {
       // A blocked pop-up (browser) or an unavailable IDE bridge must not swallow

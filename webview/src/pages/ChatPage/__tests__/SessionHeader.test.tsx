@@ -8,7 +8,6 @@ import { createTestQueryClient } from '@/hooks/queries/__tests__/testQueryClient
 import { SessionHeader } from '../SessionHeader/index';
 import { SessionMetaDto } from '../../../dto';
 import type { SessionState } from '../../../types';
-import { Route } from '@/router';
 import { setCurrentSettings } from '@/utils/openSettingsAt';
 import { DEFAULT_SETTINGS, DockItemId, type SettingsState } from '@/types/settings';
 import { OPEN_TUNNEL_EVENT } from '../SessionHeader/dock/actions';
@@ -56,7 +55,7 @@ const mockOpenSettingsAdapter = vi.fn();
 // The tunnel item's Cmd/Ctrl-click opens this session in the system browser.
 const mockOpenUrl = vi.fn();
 vi.mock('@/adapters', () => ({
-  getAdapter: () => ({ openSettings: mockOpenSettingsAdapter, openUrl: mockOpenUrl }),
+  getAdapter: () => ({ openTab: mockOpenSettingsAdapter, openUrl: mockOpenUrl }),
 }));
 
 // The tunnel item asks the backend for a pairing code through useBridge before
@@ -172,7 +171,7 @@ beforeEach(() => {
     switchSession: mockSwitchSession,
     loadSessions: mockLoadSessions,
     resetToNewSession: vi.fn(),
-    openNewTab: vi.fn(),
+    newTab: vi.fn(),
     openSettings: vi.fn(),
     deleteSession: vi.fn(),
     renameSession: vi.fn(),
@@ -408,14 +407,14 @@ describe('SessionHeader', () => {
     return row as HTMLElement;
   };
 
-  it('더보기 메뉴의 새 탭 항목 클릭 시 openNewTab 호출', async () => {
+  it('더보기 메뉴의 새 탭 항목 클릭 시 newTab 호출', async () => {
     const user = userEvent.setup();
     render(<SessionHeader />, { wrapper: queryWrapper });
 
     await openOverflowMenu(user);
     await user.click(screen.getByText('Open New Tab'));
 
-    expect(mockSessionCtxValue.openNewTab).toHaveBeenCalled();
+    expect(mockSessionCtxValue.newTab).toHaveBeenCalled();
   });
 
   // The item delegates to openSettingsAt(), which reads the stored preference
@@ -439,7 +438,7 @@ describe('SessionHeader', () => {
     await openOverflowMenu(user);
     await user.click(screen.getByText('Settings'));
 
-    expect(mockOpenSettingsAdapter).toHaveBeenCalledWith(Route.SETTINGS_GENERAL);
+    expect(mockOpenSettingsAdapter).toHaveBeenCalledWith('/settings/general');
   });
 
   // The tunnel row runs the same click as the tunnel's dock icon: a Cmd/Ctrl-click
@@ -526,7 +525,7 @@ describe('SessionHeader', () => {
     const eyeToggle = within(dockRow('newTab')).getByTitle('Add to dock');
 
     await user.click(eyeToggle);
-    expect(mockSessionCtxValue.openNewTab).not.toHaveBeenCalled();
+    expect(mockSessionCtxValue.newTab).not.toHaveBeenCalled();
 
     // The dock icon renders once the setting round-trips through updateSettingWithScope.
     expect(mockSettingsValue.updateSettingWithScope).toHaveBeenCalledWith(
@@ -561,7 +560,7 @@ describe('SessionHeader', () => {
         new PointerEvent('pointermove', { bubbles: true, button: 0, buttons: 1, clientX: 0, clientY: 90 }),
       );
     });
-    expect(mockSessionCtxValue.openNewTab).not.toHaveBeenCalled();
+    expect(mockSessionCtxValue.newTab).not.toHaveBeenCalled();
 
     act(() => {
       window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, button: 0, clientX: 0, clientY: 90 }));
@@ -569,7 +568,7 @@ describe('SessionHeader', () => {
 
     // A plain click on the row itself still runs it, same as before this menu existed.
     await user.click(screen.getByText('Open New Tab'));
-    expect(mockSessionCtxValue.openNewTab).toHaveBeenCalled();
+    expect(mockSessionCtxValue.newTab).toHaveBeenCalled();
   });
 
   // Reordering must not require a mouse, and the keyboard path rests on two
@@ -602,7 +601,7 @@ describe('SessionHeader', () => {
       expect(screen.getAllByTitle('Drag to rearrange')).toHaveLength(rowCount + 1);
     });
     // Space picked the row up rather than activating the row's own button.
-    expect(mockSessionCtxValue.openNewTab).not.toHaveBeenCalled();
+    expect(mockSessionCtxValue.newTab).not.toHaveBeenCalled();
   });
 
   // The app mirrors its entire layout for Arabic and Persian (SettingsContext

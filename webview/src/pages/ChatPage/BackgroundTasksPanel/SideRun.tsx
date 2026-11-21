@@ -17,11 +17,10 @@ export function SideRun(props: {
   backLabel: string;
   onClose: () => void;
   onPlacementChange: (placement: RunPlacement) => void;
+  onOpenInNewTab: () => void;
 }) {
-  const { task, variant, onVariantChange, onBack, backLabel, onClose, onPlacementChange } = props;
+  const { task, variant, onVariantChange, onBack, backLabel, onClose, onPlacementChange, onOpenInNewTab } = props;
   const common = { surface: 'panel' as const, onBack, backLabel, onClose, placement: 'side' as const, onPlacementChange };
-  // Opening in a tab comes with the page of its own (#667, a later step): drawn, not wired yet.
-  const onOpenInNewTab = () => {};
   switch (task.taskType) {
     case 'local_agent':
       return <SubagentRunView task={task} variant={variant} onVariantChange={onVariantChange} onOpenInNewTab={onOpenInNewTab} {...common} />;

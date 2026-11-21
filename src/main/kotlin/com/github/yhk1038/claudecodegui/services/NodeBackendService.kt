@@ -293,12 +293,12 @@ class NodeBackendService : Disposable {
                 any()?.createSession(workingDir) ?: warn("createSession")
             }
 
-            override suspend fun openNewTab(workingDir: String) {
-                any()?.openNewTab(workingDir) ?: warn("openNewTab")
+            override suspend fun newTab(workingDir: String, path: String?) {
+                any()?.newTab(workingDir, path) ?: warn("newTab")
             }
 
-            override suspend fun openSession(sessionId: String, workingDir: String?) {
-                any()?.openSession(sessionId, workingDir) ?: warn("openSession")
+            override suspend fun openTab(path: String, workingDir: String?) {
+                any()?.openTab(path, workingDir) ?: warn("openTab")
             }
 
             override suspend fun setTabName(panelId: String, name: String) {
@@ -315,10 +315,6 @@ class NodeBackendService : Disposable {
 
             override suspend fun getClipboard(): ClipboardContents =
                 any()?.getClipboard() ?: run { warn("getClipboard"); ClipboardContents.EMPTY }
-
-            override suspend fun openSettings(workingDir: String, path: String?) {
-                any()?.openSettings(workingDir, path) ?: warn("openSettings")
-            }
 
             override suspend fun openTerminal(workingDir: String) {
                 any()?.openTerminal(workingDir) ?: warn("openTerminal")

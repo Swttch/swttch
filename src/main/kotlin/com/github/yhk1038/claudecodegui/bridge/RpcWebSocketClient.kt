@@ -508,17 +508,20 @@ class RpcWebSocketClient(
                 rpcHandler.createSession(workingDir)
                 buildJsonObject {}
             }
-            "OPEN_NEW_TAB" -> {
+            "NEW_TAB" -> {
                 val workingDir = params["workingDir"]?.jsonPrimitive?.content ?: ""
-                logger.info("[DEBUG:RpcWS] OPEN_NEW_TAB received, params=$params, resolved workingDir='$workingDir'")
-                rpcHandler.openNewTab(workingDir)
+                // The page it lands on; absent → a new conversation.
+                val path = params["path"]?.jsonPrimitive?.content
+                logger.info("[DEBUG:RpcWS] NEW_TAB received, params=$params, resolved workingDir='$workingDir', path='$path'")
+                rpcHandler.newTab(workingDir, path)
                 buildJsonObject {}
             }
-            "OPEN_SESSION" -> {
-                val sessionId = params["sessionId"]?.jsonPrimitive?.content
-                    ?: throw IllegalArgumentException("Missing 'sessionId' param")
+            "OPEN_TAB" -> {
+                val path = params["path"]?.jsonPrimitive?.content
+                    ?: throw IllegalArgumentException("Missing 'path' param")
                 val workingDir = params["workingDir"]?.jsonPrimitive?.content
-                rpcHandler.openSession(sessionId, workingDir)
+                logger.info("[DEBUG:RpcWS] OPEN_TAB received, params=$params, path='$path', workingDir='$workingDir'")
+                rpcHandler.openTab(path, workingDir)
                 buildJsonObject {}
             }
             "SET_TAB_NAME" -> {
@@ -565,14 +568,6 @@ class RpcWebSocketClient(
                         }
                     }
                 }
-            }
-            "OPEN_SETTINGS" -> {
-                val workingDir = params["workingDir"]?.jsonPrimitive?.content ?: ""
-                // Which settings page the tab should land on; absent → landing page.
-                val path = params["path"]?.jsonPrimitive?.content
-                logger.info("[DEBUG:RpcWS] OPEN_SETTINGS received, params=$params, resolved workingDir='$workingDir', path='$path'")
-                rpcHandler.openSettings(workingDir, path)
-                buildJsonObject {}
             }
             "OPEN_TERMINAL" -> {
                 val workingDir = params["workingDir"]?.jsonPrimitive?.content

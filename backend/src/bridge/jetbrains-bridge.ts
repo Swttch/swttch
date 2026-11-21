@@ -450,25 +450,21 @@ export class JetBrainsBridge implements Bridge {
     await this.request(MessageType.CREATE_SESSION, workingDir ? { workingDir } : {});
   }
 
-  async openNewTab(workingDir?: string): Promise<void> {
-    await this.request(MessageType.OPEN_NEW_TAB, workingDir ? { workingDir } : {});
+  async newTab(workingDir?: string, path?: string): Promise<void> {
+    const params: Record<string, unknown> = {};
+    if (workingDir) params.workingDir = workingDir;
+    if (path) params.path = path;
+    await this.request(MessageType.NEW_TAB, params);
   }
 
-  async openSession(sessionId: string, workingDir?: string): Promise<void> {
-    const params: Record<string, unknown> = { sessionId };
+  async openTab(path: string, workingDir?: string): Promise<void> {
+    const params: Record<string, unknown> = { path };
     if (workingDir) params.workingDir = workingDir;
-    await this.request(MessageType.OPEN_SESSION, params);
+    await this.request(MessageType.OPEN_TAB, params);
   }
 
   async setTabName(panelId: string, name: string): Promise<void> {
     await this.request(MessageType.SET_TAB_NAME, { panelId, name });
-  }
-
-  async openSettings(workingDir?: string, path?: string): Promise<void> {
-    const params: Record<string, unknown> = {};
-    if (workingDir) params.workingDir = workingDir;
-    if (path) params.path = path;
-    await this.request(MessageType.OPEN_SETTINGS, params);
   }
 
   async openTerminal(workingDir: string): Promise<void> {

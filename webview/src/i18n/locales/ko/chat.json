@@ -378,6 +378,11 @@
       "tools": "도구",
       "time": "시간"
     },
+    "runPage": {
+      "loading": "실행 화면을 여는 중…",
+      "notFound": "이 세션에서 해당 실행을 찾을 수 없습니다.",
+      "backToSession": "세션으로 돌아가기"
+    },
     "transcriptModal": {
       "title": "{{name}}",
       "noAgents": "아직 에이전트가 없습니다.",

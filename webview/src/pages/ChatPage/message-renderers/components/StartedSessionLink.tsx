@@ -7,6 +7,7 @@ import { useChatStreamContextOrNull } from '@/contexts/ChatStreamContext';
 import { useWorkingDirOrNull } from '@/contexts/WorkingDirContext';
 import { useBacklinkedSession } from '@/contexts/BacklinkedSessionsContext';
 import { startedSessionsIn, type StartedSession } from '../utils/startedSessions';
+import { sessionToPath } from '@/router';
 
 /** The address of a session of this app, and how a click on a link to it opens it. */
 export function sessionLinkProps(session: StartedSession | undefined): { href?: string; onClick: (event: React.MouseEvent) => void } {
@@ -21,7 +22,7 @@ export function sessionLinkProps(session: StartedSession | undefined): { href?: 
     // In a browser the anchor's own `target="_blank"` opens the new tab; nothing to add.
     if (adapter.type === ClientEnv.BROWSER) return;
     event.preventDefault();
-    adapter.openSession(session.sessionId, session.cwd).catch((err) => {
+    adapter.openTab(sessionToPath(session.sessionId), session.cwd).catch((err) => {
       console.error('[StartedSessionLink] Failed to open session:', err);
       toast.error(i18n.t('chat:chatInput.agentMentionDropdown.openSessionFailed'));
     });

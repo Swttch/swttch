@@ -22,6 +22,24 @@ export type RunPlacement = 'side' | 'center' | 'page' | 'tab';
  */
 export type RunSurface = 'modal' | 'panel' | 'page';
 
+/** How much of the title row's controls have gone into the "More" menu: 0 none, 1 the detailed-view switch, 2 the place menu too, 3 all. */
+export type RunTitleLevel = 0 | 1 | 2 | 3;
+
+export function runTitleLevelFor(width: number): RunTitleLevel {
+  if (width >= 420) return 0;
+  if (width >= 380) return 1;
+  if (width >= 320) return 2;
+  return 3;
+}
+
+/**
+ * Whether the run is drawn in the panel's form (the panel's own row and tighter body, the controls in one "More"
+ * menu). The side panel and a page are; only the window over the chat is not.
+ */
+export function isCompactSurface(surface: RunSurface): boolean {
+  return surface !== 'modal';
+}
+
 /**
  * The icon button the title row's controls and its close button share. The
  * same padding, colour and hover as the icons of the dock in the session
@@ -61,18 +79,24 @@ export function RunVariantToggle(props: { variant: RunVariant; onChange: (varian
   );
 }
 
-/** Opens this run in a browser tab of its own. */
-export function OpenInNewTabButton(props: { onClick: () => void }) {
-  const { t } = useTranslation('chat');
-  const label = t('backgroundTasks.openInNewTab');
-
+/** The button that takes this run to the other view it is offered, named and drawn as that view. */
+function AlternativeViewButton(props: { label: string; Icon: ComponentType<{ className?: string }>; onClick: () => void }) {
+  const { label, Icon, onClick } = props;
   return (
     <Tooltip content={label} placement="top">
-      <button type="button" onClick={props.onClick} aria-label={label} className={ICON_BUTTON_CLASS}>
-        <ArrowTopRightOnSquareIcon className="w-5 h-5" />
+      <button type="button" onClick={onClick} aria-label={label} className={ICON_BUTTON_CLASS}>
+        <Icon className="w-5 h-5" />
       </button>
     </Tooltip>
   );
+}
+
+/**
+ * Where the button beside the place menu takes a run: its alternative view, which depends on where the run is. From the
+ * window and from the side panel it is a tab of its own; from a page (or a tab), back to the side panel.
+ */
+export function alternativeViewOf(placement: RunPlacement | undefined): 'tab' | 'side' {
+  return placement === 'page' || placement === 'tab' ? 'side' : 'tab';
 }
 
 const PLACEMENTS: { value: RunPlacement; labelKey: string; Icon: ComponentType<{ className?: string }> }[] = [
@@ -87,8 +111,8 @@ const PLACEMENTS: { value: RunPlacement; labelKey: string; Icon: ComponentType<{
 /**
  * The button that picks where this run opens, and the menu under it.
  *
- * The button wears the glyph of the placement it is in now; the menu lists the
- * four and ticks that one. A menu opened by a click, so Tippy is told when it
+ * The button wears one glyph wherever the run is, so the title row looks the same in the window, the page and the
+ * tab; the menu lists the four places and ticks the one in use. A menu opened by a click, so Tippy is told when it
  * is open rather than deciding for itself, and it goes into `<body>` so the
  * window it hangs from, which clips what spills past it, cannot cut it off.
  */
@@ -97,7 +121,6 @@ export function RunPlacementMenu(props: { placement: RunPlacement; onSelect?: (p
   const { t } = useTranslation('chat');
   const [open, setOpen] = useState(false);
   const label = t('backgroundTasks.viewOptions');
-  const Current = PLACEMENTS.find((p) => p.value === placement)?.Icon ?? CenterViewIcon;
 
   return (
     <Tippy
@@ -142,7 +165,7 @@ export function RunPlacementMenu(props: { placement: RunPlacement; onSelect?: (p
             aria-label={label}
             className={ICON_BUTTON_CLASS}
           >
-            <Current className="w-5 h-5" />
+            <CenterViewIcon className="w-5 h-5" />
           </button>
         </Tooltip>
       </span>
@@ -304,6 +327,14 @@ export function RunActionsMenu(props: {
               visible={subOpen}
               interactive
               placement="left-start"
+              // Left of the row when there is room, else right of it, and where neither fits it is pushed back inside the
+              // window (over the first menu) rather than left hanging off the edge.
+              popperOptions={{
+                modifiers: [
+                  { name: 'flip', options: { fallbackPlacements: ['right-start', 'left-end', 'right-end'], padding: 8 } },
+                  { name: 'preventOverflow', options: { altAxis: true, padding: 8 } },
+                ],
+              }}
               // No gap to the first level, so the pointer never leaves both menus on its way across. The row sits
               // inside the first menu's border and padding, so the distance is that (a hair less, so they overlap
               // rather than part by a sub-pixel).
@@ -372,8 +403,8 @@ export function RunActionsMenu(props: {
 }
 
 /**
- * The controls of a run window's title row, in their order: the short or detailed view, a tab of its own, and where
- * the run opens. A subagent and a workflow share them, so the two windows cannot drift apart. Each is drawn only when
+ * The controls of a run window's title row, in their order: the short or detailed view, the alternative view (a tab of
+ * its own, or the side panel; see {@link alternativeViewOf}), and where the run opens. A subagent and a workflow share them, so the two windows cannot drift apart. Each is drawn only when
  * its handler is given; nothing is drawn when none is.
  */
 export function RunViewActions(props: {
@@ -382,26 +413,36 @@ export function RunViewActions(props: {
   onOpenInNewTab?: () => void;
   placement?: RunPlacement;
   onPlacementChange?: (placement: RunPlacement) => void;
-  /** Every control goes into the one "More" button's dropdown, for a title row with no room to lay them out. */
-  collapsed?: boolean;
+  /** How much of the row has gone into the "More" menu, from none ({@link RunTitleLevel} 0) to all of it (3). */
+  level?: RunTitleLevel;
 }) {
-  const { variant, onVariantChange, onOpenInNewTab, placement, onPlacementChange, collapsed = false } = props;
+  const { variant, onVariantChange, onOpenInNewTab, placement, onPlacementChange, level = 0 } = props;
+  const { t } = useTranslation('chat');
   if (!onVariantChange && !onOpenInNewTab && !placement) return null;
-  if (collapsed) {
-    return (
-      <RunActionsMenu
-        variant={variant}
-        onVariantChange={onVariantChange}
-        placement={placement}
-        onPlacementChange={onPlacementChange}
-      />
-    );
-  }
+  // What stays on the row at each level: the switch leaves first, then the place menu, and the alternative view's button last.
+  const showSwitch = level === 0;
+  const showAlternative = level <= 2;
+  const alternative = alternativeViewOf(placement);
+  const showPlaceMenu = level <= 1;
+  const more = level >= 1;
   return (
     <>
-      {onVariantChange && <RunVariantToggle variant={variant} onChange={onVariantChange} />}
-      {onOpenInNewTab && <OpenInNewTabButton onClick={onOpenInNewTab} />}
-      {placement && <RunPlacementMenu placement={placement} onSelect={onPlacementChange} />}
+      {showSwitch && onVariantChange && <RunVariantToggle variant={variant} onChange={onVariantChange} />}
+      {showAlternative && alternative === 'tab' && onOpenInNewTab && (
+        <AlternativeViewButton label={t('backgroundTasks.openInNewTab')} Icon={ArrowTopRightOnSquareIcon} onClick={onOpenInNewTab} />
+      )}
+      {showAlternative && alternative === 'side' && onPlacementChange && (
+        <AlternativeViewButton label={t('backgroundTasks.placementSide')} Icon={SideViewIcon} onClick={() => onPlacementChange('side')} />
+      )}
+      {showPlaceMenu && placement && <RunPlacementMenu placement={placement} onSelect={onPlacementChange} />}
+      {more && (
+        <RunActionsMenu
+          variant={variant}
+          onVariantChange={onVariantChange}
+          placement={showPlaceMenu ? undefined : placement}
+          onPlacementChange={onPlacementChange}
+        />
+      )}
     </>
   );
 }

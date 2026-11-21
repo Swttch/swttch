@@ -2,7 +2,7 @@ import { MessageType, ClientEnv } from '../shared';
 import type { IdeAdapter } from './IdeAdapter';
 import { getBridge } from '../api/bridge/Bridge';
 import { assertFileOpened } from './openFileResult';
-import { type Route, routeToPath } from '../router';
+import { withWorkingDir } from '../router';
 import { readWorkingDirFromUrl } from '@/contexts/workingDirParam';
 
 /**
@@ -18,17 +18,20 @@ export class JetBrainsAdapter implements IdeAdapter {
     return getBridge().isConnected;
   }
 
-  async openNewTab(): Promise<void> {
-    await getBridge().request(MessageType.OPEN_NEW_TAB);
-    console.log('[JetBrainsAdapter] Sent OPEN_NEW_TAB via WebSocket bridge');
+  async newTab(path?: string): Promise<void> {
+    await getBridge().request(MessageType.NEW_TAB, path ? { path } : {});
+    console.log('[JetBrainsAdapter] Sent NEW_TAB via WebSocket bridge:', path ?? '(new conversation)');
   }
 
-  async openSession(sessionId: string, workingDir?: string): Promise<void> {
+  async openTab(path: string, workingDir?: string): Promise<void> {
     // `workingDir` picks the IDE project window: the Kotlin side runs it through
     // findProjectByBasePath, so a session from another project lands where it
-    // belongs instead of against whichever project asked.
-    await getBridge().request(MessageType.OPEN_SESSION, { sessionId, workingDir });
-    console.log('[JetBrainsAdapter] Sent OPEN_SESSION via WebSocket bridge:', sessionId);
+    // belongs instead of against whichever project asked. It also rides in the
+    // address, because a tab opened without it looks for the session's transcript
+    // under whichever directory the tab happens to start in and falls back to a
+    // new conversation.
+    await getBridge().request(MessageType.OPEN_TAB, { path: withWorkingDir(path, workingDir), workingDir });
+    console.log('[JetBrainsAdapter] Sent OPEN_TAB via WebSocket bridge:', path);
   }
 
   // An editor tab can only be opened by the IDE side, so this does not go
@@ -37,14 +40,6 @@ export class JetBrainsAdapter implements IdeAdapter {
   // reaches it does nothing rather than throwing.
   async openDiff(_toolUseId: string): Promise<void> {
     console.warn('[JetBrainsAdapter] openDiff() is a no-op; the backend opens the diff tab');
-  }
-
-  async openSettings(route?: Route): Promise<void> {
-    // `path` tells Kotlin which settings page the new editor tab should land on.
-    // Omitted → Kotlin falls back to the settings landing page.
-    const path = route ? routeToPath(route) : undefined;
-    await getBridge().request(MessageType.OPEN_SETTINGS, path ? { path } : {});
-    console.log('[JetBrainsAdapter] Sent OPEN_SETTINGS via WebSocket bridge:', path ?? '(default)');
   }
 
   async openFile(filePath: string, line?: number, column?: number): Promise<void> {

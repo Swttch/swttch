@@ -1,5 +1,4 @@
 import { ClientEnv } from '../shared';
-import type { Route } from '../router';
 
 /**
  * @deprecated Use ClientEnv from shared instead
@@ -20,18 +19,29 @@ export interface IdeAdapter {
   readonly type: ClientEnv;
 
   /**
-   * Open a new tab/window
+   * Open a tab/window of its own, whatever is open already.
    * - In JetBrains: Opens a new editor tab via Kotlin bridge
    * - In Browser: Opens a new browser tab
+   *
+   * @param path the page it lands on (e.g. `/sessions/new`); omit for a new conversation.
    */
-  openNewTab(): Promise<void>;
+  newTab(path?: string): Promise<void>;
 
   /**
-   * Open an existing session in a new tab/window
-   * - In JetBrains: Opens a new editor tab navigated to the session via Kotlin bridge
-   * - In Browser: Opens a new browser tab at the session route
+   * Open the page at `path`, or go to the tab/window that is already showing it.
+   *
+   * The one way into a page of its own (a session, a settings page, a sub-agent
+   * run): asking twice for the same page lands on the one tab instead of stacking
+   * a copy each time. A caller that wants a copy anyway uses {@link newTab}.
+   * - In JetBrains: the IDE finds the editor tab by the address it shows
+   * - In Browser: reuses the browser tab it opened for that address
+   *
+   * @param path the page's address, e.g. `/sessions/<id>` or `/settings/sponsor`.
+   * @param workingDir the project the page belongs to. For a page that is not this
+   *   project's own (a session mention can point anywhere) it is carried in the
+   *   address, so the page opens against the right tree.
    */
-  openSession(sessionId: string, workingDir?: string): Promise<void>;
+  openTab(path: string, workingDir?: string): Promise<void>;
 
   /**
    * Open the review for a proposed file edit in a tab/window of its own.
@@ -43,18 +53,6 @@ export interface IdeAdapter {
    *   nothing instead of throwing.
    */
   openDiff(toolUseId: string): Promise<void>;
-
-  /**
-   * Open settings in a new tab/window
-   * - In JetBrains: Opens a new editor tab navigated to settings
-   * - In Browser: Opens a new browser tab with settings hash
-   *
-   * @param route which settings page to land on (e.g. `Route.SETTINGS_SPONSOR`).
-   *   Omit to land on the settings landing page. Callers that need to respect
-   *   the user's overlay/new-tab preference should go through `openSettingsAt()`
-   *   rather than calling this directly.
-   */
-  openSettings(route?: Route): Promise<void>;
 
   /**
    * Open a file in the IDE editor, optionally focusing a 1-based line/column.

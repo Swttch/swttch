@@ -23,7 +23,7 @@ import { ConnectionLostBanner } from './ConnectionLostBanner';
 import { AuthErrorBanner } from './AuthErrorBanner';
 import { BrowserPermissionBanner } from './BrowserPermissionBanner';
 import { BackgroundTasksPanel } from './BackgroundTasksPanel';
-import { TASK_PANEL_WIDTH_CSS, useTaskPanelColumn } from './BackgroundTasksPanel/useTaskPanelColumn';
+import { useTaskPanelColumn, useTaskPanelWidthCss } from './BackgroundTasksPanel/useTaskPanelColumn';
 import { FilePreviewPane } from '@/components/FilePreviewPane';
 import { usePaneColumn, usePaneWidth } from '@/components/FilePreviewPane/usePaneColumn';
 import { ScheduledMessagesPanel, ScheduledMessageEditOverlay } from './ScheduledMessagesPanel';
@@ -181,6 +181,7 @@ function ChatPageContent() {
   const paneColumn = usePaneColumn();
   const paneColumnWidth = usePaneWidth(true);
   const taskPanelColumn = useTaskPanelColumn();
+  const taskPanelWidth = useTaskPanelWidthCss();
   // The folder this session works in was deleted or moved. The CLI cannot start there, so
   // the input gives way to a bar offering another folder.
   const folderGone = useWorkingDirGone(error);
@@ -643,7 +644,7 @@ function ChatPageContent() {
         paneColumn
           ? { width: `calc(100% - ${paneColumnWidth} - 1rem)`, transform: 'translateZ(0)' }
           : taskPanelColumn
-            ? { width: `calc(100% - ${TASK_PANEL_WIDTH_CSS})`, transform: 'translateZ(0)' }
+            ? { width: `calc(100% - ${taskPanelWidth})`, transform: 'translateZ(0)' }
             : undefined
       }
     >

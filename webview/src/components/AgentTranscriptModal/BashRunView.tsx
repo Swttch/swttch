@@ -8,7 +8,8 @@ import { RunViewActions, type RunPlacement, type RunSurface, type RunVariant } f
 
 interface Props {
   task: WorkflowTask;
-  onClose: () => void;
+  /** Omitted where the view is not a window and has nothing to close. */
+  onClose?: () => void;
   /** Where this view is drawn: its title row follows it. The window (the default) has nothing to go back to. */
   surface?: RunSurface;
   /** When given, a back chevron sits before the title; the side panel goes back to its task list with it. */
@@ -34,7 +35,6 @@ interface Props {
 export function BashRunView(props: Props) {
   const { task, onClose, surface = 'modal', onBack, backLabel, variant = 'full', onVariantChange, onOpenInNewTab, placement, onPlacementChange } = props;
   const isSimple = variant === 'simple';
-  const compact = surface === 'panel';
   const { path: resolvedOutputFile } = useTaskOutputFileLookup(task);
 
   return (
@@ -46,12 +46,12 @@ export function BashRunView(props: Props) {
         onBack={onBack}
         backLabel={backLabel}
         // In the panel the stop button leaves the title for the left end of the buttons on the right.
-        afterTitle={isSimple ? <TaskStatusWithStop task={task} hideStop={compact} /> : undefined}
-        actions={
+        afterTitle={(level) => (isSimple ? <TaskStatusWithStop task={task} hideStop={level > 0} /> : undefined)}
+        actions={(level) => (
           <>
-            {compact && isSimple && <TaskStopAction task={task} />}
+            {level > 0 && isSimple && <TaskStopAction task={task} />}
             <RunViewActions
-              collapsed={compact}
+              level={level}
               variant={variant}
               onVariantChange={onVariantChange}
               onOpenInNewTab={onOpenInNewTab}
@@ -59,7 +59,7 @@ export function BashRunView(props: Props) {
               onPlacementChange={onPlacementChange}
             />
           </>
-        }
+        )}
       />
       {!isSimple && <TaskSummaryHeader task={task} />}
       <BackgroundTaskOutputBody task={task} outputFile={resolvedOutputFile} />

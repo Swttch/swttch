@@ -8,6 +8,8 @@ export {
   pathToRoute,
   routeToPath,
   parseSessionIdFromPath,
+  parseRunFromPath,
+  runToPath,
   sessionToPath,
   parseToolUseIdFromPath,
   diffToPath,

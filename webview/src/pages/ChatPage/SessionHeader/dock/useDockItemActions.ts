@@ -41,7 +41,7 @@ export interface DockClickModifiers {
 export type DockItemActions = Partial<Record<DockItemId, (click?: DockClickModifiers) => void>>;
 
 export function useDockItemActions(): DockItemActions {
-  const { openNewTab } = useSessionContext();
+  const { newTab } = useSessionContext();
   const workflows = useWorkflowState();
   const scheduled = useScheduledMessages();
   const tunnel = useTunnelAction();
@@ -88,9 +88,9 @@ export function useDockItemActions(): DockItemActions {
       [DockItemId.ASSETS]: openAssetsFromMenu,
       [DockItemId.SIDE_QUESTION]: toggleSideQuestion,
       [DockItemId.SESSION_RAIL]: toggleSessionRail,
-      [DockItemId.NEW_TAB]: openNewTab,
+      [DockItemId.NEW_TAB]: newTab,
       [DockItemId.BROWSER]: () => filePreviewPaneStore.toggleBrowser(),
     }),
-    [openUsage, toggleScheduled, toggleWorkflows, tunnel.handleClick, openSettings, openNewTab, openAssetsFromMenu, toggleSideQuestion, toggleSessionRail],
+    [openUsage, toggleScheduled, toggleWorkflows, tunnel.handleClick, openSettings, newTab, openAssetsFromMenu, toggleSideQuestion, toggleSessionRail],
   );
 }

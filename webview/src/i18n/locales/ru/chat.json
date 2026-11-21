@@ -383,6 +383,11 @@
       "tools": "Инструменты",
       "time": "Время"
     },
+    "runPage": {
+      "loading": "Открываем запуск…",
+      "notFound": "Этот запуск не найден в сессии.",
+      "backToSession": "Назад к сессии"
+    },
     "transcriptModal": {
       "title": "{{name}}",
       "noAgents": "Пока нет агентов.",

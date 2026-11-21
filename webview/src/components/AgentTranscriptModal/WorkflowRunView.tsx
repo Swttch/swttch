@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { WorkflowTask } from '@/shared';
 import { useBackgroundTaskActions } from '@/hooks/useBackgroundTaskActions';
 import { useSessionContext } from '@/contexts/SessionContext';
@@ -12,11 +12,12 @@ import { DetailHeader } from './AgentDetailHeader';
 import { AgentComposer } from './AgentComposer';
 import { AgentTranscriptBody } from './AgentTranscriptBody';
 import { TaskStatusWithStop, TaskStopAction } from './TaskStatusBadge';
-import { RunViewActions, type RunPlacement, type RunSurface, type RunVariant } from './RunViewControls';
+import { RunViewActions, isCompactSurface, type RunPlacement, type RunSurface, type RunVariant } from './RunViewControls';
 
 interface Props {
   task: WorkflowTask;
-  onClose: () => void;
+  /** Omitted where the view is not a window and has nothing to close. */
+  onClose?: () => void;
   /** Where this view is drawn: its title row follows it, and in the side panel the agents are stacked, not beside. */
   surface?: RunSurface;
   /** When given, a back chevron sits before the title; the side panel goes back to its task list with it. */
@@ -38,10 +39,39 @@ interface Props {
  * progresses (see AgentTranscriptBody for the transcript body's own
  * live-refetch trigger).
  */
+/** From this width the agents stand in a column beside the transcript; narrower, they are rows above it. As `sm` is. */
+const SIDE_BY_SIDE_FROM_PX = 640;
+
+/**
+ * Whether the run's own body is wide enough for the agents and the transcript to stand side by side. Measured on the
+ * body and not decided by the surface: a page, the window and a wide side panel all lay it out the same way, by the room
+ * they have. Before there is a width to measure, the surface's usual answer stands.
+ */
+function useSideBySide(fallback: boolean) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [measured, setMeasured] = useState<boolean | null>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => {
+      const width = el.getBoundingClientRect().width;
+      if (width > 0) setMeasured(width >= SIDE_BY_SIDE_FROM_PX);
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  return { ref, sideBySide: measured ?? fallback };
+}
+
 export function WorkflowRunView(props: Props) {
   const { task, onClose, surface = 'modal', onBack, backLabel, variant = 'full', onVariantChange, onOpenInNewTab, placement, onPlacementChange } = props;
   const isSimple = variant === 'simple';
-  const compact = surface === 'panel';
+  const compact = isCompactSurface(surface);
+  const { ref: bodyRef, sideBySide } = useSideBySide(!compact);
+  const isModal = surface === 'modal';
   const [selectedAgentId, setSelectedAgentId] = useState<string | undefined>(task.agents[0]?.agentId);
   const { sendToAgent, stopAgent } = useBackgroundTaskActions();
   // Counts the messages sent from this view, so the transcript above the
@@ -79,12 +109,12 @@ export function WorkflowRunView(props: Props) {
         onBack={onBack}
         backLabel={backLabel}
         // In the panel the stop button leaves the title for the left end of the buttons on the right.
-        afterTitle={isSimple ? <TaskStatusWithStop task={task} hideStop={compact} /> : undefined}
-        actions={
+        afterTitle={(level) => (isSimple ? <TaskStatusWithStop task={task} hideStop={level > 0} /> : undefined)}
+        actions={(level) => (
           <>
-            {compact && isSimple && <TaskStopAction task={task} />}
+            {level > 0 && isSimple && <TaskStopAction task={task} />}
             <RunViewActions
-              collapsed={compact}
+              level={level}
               variant={variant}
               onVariantChange={onVariantChange}
               onOpenInNewTab={onOpenInNewTab}
@@ -92,7 +122,7 @@ export function WorkflowRunView(props: Props) {
               onPlacementChange={onPlacementChange}
             />
           </>
-        }
+        )}
       />
       {!isSimple && <TaskSummaryHeader task={task} />}
       {/* Picker beside the transcript rather than above it (issue #425).
@@ -112,17 +142,22 @@ export function WorkflowRunView(props: Props) {
           `flex-1`, so the picker is what shrinks. `flex-initial` keeps
           the transcript shrinkable for after the picker has bottomed out
           at its `min-w`. */}
-      <div className={`flex flex-1 min-h-0 flex-col${compact ? '' : ' sm:flex-row'}`}>
+      <div ref={bodyRef} className={`flex flex-1 min-h-0 flex-col${sideBySide ? (isModal ? ' sm:flex-row' : ' !flex-row') : ''}`}>
         {task.agents.length > 0 && (
           <AgentTabList
             agents={task.agents}
             taskStatus={task.status}
             selectedAgentId={selectedAgentId}
             onSelect={setSelectedAgentId}
-            stacked={compact}
+            // The window keeps its own `sm:` rule (the viewport's width, as before); anywhere else the body's measured
+            // width decides.
+            stacked={isModal ? compact : !sideBySide}
           />
         )}
-        <div className={`flex flex-1 min-h-0 min-w-0 flex-col${compact ? '' : ' sm:flex-initial sm:w-full sm:max-w-xl'}`}>
+        <div className={`flex flex-1 min-h-0 min-w-0 flex-col${
+            // In the window the transcript claims a width of its own (see above); on a page it takes what the picker leaves.
+            sideBySide ? (isModal ? ' sm:flex-initial sm:w-full sm:max-w-xl' : '') : ''
+          }`}>
           {selectedAgent && (
             <DetailHeader source={selectedAgent} transcriptDir={task.transcriptDir} conversationShownBelow={inTranscriptView} />
           )}
@@ -157,7 +192,9 @@ export function WorkflowRunView(props: Props) {
               // belongs to: resuming one starts it again as a task
               // under that id, which is what there is to stop.
               onStop={() => stopAgent(selectedAgent.agentId!, selectedAgent.label ?? selectedAgent.agentId!)}
-              unreachable={unreachableAgents.has(selectedAgent.agentId)}
+              // A stopped workflow's agents are covered by the ended bar, as a stopped single agent is: the CLI answers a
+              // message to a stopped agent with "stopped and not resumed".
+              unreachable={task.status === 'stopped' || unreachableAgents.has(selectedAgent.agentId)}
             />
           )}
         </div>

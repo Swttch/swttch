@@ -378,6 +378,11 @@
       "tools": "工具",
       "time": "时间"
     },
+    "runPage": {
+      "loading": "正在打开运行…",
+      "notFound": "在该会话中找不到此运行。",
+      "backToSession": "返回会话"
+    },
     "transcriptModal": {
       "title": "{{name}}",
       "noAgents": "暂无智能体。",

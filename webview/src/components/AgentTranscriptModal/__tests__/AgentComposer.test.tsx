@@ -210,6 +210,22 @@ describe('AgentComposer', () => {
       expect(screen.queryByTitle('Stop generating')).not.toBeInTheDocument();
     });
 
+    it('covers the box with a bar that keeps its place, instead of taking it away', () => {
+      setup({ unreachable: true });
+
+      const bar = screen.getByTestId('agent-ended-bar');
+      expect(bar).toBeInTheDocument();
+      // The box is still mounted (so nothing jumps), hidden and shut.
+      const hidden = document.querySelector('[contenteditable]')!.closest('.invisible');
+      expect(hidden).not.toBeNull();
+      expect(hidden).toHaveAttribute('inert');
+    });
+
+    it('draws no bar while the agent can be reached', () => {
+      setup();
+      expect(screen.queryByTestId('agent-ended-bar')).not.toBeInTheDocument();
+    });
+
     it('leaves the send button unusable', () => {
       setup({ unreachable: true });
       expect(screen.getByTitle('Send message')).toBeDisabled();

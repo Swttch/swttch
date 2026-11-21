@@ -8,6 +8,7 @@ import { Tooltip } from '@/components/Tooltip';
 import type { DesktopSession } from '@/hooks/useDesktopSession';
 import { useBacklinkedSession } from '@/contexts/BacklinkedSessionsContext';
 import { timeAgo } from '@/utils/timeAgo';
+import { sessionToPath } from '@/router';
 
 /** A link to a Claude Desktop session as the chat text writes it: `[title](#local_<id>)`. */
 const DESKTOP_SESSION_HREF = /^#?(local_[0-9A-Za-z-]+)$/;
@@ -52,7 +53,7 @@ export function openSessionFromClick(event: React.MouseEvent, sessionId: string,
   const adapter = getAdapter();
   if (adapter.type === ClientEnv.BROWSER) return;
   event.preventDefault();
-  adapter.openSession(sessionId, cwd).catch((err) => {
+  adapter.openTab(sessionToPath(sessionId), cwd).catch((err) => {
     console.error('[openSessionFromClick] Failed to open session:', err);
     toast.error(i18n.t('chat:chatInput.agentMentionDropdown.openSessionFailed'));
   });

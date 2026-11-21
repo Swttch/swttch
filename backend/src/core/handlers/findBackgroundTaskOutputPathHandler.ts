@@ -12,10 +12,13 @@ export async function findBackgroundTaskOutputPathHandler(
 ): Promise<void> {
   const taskId = message.payload?.taskId as string | undefined;
   const workingDir = message.payload?.workingDir as string | undefined;
+  // The session that started the task; lets a task gone from the runtime directory be found beside its session.
+  const sessionId = message.payload?.sessionId as string | undefined;
 
   const result = await findBackgroundTaskOutputPath({
     taskId: taskId ?? '',
     workingDir: workingDir ?? '',
+    sessionId,
   });
 
   connections.sendTo(connectionId, MessageType.ACK, {

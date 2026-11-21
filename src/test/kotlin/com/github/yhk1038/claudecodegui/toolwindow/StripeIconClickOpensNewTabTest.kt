@@ -14,12 +14,12 @@ import org.junit.jupiter.api.Test
  * `ClaudeCodeToolWindowFactory.createToolWindowContent` depends on live IDE APIs
  * (FileEditorManager, ToolWindowManager, MessageBus) that are unavailable without
  * a full `BasePlatformTestCase` / light-platform harness. Spinning up the IDE
- * platform just to assert "did we call openTab?" is fragile and slow.
+ * platform just to assert "did we call focusTab?" is fragile and slow.
  *
  * ### Strategy: extract the decision, inject the side-effect
- * The function under test is [openNewTab], a pure-logic wrapper extracted from
+ * The function under test is [newTab], a pure-logic wrapper extracted from
  * `ClaudeCodeToolWindowFactory`. It accepts a `tabOpener` lambda so tests can
- * substitute a recording fake in place of `OpenClaudeCodeAction.openTab`.
+ * substitute a recording fake in place of `OpenClaudeCodeAction.focusTab`.
  *
  * This mirrors the existing pattern in the codebase (e.g. RealizationGate):
  * keep IDE-aware plumbing in the factory, move the testable decision into a
@@ -42,37 +42,37 @@ class StripeIconClickOpensNewTabTest {
     inner class AlwaysOpensNewTab {
 
         @Test
-        fun `openNewTab calls tabOpener exactly once`() {
+        fun `newTab calls tabOpener exactly once`() {
             val spy = TabOpenerSpy()
-            openNewTab<Any?>(project = null, tabOpener = { project, tabId -> spy.record(project, tabId) })
+            newTab<Any?>(project = null, tabOpener = { project, tabId -> spy.record(project, tabId) })
 
             assertEquals(1, spy.calls.size, "tabOpener must be called exactly once")
         }
 
         @Test
-        fun `openNewTab generates a non-blank tabId`() {
+        fun `newTab generates a non-blank tabId`() {
             var capturedTabId: String? = null
-            openNewTab<Any?>(project = null, tabOpener = { _, tabId -> capturedTabId = tabId })
+            newTab<Any?>(project = null, tabOpener = { _, tabId -> capturedTabId = tabId })
 
             val id = capturedTabId
             assert(id != null && id.isNotBlank()) { "tabId must be a non-blank UUID string, got: $id" }
         }
 
         @Test
-        fun `openNewTab generates a unique tabId on every invocation`() {
+        fun `newTab generates a unique tabId on every invocation`() {
             val ids = mutableListOf<String>()
             repeat(5) {
-                openNewTab<Any?>(project = null, tabOpener = { _, tabId -> ids.add(tabId) })
+                newTab<Any?>(project = null, tabOpener = { _, tabId -> ids.add(tabId) })
             }
 
             assertEquals(5, ids.distinct().size, "Every call must produce a unique tabId")
         }
 
         @Test
-        fun `openNewTab forwards the project to tabOpener`() {
+        fun `newTab forwards the project to tabOpener`() {
             val sentinel = "sentinel-project"
             var capturedProject: String? = null
-            openNewTab(project = sentinel, tabOpener = { project, _ -> capturedProject = project })
+            newTab(project = sentinel, tabOpener = { project, _ -> capturedProject = project })
 
             assertEquals(sentinel, capturedProject)
         }
@@ -84,16 +84,16 @@ class StripeIconClickOpensNewTabTest {
         /**
          * The old `focusOrOpenClaudeCodeTab` would check openFiles and skip opening
          * a new tab if a Claude tab was already visible. This test documents that
-         * the new [openNewTab] function has NO such conditional — it always opens.
+         * the new [newTab] function has NO such conditional — it always opens.
          *
-         * We simulate "there are already open tabs" by calling openNewTab multiple
+         * We simulate "there are already open tabs" by calling newTab multiple
          * times and verifying the tabOpener is invoked each time.
          */
         @Test
-        fun `openNewTab always opens even when called multiple times in a row`() {
+        fun `newTab always opens even when called multiple times in a row`() {
             val spy = TabOpenerSpy()
             repeat(3) {
-                openNewTab<Any?>(project = null, tabOpener = { project, tabId -> spy.record(project, tabId) })
+                newTab<Any?>(project = null, tabOpener = { project, tabId -> spy.record(project, tabId) })
             }
 
             assertEquals(

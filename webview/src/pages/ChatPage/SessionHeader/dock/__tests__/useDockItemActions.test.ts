@@ -4,10 +4,10 @@ import { DockItemId } from '@/types/settings';
 import { OPEN_ASSETS_EVENT } from '../actions';
 import { TOGGLE_SIDE_QUESTION_EVENT } from '@/contexts/SideQuestionContext';
 
-const openNewTab = vi.fn();
+const newTab = vi.fn();
 const tunnelActivate = vi.fn();
 
-vi.mock('@/contexts/SessionContext', () => ({ useSessionContext: () => ({ openNewTab }) }));
+vi.mock('@/contexts/SessionContext', () => ({ useSessionContext: () => ({ newTab }) }));
 vi.mock('@/contexts/WorkflowStateContext', () => ({
   useWorkflowState: () => ({ panelOpen: false, openPanel: vi.fn(), closePanel: vi.fn() }),
 }));
@@ -64,6 +64,6 @@ describe('useDockItemActions', () => {
 
     result.current[DockItemId.NEW_TAB]!();
 
-    expect(openNewTab).toHaveBeenCalledTimes(1);
+    expect(newTab).toHaveBeenCalledTimes(1);
   });
 });

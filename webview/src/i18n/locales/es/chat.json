@@ -379,6 +379,11 @@
       "tools": "Herramientas",
       "time": "Tiempo"
     },
+    "runPage": {
+      "loading": "Abriendo la ejecución…",
+      "notFound": "No se encontró esta ejecución en la sesión.",
+      "backToSession": "Volver a la sesión"
+    },
     "transcriptModal": {
       "title": "{{name}}",
       "noAgents": "Aún no hay agentes.",

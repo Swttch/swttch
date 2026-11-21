@@ -41,7 +41,7 @@ vi.mock('@/contexts/SettingsContext', () => ({
 }));
 
 // The tasks state is what the window moves a run to the side panel with; most tests draw the window on its own, with none.
-let mockWorkflow: { openRunInSide: ReturnType<typeof vi.fn> } | null = null;
+let mockWorkflow: { placeRun: ReturnType<typeof vi.fn> } | null = null;
 vi.mock('@/contexts/WorkflowStateContext', () => ({
   useOptionalWorkflowState: () => mockWorkflow,
   useWorkflowState: () => mockWorkflow,
@@ -387,10 +387,17 @@ describe('AgentTranscriptModal: who gets a composer', () => {
   });
 
   // Before the launch text has been read there is no id, and an id is the whole
-  // address. Offering to send with nowhere to send is worse than not offering.
-  it('gives a backgrounded Agent none until its id is known', () => {
+  // address. Sending with nowhere to send is refused: the box is covered by the
+  // bar that says so, and shut.
+  it('covers the input of a backgrounded Agent with a bar until its id is known', () => {
     renderModal(agentTask({ taskId: undefined }));
-    expect(composer()).toBeNull();
+    expect(screen.getByTestId('agent-ended-bar')).toBeInTheDocument();
+    expect(composer()?.closest('[inert]')).not.toBeNull();
+  });
+
+  it('covers the input of a stopped Agent with a bar, which cannot be resumed by a message', () => {
+    renderModal(agentTask({ status: 'stopped' }));
+    expect(screen.getByTestId('agent-ended-bar')).toBeInTheDocument();
   });
 
   // A plain background command is a process, not something that reads messages.
@@ -404,6 +411,12 @@ describe('AgentTranscriptModal: who gets a composer', () => {
   it('gives a workflow with no agents none', () => {
     renderModal(makeTask({ agents: [] }));
     expect(composer()).toBeNull();
+  });
+
+  it('covers the input of a stopped workflow\'s agent with the bar, as a stopped single agent\'s is', () => {
+    sendMock.mockResolvedValue({ status: 'ok', entries: [], truncated: false });
+    renderModal(makeTask({ status: 'stopped' }));
+    expect(screen.getByTestId('agent-ended-bar')).toBeInTheDocument();
   });
 
   it('gives the workflow agent that is selected one', () => {
@@ -442,11 +455,12 @@ describe('AgentTranscriptModal scrolling', () => {
   });
 
   afterEach(() => {
+    mockWorkflow = null;
     vi.unstubAllGlobals();
   });
 
   function transcriptBox() {
-    return stubScrollBox(document.querySelector('.overflow-y-auto.space-y-3') as HTMLElement, { scrollHeight: 2000, clientHeight: 400 });
+    return stubScrollBox(document.querySelector('.absolute.inset-0.overflow-y-auto') as HTMLElement, { scrollHeight: 2000, clientHeight: 400 });
   }
 
   // Picking another agent used to keep the same body mounted, so the first
@@ -576,7 +590,7 @@ describe('AgentTranscriptModal: a subagent\'s simple and detailed views', () => 
   });
 
   it('moves the run to the side panel when "Side view" is picked, and does nothing for "View in center", where it already is', async () => {
-    const workflow = { openRunInSide: vi.fn() };
+    const workflow = { placeRun: vi.fn() };
     mockWorkflow = workflow;
     try {
       const onClose = vi.fn();
@@ -586,18 +600,38 @@ describe('AgentTranscriptModal: a subagent\'s simple and detailed views', () => 
       const items = await screen.findAllByRole('menuitemradio');
       fireEvent.click(items[1]); // View in center
       expect(onClose).not.toHaveBeenCalled();
-      expect(workflow.openRunInSide).not.toHaveBeenCalled();
+      expect(workflow.placeRun).not.toHaveBeenCalled();
 
       fireEvent.click(screen.getByRole('button', { name: 'Change view options' }));
       fireEvent.click((await screen.findAllByRole('menuitemradio'))[0]); // Side view
       expect(onClose).toHaveBeenCalledTimes(1);
-      expect(workflow.openRunInSide).toHaveBeenCalledWith('toolu_a');
+      expect(workflow.placeRun).toHaveBeenCalledWith('toolu_a', 'side');
+    } finally {
+      mockWorkflow = null;
+    }
+  });
+
+  it('moves the run to the page or a tab when those are picked, and the new-tab button opens it in a tab', async () => {
+    const workflow = { placeRun: vi.fn() };
+    mockWorkflow = workflow;
+    try {
+      const onClose = vi.fn();
+      renderModal(agentTask(), onClose);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Change view options' }));
+      fireEvent.click((await screen.findAllByRole('menuitemradio'))[2]); // Full page view
+      expect(workflow.placeRun).toHaveBeenLastCalledWith('toolu_a', 'page');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Open in new tab' }));
+      expect(workflow.placeRun).toHaveBeenLastCalledWith('toolu_a', 'tab');
+      expect(onClose).toHaveBeenCalledTimes(2);
     } finally {
       mockWorkflow = null;
     }
   });
 
   it('has the toggle, the new-tab button and the placement menu on a background command too, and flips it', () => {
+    mockWorkflow = { placeRun: vi.fn() };
     renderModal(agentTask({ taskType: 'local_bash', taskId: 'b27yhtv6i' }));
 
     // The short view first: no strip over the log, and the toggle offers the detailed one.

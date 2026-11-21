@@ -379,6 +379,11 @@
       "tools": "Outils",
       "time": "Temps"
     },
+    "runPage": {
+      "loading": "Ouverture de l’exécution…",
+      "notFound": "Cette exécution est introuvable dans la session.",
+      "backToSession": "Retour à la session"
+    },
     "transcriptModal": {
       "title": "{{name}}",
       "noAgents": "Aucun agent pour l'instant.",

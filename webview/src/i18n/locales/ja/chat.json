@@ -378,6 +378,11 @@
       "tools": "ツール",
       "time": "時間"
     },
+    "runPage": {
+      "loading": "実行を開いています…",
+      "notFound": "このセッションでその実行が見つかりませんでした。",
+      "backToSession": "セッションに戻る"
+    },
     "transcriptModal": {
       "title": "{{name}}",
       "noAgents": "まだエージェントがいません。",

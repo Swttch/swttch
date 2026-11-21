@@ -93,13 +93,12 @@ import { refreshDiffPreviewHandler } from './refreshDiffPreview';
 import { applyDiffHandler } from './applyDiff';
 import { rejectDiffHandler } from './rejectDiff';
 import { createSessionHandler } from './createSession';
-import { openNewTabHandler } from './openNewTab';
-import { openSessionHandler } from './openSession';
+import { newTabHandler } from './newTab';
+import { openTabHandler } from './openTab';
 import { setTabNameHandler } from './setTabName';
 import { setPrimarySelectionHandler } from './setPrimarySelection';
 import { getClipboardHandler } from './getClipboard';
 import { setClipboardHandler } from './setClipboard';
-import { openSettingsHandler } from './openSettings';
 import { restartBackendHandler } from './restartBackend';
 import { openTerminalHandler } from './openTerminal';
 import { openDevToolsHandler } from './openDevTools';
@@ -489,11 +488,11 @@ export async function handleMessage(
     case MessageType.CREATE_SESSION:
       await createSessionHandler(connectionId, message, connections, bridge);
       break;
-    case MessageType.OPEN_NEW_TAB:
-      await openNewTabHandler(connectionId, message, connections, bridge);
+    case MessageType.NEW_TAB:
+      await newTabHandler(connectionId, message, connections, bridge);
       break;
-    case MessageType.OPEN_SESSION:
-      await openSessionHandler(connectionId, message, connections, bridge);
+    case MessageType.OPEN_TAB:
+      await openTabHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.SET_TAB_NAME:
       await setTabNameHandler(connectionId, message, connections, bridge);
@@ -506,9 +505,6 @@ export async function handleMessage(
       break;
     case MessageType.SET_CLIPBOARD:
       await setClipboardHandler(connectionId, message, connections, bridge);
-      break;
-    case MessageType.OPEN_SETTINGS:
-      await openSettingsHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.RESTART_BACKEND:
       restartBackendHandler(connectionId, message, connections, bridge);

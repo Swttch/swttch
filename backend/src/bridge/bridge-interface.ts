@@ -120,8 +120,24 @@ export interface Bridge {
     newContent: string;
   }): Promise<void>;
   createSession(workingDir?: string): Promise<void>;
-  openNewTab(workingDir?: string): Promise<void>;
-  openSession(sessionId: string, workingDir?: string): Promise<void>;
+  /**
+   * Open a tab of its own, whatever is open already.
+   *
+   * @param path the page it lands on; omit for a new conversation.
+   */
+  newTab(workingDir?: string, path?: string): Promise<void>;
+  /**
+   * Open the page at [path], or go to the tab that is already showing it.
+   *
+   * The one way into a page of its own (a session, a settings page, a sub-agent
+   * run). Each environment keeps the promise in its own way: the IDE finds the
+   * editor tab by the address it shows, and a browser reuses the tab it opened for
+   * that address.
+   *
+   * @param path the page's address, e.g. '/sessions/<id>' or '/settings/sponsor'.
+   * @param workingDir the project the tab belongs to; omit for the one this backend serves.
+   */
+  openTab(path: string, workingDir?: string): Promise<void>;
   /**
    * Name the tab identified by [panelId], or clear the name when [name] is
    * empty so the tab goes back to following its conversation title.
@@ -134,8 +150,6 @@ export interface Bridge {
    * @param panelId the tab to name; the same id the IDE knows as its tab id.
    */
   setTabName(panelId: string, name: string): Promise<void>;
-  /** @param path settings page to land on (e.g. '/settings/sponsor'); omit for the landing page. */
-  openSettings(workingDir?: string, path?: string): Promise<void>;
   openTerminal(workingDir: string): Promise<void>;
   /**
    * Open the IDE's embedded-browser DevTools for the chat webview, in its own

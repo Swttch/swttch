@@ -387,6 +387,11 @@
       "tools": "الأدوات",
       "time": "الوقت"
     },
+    "runPage": {
+      "loading": "جارٍ فتح التشغيل…",
+      "notFound": "تعذّر العثور على هذا التشغيل في الجلسة.",
+      "backToSession": "العودة إلى الجلسة"
+    },
     "transcriptModal": {
       "title": "{{name}}",
       "noAgents": "لا يوجد وكلاء بعد.",

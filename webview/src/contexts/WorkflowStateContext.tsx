@@ -2,7 +2,10 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useBridgeContext } from './BridgeContext';
 import { useSessionContext } from './SessionContext';
 import { useSettingsOrNull } from './SettingsContext';
-import { SettingKey } from '@/types/settings';
+import { SettingKey, type RunViewPlacement } from '@/types/settings';
+import { useNavigate } from 'react-router-dom';
+import { getAdapter } from '@/adapters';
+import { runToPath, withWorkingDir } from '@/router';
 import { MessageType } from '@/shared';
 import type { WorkflowTask } from '@/shared';
 
@@ -48,6 +51,12 @@ interface WorkflowStateValue {
    */
   openRun: (toolUseId: string) => void;
   /**
+   * Show a task's run in one of the four places a run can be: beside the chat, over it, as a page of this tab, or in
+   * a tab of its own. The view options menu's place picker and the pin both end here, so a place means the same
+   * wherever it is picked from.
+   */
+  placeRun: (toolUseId: string, placement: RunViewPlacement) => void;
+  /**
    * The tasks whose end this screen saw happen: heard running, then heard over. The CLI does not write the notice of
    * a task's end into the chat until the session is read again, so the chat draws it from these (a task read back
    * already over is not here: its notice is in the record).
@@ -65,6 +74,7 @@ const WorkflowStateContext = createContext<WorkflowStateValue | null>(null);
 export function WorkflowStateProvider({ children }: { children: ReactNode }) {
   const { subscribe, isConnected } = useBridgeContext();
   const { currentSessionId } = useSessionContext();
+  const navigate = useNavigate();
   const [taskMap, setTaskMap] = useState<Map<string, WorkflowTask>>(new Map());
   // Workflows hidden from the panel via "Clear"/"✕". They stay in taskMap so the
   // inline chat card keeps rendering its real status — dismissing must not make
@@ -106,16 +116,51 @@ export function WorkflowStateProvider({ children }: { children: ReactNode }) {
   const openTranscript = useCallback((toolUseId: string) => setTranscriptToolUseId(toolUseId), []);
   const closeTranscript = useCallback(() => setTranscriptToolUseId(null), []);
   // Where a run opens when it is clicked: the place pinned as the default for the project (the view options menu's
-  // pin), else beside the chat. Only the window and the panel exist so far; the page and the tab, pinned or not, are
-  // not built yet and open beside the chat.
+  // pin), else beside the chat.
   const pinnedPlacement = useSettingsOrNull()?.settings[SettingKey.RUN_VIEW_PLACEMENT] ?? null;
+  const placeRun = useCallback(
+    (toolUseId: string, placement: RunViewPlacement) => {
+      switch (placement) {
+        case 'center':
+          openTranscript(toolUseId);
+          return;
+        case 'tab':
+        case 'page': {
+          // The page is of the session that started the task, so with no session (a conversation not begun) there is
+          // nothing to address it by and the run stays beside the chat.
+          if (!currentSessionId) {
+            openRunInSide(toolUseId);
+            return;
+          }
+          const path = runToPath(currentSessionId, toolUseId);
+          if (placement === 'page') {
+            // The same tab moves to the page. The place goes along so the page can say where it is.
+            navigate(withWorkingDir(path), { state: { runPlacement: 'page' } });
+            return;
+          }
+          getAdapter()
+            .openTab(path)
+            .catch((error) => {
+              // A blocked pop-up or an IDE that cannot be reached must not swallow the click: beside the chat still
+              // shows the run.
+              console.warn('[WorkflowState] opening the run in a tab failed, showing it beside the chat:', error);
+              openRunInSide(toolUseId);
+            });
+          return;
+        }
+        default:
+          openRunInSide(toolUseId);
+      }
+    },
+    [currentSessionId, navigate, openRunInSide, openTranscript],
+  );
   const openRun = useCallback(
     (toolUseId: string) => {
-      // A run opens in the side panel, whatever it is: an agent, a workflow or a command.
-      if (!taskMap.has(toolUseId) || pinnedPlacement === 'center') openTranscript(toolUseId);
-      else openRunInSide(toolUseId);
+      // A task this screen has not heard of has no run to put anywhere but the window.
+      if (!taskMap.has(toolUseId)) openTranscript(toolUseId);
+      else placeRun(toolUseId, pinnedPlacement ?? 'side');
     },
-    [taskMap, openRunInSide, openTranscript, pinnedPlacement],
+    [taskMap, placeRun, openTranscript, pinnedPlacement],
   );
 
   useEffect(() => {
@@ -183,9 +228,10 @@ export function WorkflowStateProvider({ children }: { children: ReactNode }) {
       openRunInSide,
       closeRunInSide,
       openRun,
+      placeRun,
       liveEndedIds,
     };
-  }, [sideRunToolUseId, openRunInSide, closeRunInSide, openRun, liveEndedIds, taskMap, dismissedIds, panelOpen, openPanel, closePanel, focusedToolUseId, transcriptToolUseId, openTranscript, closeTranscript]);
+  }, [sideRunToolUseId, openRunInSide, closeRunInSide, openRun, placeRun, liveEndedIds, taskMap, dismissedIds, panelOpen, openPanel, closePanel, focusedToolUseId, transcriptToolUseId, openTranscript, closeTranscript]);
 
   return <WorkflowStateContext.Provider value={value}>{children}</WorkflowStateContext.Provider>;
 }

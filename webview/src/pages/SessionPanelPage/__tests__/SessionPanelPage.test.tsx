@@ -43,7 +43,7 @@ vi.mock('@/contexts/BridgeContext', () => ({
 }));
 
 vi.mock('@/adapters', () => ({
-  getAdapter: () => ({ openSession: mockOpenSession }),
+  getAdapter: () => ({ openTab: mockOpenSession }),
 }));
 
 vi.mock('@/components/SessionList/useSessionList', () => ({
@@ -70,7 +70,7 @@ describe('SessionPanelPage', () => {
     bridge.isConnected = true;
     mockOpenSession.mockResolvedValue(undefined);
     mockUseSessionContext.mockReturnValue({
-      openNewTab: mockOpenNewTab,
+      newTab: mockOpenNewTab,
       loadSessions: mockLoadSessions,
       sessionsServiceError: null,
     });
@@ -85,7 +85,7 @@ describe('SessionPanelPage', () => {
   it('opens the clicked session in a new tab via the adapter', () => {
     render(<SessionPanelPage />);
     fireEvent.click(screen.getByRole('button', { name: /My Session/i }));
-    expect(mockOpenSession).toHaveBeenCalledWith('s1', undefined);
+    expect(mockOpenSession).toHaveBeenCalledWith('/sessions/s1', undefined);
   });
 
   // A session that ran in a folder under the project is looked up under the
@@ -100,7 +100,7 @@ describe('SessionPanelPage', () => {
     );
     render(<SessionPanelPage />);
     fireEvent.click(screen.getByRole('button', { name: /My Session/i }));
-    expect(mockOpenSession).toHaveBeenCalledWith('s1', 'C:\\proj\\sub');
+    expect(mockOpenSession).toHaveBeenCalledWith('/sessions/s1', 'C:\\proj\\sub');
   });
 
   it('방향키로 세션을 하이라이트하고 Enter로 새 탭에서 연다', () => {
@@ -111,7 +111,7 @@ describe('SessionPanelPage', () => {
     fireEvent.keyDown(searchInput, { key: 'ArrowDown' });
     fireEvent.keyDown(searchInput, { key: 'Enter' });
 
-    expect(mockOpenSession).toHaveBeenCalledWith('s1', undefined);
+    expect(mockOpenSession).toHaveBeenCalledWith('/sessions/s1', undefined);
   });
 
   it('Cmd/Ctrl+Shift+P로 세션 목록을 새로고침한다', () => {
@@ -142,7 +142,7 @@ describe('SessionPanelPage', () => {
 
   it('shows WSL guidance instead of "No sessions yet" when the backend reports a host mismatch', () => {
     mockUseSessionContext.mockReturnValue({
-      openNewTab: mockOpenNewTab,
+      newTab: mockOpenNewTab,
       loadSessions: mockLoadSessions,
       sessionsServiceError: { type: MessageType.WSL_HOST_MISMATCH, reason: 'inside WSL' },
     });
@@ -159,7 +159,7 @@ describe('SessionPanelPage', () => {
   // while the second is true tells the user something untrue.
   it('says the sessions are loading rather than "No sessions yet" while the list is being fetched', () => {
     mockUseSessionContext.mockReturnValue({
-      openNewTab: mockOpenNewTab,
+      newTab: mockOpenNewTab,
       loadSessions: mockLoadSessions,
       sessionsServiceError: null,
       isLoading: true,

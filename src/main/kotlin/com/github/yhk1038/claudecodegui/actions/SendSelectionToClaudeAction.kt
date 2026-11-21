@@ -214,7 +214,7 @@ class SendSelectionToClaudeAction : AnAction() {
         val targetPanelId = panelId
         ApplicationManager.getApplication().invokeLater {
             when {
-                kind == "jcef" && targetPanelId != null -> OpenClaudeCodeAction.openTab(project, targetPanelId)
+                kind == "jcef" && targetPanelId != null -> OpenClaudeCodeAction.focusTab(project, targetPanelId)
                 kind == "browser" -> Unit // active Claude is a browser tab — leave the IDE alone
                 else -> OpenClaudeCodeAction.openOrFocus(project)
             }

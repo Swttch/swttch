@@ -94,14 +94,14 @@ class ClaudeCodeToolWindowFactory : ToolWindowFactory, DumbAware {
             return
         }
         try {
-            openNewTab(project, ::openTab)
+            newTab(project, ::focusTab)
             toolWindow.hide()
         } catch (e: Exception) {
             logger.info("Editor not ready yet, will retry after indexing", e)
             label.text = "Waiting for project initialization..."
             DumbService.getInstance(project).runWhenSmart {
                 ApplicationManager.getApplication().invokeLater {
-                    openNewTab(project, ::openTab)
+                    newTab(project, ::focusTab)
                     toolWindow.hide()
                 }
             }
@@ -109,25 +109,25 @@ class ClaudeCodeToolWindowFactory : ToolWindowFactory, DumbAware {
     }
 
     /**
-     * Delegates to [OpenClaudeCodeAction.openTab] and wraps failures with a
+     * Delegates to [OpenClaudeCodeAction.focusTab] and wraps failures with a
      * 500 ms retry — preserving the same safety net that existed in the old
      * `focusOrOpenClaudeCodeTab` path.
      */
-    private fun openTab(project: Project, tabId: String) {
+    private fun focusTab(project: Project, tabId: String) {
         try {
-            OpenClaudeCodeAction.openTab(project, tabId)
+            OpenClaudeCodeAction.focusTab(project, tabId)
         } catch (e: Exception) {
             logger.warn("Failed to open Claude Code tab, retrying in 500ms", e)
-            retryOpenTab(project, tabId)
+            retryFocusTab(project, tabId)
         }
     }
 
-    private fun retryOpenTab(project: Project, tabId: String) {
+    private fun retryFocusTab(project: Project, tabId: String) {
         java.util.Timer().schedule(object : java.util.TimerTask() {
             override fun run() {
                 ApplicationManager.getApplication().invokeLater {
                     try {
-                        OpenClaudeCodeAction.openTab(project, tabId)
+                        OpenClaudeCodeAction.focusTab(project, tabId)
                     } catch (e: Exception) {
                         logger.warn("Retry also failed to open Claude Code tab", e)
                     }

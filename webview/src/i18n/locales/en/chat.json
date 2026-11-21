@@ -379,6 +379,11 @@
       "tools": "Tools",
       "time": "Time"
     },
+    "runPage": {
+      "loading": "Opening the run…",
+      "notFound": "This run could not be found in the session.",
+      "backToSession": "Back to the session"
+    },
     "transcriptModal": {
       "title": "{{name}}",
       "noAgents": "No agents yet.",

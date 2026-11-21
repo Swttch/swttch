@@ -41,7 +41,7 @@ vi.mock('../BrowserPermissionBanner', () => ({ BrowserPermissionBanner: stub('br
 vi.mock('../MigrationBanner', () => ({ MigrationBanner: stub('migration') }));
 vi.mock('../BackgroundTasksPanel', () => ({ BackgroundTasksPanel: stub('bg') }));
 vi.mock('../BackgroundTasksPanel/useTaskPanelColumn', () => ({
-  TASK_PANEL_WIDTH_CSS: '24rem',
+  useTaskPanelWidthCss: () => '24rem',
   useTaskPanelColumn: () => false,
 }));
 vi.mock('../ScheduledMessagesPanel', () => ({

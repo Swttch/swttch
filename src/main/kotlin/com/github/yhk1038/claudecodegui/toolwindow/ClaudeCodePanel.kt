@@ -108,7 +108,6 @@ import java.awt.dnd.DropTargetAdapter
 import java.awt.dnd.DropTargetDragEvent
 import java.awt.dnd.DropTargetDropEvent
 import java.io.File
-import java.util.UUID
 import javax.swing.JComponent
 import javax.swing.JPanel
 
@@ -1332,15 +1331,11 @@ class ClaudeCodePanel(
                         when {
                             path == "/sessions/new" || path.startsWith("/sessions/new?") -> {
                                 logger.info("[ClaudeCodePanel] Popup blocked: $targetUrl -> new session tab")
-                                OpenClaudeCodeAction.openTab(project, UUID.randomUUID().toString())
-                            }
-                            path.startsWith("/settings/") -> {
-                                logger.info("[ClaudeCodePanel] Popup blocked: $targetUrl -> settings tab")
-                                OpenClaudeCodeAction.openTab(project, UUID.randomUUID().toString(), "/settings/general")
+                                OpenClaudeCodeAction.newTab(project)
                             }
                             else -> {
-                                logger.info("[ClaudeCodePanel] Popup blocked: $targetUrl -> new tab with path $path")
-                                OpenClaudeCodeAction.openTab(project, UUID.randomUUID().toString(), path)
+                                logger.info("[ClaudeCodePanel] Popup blocked: $targetUrl -> tab at path $path")
+                                OpenClaudeCodeAction.openTab(project, path)
                             }
                         }
                     } catch (e: Exception) {
@@ -2876,37 +2871,28 @@ class ClaudeCodePanel(
                 logger.info("Session cleared (workingDir=$workingDir)")
             }
 
-            override suspend fun openNewTab(workingDir: String) {
+            override suspend fun newTab(workingDir: String, path: String?) {
                 ApplicationManager.getApplication().invokeLater {
                     val targetProject = findProjectByBasePath(workingDir) ?: project
-                    OpenClaudeCodeAction.openTab(targetProject, UUID.randomUUID().toString())
-                    logger.info("Opened new Claude Code session tab (workingDir=$workingDir)")
+                    OpenClaudeCodeAction.newTab(targetProject, path)
+                    logger.info("Opened new Claude Code tab (workingDir=$workingDir, path=$path)")
                 }
             }
 
-            override suspend fun openSession(sessionId: String, workingDir: String?) {
+            override suspend fun openTab(path: String, workingDir: String?) {
                 ApplicationManager.getApplication().invokeLater {
                     val targetProject = findProjectByBasePath(workingDir ?: "") ?: project
-                    // The directory has to travel IN THE ROUTE, not just in the
-                    // choice of project. A session's transcript is found under its
-                    // own working directory, so a tab opened at a bare
-                    // `/sessions/<id>` looks for it under whichever directory that
-                    // tab happens to start in — finds nothing, and falls back to a
+                    // The directory travels IN THE PATH (`?workingDir=`, written by the
+                    // caller), not just in the choice of project: a session's
+                    // transcript is found under its own working directory, so a tab
+                    // opened at a bare `/sessions/<id>` would look under whichever
+                    // directory the tab starts in, find nothing and fall back to a
                     // new conversation. The tab opened, the session did not.
                     //
-                    // `?workingDir=` is the same query the webview's own
-                    // navigation writes (withWorkingDir), so a tab opened from here
-                    // lands exactly as one switched from the session dropdown does.
-                    val path = buildString {
-                        append("/sessions/").append(sessionId)
-                        if (!workingDir.isNullOrBlank()) {
-                            append("?workingDir=")
-                            append(java.net.URLEncoder.encode(workingDir, "UTF-8"))
-                        }
-                    }
-                    // Always open the session in a fresh editor tab (new tabId).
-                    OpenClaudeCodeAction.openTab(targetProject, UUID.randomUUID().toString(), path)
-                    logger.info("Opened session tab (sessionId=$sessionId, workingDir=$workingDir)")
+                    // An already-open tab at this page is gone to rather than copied:
+                    // see OpenClaudeCodeAction.openTab.
+                    OpenClaudeCodeAction.openTab(targetProject, path)
+                    logger.info("Opened Claude Code tab (path=$path, workingDir=$workingDir)")
                 }
             }
 
@@ -2963,17 +2949,6 @@ class ClaudeCodePanel(
                 }
                 return withTimeoutOrNull(CLIPBOARD_READ_TIMEOUT_MS) { result.await() }
                     ?: ClipboardContents.EMPTY.also { logger.warn("Clipboard read timed out") }
-            }
-
-            override suspend fun openSettings(workingDir: String, path: String?) {
-                ApplicationManager.getApplication().invokeLater {
-                    val targetProject = findProjectByBasePath(workingDir) ?: project
-                    // The caller picks the destination (e.g. "/settings/sponsor" for a
-                    // sponsor invite); fall back to General when it says nothing.
-                    val target = path?.takeIf { it.isNotBlank() } ?: "/settings/general"
-                    OpenClaudeCodeAction.openTab(targetProject, UUID.randomUUID().toString(), target)
-                    logger.info("Opened Claude Code settings in editor tab (workingDir=$workingDir, path=$target)")
-                }
             }
 
             override suspend fun openDevTools() {
@@ -3234,7 +3209,7 @@ class ClaudeCodePanel(
      * desktop banner, because the two mean the same thing to the user.
      */
     private fun revealThisSession() {
-        OpenClaudeCodeAction.openTab(project, tabId)
+        OpenClaudeCodeAction.focusTab(project, tabId)
     }
 
     /**

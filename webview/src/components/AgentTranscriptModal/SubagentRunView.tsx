@@ -15,6 +15,7 @@ import { AgentOutputTranscriptBody } from './AgentOutputTranscriptBody';
 import {
   RunViewActions,
   type RunPlacement,
+  isCompactSurface,
   type RunSurface,
   type RunVariant,
 } from './RunViewControls';
@@ -65,7 +66,7 @@ interface Props {
 export function SubagentRunView(props: Props) {
   const { task, onClose, onBack, backLabel, variant = 'full', onVariantChange, surface = 'modal', onOpenInNewTab, placement, onPlacementChange } = props;
   const isSimple = variant === 'simple';
-  const compact = surface === 'panel';
+  const compact = isCompactSurface(surface);
   // In the Transcript view the prompt is the first bubble of the conversation and the answer is its last message,
   // so the strip that says both again above it is left out, as the desktop app's agent panel has none.
   const inTranscriptView = useTranscriptViewMode() !== null;
@@ -89,8 +90,8 @@ export function SubagentRunView(props: Props) {
   // resumed by the message, which is how the CLI itself describes it.
   const agentAddress = agentAddressOf(task);
   // Not every agent can be: one that was stopped is not resumed by a message, and the CLI answers one with "was
-  // stopped and not resumed". So the composer is not drawn for a stopped agent, nor for one that a send has already
-  // found unreachable, rather than left there to fail.
+  // stopped and not resumed". So for a stopped agent, one that a send has already found unreachable, or a record with no
+  // address to send to, the composer's place is covered by the bar that says so, rather than left there to fail.
   const canMessage = !!agentAddress && task.status !== 'stopped' && !unreachableAgents.has(agentAddress);
 
   return (
@@ -103,12 +104,12 @@ export function SubagentRunView(props: Props) {
         onBack={onBack}
         backLabel={backLabel}
         // In the panel the stop button leaves the title for the left end of the buttons on the right.
-        afterTitle={isSimple ? <TaskStatusWithStop task={task} hideStop={compact} /> : undefined}
-        actions={
+        afterTitle={(level) => (isSimple ? <TaskStatusWithStop task={task} hideStop={level > 0} /> : undefined)}
+        actions={(level) => (
           <>
-            {compact && isSimple && <TaskStopAction task={task} />}
+            {level > 0 && isSimple && <TaskStopAction task={task} />}
             <RunViewActions
-              collapsed={compact}
+              level={level}
               variant={variant}
               onVariantChange={onVariantChange}
               onOpenInNewTab={onOpenInNewTab}
@@ -116,7 +117,7 @@ export function SubagentRunView(props: Props) {
               onPlacementChange={onPlacementChange}
             />
           </>
-        }
+        )}
       />
       {/* The simple view says how the task is doing beside the title, and
           has no strip under it. */}
@@ -124,18 +125,16 @@ export function SubagentRunView(props: Props) {
       <div className="flex flex-1 min-h-0 flex-col">
         {!isSimple && !inTranscriptView && <DetailHeader source={task} />}
         <AgentOutputTranscriptBody compact={compact} task={task} outputFile={resolvedOutputFile} unavailable={outputUnavailable} sendCount={sendCount} />
-        {canMessage && agentAddress && (
-          <AgentComposer
-            agentId={agentAddress}
+        <AgentComposer
+            agentId={agentAddress ?? ''}
+            unreachable={!canMessage}
             isRunning={isRunning}
             inputMode={inputMode}
             onSend={sendAndFollow}
             // A backgrounded Agent IS its task, so stopping it by its
             // own address stops this agent and nothing else.
-            onStop={() => stopAgent(agentAddress, task.name)}
-            unreachable={unreachableAgents.has(agentAddress)}
+            onStop={() => agentAddress && stopAgent(agentAddress, task.name)}
           />
-        )}
       </div>
     </>
   );
