@@ -24,7 +24,7 @@ export interface SendActionsValue {
   canRewind: (sendUuid: string) => boolean;
   /** Restore the files this send edited, leaving the conversation alone. */
   rewindCode: (sendUuid: string) => void;
-  /** Start a new session branched from just before this send. */
+  /** Start a new session branched from just before this send, or just after it when the CLI wrote it (#719). */
   forkConversation: (sendUuid: string) => void;
   /** Whether a reply (an assistant entry, by its uuid) can be branched from: it is recorded and not still streaming. */
   canForkReply: (replyUuid: string) => boolean;

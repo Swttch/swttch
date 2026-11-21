@@ -8,6 +8,31 @@ import { MessageType } from '@/shared';
 import { getTextContent, type LoadedMessageDto } from '../../types';
 import { canRewindTo, isRecordedSend, recordedUuidOf } from './rewindTargets';
 import type { SendActionsValue } from './SendActionsContext';
+import { commandSendText } from './sendText';
+import { parseUserContent, stripPickedElements, stripSystemReminders } from './message-renderers/utils/parseUserContent';
+import { hasVisibleGlyph } from './message-renderers/components/IfVisible';
+
+/**
+ * What a fork from this card puts back in the composer, or null when nobody typed the card (#719).
+ *
+ * The CLI records some of its own output as `user` entries, and they head a section and get the fork button like a
+ * send: `/compact` leaves "Compacted …" behind as `<local-command-stdout>`. There is nothing in one to retype, so the
+ * branch keeps it, as a branch from a reply does, and the composer stays empty.
+ *
+ * Otherwise the answer is the send as the card reads, not as the transcript stores it. A slash command is stored as
+ * `<command-name>` markup and comes back as `/compact`. A typed send loses the `<system-reminder>` the GUI wrapped
+ * around it and keeps its `<session-mention>` tag, which is what Up recall does (`useInputHistory`) for the same
+ * reason: the composer turns the tag back into a live chip, and the reminder is not something the user wrote.
+ */
+function retypedText(send: LoadedMessageDto): string | null {
+  const stored = getTextContent(send);
+  const parsed = parseUserContent(stored);
+  if (hasVisibleGlyph(parsed.commandName)) return commandSendText(parsed.commandName, parsed.text);
+  const typed = stripPickedElements(stripSystemReminders(stored)).trim();
+  // Anchored like the shared `isCliAuthoredText`, so a send that only quotes the tag further in is still a send.
+  if (typed.startsWith('<local-command-stdout>')) return null;
+  return typed;
+}
 
 /**
  * Wires the ⋮ menu's per-send actions to the backend (issue #356).
@@ -23,7 +48,9 @@ import type { SendActionsValue } from './SendActionsContext';
  *
  * The send being forked from rides along as `promptText` and lands in the
  * composer. The branch stops just before it, so without it the user would have
- * to retype from memory the message they were trying to rework.
+ * to retype from memory the message they were trying to rework. A card the CLI
+ * wrote is the exception: the branch keeps it and the composer stays empty (see
+ * `retypedText`).
  *
  * ## Rewinding does not touch the conversation
  *
@@ -66,15 +93,19 @@ export function useSendActions(messages: LoadedMessageDto[]): SendActionsValue {
   const openFork = useCallback(
     async (sendUuid: string) => {
       const send = sendByKey(sendUuid);
-      const promptText = send ? getTextContent(send) : '';
       // The uuid the CLI knows this send by; a send still in flight has none, and
       // the menu does not offer the action for one.
       const recorded = recordedUuidOf(send);
 
-      if (!recorded || !currentSessionId || !workingDirectory) {
+      if (!send || !recorded || !currentSessionId || !workingDirectory) {
         toast.error(t('sendActions.forkFailed'));
         return;
       }
+
+      const retyped = retypedText(send);
+      const promptText = retyped ?? '';
+      // Before a send, so it can be sent again; through a card the CLI wrote, which has nothing to send again.
+      const cut = retyped === null ? { throughUuid: recorded } : { sendUuid: recorded };
 
       try {
         // The fork point is worked out by the backend, which holds the whole
@@ -82,7 +113,7 @@ export function useSendActions(messages: LoadedMessageDto[]): SendActionsValue {
         // send near the top of a long conversation has its predecessor outside it.
         const response = await bridge.send<{ status?: string; error?: string; sessionId?: string }>(
           MessageType.FORK_SESSION,
-          { sessionId: currentSessionId, sendUuid: recorded, workingDir: workingDirectory },
+          { sessionId: currentSessionId, ...cut, workingDir: workingDirectory },
         );
         if (response?.status === 'error' || !response?.sessionId) {
           toast.error(response?.error || t('sendActions.forkFailed'));
