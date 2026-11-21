@@ -47,7 +47,7 @@ vi.mock('../ApiContext', () => ({
 
 vi.mock('../../adapters', () => ({
   getAdapter: () => ({
-    openNewTab: vi.fn().mockResolvedValue(undefined),
+    newTab: vi.fn().mockResolvedValue(undefined),
     openSettings: vi.fn().mockResolvedValue(undefined),
   }),
   onBridgeReady: vi.fn(),

@@ -340,9 +340,22 @@
     "empty": "暂无后台工作流。",
     "running": "运行中",
     "finishedCount": "已完成 {{count}} 个",
-    "clear": "清除",
+    "clearFinished": "清除已完成的任务",
     "dismiss": "关闭",
     "cancelRunning": "取消此任务",
+    "viewSimple": "简洁视图",
+    "viewFull": "详细视图",
+    "openInNewTab": "在新标签页中打开",
+    "viewOptions": "更改视图选项",
+    "placementSide": "侧边查看",
+    "placementCenter": "居中查看",
+    "placementPage": "全页查看",
+    "placementTab": "新标签页",
+    "setAsDefault": "设为默认",
+    "statusRunning": "运行中",
+    "statusCompleted": "已完成",
+    "statusFailed": "失败",
+    "statusStopped": "已停止",
     "stopAll": {
       "title": "要停止后台任务吗?",
       "message": "仍有 {{count}} 个后台任务在运行。要全部停止吗?",
@@ -354,6 +367,9 @@
     "agentsCount": "{{count}} 个智能体",
     "agentsCount_one": "{{count}} 个智能体",
     "agentsCount_other": "{{count}} 个智能体",
+    "agentsRunning": "{{count}} 个智能体运行中",
+    "agentsRunning_one": "{{count}} 个智能体运行中",
+    "agentsRunning_other": "{{count}} 个智能体运行中",
     "tokensLabel": "{{tokens}} 个 token",
     "phasesLabel": "阶段",
     "tableHeader": {
@@ -361,6 +377,11 @@
       "tokens": "Token",
       "tools": "工具",
       "time": "时间"
+    },
+    "runPage": {
+      "loading": "正在打开运行…",
+      "notFound": "在该会话中找不到此运行。",
+      "backToSession": "返回会话"
     },
     "transcriptModal": {
       "title": "{{name}}",
@@ -390,7 +411,12 @@
       "context": "上下文 {{value}}",
       "in": "输入 {{value}}",
       "cache": "缓存 +{{written}} / 复用 {{read}}",
-      "out": "输出 {{value}}"
+      "out": "输出 {{value}}",
+      "noResult": {
+        "failed": "没有结果。代理失败。",
+        "stopped": "没有结果。代理已停止。",
+        "ended": "没有结果。代理已结束。"
+      }
     }
   },
   "scheduledMessages": {
@@ -1149,6 +1175,29 @@
       "viewAll": "查看全部",
       "viewLess": "收起"
     },
+    "taskNotice": {
+      "label": "后台{{noun}}{{status}}",
+      "labelNoStatus": "后台{{noun}}",
+      "noun": {
+        "agent": "代理",
+        "command": "命令",
+        "workflow": "工作流",
+        "task": "任务"
+      },
+      "failed": {
+        "agent": "后台代理失败",
+        "command": "后台命令失败",
+        "workflow": "后台工作流失败",
+        "task": "后台任务失败"
+      },
+      "commandCompleted": "后台命令已完成",
+      "status": {
+        "completed": "已完成",
+        "failed": "失败",
+        "stopped": "已停止"
+      },
+      "took": "耗时 {{elapsed}}"
+    },
     "tools": {
       "ranCommand": "运行了命令",
       "ranCommands_other": "运行了 {{count}} 条命令",
@@ -1170,6 +1219,7 @@
       "readAndEditedFile": "读取并编辑了 {{name}}",
       "runningCommand": "正在运行命令",
       "failedMark": "失败",
+      "viewInBackgroundTasks": "在后台任务中查看",
       "stoppedMark": "已停止",
       "interruptedNote": "已中断",
       "exitCode": "退出码 {{code}}",
@@ -1231,6 +1281,7 @@
       "searchedWeb": "已搜索网络",
       "stoppedTask": "已停止任务",
       "ranAgent": "已运行代理",
+      "ranWorkflow": "已运行工作流",
       "usedLabel": "已使用 {{label}}",
       "ranAgents": "已运行 {{count}} 个代理",
       "view_normal": "已切换到常规视图",

@@ -22,7 +22,10 @@
     "to": "收件者: {{to}}",
     "sent": "已傳送訊息",
     "delivered": "已送達",
-    "anotherSession": "另一個工作階段"
+    "anotherSession": "另一個工作階段",
+    "agentSending": "正在傳送訊息給代理",
+    "agentSent": "已傳送訊息給代理",
+    "sessionSending": "正在傳送訊息給另一個工作階段"
   },
   "attachments": {
     "imageAlt": "圖片 {{index}}",

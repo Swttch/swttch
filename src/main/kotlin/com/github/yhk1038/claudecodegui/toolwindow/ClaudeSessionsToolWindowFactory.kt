@@ -16,8 +16,8 @@ import com.intellij.ui.content.ContentFactory
  * editor tab and immediately hides itself — this factory hosts real content: a
  * [ClaudeCodePanel] pointed at the `/session-panel` WebView route. Reusing
  * ClaudeCodePanel means the panel registers its own RPC handler and backend
- * connection, so selecting a session there opens it in a fresh editor tab via
- * the OPEN_SESSION RPC even when no editor tab is currently open.
+ * connection, so selecting a session there opens it in an editor tab (the one already showing it, else a new one) via
+ * the OPEN_TAB RPC even when no editor tab is currently open.
  */
 class ClaudeSessionsToolWindowFactory : ToolWindowFactory, DumbAware {
 

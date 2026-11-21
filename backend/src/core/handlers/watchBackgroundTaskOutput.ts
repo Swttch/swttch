@@ -1,7 +1,11 @@
 import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
-import { watchBackgroundTaskOutput, unwatchBackgroundTaskOutput } from '../features/backgroundTaskOutputWatcher';
+import {
+  watchBackgroundTaskOutput,
+  unwatchBackgroundTaskOutput,
+  loadEarlierBackgroundTaskOutput,
+} from '../features/backgroundTaskOutputWatcher';
 
 /**
  * WATCH_BACKGROUND_TASK_OUTPUT — subscribe this connection to a background
@@ -29,4 +33,19 @@ export function unwatchBackgroundTaskOutputHandler(
   const outputFile = (message.payload as { outputFile?: string } | undefined)?.outputFile;
   if (!outputFile) return;
   unwatchBackgroundTaskOutput(connectionId, outputFile);
+}
+
+/**
+ * LOAD_EARLIER_BACKGROUND_TASK_OUTPUT — send this connection one more page of an agent's record, before what it
+ * has. The answer is the usual BACKGROUND_TASK_OUTPUT_CHANGED, with the larger window.
+ */
+export function loadEarlierBackgroundTaskOutputHandler(
+  connectionId: string,
+  message: IPCMessage,
+  connections: ConnectionManager,
+  _bridge: Bridge,
+): void {
+  const outputFile = (message.payload as { outputFile?: string } | undefined)?.outputFile;
+  if (!outputFile) return;
+  loadEarlierBackgroundTaskOutput(connectionId, outputFile, connections);
 }

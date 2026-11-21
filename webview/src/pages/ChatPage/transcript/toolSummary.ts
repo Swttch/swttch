@@ -347,6 +347,16 @@ function deletedTitles(call: ToolCall): string {
   return [...text.matchAll(/\("([\s\S]*?)"\)/g)].map((match) => match[1]).join(', ');
 }
 
+/**
+ * A `SendMessage` to an agent, not to another session: a session's id starts with `local_` and Desktop's answer names it
+ * ("... to session x (\"Title\")"); anything else is an agent, named by the id or the name it was given.
+ */
+export function isAgentMessage(call: ToolCall): boolean {
+  const to = inputString(call, 'to');
+  if (to === '' || to.startsWith('local_')) return false;
+  return parseSessionDelivery(toolResultText(call.toolUse.tool_result as LoadedMessageDto | undefined)).title === undefined;
+}
+
 /** The title of the session a `SendMessage` went to, when the answer names it. */
 export function sentTo(call: ToolCall): string {
   return parseSessionDelivery(toolResultText(call.toolUse.tool_result as LoadedMessageDto | undefined)).title ?? '';
@@ -400,6 +410,13 @@ function withFile(key: string, call: ToolCall, t: TFunction): RowLabel {
   return { before: text.slice(0, at), fileName: baseName(path), after: text.slice(at + 1) };
 }
 
+/** The name a workflow's script gives itself (`export const meta = { name: 'many-steps', … }`), or '' when it gives none. */
+export function workflowNameOf(call: ToolCall): string {
+  const script = call.toolUse.input?.script;
+  if (typeof script !== 'string') return '';
+  return /\bname:\s*(['"`])([^'"`\n]+)\1/.exec(script)?.[2]?.trim() ?? '';
+}
+
 function plain(text: string): RowLabel {
   return { before: text, fileName: '', after: '' };
 }
@@ -410,7 +427,12 @@ function plain(text: string): RowLabel {
  * A command that is still running, or that failed, says "Running command": the desktop app leaves a failed one
  * at its running wording and marks it failed beside it, so it is not reported as done when it was not.
  */
-export function rowLabel(call: ToolCall, t: TFunction): RowLabel {
+export function rowLabel(call: ToolCall, t: TFunction, agentName?: (to: string) => string | undefined): RowLabel {
+  // A workflow is "Ran workflow" and the name its script gave it, as an agent is "Ran agent" and its name.
+  if (call.toolUse.name === 'Workflow') {
+    const named = workflowNameOf(call);
+    return named ? { ...plain(t('transcript.tools.ranWorkflow', { ns: 'chat' })), meta: named } : plain(t('transcript.tools.ranWorkflow', { ns: 'chat' }));
+  }
   const kind = toolKindOf(call);
   switch (kind) {
     case 'command': {
@@ -445,10 +467,10 @@ export function rowLabel(call: ToolCall, t: TFunction): RowLabel {
     case 'webSearch':
       return { ...plain(t('transcript.tools.searchedWeb', { ns: 'chat' })), meta: inputString(call, 'query') };
     case 'agent': {
-      // The agent's own name is the line, as the desktop app draws it; "Ran agent" is said on the card inside once the
-      // line is opened (#673), so it is not said twice. A call that names nothing keeps the words.
+      // "Ran agent" and then the agent's name, as the desktop app draws a call that is over, the way it draws a read
+      // ("Read x"): the words quiet and the name after them. A call that names nothing keeps the words alone.
       const named = inputString(call, 'description') || inputString(call, 'subagent_type');
-      return named ? plain(named) : plain(t('transcript.tools.ranAgent', { ns: 'chat' }));
+      return named ? { ...plain(t('transcript.tools.ranAgent', { ns: 'chat' })), meta: named } : plain(t('transcript.tools.ranAgent', { ns: 'chat' }));
     }
     case 'stopTask':
       return plain(t('transcript.tools.stoppedTask', { ns: 'chat' }));
@@ -485,8 +507,20 @@ export function rowLabel(call: ToolCall, t: TFunction): RowLabel {
       return plain(t('transcript.tools.appAskedReport', { ns: 'chat' }));
     case 'toolLoad':
       return { ...plain(t('transcript.tools.loadedTools', { ns: 'chat' })), meta: loadedToolNames(call) };
-    case 'messageSent':
+    case 'messageSent': {
+      // A message to an agent says "Messaged agent" and the agent's name after it, as the desktop app does; one that is
+      // still going out, or that failed, stays at its running wording ("Messaging agent"). Only a message to another
+      // session says "Message sent" and that session's title.
+      const to = inputString(call, 'to');
+      // Before the call has been written out far enough to say who it is for, the desktop app says only that it is
+      // messaging another session, and names no one.
+      if (to === '' && isRunning(call)) return plain(t('sendMessage.sessionSending', { ns: 'chatTools' }));
+      if (isAgentMessage(call)) {
+        const key = isRunning(call) || hasFailed(call) ? 'sendMessage.agentSending' : 'sendMessage.agentSent';
+        return { ...plain(t(key, { ns: 'chatTools' })), meta: agentName?.(to) ?? to };
+      }
       return { ...plain(t('sendMessage.sent', { ns: 'chatTools' })), meta: sentTo(call) || t('sendMessage.anotherSession', { ns: 'chatTools' }) };
+    }
     case 'read':
       return withFile('transcript.tools.readFile', call, t);
     // A file change the user turned down, or that failed, stays at its running wording ("Editing x"): it is not reported

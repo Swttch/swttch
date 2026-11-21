@@ -4,7 +4,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AppProviders } from './contexts';
 import { I18nLocaleSync } from './i18n/I18nLocaleSync';
-import { ChatPage, SettingsPage, SettingsOverlay, SwitchAccountPage, ProjectSelectorPage, SessionPanelPage, DiffPage } from './pages';
+import { ChatPage, SettingsPage, SettingsOverlay, SwitchAccountPage, ProjectSelectorPage, SessionPanelPage, DiffPage, RunPage } from './pages';
 import { AccountUsageModal } from './components/AccountUsageModal';
 import { useUsageStreamRefresh } from './hooks/useUsageStreamRefresh';
 import { TunnelModal } from './components/TunnelModal';
@@ -115,6 +115,8 @@ function AppContent() {
         {/* Its own window (IDE editor tab or browser tab), so it sits beside the
             chat rather than inside it — see DiffPage. */}
         <Route path="/diff/:tool_use_id" element={<DiffPage />} />
+        {/* The run of one background task, in a tab of its own or as this tab's page — see RunPage. */}
+        <Route path="/runs/:session_id/:tool_use_id" element={<RunPage />} />
         <Route path="/settings" element={<Navigate to="/settings/general" replace />} />
         <Route path="/settings/*" element={<SettingsPage />} />
         <Route path="/switch-account" element={<SwitchAccountPage />} />

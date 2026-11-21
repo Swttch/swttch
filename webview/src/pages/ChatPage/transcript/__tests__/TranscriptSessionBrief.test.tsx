@@ -8,7 +8,7 @@ import { TranscriptSessionBrief } from '../TranscriptSessionBrief';
 const parent = vi.hoisted(() => ({ value: undefined as SessionParent | undefined }));
 vi.mock('@/hooks/useSessionParent', () => ({ useSessionParent: () => parent.value }));
 
-const adapter = vi.hoisted(() => ({ type: 'browser', openSession: vi.fn(async () => undefined) }));
+const adapter = vi.hoisted(() => ({ type: 'browser', openTab: vi.fn(async () => undefined) }));
 vi.mock('@/adapters', () => ({ getAdapter: () => adapter }));
 
 const brief = { task: 'Say ok.', context: 'Background.' };
@@ -21,7 +21,7 @@ const message = { timestamp: '2026-11-11T09:00:00Z' } as unknown as LoadedMessag
 describe('the line over a started session\'s brief', () => {
   beforeEach(() => {
     adapter.type = ClientEnv.BROWSER;
-    adapter.openSession.mockClear();
+    adapter.openTab.mockClear();
     parent.value = undefined;
   });
 
@@ -44,7 +44,7 @@ describe('the line over a started session\'s brief', () => {
     render(<TranscriptSessionBrief brief={brief} message={message} />);
     expect(screen.getByText('Say ok.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('link', { name: 'Release manager' }));
-    expect(adapter.openSession).toHaveBeenCalledWith('boss-1', '/work/app');
+    expect(adapter.openTab).toHaveBeenCalledWith('/sessions/boss-1', '/work/app');
     expect(screen.getByText('Say ok.')).toBeInTheDocument();
   });
 

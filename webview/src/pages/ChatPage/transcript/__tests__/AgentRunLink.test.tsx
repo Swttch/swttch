@@ -7,13 +7,13 @@ import type { ToolCall } from '../buildSegments';
 // window. The shared state is stubbed; what is asked of it is the open call.
 let tasks: Record<string, WorkflowTask> = {};
 let provided = true;
-const openTranscript = vi.fn();
+const openRun = vi.fn();
 vi.mock('@/contexts/WorkflowStateContext', () => ({
   useOptionalWorkflowState: () =>
-    provided ? { getByToolUseId: (id: string) => tasks[id], openTranscript } : null,
+    provided ? { getByToolUseId: (id: string) => tasks[id], openRun } : null,
 }));
 
-import { AgentRunLink, useRunningAgentLive } from '../TranscriptToolRun';
+import { AgentRunLink, TranscriptToolRun, useRunningAgentLive } from '../TranscriptToolRun';
 import { renderHook } from '@testing-library/react';
 
 function task(overrides: Partial<WorkflowTask> = {}): WorkflowTask {
@@ -27,7 +27,7 @@ function callOf(input: Record<string, unknown>): ToolCall {
 beforeEach(() => {
   tasks = {};
   provided = true;
-  openTranscript.mockClear();
+  openRun.mockClear();
 });
 
 describe('AgentRunLink', () => {
@@ -38,7 +38,7 @@ describe('AgentRunLink', () => {
     expect(screen.getByText('Create directory')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('agent-run-link'));
 
-    expect(openTranscript).toHaveBeenCalledWith('toolu_a');
+    expect(openRun).toHaveBeenCalledWith('toolu_a');
   });
 
   it('words a running agent and a finished one differently, with the description in both', () => {
@@ -128,6 +128,15 @@ describe('useRunningAgentLive', () => {
     expect(result.current?.elapsed).toMatch(/21/);
   });
 
+  it('says what a running workflow is doing too, by its own name, for how long, as it does for an agent', () => {
+    tasks = { toolu_a: task({ status: 'running', startedAt: 1_000_000, name: 'many-steps' }) };
+    const workflowCall = { toolUse: { id: 'toolu_a', name: 'Workflow', input: { script: 'export const meta = {}' } }, message: {} } as unknown as ToolCall;
+    const { result } = renderHook(() => useRunningAgentLive([workflowCall]));
+
+    expect(result.current?.label).toBe('many-steps');
+    expect(result.current?.elapsed).toMatch(/21/);
+  });
+
   it('says nothing for a task that is not running', () => {
     tasks = { toolu_a: task({ status: 'completed', startedAt: 1_000_000 }) };
     const { result } = renderHook(() => useRunningAgentLive([callOf({ description: 'x' })]));
@@ -158,5 +167,55 @@ describe('useRunningAgentLive', () => {
     act(() => { vi.advanceTimersByTime(5000); });
 
     expect(result.current?.elapsed).not.toBe(first);
+  });
+});
+
+describe('a finished agent call', () => {
+  const finishedCall = () =>
+    ({ toolUse: { id: 'toolu_a', name: 'Agent', input: { description: 'final check' }, tool_result: { type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_a', content: 'ok' }] } } }, message: {} }) as unknown as ToolCall;
+
+  it('does not fold open: the name is the way into its run window', () => {
+    tasks = { toolu_a: task({ status: 'completed' }) };
+    const { container } = render(<TranscriptToolRun calls={[finishedCall()]} />);
+    const row = container.querySelector('button[aria-expanded]') as HTMLElement;
+    expect(row.querySelector('svg')).toBeNull();
+    fireEvent.click(row);
+    expect(row.getAttribute('aria-expanded')).toBe('false');
+
+    fireEvent.click(screen.getByTestId('finished-run-link'));
+    expect(openRun).toHaveBeenCalledWith('toolu_a');
+  });
+
+  it('says a stopped agent is still running, marked stopped, as the desktop app does', () => {
+    tasks = { toolu_a: task({ status: 'stopped' }) };
+    const { container } = render(<TranscriptToolRun calls={[finishedCall()]} />);
+    const row = container.querySelector('button[aria-expanded]') as HTMLElement;
+    expect(row.textContent).toBe('Running an agentfinal checkStopped');
+  });
+});
+
+describe('a workflow that was stopped', () => {
+  const workflowCall = (summary?: string) =>
+    ({
+      toolUse: {
+        id: 'toolu_a',
+        name: 'Workflow',
+        input: { script: "export const meta = { name: 'stop-flow' }" },
+        tool_result: { type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_a', content: 'started' }] } },
+        workflowNotification: summary ? { summary } : undefined,
+      },
+      message: {},
+    }) as unknown as ToolCall;
+
+  it('opens to the CLI sentence about it, with a way to the background tasks', () => {
+    tasks = { toolu_a: task({ status: 'stopped' }) };
+    render(<TranscriptToolRun calls={[workflowCall('Task "x" was stopped by the user')]} />);
+    expect(screen.getByTestId('end-note').textContent).toContain('Task "x" was stopped by the user');
+  });
+
+  it('has nothing to open to before that sentence has come', () => {
+    tasks = { toolu_a: task({ status: 'stopped' }) };
+    render(<TranscriptToolRun calls={[workflowCall()]} />);
+    expect(screen.queryByTestId('end-note')).toBeNull();
   });
 });

@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 
 const session = vi.hoisted(() => ({ value: undefined as { cliSessionId?: string; cwd?: string; title?: string } | undefined }));
 const viewMode = vi.hoisted(() => ({ value: null as string | null }));
-const openSession = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const openTab = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const env = vi.hoisted(() => ({ value: 'browser' as string }));
 
 vi.mock('@/hooks/useDesktopSession', () => ({
@@ -13,7 +13,7 @@ vi.mock('../../transcriptViewMode', () => ({
   useTranscriptViewMode: () => viewMode.value,
 }));
 vi.mock('@/adapters', () => ({
-  getAdapter: () => ({ type: env.value, openSession }),
+  getAdapter: () => ({ type: env.value, openTab }),
 }));
 
 import { DesktopSessionLink, SessionFacts, desktopSessionIdOf } from '../DesktopSessionLink';
@@ -37,7 +37,7 @@ describe('DesktopSessionLink', () => {
     session.value = undefined;
     viewMode.value = null;
     env.value = 'browser';
-    openSession.mockClear();
+    openTab.mockClear();
   });
 
   it('is a link that opens in a new tab once Desktop says which session it is, on the blue background', () => {
@@ -69,7 +69,7 @@ describe('DesktopSessionLink', () => {
     render(<DesktopSessionLink id="local_x">Mockup session</DesktopSessionLink>);
     const notPrevented = fireEvent.click(screen.getByRole('link', { name: 'Mockup session' }));
     expect(notPrevented).toBe(true);
-    expect(openSession).not.toHaveBeenCalled();
+    expect(openTab).not.toHaveBeenCalled();
   });
 
   it('opens that session through the adapter in the IDE, where the popup target is not handed over', () => {
@@ -78,7 +78,7 @@ describe('DesktopSessionLink', () => {
     render(<DesktopSessionLink id="local_x">Mockup session</DesktopSessionLink>);
     const notPrevented = fireEvent.click(screen.getByRole('link', { name: 'Mockup session' }));
     expect(notPrevented).toBe(false);
-    expect(openSession).toHaveBeenCalledWith('cli-1', '/Users/me/project');
+    expect(openTab).toHaveBeenCalledWith('/sessions/cli-1', '/Users/me/project');
   });
 
   it('is the name alone on the same background, with nothing to open, while the session is not known', () => {

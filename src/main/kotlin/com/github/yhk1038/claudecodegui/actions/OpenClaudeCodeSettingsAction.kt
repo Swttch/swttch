@@ -5,7 +5,6 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.fileEditor.FileEditorManager
-import java.util.UUID
 
 /**
  * Action to open Claude Code settings in a new editor tab.
@@ -21,8 +20,7 @@ class OpenClaudeCodeSettingsAction : AnAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        val settingsSessionId = "settings-${UUID.randomUUID()}"
-        OpenClaudeCodeAction.openTab(project, settingsSessionId, "#/settings/general")
+        OpenClaudeCodeAction.openTab(project, "/settings/general")
     }
 
     override fun update(e: AnActionEvent) {

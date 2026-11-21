@@ -340,9 +340,22 @@
     "empty": "尚無背景工作流程。",
     "running": "執行中",
     "finishedCount": "已完成 {{count}} 個",
-    "clear": "清除",
+    "clearFinished": "清除已完成的任務",
     "dismiss": "關閉",
     "cancelRunning": "取消此工作",
+    "viewSimple": "簡潔檢視",
+    "viewFull": "詳細檢視",
+    "openInNewTab": "在新分頁中開啟",
+    "viewOptions": "變更檢視選項",
+    "placementSide": "側邊檢視",
+    "placementCenter": "置中檢視",
+    "placementPage": "全頁檢視",
+    "placementTab": "新分頁",
+    "setAsDefault": "設為預設",
+    "statusRunning": "執行中",
+    "statusCompleted": "已完成",
+    "statusFailed": "失敗",
+    "statusStopped": "已停止",
     "stopAll": {
       "title": "要停止背景工作嗎?",
       "message": "仍有 {{count}} 個背景工作在執行。要全部停止嗎?",
@@ -354,6 +367,9 @@
     "agentsCount": "{{count}} 個代理程式",
     "agentsCount_one": "{{count}} 個代理程式",
     "agentsCount_other": "{{count}} 個代理程式",
+    "agentsRunning": "{{count}} 個代理執行中",
+    "agentsRunning_one": "{{count}} 個代理執行中",
+    "agentsRunning_other": "{{count}} 個代理執行中",
     "tokensLabel": "{{tokens}} 個 token",
     "phasesLabel": "階段",
     "tableHeader": {
@@ -361,6 +377,11 @@
       "tokens": "Token",
       "tools": "工具",
       "time": "時間"
+    },
+    "runPage": {
+      "loading": "正在開啟執行…",
+      "notFound": "在此工作階段中找不到這個執行。",
+      "backToSession": "返回工作階段"
     },
     "transcriptModal": {
       "title": "{{name}}",
@@ -390,7 +411,12 @@
       "context": "上下文 {{value}}",
       "in": "輸入 {{value}}",
       "cache": "快取 +{{written}} / 重用 {{read}}",
-      "out": "輸出 {{value}}"
+      "out": "輸出 {{value}}",
+      "noResult": {
+        "failed": "沒有結果。代理失敗。",
+        "stopped": "沒有結果。代理已停止。",
+        "ended": "沒有結果。代理已結束。"
+      }
     }
   },
   "scheduledMessages": {
@@ -1149,6 +1175,29 @@
       "viewAll": "檢視全部",
       "viewLess": "收合"
     },
+    "taskNotice": {
+      "label": "背景{{noun}}{{status}}",
+      "labelNoStatus": "背景{{noun}}",
+      "noun": {
+        "agent": "代理",
+        "command": "指令",
+        "workflow": "工作流程",
+        "task": "任務"
+      },
+      "failed": {
+        "agent": "背景代理失敗",
+        "command": "背景指令失敗",
+        "workflow": "背景工作流程失敗",
+        "task": "背景任務失敗"
+      },
+      "commandCompleted": "背景指令已完成",
+      "status": {
+        "completed": "已完成",
+        "failed": "失敗",
+        "stopped": "已停止"
+      },
+      "took": "耗時 {{elapsed}}"
+    },
     "tools": {
       "ranCommand": "執行了指令",
       "ranCommands_other": "執行了 {{count}} 個指令",
@@ -1170,6 +1219,7 @@
       "readAndEditedFile": "讀取並編輯了 {{name}}",
       "runningCommand": "正在執行指令",
       "failedMark": "失敗",
+      "viewInBackgroundTasks": "在背景工作中查看",
       "stoppedMark": "已停止",
       "interruptedNote": "已中斷",
       "exitCode": "結束代碼 {{code}}",
@@ -1231,6 +1281,7 @@
       "searchedWeb": "已搜尋網路",
       "stoppedTask": "已停止工作",
       "ranAgent": "已執行代理",
+      "ranWorkflow": "已執行工作流程",
       "usedLabel": "已使用 {{label}}",
       "ranAgents": "已執行 {{count}} 個代理",
       "view_normal": "已切換到一般檢視",

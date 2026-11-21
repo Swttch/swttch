@@ -1,5 +1,5 @@
 import { getTextContent, type LoadedMessageDto } from '../../types';
-import { isSideSessionsEventText } from '../../shared';
+import { isSideSessionsEventText, withoutSystemReminders } from '../../shared';
 import { LoadedMessageType } from '../../dto/common';
 
 /**
@@ -27,6 +27,14 @@ export function isUserSend(message: LoadedMessageDto): boolean {
   if (message.isMeta) return false;
   // The note about sessions this one started is written as a user entry, but nobody sent it.
   if (isSideSessionsEventText(getTextContent(message))) return false;
+  // A note the GUI or the app writes for Claude and nothing else ("The user clicked the cancel button for the
+  // background task…") is a `<system-reminder>` and nothing typed. It is drawn as nothing, so counting it opened a
+  // section with an empty head and a gap above whatever came after it.
+  const text = getTextContent(message);
+  if (text.trim() !== '' && withoutSystemReminders(text).trim() === '') return false;
+  // The CLI hands Claude the notice that a background task is over as a user entry (marked by its `origin`); no
+  // one sent it, and the Transcript view draws it as a line of its own.
+  if (message.origin?.kind === 'task-notification') return false;
   if (message.isVisibleInTranscriptOnly) return false;
   if (message.isCompactSummary) return false;
   if (message.toolUseResult !== undefined) return false;

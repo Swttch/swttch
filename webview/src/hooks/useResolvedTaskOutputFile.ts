@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useBridge } from './useBridge';
 import { useWorkingDirOrNull } from '@/contexts/WorkingDirContext';
+import { useSessionContext } from '@/contexts/SessionContext';
 import { MessageType } from '@/shared';
 import type { WorkflowTask } from '@/shared';
 
@@ -36,14 +37,17 @@ export function useResolvedTaskOutputFile(task: WorkflowTask): string | undefine
 export function useTaskOutputFileLookup(task: WorkflowTask): { path: string | undefined; unavailable: boolean } {
   const { send } = useBridge();
   const { workingDirectory } = useWorkingDirOrNull() ?? { workingDirectory: null };
+  const { currentSessionId } = useSessionContext();
   const taskId = task.outputFile ? undefined : task.taskId;
 
   const { data, isFetched } = useQuery({
-    queryKey: ['bg-task-output-path', taskId, workingDirectory],
+    queryKey: ['bg-task-output-path', taskId, workingDirectory, currentSessionId],
     queryFn: async (): Promise<string | null> => {
       const res = await send<{ path: string | null }>(MessageType.FIND_BG_TASK_OUTPUT_PATH, {
         taskId,
         workingDir: workingDirectory,
+        // Names where the record is kept for good, for a task the runtime directory no longer holds.
+        sessionId: currentSessionId,
       });
       return res.path;
     },

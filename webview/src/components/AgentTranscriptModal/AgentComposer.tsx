@@ -26,6 +26,9 @@ import type { InputMode } from '@/types/chatInput';
  */
 const ASSUME_WORKING_MS = 20_000;
 
+/** The box stands in the chat column's width, as the session's input does, so on a wide page it does not run edge to edge. */
+const COLUMN_CLASS = 'mx-auto w-full max-w-[var(--chat-column-max,70rem)]';
+
 interface Props {
   /** The agent's address. */
   agentId: string;
@@ -37,10 +40,9 @@ interface Props {
   /** Stop this agent. Omitted where there is no way to stop only this one. */
   onStop?: () => void;
   /**
-   * The CLI has refused to resume this agent, so nothing can reach it. Said
-   * under the box in the error's own colour rather than as placeholder text: a
-   * refusal answers a message that was just sent, and a greyed hint where the
-   * prompt used to be is not an answer to anything.
+   * Nothing can reach this agent (it was stopped, or the CLI has refused to resume it). The box stays where it is,
+   * hidden and shut, and a bar saying so covers its place, as the archived bar covers the session's input: the
+   * layout does not jump, and the reason is where the prompt used to be.
    */
   unreachable?: boolean;
 }
@@ -173,18 +175,10 @@ export function AgentComposer(props: Props) {
     }
   };
 
-  return (
-    <div className="shrink-0 px-3 pb-3 pt-1">
+  const frame = (
       <InputFrame
         mode={inputMode}
         isFocused={isFocused}
-        belowEditor={
-          unreachable ? (
-            <div className="px-3 pb-1.5 text-xs text-state-error-fg">
-              {t('backgroundTasks.agentComposer.unreachable')}
-            </div>
-          ) : undefined
-        }
         editor={
           <RichInput
             ref={editorRef}
@@ -210,6 +204,22 @@ export function AgentComposer(props: Props) {
           />
         }
       />
+  );
+
+  if (!unreachable) return <div className="shrink-0 px-3 pb-3 pt-1"><div className={COLUMN_CLASS}>{frame}</div></div>;
+
+  // The box keeps its place and size (`invisible`) and is shut to the keyboard and the pointer (`inert`); the bar is laid
+  // over that place and fills what the box would have drawn.
+  return (
+    <div className="relative shrink-0 px-3 pb-3 pt-1">
+      <div className={`invisible ${COLUMN_CLASS}`} aria-hidden="true" {...({ inert: '' } as object)}>
+        {frame}
+      </div>
+      <div role="status" data-testid="agent-ended-bar" className="absolute inset-x-3 bottom-3 top-1">
+        <div className={`${COLUMN_CLASS} flex h-full items-center rounded-lg border border-border-default/70 bg-surface-hover px-3 py-2 text-base leading-normal text-text-primary`}>
+          {t('backgroundTasks.agentComposer.unreachable')}
+        </div>
+      </div>
     </div>
   );
 }

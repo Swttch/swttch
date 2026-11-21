@@ -3,12 +3,12 @@ import { useTranslation } from '@/i18n';
 
 export function NewTabButton() {
   const { t } = useTranslation('chat');
-  const { openNewTab } = useSessionContext();
+  const { newTab } = useSessionContext();
 
   return (
     <button
       id="new-tab-button"
-      onClick={openNewTab}
+      onClick={newTab}
       className="p-1 rounded transition-colors text-text-secondary hover:text-text-primary hover:bg-surface-hover"
       title={t('sessionHeader.newTab.title')}
     >

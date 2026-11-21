@@ -124,4 +124,16 @@ describe('groupIntoSendSections and another session\'s message', () => {
     const note = typed('n-1', '<system-reminder>r</system-reminder>\n<side-sessions-event>x</side-sessions-event>');
     expect(groupIntoSendSections([typed('u-1'), assistant('a-1'), note]).map(s => s.key)).toEqual(['u-1']);
   });
+
+  it('does not open a section for a note written for Claude that is only a <system-reminder>', () => {
+    const note = typed('note', '<system-reminder>The user clicked the cancel button for the background task x.</system-reminder>');
+    const sections = groupIntoSendSections([typed('u1'), assistant('a1'), note, assistant('a2')]);
+    expect(sections).toHaveLength(1);
+    expect(sections[0].body.map((m) => m.uuid)).toEqual(['a1', 'note', 'a2']);
+  });
+
+  it('still counts a typed message that has a reminder beside its text', () => {
+    const withText = typed('u2', '<system-reminder>a note</system-reminder>\nreal question');
+    expect(groupIntoSendSections([typed('u1'), withText])).toHaveLength(2);
+  });
 });

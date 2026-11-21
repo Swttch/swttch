@@ -22,7 +22,10 @@
     "to": "به: {{to}}",
     "sent": "پیام ارسال شد",
     "delivered": "تحویل داده شد",
-    "anotherSession": "جلسهٔ دیگر"
+    "anotherSession": "جلسهٔ دیگر",
+    "agentSending": "در حال ارسال پیام به عامل",
+    "agentSent": "پیام به عامل ارسال شد",
+    "sessionSending": "در حال ارسال پیام به جلسهٔ دیگر"
   },
   "attachments": {
     "imageAlt": "تصویر {{index}}",

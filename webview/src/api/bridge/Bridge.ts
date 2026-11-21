@@ -184,7 +184,7 @@ export class Bridge {
 
   /**
    * Fire-and-forget 전송. requestId 없이 메시지 전송.
-   * JetBrainsAdapter에서 CREATE_SESSION, OPEN_SETTINGS 등에 사용.
+   * JetBrainsAdapter에서 CREATE_SESSION, OPEN_TAB 등에 사용.
    */
   sendRaw(message: IPCMessage): void {
     this.connector.send(message);

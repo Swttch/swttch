@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, act } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { WorkflowStateProvider, useWorkflowState } from '../WorkflowStateContext';
 import type { WorkflowTask } from '@/shared';
 
@@ -14,9 +15,26 @@ vi.mock('../BridgeContext', () => ({
   useBridgeContext: () => ({ subscribe: mockSubscribe, isConnected: true }),
 }));
 
+// Where a run goes when its place is a tab of its own.
+const mockOpenTab = vi.fn();
+vi.mock('@/adapters', () => ({ getAdapter: () => ({ openTab: mockOpenTab }) }));
+
+// Where a run goes when its place is a page of this tab.
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('react-router-dom')>()),
+  useNavigate: () => mockNavigate,
+}));
+
 let mockSessionId: string | null = 's1';
 vi.mock('../SessionContext', () => ({
   useSessionContext: () => ({ currentSessionId: mockSessionId }),
+}));
+
+// The place pinned as the default for the project, which is where a run opens when it is clicked.
+let mockPinned: string | null = null;
+vi.mock('../SettingsContext', () => ({
+  useSettingsOrNull: () => ({ settings: { runViewPlacement: mockPinned } }),
 }));
 
 let ctx: ReturnType<typeof useWorkflowState>;
@@ -36,10 +54,15 @@ function emit(task: Partial<WorkflowTask> & Pick<WorkflowTask, 'toolUseId'>) {
 beforeEach(() => {
   capturedHandler = null;
   mockSessionId = 's1';
+  mockPinned = null;
+  mockOpenTab.mockReset().mockResolvedValue(undefined);
+  mockNavigate.mockReset();
   render(
-    <WorkflowStateProvider>
-      <Harness />
-    </WorkflowStateProvider>,
+    <MemoryRouter>
+      <WorkflowStateProvider>
+        <Harness />
+      </WorkflowStateProvider>
+    </MemoryRouter>,
   );
 });
 
@@ -52,6 +75,35 @@ describe('WorkflowStateContext', () => {
     expect(ctx.tasks).toHaveLength(1);
     expect(ctx.finishedTasks).toHaveLength(1);
     expect(ctx.runningTasks).toHaveLength(0);
+  });
+
+  it('lists the running tasks by when they started and the finished ones by when they ended, the newest first, as the desktop app does', () => {
+    // Three tasks started at once, in this order; the Bash one took longest, so it ended last.
+    emit({ toolUseId: 'agent', status: 'completed', startedAt: 1000, endedAt: 25_000 });
+    emit({ toolUseId: 'bash', status: 'completed', startedAt: 1100, endedAt: 61_000 });
+    emit({ toolUseId: 'workflow', status: 'completed', startedAt: 4000, endedAt: 26_000 });
+    emit({ toolUseId: 'run-old', status: 'running', startedAt: 90_000 });
+    emit({ toolUseId: 'run-new', status: 'running', startedAt: 95_000 });
+
+    expect(ctx.finishedTasks.map((t) => t.toolUseId)).toEqual(['bash', 'workflow', 'agent']);
+    expect(ctx.runningTasks.map((t) => t.toolUseId)).toEqual(['run-new', 'run-old']);
+    // The running ones are above the finished ones.
+    expect(ctx.tasks.map((t) => t.toolUseId)).toEqual(['run-new', 'run-old', 'bash', 'workflow', 'agent']);
+  });
+
+  it('takes the start for the end of a finished task that has none (one stopped without a notice)', () => {
+    emit({ toolUseId: 'stopped', status: 'stopped', startedAt: 5000 });
+    emit({ toolUseId: 'done', status: 'completed', startedAt: 1000, endedAt: 3000 });
+
+    expect(ctx.finishedTasks.map((t) => t.toolUseId)).toEqual(['stopped', 'done']);
+  });
+
+  it('puts a task with no times (one rebuilt after a reload) after the ones that have them, the latest arrival first', () => {
+    emit({ toolUseId: 'a', status: 'completed', startedAt: 0 });
+    emit({ toolUseId: 'b', status: 'completed', startedAt: 0 });
+    emit({ toolUseId: 'c', status: 'completed', startedAt: 500 });
+
+    expect(ctx.finishedTasks.map((t) => t.toolUseId)).toEqual(['c', 'b', 'a']);
   });
 
   it('dismissTask hides a workflow from the panel but keeps it for the inline card', () => {
@@ -89,5 +141,93 @@ describe('WorkflowStateContext', () => {
 
     act(() => ctx.closeTranscript());
     expect(ctx.transcriptToolUseId).toBeNull();
+  });
+
+  // #667: a run opens inside the panel, whatever it is; one the app does not track falls back to the window.
+  it('opens an agent, a workflow and a command in the panel, and closing the panel ends the run view', () => {
+    emit({ toolUseId: 'a', taskType: 'local_agent' });
+    emit({ toolUseId: 'w', taskType: 'local_workflow' });
+    emit({ toolUseId: 'b', taskType: 'local_bash' });
+
+    act(() => ctx.openRun('a'));
+    expect(ctx.sideRunToolUseId).toBe('a');
+    expect(ctx.panelOpen).toBe(true);
+    expect(ctx.transcriptToolUseId).toBeNull();
+
+    act(() => ctx.closeRunInSide());
+    expect(ctx.sideRunToolUseId).toBeNull();
+    expect(ctx.panelOpen).toBe(true);
+
+    act(() => ctx.openRun('w'));
+    expect(ctx.sideRunToolUseId).toBe('w');
+    expect(ctx.transcriptToolUseId).toBeNull();
+
+    act(() => ctx.openRun('b'));
+    expect(ctx.sideRunToolUseId).toBe('b');
+
+    act(() => ctx.openRun('unknown'));
+    expect(ctx.transcriptToolUseId).toBe('unknown');
+
+    act(() => ctx.openRun('a'));
+    act(() => ctx.closePanel());
+    expect(ctx.sideRunToolUseId).toBeNull();
+  });
+
+  // The pin on a row of the view options menu: where a click on a run opens it.
+  it('opens a run in the window when "View in center" is the pinned default, and beside the chat for any other pin', () => {
+    const open = (pinned: string | null) => {
+      mockPinned = pinned;
+      render(
+        <MemoryRouter>
+          <WorkflowStateProvider>
+            <Harness />
+          </WorkflowStateProvider>
+        </MemoryRouter>,
+      );
+      emit({ toolUseId: 'a', taskType: 'local_agent' });
+      act(() => ctx.openRun('a'));
+      return { side: ctx.sideRunToolUseId, window: ctx.transcriptToolUseId };
+    };
+
+    expect(open('center')).toEqual({ side: null, window: 'a' });
+    expect(open('side')).toEqual({ side: 'a', window: null });
+    expect(open(null)).toEqual({ side: 'a', window: null });
+    // The page and the tab are elsewhere: nothing opens on this screen.
+    expect(open('page')).toEqual({ side: null, window: null });
+    expect(open('tab')).toEqual({ side: null, window: null });
+  });
+
+  it('opens a run in a tab of its own, at the page of the session and the task', () => {
+    emit({ toolUseId: 'toolu_1', taskType: 'local_agent' });
+    act(() => ctx.placeRun('toolu_1', 'tab'));
+
+    expect(mockOpenTab).toHaveBeenCalledWith('/runs/s1/toolu_1');
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(ctx.sideRunToolUseId).toBeNull();
+  });
+
+  it('moves this tab to the page of the run, and says it was moved there', () => {
+    emit({ toolUseId: 'toolu_1', taskType: 'local_agent' });
+    act(() => ctx.placeRun('toolu_1', 'page'));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/runs/s1/toolu_1', { state: { runPlacement: 'page' } });
+    expect(mockOpenTab).not.toHaveBeenCalled();
+  });
+
+  it('shows the run beside the chat when the tab cannot be opened, rather than swallow the click', async () => {
+    mockOpenTab.mockRejectedValue(new Error('Pop-up might be blocked'));
+    emit({ toolUseId: 'toolu_1', taskType: 'local_agent' });
+    await act(async () => ctx.placeRun('toolu_1', 'tab'));
+
+    expect(ctx.sideRunToolUseId).toBe('toolu_1');
+  });
+
+  it('keeps the run beside the chat when there is no session to address a page by', () => {
+    mockSessionId = null;
+    emit({ toolUseId: 'toolu_1', taskType: 'local_agent' });
+    act(() => ctx.placeRun('toolu_1', 'page'));
+
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(ctx.sideRunToolUseId).toBe('toolu_1');
   });
 });

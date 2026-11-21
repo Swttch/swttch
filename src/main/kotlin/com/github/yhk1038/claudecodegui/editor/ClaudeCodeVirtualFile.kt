@@ -202,6 +202,20 @@ class ClaudeCodeVirtualFile(
             }
         }
 
+        /**
+         * Every tab this project has open, each with the address it shows right now.
+         *
+         * What "is this page already open?" is answered from (see
+         * [com.github.yhk1038.claudecodegui.toolwindow.findTabShowing]). The address
+         * is the file's own [currentPath], so a tab that was just asked for counts at
+         * once, before its page has had time to report anything.
+         */
+        fun openTabAddresses(project: Project): List<Pair<String, String?>> {
+            synchronized(openTabs) {
+                return openTabs[project]?.values?.map { it.tabId to it.currentPath } ?: emptyList()
+            }
+        }
+
         fun isTabOpen(project: Project, tabId: String): Boolean {
             synchronized(openTabs) {
                 return openTabs[project]?.containsKey(tabId) == true

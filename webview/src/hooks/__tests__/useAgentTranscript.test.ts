@@ -23,8 +23,22 @@ describe('useAgentTranscript', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(sendMock).toHaveBeenCalledWith(MessageType.GET_AGENT_TRANSCRIPT, { transcriptDir: '/x/y', agentId: 'a1' });
+    expect(sendMock).toHaveBeenCalledWith(MessageType.GET_AGENT_TRANSCRIPT, { transcriptDir: '/x/y', agentId: 'a1', pages: 1 });
     expect(result.current.data).toEqual({ entries: [{ type: 'user', uuid: 'u1' }], truncated: false });
+  });
+
+  it('asks for as many pages as it is given, each count being a query of its own', async () => {
+    sendMock.mockResolvedValue({ status: 'ok', entries: [], truncated: true });
+    const client = createTestQueryClient();
+    const { result, rerender } = renderHook(({ pages }: { pages: number }) => useAgentTranscript('/x/y', 'a1', undefined, pages), {
+      wrapper: makeQueryWrapper(client),
+      initialProps: { pages: 1 },
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    rerender({ pages: 2 });
+    await waitFor(() => expect(sendMock).toHaveBeenCalledTimes(2));
+    expect(sendMock).toHaveBeenLastCalledWith(MessageType.GET_AGENT_TRANSCRIPT, { transcriptDir: '/x/y', agentId: 'a1', pages: 2 });
   });
 
   it('does not fire the request when transcriptDir or agentId is missing', () => {

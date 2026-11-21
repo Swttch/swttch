@@ -85,6 +85,7 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   hideToolCalls: false,
   transcriptViewMode: 'normal',
   transcriptViewModeBySession: {},
+  runViewPlacement: null,
   includeNestedSessions: false,
   uiDirection: 'ltr',
   // GUI-only keys migrated out of the native ~/.claude/settings.json (not part of
@@ -178,6 +179,7 @@ const COMMENT_MAP: Record<string, string> = {
   hideToolCalls: '명령 실행·조회처럼 과정에 해당하는 도구 카드를 채팅에서 숨긴다(CLI의 focus view와 같은 자리). 파일 변경(Edit/Write)과 질문·계획처럼 사용자를 향한 것은 계속 보인다',
   transcriptViewMode: '채팅 보기 방식: "normal" | "thinking" | "verbose" | "classic". 비어 있으면(null) normal. classic은 이전 버전 채팅 UI이고, 나머지 셋은 데스크탑 앱의 Transcript view와 같으며 사용자 말풍선을 오른쪽에 두고 접기·상단 고정을 없앤다',
   transcriptViewModeBySession: '헤더 메뉴에서 세션마다 고른 보기 방식. { 세션id: "normal" | "thinking" | "verbose" | "classic" }. 항목이 없는 세션은 transcriptViewMode를 따른다',
+  runViewPlacement: '백그라운드 작업의 실행 화면이 열리는 자리: "side"(채팅 옆 패널) | "center"(채팅 위 창) | "page" | "tab". 보기 옵션 메뉴의 핀으로 프로젝트마다 고정한다. null이면 고정 없음(채팅 옆 패널)',
   includeNestedSessions: '세션 목록에 하위 작업 디렉터리의 세션까지 포함. false면 현재 디렉터리의 세션만',
   uiDirection: 'UI 미러링(레이아웃 방향): "ltr" | "rtl"',
   uiLanguage: 'GUI 인터페이스 표시 언어(예: "korean"). null이면 영어. Claude 응답 언어(language)와 무관',
@@ -529,6 +531,11 @@ function validateSetting(key: string, value: unknown): string | null {
     case 'transcriptViewMode':
       if (value !== null && value !== 'classic' && !TRANSCRIPT_VIEW_MODES.includes(value as string)) {
         return 'transcriptViewMode must be null or one of "normal", "thinking", "verbose", "classic"';
+      }
+      break;
+    case 'runViewPlacement':
+      if (value !== null && !['side', 'center', 'page', 'tab'].includes(value as string)) {
+        return 'runViewPlacement must be null or one of "side", "center", "page", "tab"';
       }
       break;
     case 'transcriptViewModeBySession':

@@ -1,12 +1,18 @@
 import type { WorkflowAgent, WorkflowStatus } from '@/shared';
 import { useTranslation } from '@/i18n';
 import { AgentChip } from './AgentChip';
+import { stackedClasses } from './stackedClasses';
 
 interface Props {
   agents: WorkflowAgent[];
   taskStatus: WorkflowStatus;
   selectedAgentId: string | undefined;
   onSelect: (agentId: string) => void;
+  /**
+   * Always the stacked shape (rows above the transcript), whatever the window's width is. The side panel is narrow
+   * in a wide window too, so the width of the window says nothing of the room the picker has.
+   */
+  stacked?: boolean;
 }
 
 /**
@@ -28,29 +34,30 @@ interface Props {
  * nothing left — the very bug this modal was rebuilt to fix.
  */
 export function AgentTabList(props: Props) {
-  const { agents, taskStatus, selectedAgentId, onSelect } = props;
+  const { agents, taskStatus, selectedAgentId, onSelect, stacked } = props;
+  const sm = stackedClasses(stacked);
   const { t } = useTranslation('chat');
   const groups = groupByPhase(agents);
   const hasPhases = groups.some((g) => g.title);
 
   return (
-    <div className="flex shrink-0 flex-col gap-1 max-h-32 overflow-y-auto px-4 pt-3 pb-2 border-b border-border-subtle sm:flex-1 sm:max-h-none sm:max-w-52 sm:min-w-28 sm:pb-3 sm:border-b-0 sm:border-e">
+    <div className={sm('flex shrink-0 flex-col gap-1 max-h-32 overflow-y-auto px-4 pt-3 pb-2 border-b border-border-subtle sm:flex-1 sm:max-h-none sm:max-w-52 sm:min-w-28 sm:pb-3 sm:border-b-0 sm:border-e')}>
       {hasPhases && (
         <div className="shrink-0 text-xs uppercase tracking-wide text-text-tertiary">
           {t('backgroundTasks.phasesLabel')}
         </div>
       )}
       {groups.map((group) => (
-        <div key={group.title ?? '(none)'} className="flex shrink-0 items-center gap-1 sm:block">
+        <div key={group.title ?? '(none)'} className={sm('flex shrink-0 items-center gap-1 sm:block')}>
           {group.title && (
-            <div className="flex w-20 shrink-0 items-center justify-between gap-1.5 text-sm text-text-tertiary sm:w-full sm:px-1 sm:pt-1 sm:pb-0.5">
+            <div className={sm('flex w-20 shrink-0 items-center justify-between gap-1.5 text-sm text-text-tertiary sm:w-full sm:px-1 sm:pt-1 sm:pb-0.5')}>
               <span className="truncate">{group.title}</span>
               <span className="shrink-0 tabular-nums">{group.agents.length}</span>
             </div>
           )}
           {/* Only the agents scroll sideways; their phase's name is a sibling of
               this scroller, not inside it. From `sm` the same list stacks. */}
-          <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto sm:flex-col sm:overflow-x-visible">
+          <div className={sm('flex min-w-0 flex-1 gap-1 overflow-x-auto sm:flex-col sm:overflow-x-visible')}>
             {group.agents.map((agent, i) => {
               const agentId = agent.agentId ?? String(agent.index ?? i);
               return (
@@ -62,6 +69,7 @@ export function AgentTabList(props: Props) {
                   phaseTitle={group.title}
                   selected={agentId === selectedAgentId}
                   onSelect={onSelect}
+                  stacked={stacked}
                 />
               );
             })}

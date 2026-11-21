@@ -12,6 +12,7 @@ import { mergeAdjacentTextBlocks } from '../message-renderers/mergeAdjacentTextB
 import { mergeAdjacentThinkingBlocks } from '../message-renderers/mergeAdjacentThinkingBlocks';
 import { isAlwaysVisibleTool } from '../message-renderers/hideToolCalls';
 import { isUserSend } from '../paging';
+import { isTaskNoticeEntry } from './taskNotice';
 import { WRAP_UP_TOOL } from '../message-renderers/ToolRenderers/Mcp/CcdTurn';
 import { UPDATE_PLAN_TOOL } from '../message-renderers/ToolRenderers/Mcp/CcdTurn/planState';
 
@@ -40,7 +41,9 @@ export type Segment =
   /** A call whose card is the point of the turn (a question, a plan), drawn on its own. */
   | { kind: 'card'; key: string; call: ToolCall }
   /** A chapter Claude marked in the session (`mark_chapter`), drawn as a heading between the replies. */
-  | { kind: 'chapter'; key: string; message: LoadedMessageDto; title: string };
+  | { kind: 'chapter'; key: string; message: LoadedMessageDto; title: string }
+  /** The CLI's notice that a background task is over, drawn as a line where it arrived ("Background agent completed · name"). */
+  | { kind: 'taskNotice'; key: string; message: LoadedMessageDto };
 
 /**
  * The name a message from another session goes by in a run of calls. Such a message is a `user` entry, not a call,
@@ -237,6 +240,13 @@ export function buildSegments(body: LoadedMessageDto[]): Segment[] {
     if (isPeerMessage(message)) {
       if (!run) run = [];
       run.push(peerCall(message, key));
+      return;
+    }
+    if (isTaskNoticeEntry(message)) {
+      // Not part of the conversation, so it does not split a run of calls it arrives in; it is drawn right after it.
+      const segment: Segment = { kind: 'taskNotice', key: `task-notice-${rowKey}`, message };
+      if (run) deferred.push(segment);
+      else segments.push(segment);
       return;
     }
     if (carriesAppEvent(message)) {

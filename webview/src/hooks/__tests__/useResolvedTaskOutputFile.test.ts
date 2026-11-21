@@ -7,6 +7,11 @@ vi.mock('@/hooks/useBridge', () => ({
   useBridge: () => ({ send: sendMock }),
 }));
 
+// The session that started the task, named in the lookup so a task gone from the runtime directory is found beside it.
+vi.mock('@/contexts/SessionContext', () => ({
+  useSessionContext: () => ({ currentSessionId: 'sess-1' }),
+}));
+
 let workingDirectory: string | null = '/private/tmp/ccg-demo';
 vi.mock('@/contexts/WorkingDirContext', () => ({
   useWorkingDirOrNull: () => (workingDirectory === null ? null : { workingDirectory }),
@@ -57,6 +62,7 @@ describe('useResolvedTaskOutputFile', () => {
     expect(sendMock).toHaveBeenCalledWith(MessageType.FIND_BG_TASK_OUTPUT_PATH, {
       taskId: 'a1e4a6',
       workingDir: '/private/tmp/ccg-demo',
+      sessionId: 'sess-1',
     });
   });
 

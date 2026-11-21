@@ -96,19 +96,48 @@ describe('loadWorkflowAgentTranscript', () => {
     }
   });
 
-  it('truncates and flags truncated when entries exceed the cap', async () => {
-    const bigDir = join(configDir, 'projects', 'proj-slug', 'sess-2', 'subagents', 'workflows', 'wf_big');
-    mkdirSync(bigDir, { recursive: true });
-    const lines: string[] = [];
-    for (let i = 0; i < 2005; i++) {
-      lines.push(JSON.stringify({ type: 'user', uuid: `u${i}`, message: { role: 'user', content: String(i) } }));
+  describe('pages of conversation', () => {
+    function writeRecord(name: string, lines: object[]): string {
+      const dir = join(configDir, 'projects', 'proj-slug', 'sess-2', 'subagents', 'workflows', name);
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, 'agent-big.jsonl'), lines.map((l) => JSON.stringify(l)).join('\n'));
+      return dir;
     }
-    writeFileSync(join(bigDir, 'agent-big.jsonl'), lines.join('\n'));
+    const convo = (n: number) =>
+      Array.from({ length: n }, (_, i) => ({ type: i % 2 === 0 ? 'user' : 'assistant', uuid: `c${i}` }));
 
-    const result = await loadWorkflowAgentTranscript({ transcriptDir: bigDir, agentId: 'big' });
-    expect(result.truncated).toBe(true);
-    expect(result.entries).toHaveLength(2000);
-    // Keeps the most recent entries (tail), not the oldest.
-    expect(result.entries[result.entries.length - 1]).toMatchObject({ uuid: 'u2004' });
+    it('sends the last page of conversation, newest last, and says where the window starts', async () => {
+      const dir = writeRecord('wf_a', convo(100));
+
+      const result = await loadWorkflowAgentTranscript({ transcriptDir: dir, agentId: 'big' });
+
+      expect(result.truncated).toBe(true);
+      expect(result.startIndex).toBe(60);
+      expect(result.entries).toHaveLength(40);
+      expect(result.entries[0]).toMatchObject({ uuid: 'c60' });
+      expect(result.entries[result.entries.length - 1]).toMatchObject({ uuid: 'c99' });
+    });
+
+    it('reaches a page further back for each page asked for, and the whole record at last', async () => {
+      const dir = writeRecord('wf_b', convo(100));
+
+      const two = await loadWorkflowAgentTranscript({ transcriptDir: dir, agentId: 'big', pages: 2 });
+      expect(two.startIndex).toBe(20);
+      expect(two.entries).toHaveLength(80);
+      const three = await loadWorkflowAgentTranscript({ transcriptDir: dir, agentId: 'big', pages: 3 });
+      expect(three.truncated).toBe(false);
+      expect(three.entries).toHaveLength(100);
+    });
+
+    it('keeps the entries of a page that are not conversation, and is not cut short by a lot of them', async () => {
+      const bulk = Array.from({ length: 3000 }, (_, i) => ({ type: 'attachment', uuid: `att${i}` }));
+      const dir = writeRecord('wf_c', [{ type: 'user', uuid: 'prompt' }, ...bulk, { type: 'assistant', uuid: 'reply' }]);
+
+      const result = await loadWorkflowAgentTranscript({ transcriptDir: dir, agentId: 'big' });
+
+      expect(result.truncated).toBe(false);
+      expect(result.entries).toHaveLength(3002);
+      expect(result.entries[0]).toMatchObject({ uuid: 'prompt' });
+    });
   });
 });

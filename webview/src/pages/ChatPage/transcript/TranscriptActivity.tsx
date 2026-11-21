@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { useTranslation } from '@/i18n';
-import { useChatStreamContext } from '@/contexts/ChatStreamContext';
+import { useChatStreamContextOrNull } from '@/contexts/ChatStreamContext';
+import { TurnClockContext } from './TurnClockContext';
 import { activityLabel, type StreamingActivity } from './streamingActivity';
 import { WorkingMark, type WorkingActivity } from './WorkingMark';
 
@@ -14,7 +15,9 @@ export function ActivityGlyph({ activity = 'think' }: { activity?: WorkingActivi
 
 /** The seconds the running turn has taken, counted from the moment its message was sent, once a second. */
 export function useTurnSeconds(): number {
-  const { turnStartedAt } = useChatStreamContext();
+  const clock = useContext(TurnClockContext);
+  const chatStartedAt = useChatStreamContextOrNull()?.turnStartedAt ?? null;
+  const turnStartedAt = clock !== undefined ? clock : chatStartedAt;
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);

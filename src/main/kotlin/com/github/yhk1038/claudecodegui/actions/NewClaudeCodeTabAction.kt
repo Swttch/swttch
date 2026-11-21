@@ -8,7 +8,6 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.util.SystemInfo
 import java.awt.event.InputEvent
 import java.awt.event.KeyEvent
-import java.util.UUID
 
 /**
  * True when this action is being triggered by a Ctrl-without-Meta key chord on macOS.
@@ -36,7 +35,7 @@ class NewClaudeCodeTabAction : AnAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        OpenClaudeCodeAction.openTab(project, UUID.randomUUID().toString())
+        OpenClaudeCodeAction.newTab(project)
     }
 
     override fun update(e: AnActionEvent) {

@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { getAdapter } from '../../../../adapters';
 import { i18n } from '@/i18n';
 import type { SessionMention } from '../../ChatInput/sessionMentionTag';
+import { sessionToPath } from '@/router';
 
 interface Props {
   mention: SessionMention;
@@ -39,7 +40,7 @@ export const MessageSessionMentionChip = (props: Props) => {
     // Stop the parent MessageBox from toggling its expand/collapse state.
     event.stopPropagation();
     getAdapter()
-      .openSession(mention.sessionId, mention.sessionDir)
+      .openTab(sessionToPath(mention.sessionId), mention.sessionDir)
       .catch((err) => {
         console.error('[MessageSessionMentionChip] Failed to open session:', err);
         toast.error(i18n.t('chat:chatInput.agentMentionDropdown.openSessionFailed'));

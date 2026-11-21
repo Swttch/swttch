@@ -22,7 +22,10 @@
     "to": "받는 대상: {{to}}",
     "sent": "메시지 전송함",
     "delivered": "배송됨",
-    "anotherSession": "다른 세션"
+    "anotherSession": "다른 세션",
+    "agentSending": "에이전트에게 메시지 보내는 중",
+    "agentSent": "에이전트에 메시지 전송됨",
+    "sessionSending": "다른 세션에 메시지 전송 중"
   },
   "attachments": {
     "imageAlt": "이미지 {{index}}",

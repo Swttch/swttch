@@ -4,7 +4,7 @@ import { DEFAULT_SETTINGS, OpenSettingsMode, SettingKey, type SettingsState } fr
 
 const openSettingsAdapterMock = vi.fn();
 vi.mock('@/adapters', () => ({
-  getAdapter: () => ({ openSettings: openSettingsAdapterMock }),
+  getAdapter: () => ({ openTab: openSettingsAdapterMock }),
 }));
 
 import {
@@ -66,7 +66,7 @@ describe('openSettingsAt', () => {
 
     // The destination must survive the trip — a new tab that lands on General
     // would drop the user somewhere they did not ask for.
-    expect(openSettingsAdapterMock).toHaveBeenCalledWith(Route.SETTINGS_SPONSOR);
+    expect(openSettingsAdapterMock).toHaveBeenCalledWith('/settings/sponsor');
     expect(overlay.detail()).toBeNull();
     overlay.stop();
   });
@@ -86,7 +86,7 @@ describe('openSettingsAt', () => {
 
     await openSettingsAt(Route.SETTINGS_PERMISSIONS);
 
-    expect(openSettingsAdapterMock).toHaveBeenCalledWith(Route.SETTINGS_PERMISSIONS);
+    expect(openSettingsAdapterMock).toHaveBeenCalledWith('/settings/permissions');
   });
 
   it('falls back to the overlay when opening a tab fails (e.g. pop-up blocked)', async () => {

@@ -339,10 +339,23 @@
     "close": "닫기",
     "empty": "아직 백그라운드 워크플로가 없습니다.",
     "running": "실행 중",
-    "finishedCount": "{{count}}개 완료",
-    "clear": "지우기",
+    "finishedCount": "완료 {{count}}",
+    "clearFinished": "완료된 작업 지우기",
     "dismiss": "닫기",
     "cancelRunning": "이 작업 취소",
+    "viewSimple": "간단히 보기",
+    "viewFull": "자세히 보기",
+    "openInNewTab": "새 탭으로 열기",
+    "viewOptions": "보기 옵션 변경",
+    "placementSide": "사이드 보기",
+    "placementCenter": "중앙에서 보기",
+    "placementPage": "전체 페이지 보기",
+    "placementTab": "새로운 탭",
+    "setAsDefault": "기본으로 설정",
+    "statusRunning": "실행 중",
+    "statusCompleted": "완료",
+    "statusFailed": "실패",
+    "statusStopped": "중지됨",
     "stopAll": {
       "title": "백그라운드 작업을 중지할까요?",
       "message": "아직 실행 중인 백그라운드 작업이 {{count}}개 있습니다. 전부 중지할까요?",
@@ -351,16 +364,24 @@
     "workflowLabel": "워크플로",
     "bashLabel": "Bash",
     "agentLabel": "에이전트",
-    "agentsCount": "에이전트 {{count}}명",
-    "agentsCount_one": "에이전트 {{count}}명",
-    "agentsCount_other": "에이전트 {{count}}명",
-    "tokensLabel": "토큰 {{tokens}}개",
+    "agentsCount": "{{count}}개 에이전트",
+    "agentsCount_one": "{{count}}개 에이전트",
+    "agentsCount_other": "{{count}}개 에이전트",
+    "agentsRunning": "에이전트 {{count}}개 실행 중",
+    "agentsRunning_one": "에이전트 {{count}}개 실행 중",
+    "agentsRunning_other": "에이전트 {{count}}개 실행 중",
+    "tokensLabel": "{{tokens}} 토큰",
     "phasesLabel": "단계",
     "tableHeader": {
       "agent": "에이전트",
       "tokens": "토큰",
       "tools": "도구",
       "time": "시간"
+    },
+    "runPage": {
+      "loading": "실행 화면을 여는 중…",
+      "notFound": "이 세션에서 해당 실행을 찾을 수 없습니다.",
+      "backToSession": "세션으로 돌아가기"
     },
     "transcriptModal": {
       "title": "{{name}}",
@@ -390,7 +411,12 @@
       "context": "컨텍스트 {{value}}",
       "in": "입력 {{value}}",
       "cache": "캐시 +{{written}} / {{read}} 재사용",
-      "out": "출력 {{value}}"
+      "out": "출력 {{value}}",
+      "noResult": {
+        "failed": "결과가 없습니다. 에이전트가 실패했습니다.",
+        "stopped": "결과가 없습니다. 에이전트가 중지되었습니다.",
+        "ended": "결과가 없습니다. 에이전트가 종료되었습니다."
+      }
     }
   },
   "scheduledMessages": {
@@ -1149,6 +1175,29 @@
       "viewAll": "모두 보기",
       "viewLess": "간략히 보기"
     },
+    "taskNotice": {
+      "label": "백그라운드 {{noun}} {{status}}",
+      "labelNoStatus": "백그라운드 {{noun}}",
+      "noun": {
+        "agent": "에이전트",
+        "command": "명령",
+        "workflow": "워크플로우",
+        "task": "작업"
+      },
+      "failed": {
+        "agent": "백그라운드 에이전트가 실패했습니다",
+        "command": "백그라운드 명령이 실패했습니다",
+        "workflow": "백그라운드 워크플로우가 실패했습니다",
+        "task": "백그라운드 작업이 실패했습니다"
+      },
+      "commandCompleted": "백그라운드 명령이 완료되었습니다",
+      "status": {
+        "completed": "완료됨",
+        "failed": "실패",
+        "stopped": "중지됨"
+      },
+      "took": "{{elapsed}} 소요됨"
+    },
     "tools": {
       "ranCommand": "실행함 명령어",
       "ranCommands_other": "실행됨 명령 {{count}}개",
@@ -1170,6 +1219,7 @@
       "readAndEditedFile": "읽음 및 편집함 {{name}}",
       "runningCommand": "실행 중 명령어",
       "failedMark": "실패",
+      "viewInBackgroundTasks": "백그라운드 작업에서 보기",
       "stoppedMark": "중지됨",
       "interruptedNote": "중단됨",
       "exitCode": "종료 코드 {{code}}",
@@ -1231,6 +1281,7 @@
       "searchedWeb": "웹 검색함",
       "stoppedTask": "작업 중지됨",
       "ranAgent": "에이전트 실행함",
+      "ranWorkflow": "워크플로 실행됨",
       "usedLabel": "{{label}} 사용함",
       "ranAgents": "에이전트 {{count}}개 실행됨",
       "view_normal": "일반 보기로 전환됨",

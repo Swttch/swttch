@@ -341,9 +341,22 @@
     "empty": "Noch keine Hintergrund-Workflows.",
     "running": "Läuft",
     "finishedCount": "{{count}} abgeschlossen",
-    "clear": "Leeren",
+    "clearFinished": "Abgeschlossene Aufgaben löschen",
     "dismiss": "Verwerfen",
     "cancelRunning": "Diese Aufgabe abbrechen",
+    "viewSimple": "Einfache Ansicht",
+    "viewFull": "Detailansicht",
+    "openInNewTab": "In neuem Tab öffnen",
+    "viewOptions": "Ansichtsoptionen ändern",
+    "placementSide": "Seitenansicht",
+    "placementCenter": "In der Mitte anzeigen",
+    "placementPage": "Ganzseitenansicht",
+    "placementTab": "Neuer Tab",
+    "setAsDefault": "Als Standard festlegen",
+    "statusRunning": "Läuft",
+    "statusCompleted": "Abgeschlossen",
+    "statusFailed": "Fehlgeschlagen",
+    "statusStopped": "Gestoppt",
     "stopAll": {
       "title": "Hintergrundaufgaben stoppen?",
       "message": "Es laufen noch {{count}} Hintergrundaufgabe(n). Alle stoppen?",
@@ -355,6 +368,9 @@
     "agentsCount": "{{count}} Agenten",
     "agentsCount_one": "{{count}} Agent",
     "agentsCount_other": "{{count}} Agenten",
+    "agentsRunning": "{{count}} Agents laufen",
+    "agentsRunning_one": "{{count}} Agent läuft",
+    "agentsRunning_other": "{{count}} Agents laufen",
     "tokensLabel": "{{tokens}} Tokens",
     "phasesLabel": "Phasen",
     "tableHeader": {
@@ -362,6 +378,11 @@
       "tokens": "Tokens",
       "tools": "Tools",
       "time": "Zeit"
+    },
+    "runPage": {
+      "loading": "Lauf wird geöffnet …",
+      "notFound": "Dieser Lauf wurde in der Sitzung nicht gefunden.",
+      "backToSession": "Zurück zur Sitzung"
     },
     "transcriptModal": {
       "title": "{{name}}",
@@ -391,7 +412,12 @@
       "context": "Kontext {{value}}",
       "in": "Eingabe {{value}}",
       "cache": "Cache +{{written}} / {{read}} wiederverwendet",
-      "out": "Ausgabe {{value}}"
+      "out": "Ausgabe {{value}}",
+      "noResult": {
+        "failed": "Kein Ergebnis. Der Agent ist fehlgeschlagen.",
+        "stopped": "Kein Ergebnis. Der Agent wurde gestoppt.",
+        "ended": "Kein Ergebnis. Der Agent hat die Ausführung beendet."
+      }
     }
   },
   "scheduledMessages": {
@@ -1160,6 +1186,29 @@
       "viewAll": "Alle anzeigen",
       "viewLess": "Weniger anzeigen"
     },
+    "taskNotice": {
+      "label": "Hintergrund-{{noun}} {{status}}",
+      "labelNoStatus": "Hintergrund-{{noun}}",
+      "noun": {
+        "agent": "Agent",
+        "command": "Befehl",
+        "workflow": "Workflow",
+        "task": "Task"
+      },
+      "failed": {
+        "agent": "Hintergrund-Agent fehlgeschlagen",
+        "command": "Hintergrund-Befehl fehlgeschlagen",
+        "workflow": "Hintergrund-Workflow fehlgeschlagen",
+        "task": "Hintergrund-Task fehlgeschlagen"
+      },
+      "commandCompleted": "Hintergrund-Befehl abgeschlossen",
+      "status": {
+        "completed": "abgeschlossen",
+        "failed": "fehlgeschlagen",
+        "stopped": "gestoppt"
+      },
+      "took": "dauerte {{elapsed}}"
+    },
     "tools": {
       "ranCommand": "Befehl ausgeführt",
       "ranCommands_one": "{{count}} Befehl ausgeführt",
@@ -1187,6 +1236,7 @@
       "readAndEditedFile": "{{name}} gelesen und bearbeitet",
       "runningCommand": "Befehl wird ausgeführt",
       "failedMark": "Fehlgeschlagen",
+      "viewInBackgroundTasks": "In Hintergrundaufgaben anzeigen",
       "stoppedMark": "Gestoppt",
       "interruptedNote": "Unterbrochen",
       "exitCode": "Exit-Code {{code}}",
@@ -1250,6 +1300,7 @@
       "searchedWeb": "hat im Web gesucht",
       "stoppedTask": "Aufgabe gestoppt",
       "ranAgent": "Agent ausgeführt",
+      "ranWorkflow": "Workflow ausgeführt",
       "usedLabel": "{{label}} verwendet",
       "ranAgents": "{{count}} Agenten ausgeführt",
       "view_normal": "Zur Ansicht „Normal“ gewechselt",

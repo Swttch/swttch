@@ -40,6 +40,13 @@ vi.mock('@/contexts/SettingsContext', () => ({
   useSettingsOrNull: () => null,
 }));
 
+// The tasks state is what the window moves a run to the side panel with; most tests draw the window on its own, with none.
+let mockWorkflow: { placeRun: ReturnType<typeof vi.fn> } | null = null;
+vi.mock('@/contexts/WorkflowStateContext', () => ({
+  useOptionalWorkflowState: () => mockWorkflow,
+  useWorkflowState: () => mockWorkflow,
+}));
+
 // The composer asks the conversation which agents can no longer be reached
 // (useUnreachableAgents). These tests are not about that, so it reads an empty
 // one — and an empty conversation means every agent is still reachable.
@@ -182,6 +189,8 @@ describe('AgentTranscriptModal', () => {
   it('shows the same summary info the panel card shows: status, agent count, tokens, description', () => {
     sendMock.mockResolvedValue({ status: 'ok', entries: [], truncated: false });
     renderModal(makeTask({ description: 'Explore two files in parallel' }));
+    // A workflow opens to the short view; the strip with all of this is the detailed one.
+    fireEvent.click(screen.getByText('Detailed view'));
 
     expect(screen.getByText('completed')).toBeInTheDocument();
     expect(screen.getByText('2 agents')).toBeInTheDocument();
@@ -191,6 +200,7 @@ describe('AgentTranscriptModal', () => {
   it('shows a cancel button only while running, and it calls cancelTask with the task', () => {
     sendMock.mockResolvedValue({ status: 'ok', entries: [], truncated: false });
     const { rerender } = renderModal(makeTask({ status: 'running' }));
+    fireEvent.click(screen.getByText('Detailed view'));
 
     const cancelButton = screen.getByText('Cancel this task');
     fireEvent.click(cancelButton);
@@ -377,10 +387,17 @@ describe('AgentTranscriptModal: who gets a composer', () => {
   });
 
   // Before the launch text has been read there is no id, and an id is the whole
-  // address. Offering to send with nowhere to send is worse than not offering.
-  it('gives a backgrounded Agent none until its id is known', () => {
+  // address. Sending with nowhere to send is refused: the box is covered by the
+  // bar that says so, and shut.
+  it('covers the input of a backgrounded Agent with a bar until its id is known', () => {
     renderModal(agentTask({ taskId: undefined }));
-    expect(composer()).toBeNull();
+    expect(screen.getByTestId('agent-ended-bar')).toBeInTheDocument();
+    expect(composer()?.closest('[inert]')).not.toBeNull();
+  });
+
+  it('covers the input of a stopped Agent with a bar, which cannot be resumed by a message', () => {
+    renderModal(agentTask({ status: 'stopped' }));
+    expect(screen.getByTestId('agent-ended-bar')).toBeInTheDocument();
   });
 
   // A plain background command is a process, not something that reads messages.
@@ -394,6 +411,12 @@ describe('AgentTranscriptModal: who gets a composer', () => {
   it('gives a workflow with no agents none', () => {
     renderModal(makeTask({ agents: [] }));
     expect(composer()).toBeNull();
+  });
+
+  it('covers the input of a stopped workflow\'s agent with the bar, as a stopped single agent\'s is', () => {
+    sendMock.mockResolvedValue({ status: 'ok', entries: [], truncated: false });
+    renderModal(makeTask({ status: 'stopped' }));
+    expect(screen.getByTestId('agent-ended-bar')).toBeInTheDocument();
   });
 
   it('gives the workflow agent that is selected one', () => {
@@ -432,11 +455,12 @@ describe('AgentTranscriptModal scrolling', () => {
   });
 
   afterEach(() => {
+    mockWorkflow = null;
     vi.unstubAllGlobals();
   });
 
   function transcriptBox() {
-    return stubScrollBox(document.querySelector('.overflow-y-auto.space-y-3') as HTMLElement, { scrollHeight: 2000, clientHeight: 400 });
+    return stubScrollBox(document.querySelector('.absolute.inset-0.overflow-y-auto') as HTMLElement, { scrollHeight: 2000, clientHeight: 400 });
   }
 
   // Picking another agent used to keep the same body mounted, so the first
@@ -483,5 +507,151 @@ describe('AgentTranscriptModal scrolling', () => {
     // The follow glides there over a few frames rather than in one (#701).
     raf.flushFrames(120);
     expect(box.el.scrollTop).toBe(2000);
+  });
+});
+
+// A backgrounded Agent opens in its simple view and can be switched to the
+// detailed one (#667). The simple view keeps the composer, so sending and
+// stopping are still there; it drops what the detailed view adds on top.
+describe('AgentTranscriptModal: a subagent\'s simple and detailed views', () => {
+  function agentTask(overrides: Partial<WorkflowTask> = {}): WorkflowTask {
+    return {
+      toolUseId: 'toolu_a',
+      taskType: 'local_agent',
+      taskId: 'a40be17f1967a0861',
+      name: 'Describe webview utils dir',
+      description: 'Describe the utils directory',
+      status: 'running',
+      startedAt: Date.now() - 5000,
+      phases: [],
+      agents: [],
+      events: { task_started: [{ prompt: 'List the files in utils' }] },
+      ...overrides,
+    };
+  }
+
+  function composer(): HTMLElement | null {
+    return document.querySelector('[contenteditable]');
+  }
+
+  it('opens in the simple view: no summary strip, no prompt row, no cancel button, the composer kept', () => {
+    renderModal(agentTask());
+
+    expect(screen.queryByText('Prompt')).not.toBeInTheDocument();
+    expect(screen.queryByText('Describe the utils directory')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cancel this task')).not.toBeInTheDocument();
+    expect(composer()).not.toBeNull();
+  });
+
+  it('says how the task is doing as a dot after the title, named by its tooltip text', () => {
+    renderModal(agentTask({ status: 'running' }));
+    expect(screen.getByRole('img', { name: 'Running' })).toBeInTheDocument();
+  });
+
+  it.each([
+    ['completed', 'Completed'],
+    ['failed', 'Failed'],
+    ['stopped', 'Stopped'],
+  ] as const)('names a %s task "%s"', (status, label) => {
+    renderModal(agentTask({ status }));
+    expect(screen.getByRole('img', { name: label })).toBeInTheDocument();
+  });
+
+  it('shows the prompt, the summary and the cancel button once switched to the detailed view, and back', () => {
+    renderModal(agentTask());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Detailed view' }));
+    expect(screen.getByText('Prompt')).toBeInTheDocument();
+    expect(screen.getByText('List the files in utils')).toBeInTheDocument();
+    expect(screen.getByText('Cancel this task')).toBeInTheDocument();
+    // The dot is the simple view's; the detailed one has its status strip.
+    expect(screen.queryByRole('img', { name: 'Running' })).not.toBeInTheDocument();
+    expect(composer()).not.toBeNull();
+
+    // The label is the view it goes to, so it now offers the way back.
+    fireEvent.click(screen.getByRole('button', { name: 'Simple view' }));
+    expect(screen.queryByText('Prompt')).not.toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Running' })).toBeInTheDocument();
+  });
+
+  it('offers the placement menu with the window\'s own placement ticked', async () => {
+    renderModal(agentTask());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Change view options' }));
+
+    expect(await screen.findByRole('menu')).toBeInTheDocument();
+    const items = screen.getAllByRole('menuitemradio');
+    expect(items.map((i) => i.textContent)).toEqual(['Side view', 'View in center', 'Full page view', 'New tab']);
+    expect(items.map((i) => i.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false', 'false']);
+
+    // Choosing closes the menu.
+    fireEvent.click(items[0]);
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
+  });
+
+  it('moves the run to the side panel when "Side view" is picked, and does nothing for "View in center", where it already is', async () => {
+    const workflow = { placeRun: vi.fn() };
+    mockWorkflow = workflow;
+    try {
+      const onClose = vi.fn();
+      renderModal(agentTask(), onClose);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Change view options' }));
+      const items = await screen.findAllByRole('menuitemradio');
+      fireEvent.click(items[1]); // View in center
+      expect(onClose).not.toHaveBeenCalled();
+      expect(workflow.placeRun).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Change view options' }));
+      fireEvent.click((await screen.findAllByRole('menuitemradio'))[0]); // Side view
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(workflow.placeRun).toHaveBeenCalledWith('toolu_a', 'side');
+    } finally {
+      mockWorkflow = null;
+    }
+  });
+
+  it('moves the run to the page or a tab when those are picked, and the new-tab button opens it in a tab', async () => {
+    const workflow = { placeRun: vi.fn() };
+    mockWorkflow = workflow;
+    try {
+      const onClose = vi.fn();
+      renderModal(agentTask(), onClose);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Change view options' }));
+      fireEvent.click((await screen.findAllByRole('menuitemradio'))[2]); // Full page view
+      expect(workflow.placeRun).toHaveBeenLastCalledWith('toolu_a', 'page');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Open in new tab' }));
+      expect(workflow.placeRun).toHaveBeenLastCalledWith('toolu_a', 'tab');
+      expect(onClose).toHaveBeenCalledTimes(2);
+    } finally {
+      mockWorkflow = null;
+    }
+  });
+
+  it('has the toggle, the new-tab button and the placement menu on a background command too, and flips it', () => {
+    mockWorkflow = { placeRun: vi.fn() };
+    renderModal(agentTask({ taskType: 'local_bash', taskId: 'b27yhtv6i' }));
+
+    // The short view first: no strip over the log, and the toggle offers the detailed one.
+    expect(screen.queryByRole('button', { name: 'Open in new tab' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Change view options' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Detailed view' }));
+    expect(screen.getByRole('button', { name: 'Simple view' })).toBeInTheDocument();
+  });
+
+  it('has the stop button by the title in the short view while the task runs, and not after', () => {
+    sendMock.mockResolvedValue({ status: 'ok', entries: [], truncated: false });
+    const { rerender } = renderModal(makeTask({ status: 'running' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Cancel this task' })[0]);
+    expect(cancelTaskMock).toHaveBeenCalledWith(expect.objectContaining({ toolUseId: 'toolu_1' }));
+
+    rerender(
+      <QueryClientProvider client={createTestQueryClient()}>
+        <AgentTranscriptModal task={makeTask({ status: 'completed' })} onClose={vi.fn()} />
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByRole('button', { name: 'Cancel this task' })).not.toBeInTheDocument();
   });
 });

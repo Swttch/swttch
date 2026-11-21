@@ -80,6 +80,23 @@ export function runningActivity(messages: LoadedMessageDto[]): StreamingActivity
   return null;
 }
 
+/**
+ * Whether two readings say the same thing, so that a view can keep handing out the object it has while the call is
+ * the same, however many words arrive (#680).
+ */
+export function isSameActivity(a: StreamingActivity | null, b: StreamingActivity | null): boolean {
+  if (a === b) return true;
+  if (a === null || b === null) return false;
+  return (
+    a.toolUseId === b.toolUseId &&
+    a.description === b.description &&
+    a.phrase === b.phrase &&
+    a.mark === b.mark &&
+    a.file?.name === b.file?.name &&
+    a.file?.creating === b.file?.creating
+  );
+}
+
 /** What one call is doing, in the terms the summary line says it: the call itself, whether or not it has answered. */
 export function activityOfCall(call: ToolCall): StreamingActivity {
   const { toolUse } = call;

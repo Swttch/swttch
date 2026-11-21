@@ -35,7 +35,7 @@ function makeServices(overrides: {
     },
     archive: { available: true, isCurrentArchived: false, setArchived: vi.fn().mockResolvedValue(true) },
     adapter: {
-      openNewTab: vi.fn().mockResolvedValue(undefined),
+      newTab: vi.fn().mockResolvedValue(undefined),
       openSettings: vi.fn().mockResolvedValue(undefined),
       openTerminal: vi.fn().mockResolvedValue(undefined),
     },

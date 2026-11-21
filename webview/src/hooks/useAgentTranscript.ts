@@ -5,12 +5,14 @@ import { MessageType } from '@/shared';
 
 export interface AgentTranscriptData {
   entries: Record<string, unknown>[];
+  /** Pages of the transcript before `entries` are not here; ask for more with a larger `pages`. */
   truncated: boolean;
 }
 
 /**
- * Load one workflow agent's full transcript for the Background tasks detail
- * modal (issue #347). `fingerprint` should change whenever the agent's live
+ * Load one workflow agent's transcript for the Background tasks detail
+ * modal (issue #347): its last `pages` pages of conversation, the newest page
+ * first (see the backend's conversationWindow.ts). `fingerprint` should change whenever the agent's live
  * stats (tokens/tools/durationMs) change, so a running agent's transcript
  * refetches as WORKFLOW_PROGRESS updates arrive — no separate polling needed.
  */
@@ -18,6 +20,7 @@ export function useAgentTranscript(
   transcriptDir: string | undefined,
   agentId: string | undefined,
   fingerprint?: string | number,
+  pages = 1,
 ) {
   const { send } = useBridge();
   // The backend validates transcriptDir against this project's Claude data directory, and a
@@ -26,14 +29,14 @@ export function useAgentTranscript(
   const workingDirectory = useWorkingDirOrNull()?.workingDirectory ?? undefined;
 
   return useQuery({
-    queryKey: ['agent-transcript', workingDirectory ?? null, transcriptDir, agentId, fingerprint],
+    queryKey: ['agent-transcript', workingDirectory ?? null, transcriptDir, agentId, fingerprint, pages],
     queryFn: async (): Promise<AgentTranscriptData> => {
       const res = await send<{
         status: string;
         entries?: Record<string, unknown>[];
         truncated?: boolean;
         error?: string;
-      }>(MessageType.GET_AGENT_TRANSCRIPT, { transcriptDir, agentId, workingDir: workingDirectory });
+      }>(MessageType.GET_AGENT_TRANSCRIPT, { transcriptDir, agentId, workingDir: workingDirectory, pages });
       if (res.status !== 'ok') throw new Error(res.error ?? 'Failed to load transcript');
       return { entries: res.entries ?? [], truncated: !!res.truncated };
     },

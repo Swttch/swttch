@@ -10,12 +10,12 @@ import org.junit.jupiter.api.Test
  * Pure-logic tests for the chat-host router.
  *
  * The router has two testable decisions that are deliberately extracted from
- * any IDE API call (mirroring the existing `openNewTab` / `RealizationGate`
+ * any IDE API call (mirroring the existing `newTab` / `RealizationGate`
  * pattern in this codebase):
  *
  * 1. [ChatHostRouter.selectHost] — given a [HostMode] and the available hosts,
  *    pick the right [ChatHost]. This is the spine of Phase 2–4: a host is
- *    *chosen* here, then *delegated to* by `OpenClaudeCodeAction.openTab`.
+ *    *chosen* here, then *delegated to* by `OpenClaudeCodeAction.focusTab`.
  * 2. [ChatHostRouter.planRestoreOrder] — the restart-restore ordering that used
  *    to live inline in `EditorTabRestoreActivity`: inactive tabs first (in
  *    their original order), the active tab last so it wins focus.

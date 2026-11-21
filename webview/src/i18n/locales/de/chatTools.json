@@ -22,7 +22,10 @@
     "to": "An: {{to}}",
     "sent": "Nachricht gesendet",
     "delivered": "Zugestellt",
-    "anotherSession": "andere Sitzung"
+    "anotherSession": "andere Sitzung",
+    "agentSending": "Nachricht an Agent wird gesendet",
+    "agentSent": "Agent benachrichtigt",
+    "sessionSending": "Nachricht an eine andere Sitzung"
   },
   "attachments": {
     "imageAlt": "Bild {{index}}",

@@ -9,13 +9,11 @@ import { toInstance } from '@/dto/common';
 import { LoadedMessageDto } from '@/types';
 import { mergeToolResults } from '@/pages/ChatPage/mergeToolResults';
 import { mergeSplitThinkingMessages } from '@/pages/ChatPage/mergeSplitThinkingMessages';
-import { findNewestUserUuid } from '@/pages/ChatPage/paging';
-import { MessageBubble } from '@/pages/ChatPage/MessageBubble';
-import { StreamingIndicator } from '@/pages/ChatPage/StreamingIndicator';
-import { ScrollToBottomButton } from '@/components/ScrollToBottomButton';
-import { agentRearmKey } from './agentRearmKey';
+import { useAgentRearmKey } from './agentRearmKey';
 import { useGlideOnSend } from './useGlideOnSend';
 import { DETAIL_STORAGE_KEY } from './detailScroll';
+import { AgentTranscriptView } from './AgentTranscriptView';
+import { useAgentRunFacts } from './AgentDetailHeader';
 
 interface Props {
   transcriptDir: string | undefined;
@@ -36,6 +34,7 @@ interface Props {
  */
 export function AgentTranscriptBody(props: Props) {
   const { transcriptDir, agent, taskStatus, sendCount } = props;
+  const runFacts = useAgentRunFacts(agent, transcriptDir);
   const { t } = useTranslation('chat');
 
   // Changes whenever the agent's live stats change, so a running agent's
@@ -44,7 +43,9 @@ export function AgentTranscriptBody(props: Props) {
     ? `${agent.tokens ?? 0}:${agent.toolCalls ?? 0}:${Math.floor((agent.durationMs ?? 0) / 2000)}`
     : undefined;
 
-  const { data, isPending, isError } = useAgentTranscript(transcriptDir, agent?.agentId, fingerprint);
+  // How many pages of the transcript are asked for: the newest, and one more each time the reader asks for earlier.
+  const [pages, setPages] = useState(1);
+  const { data, isPending, isError } = useAgentTranscript(transcriptDir, agent?.agentId, fingerprint, pages);
 
   // The fingerprint is part of the query key, so every refetch is a new query
   // that starts out with no data. Showing that literally swapped the transcript
@@ -56,6 +57,8 @@ export function AgentTranscriptBody(props: Props) {
     if (data) setLastLoaded(data);
   }, [data]);
   const shown = data ?? lastLoaded;
+  // The page asked for is on its way while the query for it has no data yet and the transcript before it is on screen.
+  const loadingEarlier = data === undefined && lastLoaded !== undefined && !isError;
 
   // Keeping the old transcript through a failed refetch must not pass it off as
   // current: a refetch that keeps failing would leave a frozen transcript that
@@ -74,14 +77,14 @@ export function AgentTranscriptBody(props: Props) {
   }, [shown]);
 
   const isRunning = agent ? agentDisplayStatus(agent.state, taskStatus) === 'running' : false;
-  const newestUserUuid = useMemo(() => findNewestUserUuid(messages), [messages]);
+  const rearmKey = useAgentRearmKey(messages, sendCount);
   const { scrollRef, showScrollButton, scrollToBottom } = useAutoScroll({
     resetKey: agent?.agentId,
     storageKey: DETAIL_STORAGE_KEY,
     repositionOnRemount: true,
     hasContent: messages.length > 0,
     isStreaming: isRunning,
-    rearmKey: agentRearmKey(newestUserUuid, sendCount),
+    rearmKey,
   });
   useGlideOnSend(sendCount, scrollToBottom);
 
@@ -108,28 +111,15 @@ export function AgentTranscriptBody(props: Props) {
 
   return (
     <div className="flex flex-1 min-h-0 flex-col">
-      <div className="relative flex-1 min-h-0">
-        {/* absolute inset-0 rather than h-full, for the reason given in
-            BackgroundTaskOutputBody: a percentage height inside a flex item
-            sized by flex-grow does not reliably resolve. */}
-        <div ref={scrollRef} className="absolute inset-0 overflow-y-auto px-4 py-3 space-y-3">
-          {shown?.truncated && (
-            <div className="text-[0.8461rem] text-text-primary/50 text-center pb-2">
-              {t('backgroundTasks.transcriptModal.truncated', { count: messages.length })}
-            </div>
-          )}
-          {messages.map((message) => (
-            <MessageBubble key={message.uuid ?? `${message.type}-${message.timestamp}`} message={message} />
-          ))}
-          {/* Same cue the main chat shows below the latest bubble for the whole
-              span of a turn — here, the whole span of this agent still running. */}
-          {isRunning && <StreamingIndicator />}
-        </div>
-
-        {showScrollButton && (
-          <ScrollToBottomButton onClick={scrollToBottom} placementClassName="bottom-3 start-1/2 -translate-x-1/2" />
-        )}
-      </div>
+      <AgentTranscriptView
+        messages={messages}
+        isRunning={isRunning}
+        hasEarlier={!!shown?.truncated}
+        loadingEarlier={loadingEarlier}
+        onLoadEarlier={() => setPages((count) => count + 1)}
+        scroll={{ scrollRef, showScrollButton, scrollToBottom }}
+        runFacts={runFacts}
+      />
 
       {/* A sibling below the scrolling area, never inside it and never in its
           place, so showing or hiding it does not replace the scrolling element.

@@ -13,6 +13,10 @@ import {
 export type TranscriptViewMode = 'normal' | 'thinking' | 'verbose';
 export const TRANSCRIPT_VIEW_MODES: readonly TranscriptViewMode[] = ['normal', 'thinking', 'verbose'];
 
+/** Where a run opens: beside the chat, over it, as a page, or in a tab of its own. */
+export type RunViewPlacement = 'side' | 'center' | 'page' | 'tab';
+export const RUN_VIEW_PLACEMENTS: readonly RunViewPlacement[] = ['side', 'center', 'page', 'tab'];
+
 /**
  * Chat message line-height (unitless multiplier). Matches the CSS default in
  * streaming.css (`.streaming-message` etc.) so turning the setting off/absent
@@ -93,6 +97,11 @@ export enum SettingKey {
   // that has no entry here follows TRANSCRIPT_VIEW_MODE. The value 'classic' stands for the
   // released chat UI, since a map value cannot be told apart from a missing entry as null.
   TRANSCRIPT_VIEW_MODE_BY_SESSION = 'transcriptViewModeBySession',
+
+  // Where a background task's run opens when it is clicked: beside the chat ('side'), over it ('center'), as a page
+  // ('page') or in a tab of its own ('tab'). Pinned from the run view's "View options" menu and kept for the project
+  // (the project scope). null is no pin: the run opens beside the chat.
+  RUN_VIEW_PLACEMENT = 'runViewPlacement',
 
   // List sessions from directories nested under the one being browsed, not just
   // that directory itself. Off by default: it widens what the session dropdown
@@ -514,6 +523,7 @@ export interface SettingsState {
   [SettingKey.HIDE_TOOL_CALLS]: boolean;
   [SettingKey.TRANSCRIPT_VIEW_MODE]: TranscriptViewMode | 'classic' | null;
   [SettingKey.TRANSCRIPT_VIEW_MODE_BY_SESSION]: Record<string, TranscriptViewMode | 'classic'>;
+  [SettingKey.RUN_VIEW_PLACEMENT]: RunViewPlacement | null;
   [SettingKey.INCLUDE_NESTED_SESSIONS]: boolean;
   [SettingKey.UI_DIRECTION]: UiDirection;
   [SettingKey.UI_LANGUAGE]: string | null;
@@ -570,6 +580,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.HIDE_TOOL_CALLS]: false,
   [SettingKey.TRANSCRIPT_VIEW_MODE]: 'normal',
   [SettingKey.TRANSCRIPT_VIEW_MODE_BY_SESSION]: {},
+  [SettingKey.RUN_VIEW_PLACEMENT]: null,
   [SettingKey.INCLUDE_NESTED_SESSIONS]: false,
   [SettingKey.UI_DIRECTION]: UiDirection.LTR,
   [SettingKey.UI_LANGUAGE]: null,

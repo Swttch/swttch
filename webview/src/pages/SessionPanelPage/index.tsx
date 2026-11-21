@@ -11,18 +11,19 @@ import { MessageType } from '@/shared';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { ConnectionLostBanner } from '@/pages/ChatPage/ConnectionLostBanner';
 import { ScopeTabs, SessionScope } from './ScopeTabs';
+import { sessionToPath } from '@/router';
 
 /**
  * 좌측 세션 패널 전용 뷰 (/session-panel).
  *
  * JetBrains 좌측 툴 윈도우의 JCEF WebView가 이 라우트로 진입한다.
- * 세션 선택은 "항상 새 에디터 탭"으로 열린다(adapter.openSession 경유).
+ * 세션 선택은 "항상 새 에디터 탭"으로 열린다(adapter.openTab 경유).
  *
  * 드롭다운과 달리 면적이 넉넉하므로 채팅영역과 동일한 일반 스케일(Regular)을 쓴다.
  */
 export function SessionPanelPage() {
   const { t } = useTranslation('sessionPanel');
-  const { openNewTab, loadSessions, sessionsServiceError, isLoading } = useSessionContext();
+  const { newTab, loadSessions, sessionsServiceError, isLoading } = useSessionContext();
   const { isConnected } = useBridgeContext();
   const {
     currentSessionId,
@@ -45,7 +46,7 @@ export function SessionPanelPage() {
     // transcript under the project root, finds none, and opens a new conversation
     // instead (issue #622). The row already names where it came from.
     const sessionDir = filteredSessions.find((s) => s.id === sessionId)?.sessionDir;
-    getAdapter().openSession(sessionId, sessionDir).catch((error) => {
+    getAdapter().openTab(sessionToPath(sessionId), sessionDir).catch((error) => {
       console.error('[SessionPanelPage] Failed to open session:', error);
     });
   };
@@ -72,7 +73,7 @@ export function SessionPanelPage() {
 
         <div className="flex-shrink-0 px-2 pt-2">
           <button
-            onClick={openNewTab}
+            onClick={newTab}
             className="w-full flex items-center gap-2 px-2.5 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-surface-hover rounded transition-colors"
           >
             <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

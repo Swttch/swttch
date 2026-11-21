@@ -2,17 +2,16 @@ import { realpathSync } from 'fs';
 import { join, resolve, sep } from 'path';
 import { readJsonlEntries, type JsonlEntry } from './readJsonlEntries';
 import { getClaudeConfigDir } from './claudeConfigDir';
+import { conversationWindowStart } from './conversationWindow';
 
 const SAFE_AGENT_ID = /^[a-zA-Z0-9_-]+$/;
 
-// Cap the returned entries so a runaway/huge agent transcript cannot blow up the
-// IPC payload or browser memory. Real transcripts observed so far are tens of KB
-// (a few hundred lines); this is a generous ceiling, not a real paging scheme.
-const MAX_ENTRIES = 2000;
-
 export interface WorkflowAgentTranscript {
   entries: JsonlEntry[];
+  /** Entries before the window were left out: the reader can ask for them a page at a time (see conversationWindow.ts). */
   truncated: boolean;
+  /** The index of the first entry sent, 0 when the record is sent from its start. */
+  startIndex: number;
 }
 
 /**
@@ -45,22 +44,24 @@ function resolveTranscriptDir(transcriptDir: string): string | null {
 }
 
 /**
- * Load one workflow agent's full transcript (`agent-<id>.jsonl` under
+ * Load one workflow agent's transcript (`agent-<id>.jsonl` under
  * `transcriptDir`) as raw JSONL entries, ready for LoadedMessageDto conversion
- * on the webview side. Mirrors computeAgentStats' read of the same file in
+ * on the webview side: the last `pages` pages of conversation, with every entry between them
+ * (see conversationWindow.ts). Mirrors computeAgentStats' read of the same file in
  * workflow-tracker.ts, but returns entries instead of aggregated stats.
  */
 export async function loadWorkflowAgentTranscript(payload: {
   transcriptDir: string;
   agentId: string;
+  pages?: number;
 }): Promise<WorkflowAgentTranscript> {
-  const { transcriptDir, agentId } = payload;
+  const { transcriptDir, agentId, pages = 1 } = payload;
 
-  if (!transcriptDir || !agentId) return { entries: [], truncated: false };
-  if (!SAFE_AGENT_ID.test(agentId)) return { entries: [], truncated: false };
+  if (!transcriptDir || !agentId) return { entries: [], truncated: false, startIndex: 0 };
+  if (!SAFE_AGENT_ID.test(agentId)) return { entries: [], truncated: false, startIndex: 0 };
 
   const dir = resolveTranscriptDir(transcriptDir);
-  if (!dir) return { entries: [], truncated: false };
+  if (!dir) return { entries: [], truncated: false, startIndex: 0 };
 
   const file = join(dir, `agent-${agentId}.jsonl`);
   let entries: JsonlEntry[];
@@ -69,9 +70,9 @@ export async function loadWorkflowAgentTranscript(payload: {
   } catch {
     // Not present yet (e.g. a running agent that hasn't written its first line) —
     // not an error, just nothing to show yet.
-    return { entries: [], truncated: false };
+    return { entries: [], truncated: false, startIndex: 0 };
   }
 
-  const truncated = entries.length > MAX_ENTRIES;
-  return { entries: truncated ? entries.slice(-MAX_ENTRIES) : entries, truncated };
+  const start = conversationWindowStart(entries.map((entry) => entry.type), pages);
+  return { entries: start === 0 ? entries : entries.slice(start), truncated: start > 0, startIndex: start };
 }

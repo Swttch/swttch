@@ -95,3 +95,25 @@ describe('buildSegments', () => {
     expect(kinds(body)).toEqual(['blocks', 'tools']);
   });
 });
+
+describe('buildSegments, task notices', () => {
+  const notice = (uuid: string): LoadedMessageDto =>
+    ({
+      uuid,
+      type: 'user',
+      origin: { kind: 'task-notification' },
+      message: { role: 'user', content: '<task-notification>\n<status>completed</status>\n<summary>Agent "x" finished</summary>\n</task-notification>' },
+    }) as unknown as LoadedMessageDto;
+
+  it('draws the notice as a line of its own where it arrived', () => {
+    expect(kinds([assistant('a', [text('Started it.')]), notice('n'), assistant('b', [text('It finished.')])])).toEqual([
+      'blocks',
+      'taskNotice',
+      'blocks',
+    ]);
+  });
+
+  it('does not split a run of calls it arrives in: it is drawn after the run', () => {
+    expect(kinds([assistant('a', [tool('1')]), notice('n'), assistant('b', [tool('2')])])).toEqual(['tools', 'taskNotice']);
+  });
+});

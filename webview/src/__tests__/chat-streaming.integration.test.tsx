@@ -58,7 +58,7 @@ const mockSession = {
   autoFallbackNotice: false,
   loadSessions: vi.fn(),
   resetToNewSession: vi.fn(),
-  openNewTab: vi.fn(),
+  newTab: vi.fn(),
   openSettings: vi.fn(),
   switchSession: vi.fn(),
   deleteSession: vi.fn(),

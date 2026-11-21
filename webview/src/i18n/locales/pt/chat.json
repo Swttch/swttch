@@ -341,9 +341,22 @@
     "empty": "Ainda não há fluxos de trabalho em segundo plano.",
     "running": "Em execução",
     "finishedCount": "Concluídos {{count}}",
-    "clear": "Limpar",
+    "clearFinished": "Limpar tarefas concluídas",
     "dismiss": "Dispensar",
     "cancelRunning": "Cancelar esta tarefa",
+    "viewSimple": "Visualização simples",
+    "viewFull": "Visualização detalhada",
+    "openInNewTab": "Abrir em nova guia",
+    "viewOptions": "Alterar opções de visualização",
+    "placementSide": "Visualização lateral",
+    "placementCenter": "Visualização central",
+    "placementPage": "Página inteira",
+    "placementTab": "Nova guia",
+    "setAsDefault": "Tornar padrão",
+    "statusRunning": "Em execução",
+    "statusCompleted": "Concluído",
+    "statusFailed": "Falhou",
+    "statusStopped": "Interrompido",
     "stopAll": {
       "title": "Parar as tarefas em segundo plano?",
       "message": "Ainda há {{count}} tarefa(s) em segundo plano em execução. Parar todas?",
@@ -355,6 +368,9 @@
     "agentsCount": "{{count}} agentes",
     "agentsCount_one": "{{count}} agente",
     "agentsCount_other": "{{count}} agentes",
+    "agentsRunning": "{{count}} agentes em execução",
+    "agentsRunning_one": "{{count}} agente em execução",
+    "agentsRunning_other": "{{count}} agentes em execução",
     "tokensLabel": "{{tokens}} tokens",
     "phasesLabel": "Fases",
     "tableHeader": {
@@ -362,6 +378,11 @@
       "tokens": "Tokens",
       "tools": "Ferramentas",
       "time": "Tempo"
+    },
+    "runPage": {
+      "loading": "Abrindo a execução…",
+      "notFound": "Não foi possível encontrar esta execução na sessão.",
+      "backToSession": "Voltar à sessão"
     },
     "transcriptModal": {
       "title": "{{name}}",
@@ -391,7 +412,12 @@
       "context": "contexto {{value}}",
       "in": "entrada {{value}}",
       "cache": "cache +{{written}} / {{read}} reutilizado",
-      "out": "saída {{value}}"
+      "out": "saída {{value}}",
+      "noResult": {
+        "failed": "Sem resultado. O agente falhou.",
+        "stopped": "Sem resultado. O agente foi interrompido.",
+        "ended": "Sem resultado. O agente terminou."
+      }
     }
   },
   "scheduledMessages": {
@@ -1160,6 +1186,29 @@
       "viewAll": "Ver todos",
       "viewLess": "Mostrar menos"
     },
+    "taskNotice": {
+      "label": "{{noun}} em segundo plano {{status}}",
+      "labelNoStatus": "{{noun}} em segundo plano",
+      "noun": {
+        "agent": "agente",
+        "command": "comando",
+        "workflow": "fluxo de trabalho",
+        "task": "tarefa"
+      },
+      "failed": {
+        "agent": "agente em segundo plano falhou",
+        "command": "comando em segundo plano falhou",
+        "workflow": "fluxo de trabalho em segundo plano falhou",
+        "task": "tarefa em segundo plano falhou"
+      },
+      "commandCompleted": "comando em segundo plano concluído",
+      "status": {
+        "completed": "concluído",
+        "failed": "falhou",
+        "stopped": "parado"
+      },
+      "took": "levou {{elapsed}}"
+    },
     "tools": {
       "ranCommand": "Comando executado",
       "ranCommands_one": "{{count}} comando executado",
@@ -1193,6 +1242,7 @@
       "readAndEditedFile": "{{name}} lido e editado",
       "runningCommand": "Executando comando",
       "failedMark": "Falhou",
+      "viewInBackgroundTasks": "Ver nas tarefas em segundo plano",
       "stoppedMark": "Parado",
       "interruptedNote": "Interrompido",
       "exitCode": "Código de saída {{code}}",
@@ -1257,6 +1307,7 @@
       "searchedWeb": "Pesquisou na web",
       "stoppedTask": "Tarefa interrompida",
       "ranAgent": "Executou agente",
+      "ranWorkflow": "Workflow executado",
       "usedLabel": "Usou {{label}}",
       "ranAgents": "Executou {{count}} agentes",
       "view_normal": "Mudou para a visualização normal",

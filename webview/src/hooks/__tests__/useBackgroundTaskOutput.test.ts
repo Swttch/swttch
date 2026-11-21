@@ -32,7 +32,7 @@ describe('useBackgroundTaskOutput', () => {
   it('starts loading and does nothing when outputFile is undefined', () => {
     const { result } = renderHook(() => useBackgroundTaskOutput(undefined));
     expect(sendRawMock).not.toHaveBeenCalled();
-    expect(result.current).toEqual({ text: '', truncated: false, loading: true });
+    expect(result.current).toMatchObject({ text: '', truncated: false, loading: true, loadingEarlier: false });
   });
 
   it('subscribes and sends WATCH_BACKGROUND_TASK_OUTPUT when outputFile is given', () => {
@@ -47,7 +47,29 @@ describe('useBackgroundTaskOutput', () => {
 
     act(() => emitChange('/x/y.output', 'count: 1\n', false));
 
-    expect(result.current).toEqual({ text: 'count: 1\n', truncated: false, loading: false });
+    expect(result.current).toMatchObject({ text: 'count: 1\n', truncated: false, loading: false, loadingEarlier: false });
+  });
+
+  it('asks for the page before with LOAD_EARLIER_BACKGROUND_TASK_OUTPUT, and is loading it until the next push', () => {
+    const { result } = renderHook(() => useBackgroundTaskOutput('/x/y.output'));
+    act(() => emitChange('/x/y.output', '{"type":"user"}\n', true));
+    expect(result.current.truncated).toBe(true);
+
+    act(() => result.current.loadEarlier());
+
+    expect(sendRawMock).toHaveBeenCalledWith(MessageType.LOAD_EARLIER_BACKGROUND_TASK_OUTPUT, { outputFile: '/x/y.output' });
+    expect(result.current.loadingEarlier).toBe(true);
+    expect(result.current.text).toBe('{"type":"user"}\n'); // what is on screen stays until the larger window arrives
+
+    act(() => emitChange('/x/y.output', '{"type":"user"}\n{"type":"assistant"}\n', false));
+    expect(result.current.loadingEarlier).toBe(false);
+    expect(result.current.truncated).toBe(false);
+  });
+
+  it('asks for nothing when there is no file', () => {
+    const { result } = renderHook(() => useBackgroundTaskOutput(undefined));
+    act(() => result.current.loadEarlier());
+    expect(sendRawMock).not.toHaveBeenCalled();
   });
 
   it('ignores a push for a different outputFile', () => {

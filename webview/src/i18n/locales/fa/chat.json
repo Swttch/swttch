@@ -341,9 +341,22 @@
     "empty": "هنوز جریان کاری پس‌زمینه‌ای وجود ندارد.",
     "running": "در حال اجرا",
     "finishedCount": "{{count}} پایان‌یافته",
-    "clear": "پاک کردن",
+    "clearFinished": "پاک کردن کارهای تمام‌شده",
     "dismiss": "نادیده گرفتن",
     "cancelRunning": "لغو این وظیفه",
+    "viewSimple": "نمای ساده",
+    "viewFull": "نمای تفصیلی",
+    "openInNewTab": "باز کردن در تب جدید",
+    "viewOptions": "تغییر گزینه‌های نمایش",
+    "placementSide": "نمای کناری",
+    "placementCenter": "نمایش در مرکز",
+    "placementPage": "نمای تمام‌صفحه",
+    "placementTab": "تب جدید",
+    "setAsDefault": "پیش‌فرض شود",
+    "statusRunning": "در حال اجرا",
+    "statusCompleted": "تکمیل‌شده",
+    "statusFailed": "ناموفق",
+    "statusStopped": "متوقف‌شده",
     "stopAll": {
       "title": "توقف وظایف پس‌زمینه؟",
       "message": "{{count}} وظیفه پس‌زمینه هنوز در حال اجراست. همه را متوقف می‌کنید؟",
@@ -355,6 +368,9 @@
     "agentsCount": "{{count}} ایجنت",
     "agentsCount_one": "{{count}} ایجنت",
     "agentsCount_other": "{{count}} ایجنت",
+    "agentsRunning": "{{count}} عامل در حال اجرا",
+    "agentsRunning_one": "{{count}} عامل در حال اجرا",
+    "agentsRunning_other": "{{count}} عامل در حال اجرا",
     "tokensLabel": "{{tokens}} توکن",
     "phasesLabel": "مراحل",
     "tableHeader": {
@@ -362,6 +378,11 @@
       "tokens": "توکن‌ها",
       "tools": "ابزارها",
       "time": "زمان"
+    },
+    "runPage": {
+      "loading": "در حال باز کردن اجرا…",
+      "notFound": "این اجرا در نشست پیدا نشد.",
+      "backToSession": "بازگشت به نشست"
     },
     "transcriptModal": {
       "title": "{{name}}",
@@ -391,7 +412,12 @@
       "context": "زمینه {{value}}",
       "in": "ورودی {{value}}",
       "cache": "کش +{{written}} / {{read}} بازاستفاده",
-      "out": "خروجی {{value}}"
+      "out": "خروجی {{value}}",
+      "noResult": {
+        "failed": "نتیجه‌ای وجود ندارد. عامل ناموفق بود.",
+        "stopped": "نتیجه‌ای وجود ندارد. عامل متوقف شد.",
+        "ended": "نتیجه‌ای وجود ندارد. عامل پایان یافت."
+      }
     }
   },
   "scheduledMessages": {
@@ -1159,6 +1185,29 @@
       "viewAll": "نمایش همه",
       "viewLess": "نمایش کمتر"
     },
+    "taskNotice": {
+      "label": "{{noun}} در پس‌زمینه {{status}}",
+      "labelNoStatus": "{{noun}} در پس‌زمینه",
+      "noun": {
+        "agent": "عامل",
+        "command": "فرمان",
+        "workflow": "گردش‌کار",
+        "task": "وظیفه"
+      },
+      "failed": {
+        "agent": "عامل در پس‌زمینه ناموفق بود",
+        "command": "فرمان در پس‌زمینه ناموفق بود",
+        "workflow": "گردش‌کار در پس‌زمینه ناموفق بود",
+        "task": "وظیفه در پس‌زمینه ناموفق بود"
+      },
+      "commandCompleted": "فرمان در پس‌زمینه کامل شد",
+      "status": {
+        "completed": "کامل شد",
+        "failed": "ناموفق بود",
+        "stopped": "متوقف شد"
+      },
+      "took": "{{elapsed}} طول کشید"
+    },
     "tools": {
       "ranCommand": "دستور اجرا شد",
       "ranCommands_one": "{{count}} دستور اجرا شد",
@@ -1186,6 +1235,7 @@
       "readAndEditedFile": "{{name}} خوانده و ویرایش شد",
       "runningCommand": "دستور در حال اجراست",
       "failedMark": "ناموفق",
+      "viewInBackgroundTasks": "نمایش در وظایف پس‌زمینه",
       "stoppedMark": "متوقف شد",
       "interruptedNote": "قطع شد",
       "exitCode": "کد خروج {{code}}",
@@ -1249,6 +1299,7 @@
       "searchedWeb": "جستجوی وب انجام شد",
       "stoppedTask": "وظیفه متوقف شد",
       "ranAgent": "عامل اجرا شد",
+      "ranWorkflow": "گردش‌کار اجرا شد",
       "usedLabel": "{{label}} استفاده شد",
       "ranAgents": "{{count}} عامل اجرا شد",
       "view_normal": "به نمای عادی تغییر کرد",

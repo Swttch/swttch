@@ -32,13 +32,12 @@ object NoopRpcHandler : NodeProcessManager.RpcHandler {
     override suspend fun closeDiffTab(toolUseId: String) {}
     override suspend fun refreshFiles(paths: List<String>) {}
     override suspend fun createSession(workingDir: String) {}
-    override suspend fun openNewTab(workingDir: String) {}
-    override suspend fun openSession(sessionId: String, workingDir: String?) {}
+    override suspend fun newTab(workingDir: String, path: String?) {}
+    override suspend fun openTab(path: String, workingDir: String?) {}
     override suspend fun setTabName(panelId: String, name: String) {}
     override suspend fun setPrimarySelection(text: String) {}
     override suspend fun setClipboard(text: String, html: String?) {}
     override suspend fun getClipboard(): ClipboardContents = ClipboardContents.EMPTY
-    override suspend fun openSettings(workingDir: String, path: String?) {}
     override suspend fun openTerminal(workingDir: String) {}
     override suspend fun reviewBaseChanged(
         toolUseId: String,

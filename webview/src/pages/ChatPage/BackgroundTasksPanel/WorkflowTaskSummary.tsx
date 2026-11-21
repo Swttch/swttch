@@ -1,4 +1,5 @@
 import { useTranslation } from '@/i18n';
+import { useFormatElapsed } from '../transcript/TranscriptActivity';
 import type { WorkflowTask } from '@/shared';
 import {
     agentDisplayName,
@@ -6,6 +7,7 @@ import {
     agentDotClass,
     formatDuration,
     formatTokens,
+    formatTokensFor,
     workflowAgentCount,
     workflowDurationMs,
     taskSubagentType,
@@ -22,6 +24,54 @@ interface Props {
 }
 
 /**
+ * How long a task has run, as the text a summary shows ("24s", "1m 5s"), or
+ * undefined when there is nothing to say.
+ *
+ * While it runs, the clock: the CLI's `duration_ms` is the figure at its last
+ * progress event, which stops moving once the agent goes quiet (waiting on a
+ * permission answer, say), so it read "2s" next to a row that said 21s (#673).
+ * The exception is a start time we never learned (a task rebuilt without a
+ * timestamp has 0), where the clock would count from 1970.
+ * Once it has ended: the CLI's own figure, when its closing notification
+ * carried one. A cancelled task's notification carries none (it says only
+ * "stopped"), so its usage is still the last progress figure: a cancelled
+ * agent that ran 15s read "1s". The span between the two timestamps we do
+ * have is truer then, and it is also all a task settled from its output log
+ * has to go on.
+ */
+/**
+ * A length of time in the words of the reader's language ("1분 5초", "1m 5s"), as the cards of the list say it, or
+ * undefined when there is nothing to say. The one way a window and a card write a time.
+ */
+export function useDurationLabel(): (ms?: number) => string | undefined {
+    const formatElapsed = useFormatElapsed();
+    return (ms) => (!ms || ms <= 0 ? undefined : formatElapsed(Math.max(0, Math.round(ms / 1000))));
+}
+
+export function taskDurationText(task: WorkflowTask, now: number): string | undefined {
+    return formatDuration(taskDurationMs(task, now));
+}
+
+/** How long the task has run or took, in milliseconds, by the rules above. */
+export function taskDurationMs(task: WorkflowTask, now: number): number | undefined {
+    const isRunning = task.status === 'running';
+    const clockMs = isRunning && task.startedAt > 0 ? now - task.startedAt : undefined;
+    const spanMs =
+        task.endedAt && task.startedAt > 0 && task.endedAt > task.startedAt ? task.endedAt - task.startedAt : undefined;
+    const closedByCli = !!task.events?.task_notification?.['usage'];
+    // A task stopped with nothing but a notice to say when: the notice may have been written long after the stop
+    // (a reload of an old session writes it at the reload), so what its agents ran for is truer than the span.
+    const agentMs = task.agents.reduce((most, a) => Math.max(most, a.durationMs ?? 0), 0);
+    const durationMs =
+        clockMs ??
+        (!isRunning && !closedByCli && agentMs > 0 ? agentMs : undefined) ??
+        (closedByCli ? undefined : spanMs) ??
+        workflowDurationMs(task.usage) ??
+        (isRunning ? now - task.startedAt : task.endedAt ? task.endedAt - task.startedAt : undefined);
+    return durationMs;
+}
+
+/**
  * The summary block a Background tasks panel card shows for one task: status,
  * agents/tokens/time, description, phases. Shared with AgentTranscriptModal's
  * header (issue #347 follow-up) so the detail view — which is supposed to be
@@ -29,36 +79,17 @@ interface Props {
  */
 export function WorkflowTaskSummary(props: Props) {
     const { task, now, showPhases = true } = props;
-    const { t } = useTranslation('chat');
+    const { t, i18n } = useTranslation('chat');
 
     const isRunning = task.status === 'running';
     const statusColor = WORKFLOW_STATUS_COLOR[task.status] || 'text-text-primary/60';
     const agentCount = task.agents.length || workflowAgentCount(task.usage);
-    // While it runs, the clock: the CLI's `duration_ms` is the figure at its last
-    // progress event, which stops moving once the agent goes quiet (waiting on a
-    // permission answer, say), so it read "2s" next to a row that said 21s (#673).
-    // The exception is a start time we never learned (a task rebuilt without a
-    // timestamp has 0), where the clock would count from 1970.
-    // Once it has ended: the CLI's own figure, when its closing notification
-    // carried one. A cancelled task's notification carries none (it says only
-    // "stopped"), so its usage is still the last progress figure: a cancelled
-    // agent that ran 15s read "1s". The span between the two timestamps we do
-    // have is truer then, and it is also all a task settled from its output log
-    // has to go on.
-    const clockMs = isRunning && task.startedAt > 0 ? now - task.startedAt : undefined;
-    const spanMs =
-        task.endedAt && task.startedAt > 0 && task.endedAt > task.startedAt ? task.endedAt - task.startedAt : undefined;
-    const closedByCli = !!task.events?.task_notification?.['usage'];
-    const durationMs =
-        clockMs ??
-        (closedByCli ? undefined : spanMs) ??
-        workflowDurationMs(task.usage) ??
-        (isRunning ? now - task.startedAt : task.endedAt ? task.endedAt - task.startedAt : undefined);
-    const duration = formatDuration(durationMs);
+    const durationLabel = useDurationLabel();
+    const duration = durationLabel(taskDurationMs(task, now));
     // Authoritative workflow-level total first; per-agent sum is only a fallback
     // (see WorkflowRenderer) so the header stays consistent with the agent table.
     const liveTokens = task.agents.reduce((sum, a) => sum + (a.tokens || 0), 0);
-    const tokens = formatTokens(workflowTokens(task.usage) || liveTokens);
+    const tokens = formatTokensFor(i18n.language, workflowTokens(task.usage) || liveTokens);
     const subagentType = taskSubagentType(task);
 
     return (

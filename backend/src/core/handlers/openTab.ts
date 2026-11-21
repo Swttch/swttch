@@ -3,21 +3,28 @@ import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { MessageType } from '../../shared';
 
-export async function openSessionHandler(
+/**
+ * OPEN_TAB: the page at `path`, in the tab that is already showing it, or in a new one.
+ *
+ * A page is told apart by its address (`/sessions/<id>`, `/settings/sponsor`, ...), so
+ * every way into a page (a session link, a settings jump, a sub-agent run) is this one
+ * request rather than a message of its own.
+ */
+export async function openTabHandler(
   connectionId: string,
   message: IPCMessage,
   connections: ConnectionManager,
   bridge: Bridge,
 ): Promise<void> {
   try {
-    const sessionId = message.payload?.sessionId as string | undefined;
+    const path = message.payload?.path as string | undefined;
     const workingDir = message.payload?.workingDir as string | undefined;
-    if (sessionId) {
-      await bridge.openSession(sessionId, workingDir);
+    if (path) {
+      await bridge.openTab(path, workingDir);
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : JSON.stringify(err);
-    console.error('[node-backend]', `bridge.openSession() failed: ${msg}`);
+    console.error('[node-backend]', `bridge.openTab() failed: ${msg}`);
   }
 
   connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId });
