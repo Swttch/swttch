@@ -42,6 +42,11 @@ export function stripPickedElements(text: string): string {
   return text.replace(/<picked-element>[\s\S]*?<\/picked-element>/g, '');
 }
 
+/** Drop the tags the app puts round a pasted block and keep what was pasted. The closing tag carries an id too: `</pasted_content id="6c03">`. */
+export function unwrapPastedContent(text: string): string {
+  return text.replace(/<\/?pasted_content(?:\s[^>]*)?>/g, '');
+}
+
 export function parseUserContent(content: string): {
   text: string;
   contexts: Context[];
@@ -111,7 +116,7 @@ export function parseUserContent(content: string): {
   // Step H2: the wrapper the app puts round a pasted block. Desktop shows the pasted
   // text without it, so only the tags go (the closing one carries an id too:
   // `</pasted_content id="6c03">`); the pasted text stays.
-  cleanText = cleanText.replace(/<\/?pasted_content(?:\s[^>]*)?>/g, '');
+  cleanText = unwrapPastedContent(cleanText);
 
   // Step H3: what a picked page element stands for (#593) is written out after the message for Claude. The
   // reader sees the element's chip text where the whole description sits, as the chip they sent.

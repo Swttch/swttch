@@ -1754,4 +1754,47 @@ describe('SessionContext', () => {
       expect(ctx().isNewlyCreatedSession('session-1')).toBe(false);
     });
   });
+
+  // A fork opens a branch whose transcript is already on disk. The mark says the opposite ("nothing on disk yet,
+  // do not wipe, do not load"), and with it SessionLoader kept the conversation of the session the fork came from on
+  // screen: it skipped the clearing and the loading, and the load the fork asked for itself was dropped as stale when
+  // it beat the navigation (#719).
+  describe('addNewSession - 기록이 이미 있는 세션(포크)', () => {
+    async function open(handoff?: { promptText?: string; hasTranscript?: boolean }) {
+      mockSessionsIndex.mockResolvedValue({ sessions: mockSessionDtos });
+      let capturedCtx: ReturnType<typeof useSessionContext> | null = null;
+      const view = render(
+        <SessionProvider>
+          <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+        </SessionProvider>,
+      );
+      await act(async () => { await capturedCtx?.loadSessions(); });
+      act(() => { capturedCtx?.addNewSession('branch', 'origin title', handoff); });
+      view.rerender(
+        <SessionProvider>
+          <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+        </SessionProvider>,
+      );
+      await waitFor(() => expect(capturedCtx?.currentSessionId).toBe('branch'));
+      return () => capturedCtx!;
+    }
+
+    it('기록이 이미 있다고 알리면 만든 세션으로 표시하지 않는다', async () => {
+      const ctx = await open({ promptText: 'reword me', hasTranscript: true });
+
+      expect(ctx().isNewlyCreatedSession('branch')).toBe(false);
+    });
+
+    it('알리지 않으면 그대로 만든 세션으로 표시한다', async () => {
+      const ctx = await open({ promptText: 'reword me' });
+
+      expect(ctx().isNewlyCreatedSession('branch')).toBe(true);
+    });
+
+    it('기록이 이미 있는 세션도 목록에는 오른다', async () => {
+      const ctx = await open({ hasTranscript: true });
+
+      expect(ctx().sessions.some((s) => s.id === 'branch')).toBe(true);
+    });
+  });
 });

@@ -30,10 +30,12 @@ question and send it down a different path. Your original conversation is left
 exactly as it was — nothing is deleted, and you can go back to it from the
 session list at any time.
 
-What goes back in the composer is the message as you see it in the chat. A slash
-command comes back as you typed it (`/compact`), and a note the app added for
-Claude around your words (when you addressed another session with `@@`, for
-example) is left out ([#719](https://github.com/Swttch/swttch/issues/719)).
+What goes back in the composer is what you typed. A slash command comes back as
+you typed it (`/compact`). What the app added around your words for Claude is
+left out: the note it adds when you address another session with `@@`, and the
+file or selection your IDE had open when you sent the message. A quote you
+attached with Reply goes back above the composer as a card, ready to send again
+([#719](https://github.com/Swttch/swttch/issues/719)).
 
 Some cards in the chat are output Claude Code wrote, not messages you sent: the
 "Compacted …" line `/compact` leaves at the end is one. Forking from one of

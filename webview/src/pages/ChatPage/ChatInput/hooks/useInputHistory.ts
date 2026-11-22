@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useBridge } from '@/hooks/useBridge';
 import { MessageType, isQueueOperation } from '@/shared';
 import { getTextContent, type LoadedMessageDto } from '@/types';
-import { stripPickedElements, stripSystemReminders } from '@/pages/ChatPage/message-renderers/utils/parseUserContent';
+import { typedSendText } from '@/pages/ChatPage/sendText';
 
 /**
  * How close to the end of the loaded history the cursor may get before the next
@@ -28,12 +28,13 @@ function promptTextOf(entry: Record<string, unknown>): string {
   // What was STORED is not what was TYPED. A send that addresses another
   // session, or cancels a task, carries a `<system-reminder>` the GUI wrapped
   // around the user's words — measured: Up recalled the whole delivery
-  // instruction, tag and markers and all, straight into the composer.
+  // instruction, tag and markers and all, straight into the composer. The IDE's
+  // open file and selection ride ahead of a send the same way (#719).
   //
-  // Only the reminder is taken off here. The `<session-mention>` tag stays, so
-  // the composer can put the chip back as a live chip rather than as dead text
-  // that looks addressed and is not.
-  return stripPickedElements(stripSystemReminders(raw)).trim();
+  // `typedSendText` takes those off, and is the one answer a fork takes back too.
+  // The `<session-mention>` tag stays, so the composer can put the chip back as a
+  // live chip rather than as dead text that looks addressed and is not.
+  return typedSendText(raw);
 }
 
 interface PromptHistoryResponse {

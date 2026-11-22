@@ -2,36 +2,49 @@ import { useCallback, useMemo, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { useSessionContext } from '@/contexts/SessionContext';
-import { useApi } from '@/contexts/ApiContext';
 import { useTranslation } from '@/i18n';
 import { MessageType } from '@/shared';
 import { getTextContent, type LoadedMessageDto } from '../../types';
 import { canRewindTo, isRecordedSend, recordedUuidOf } from './rewindTargets';
 import type { SendActionsValue } from './SendActionsContext';
-import { commandSendText } from './sendText';
-import { parseUserContent, stripPickedElements, stripSystemReminders } from './message-renderers/utils/parseUserContent';
+import { commandSendText, typedSendText } from './sendText';
+import { parseUserContent } from './message-renderers/utils/parseUserContent';
+import { parseReplyBlocks, type ReplyCard } from './message-renderers/utils/replyBlocks';
 import { hasVisibleGlyph } from './message-renderers/components/IfVisible';
+import { addReplyToComposer } from '@/utils/composerReplies';
+
+/** What a fork puts back for a send: the words for the composer, and the cards for the row above it. */
+interface Retyped {
+  text: string;
+  replies: ReplyCard[];
+  /** The quotes of the cards with no comment. */
+  excerpts: string[];
+}
 
 /**
- * What a fork from this card puts back in the composer, or null when nobody typed the card (#719).
+ * What a fork from this card puts back, or null when nobody typed the card (#719).
  *
  * The CLI records some of its own output as `user` entries, and they head a section and get the fork button like a
  * send: `/compact` leaves "Compacted …" behind as `<local-command-stdout>`. There is nothing in one to retype, so the
  * branch keeps it, as a branch from a reply does, and the composer stays empty.
  *
  * Otherwise the answer is the send as the card reads, not as the transcript stores it. A slash command is stored as
- * `<command-name>` markup and comes back as `/compact`. A typed send loses the `<system-reminder>` the GUI wrapped
- * around it and keeps its `<session-mention>` tag, which is what Up recall does (`useInputHistory`) for the same
- * reason: the composer turns the tag back into a live chip, and the reminder is not something the user wrote.
+ * `<command-name>` markup and comes back as `/compact`. A typed send comes back as `typedSendText` has it, the same
+ * words Up recall brings back, and the reply cards it opened with are lifted out of the text: the composer cannot
+ * draw a card from `<!-- reply -->` markup, but it can hold one, so they return to the row above it.
  */
-function retypedText(send: LoadedMessageDto): string | null {
+function retypedSend(send: LoadedMessageDto): Retyped | null {
   const stored = getTextContent(send);
   const parsed = parseUserContent(stored);
-  if (hasVisibleGlyph(parsed.commandName)) return commandSendText(parsed.commandName, parsed.text);
-  const typed = stripPickedElements(stripSystemReminders(stored)).trim();
+  if (hasVisibleGlyph(parsed.commandName)) {
+    return { text: commandSendText(parsed.commandName, parsed.text), replies: [], excerpts: [] };
+  }
+  const typed = typedSendText(stored);
   // Anchored like the shared `isCliAuthoredText`, so a send that only quotes the tag further in is still a send.
   if (typed.startsWith('<local-command-stdout>')) return null;
-  return typed;
+  const cards = parseReplyBlocks(typed);
+  if (!cards) return { text: typed, replies: [], excerpts: [] };
+  return { text: cards.body.trim(), replies: cards.replies, excerpts: cards.excerpts };
 }
 
 /**
@@ -61,7 +74,6 @@ export function useSendActions(messages: LoadedMessageDto[]): SendActionsValue {
   const { t } = useTranslation('chat');
   const bridge = useBridgeContext();
   const { currentSessionId, workingDirectory, addNewSession, sessions } = useSessionContext();
-  const api = useApi();
 
   // The messages are read when an action is asked about, not closed over. The value this hook returns is handed to
   // every row through a context, so one that changed with the messages made every row draw again for each word of a
@@ -102,8 +114,8 @@ export function useSendActions(messages: LoadedMessageDto[]): SendActionsValue {
         return;
       }
 
-      const retyped = retypedText(send);
-      const promptText = retyped ?? '';
+      const retyped = retypedSend(send);
+      const promptText = retyped?.text ?? '';
       // Before a send, so it can be sent again; through a card the CLI wrote, which has nothing to send again.
       const cut = retyped === null ? { throughUuid: recorded } : { sendUuid: recorded };
 
@@ -124,11 +136,13 @@ export function useSendActions(messages: LoadedMessageDto[]): SendActionsValue {
          * navigates, because for a locally created session the URL change IS the
          * creation.
          *
-         * Registering matters on its own too: `SessionLoader` redirects a URL
-         * whose session is missing from the list it has loaded, and that list is
-         * fetched asynchronously. The branch exists on disk but the webview has
-         * not seen it yet, so the route bounced straight back to /sessions/new
-         * until this call marked it as one of ours.
+         * The branch is handed over as a session that already has its transcript
+         * (`hasTranscript`): it was written before this ran, so `SessionLoader`
+         * clears the screen and reads it once the route has changed, as it does for
+         * any session opened from the list. Marked as just created instead, it
+         * kept the conversation of the session the fork came from on screen, and
+         * a read asked for here could beat the navigation and be dropped as stale
+         * (#719).
          */
         /*
          * The branch is listed under the name of the session it came from.
@@ -141,22 +155,17 @@ export function useSendActions(messages: LoadedMessageDto[]): SendActionsValue {
          * system tag — that name comes out as "No title".
          */
         const originTitle = sessionsRef.current.find((s) => s.id === currentSessionId)?.title ?? promptText;
-        addNewSession(response.sessionId, originTitle, { promptText });
-        /*
-         * Ask for the transcript explicitly.
-         *
-         * Registering the branch above is what stops `SessionLoader` from
-         * redirecting a URL it cannot find in its list yet, but a locally created
-         * session is also one it does not bother loading — it assumes there is
-         * nothing on disk. Here there is: the branch was written before this ran.
-         */
-        void api.sessions.load(response.sessionId, workingDirectory);
+        // The cards go back only now: with no branch made there is nowhere for them to go, and they would be left in
+        // the row of the session the user is still looking at.
+        retyped?.replies.forEach((card) => addReplyToComposer(card.quote, card.comment));
+        retyped?.excerpts.forEach((quote) => addReplyToComposer(quote, ''));
+        addNewSession(response.sessionId, originTitle, { promptText, hasTranscript: true });
         toast.success(t('sendActions.forkDone'));
       } catch (error) {
         toast.error(error instanceof Error ? error.message : t('sendActions.forkFailed'));
       }
     },
-    [sendByKey, currentSessionId, workingDirectory, bridge, t, addNewSession, api],
+    [sendByKey, currentSessionId, workingDirectory, bridge, t, addNewSession],
   );
 
   const canForkReply = useCallback(
@@ -184,14 +193,13 @@ export function useSendActions(messages: LoadedMessageDto[]): SendActionsValue {
           return;
         }
         const originTitle = sessionsRef.current.find((s) => s.id === currentSessionId)?.title ?? '';
-        addNewSession(response.sessionId, originTitle, { promptText: '' });
-        void api.sessions.load(response.sessionId, workingDirectory);
+        addNewSession(response.sessionId, originTitle, { promptText: '', hasTranscript: true });
         toast.success(t('sendActions.forkDone'));
       } catch (error) {
         toast.error(error instanceof Error ? error.message : t('sendActions.forkFailed'));
       }
     },
-    [currentSessionId, workingDirectory, bridge, t, addNewSession, api],
+    [currentSessionId, workingDirectory, bridge, t, addNewSession],
   );
 
   const runRewind = useCallback(

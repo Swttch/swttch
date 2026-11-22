@@ -31,9 +31,30 @@ export function withoutSystemReminders(text: string): string {
   return text.replace(SYSTEM_REMINDER_BLOCK, '');
 }
 
-/** True when nothing a person typed is left in `text` once the reminders are taken out. */
+/**
+ * The open file and the selection the IDE put in a message, as the two blocks they are written as.
+ *
+ * The plugin writes them ahead of what was typed, in the same entry (`injectIdeContext`), so the typed words come
+ * after a tag.
+ */
+const IDE_CONTEXT_BLOCK = /<ide_opened_file>[\s\S]*?<\/ide_opened_file>|<ide_selection>[\s\S]*?<\/ide_selection>/g;
+
+/** The text without the open file and the selection the IDE put in it. */
+export function withoutIdeContext(text: string): string {
+  return text.replace(IDE_CONTEXT_BLOCK, '');
+}
+
+/**
+ * True when nothing a person typed is left in `text` once the reminders and the IDE context are taken out.
+ *
+ * The IDE context goes the way the reminders do, and for the same reason: it rides in the same entry as what was
+ * typed, so testing the entry for a tag at its start called a send made with an open file CLI-authored. Such a send
+ * was left out of the Up-arrow history and got no tick on the rail (#719). `<ide_selection>` was not on the list of
+ * tags, so a send that opens with it was never wrongly caught. An entry that is only IDE context has nothing typed
+ * left, so it is still not a send.
+ */
 export function isCliAuthoredText(text: string): boolean {
-  const typed = withoutSystemReminders(text);
+  const typed = withoutIdeContext(withoutSystemReminders(text));
   return typed.trim() === '' || CLI_AUTHORED_TEXT.test(typed);
 }
 

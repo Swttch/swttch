@@ -1,5 +1,11 @@
 import { getTextContent, type LoadedMessageDto } from '@/types';
-import { parseUserContent } from './message-renderers/utils/parseUserContent';
+import { withoutIdeContext } from '@/shared';
+import {
+  parseUserContent,
+  stripPickedElements,
+  stripSystemReminders,
+  unwrapPastedContent,
+} from './message-renderers/utils/parseUserContent';
 
 /**
  * What a slash-command send reads as, as one plain string.
@@ -21,6 +27,27 @@ import { parseUserContent } from './message-renderers/utils/parseUserContent';
 export function commandSendText(commandName: string | undefined, args: string): string {
   const command = `/${commandName ?? ''}`;
   return args ? `${command} ${args}` : command;
+}
+
+/**
+ * What a person typed in one send, as the composer takes it back: a prompt recalled with the Up arrow, and a send
+ * forked from (#719).
+ *
+ * What was STORED is not what was TYPED. The GUI wraps a `<system-reminder>` round a send that addresses another
+ * session or cancels a task (#232), the plugin writes the open file and the selection of the IDE ahead of it, the
+ * Browser pane writes a picked element out after it, and the app wraps a pasted block in a tag of its own. None
+ * of that is something the user wrote, and the next send brings its own again, so a composer that took it back
+ * would show a wall of markup that sends twice.
+ *
+ * Two kinds of markup stay. The `<session-mention>` tag is what lets the composer draw the chip again instead of
+ * dead text that looks addressed and is not. Reply cards are the words that went out, and the composer cannot
+ * draw them from text; a fork lifts them out into cards (`useSendActions`), and a recalled prompt keeps them as
+ * written, which sends the same words.
+ *
+ * Slash commands are not handled here: `commandSendText` says what a command reads as.
+ */
+export function typedSendText(raw: string): string {
+  return unwrapPastedContent(withoutIdeContext(stripPickedElements(stripSystemReminders(raw)))).trim();
 }
 
 /**
