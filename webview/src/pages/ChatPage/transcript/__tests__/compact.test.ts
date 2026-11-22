@@ -1,14 +1,23 @@
 import { describe, it, expect } from 'vitest';
 import type { LoadedMessageDto } from '../../../../types';
-import { formatTokenCount, isCliNotice, isCompactBoundary, isCompactSummaryEntry } from '../compact';
+import { compactSavedTokens, isCliNotice, isCompactBoundary, isCompactSummaryEntry } from '../compact';
 
 const entry = (fields: Record<string, unknown>) => fields as unknown as LoadedMessageDto;
 
-describe('formatTokenCount', () => {
-  it('writes thousands with one decimal and a k', () => {
-    expect(formatTokenCount(828311)).toBe('828.3k');
-    expect(formatTokenCount(950)).toBe('950');
-    expect(formatTokenCount(1250000)).toBe('1.3M');
+describe('compactSavedTokens', () => {
+  const boundary = (compactMetadata: Record<string, unknown>) =>
+    entry({ type: 'system', subtype: 'compact_boundary', compactMetadata });
+
+  it('is what this compaction dropped, not the running total (the second compaction of a session)', () => {
+    expect(compactSavedTokens(boundary({ preTokens: 355503, postTokens: 27142, cumulativeDroppedTokens: 510016 }))).toBe(328361);
+  });
+
+  it('falls back to the running total when the before and after counts are missing', () => {
+    expect(compactSavedTokens(boundary({ cumulativeDroppedTokens: 181655 }))).toBe(181655);
+  });
+
+  it('is unknown without any metadata', () => {
+    expect(compactSavedTokens(entry({ type: 'system', subtype: 'compact_boundary' }))).toBeUndefined();
   });
 });
 

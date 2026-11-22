@@ -65,6 +65,7 @@ import type { SendSection } from './groupIntoSendSections';
 import { mergeSplitThinkingMessages } from './mergeSplitThinkingMessages';
 import { restoreQueuedMessages } from './restoreQueuedMessages';
 import { hideCliNotes } from './hideCliNotes';
+import { placeCompactCommand } from './placeCompactCommand';
 import { splitSectionsAtGap } from './windowGapSections';
 import { ENTRY_UUID_ATTRIBUTE, useScrollAnchor } from './useScrollAnchor';
 import { useChatWindowConfig } from '@/hooks/useChatWindowConfig';
@@ -337,7 +338,7 @@ function ChatPageContent() {
   const liveEndedIds = workflowState?.liveEndedIds;
   const taskList = workflowState?.tasks;
   const mergedMessages = useMemo(() => {
-    const merged = mergeToolResults(mergeSplitThinkingMessages(hideCliNotes(restoreQueuedMessages(messages))), {
+    const merged = mergeToolResults(mergeSplitThinkingMessages(hideCliNotes(placeCompactCommand(restoreQueuedMessages(messages)))), {
       keepTaskNotices: transcriptViewMode !== null,
     });
     // The notice of a task whose end this screen saw, until the CLI's own is read back (next-gen view only).
