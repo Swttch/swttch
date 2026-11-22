@@ -188,6 +188,14 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.38.2 - Now, a sub-agent can open in its own window or tab</h3>
+            <ul>
+                <li>Add opening a sub-agent run in the side panel, the center window, a page or a new tab (#718, reported by @deniskrizanovic)</li>
+                <li>Add "Allow all this session" back to the new permission card (#712, reported by @itachi-8733)</li>
+                <li>Fix forking putting the stored markup in the composer instead of what was typed (#721 by @ShiningPluto, #724)</li>
+                <li>Fix the original conversation staying on screen after opening a fork (#724)</li>
+                <li>Fix messages sent with an IDE file or selection missing from the Up-arrow history and the send rail (#724)</li>
+            </ul>
             <h3>0.38.1 - Various bug fixes and usability improvements</h3>
             <ul>
                 <li>Add opening the current session in the Claude Desktop app (#710)</li>
