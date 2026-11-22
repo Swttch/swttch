@@ -4,6 +4,7 @@ import com.github.yhk1038.claudecodegui.bridge.AutoRebootBudget
 import com.github.yhk1038.claudecodegui.bridge.BackendProcessState
 import com.github.yhk1038.claudecodegui.bridge.BackendRebooter
 import com.github.yhk1038.claudecodegui.bridge.ClipboardContents
+import com.github.yhk1038.claudecodegui.bridge.DebugLoggingWatcher
 import com.github.yhk1038.claudecodegui.bridge.ExtractedResources
 import com.github.yhk1038.claudecodegui.bridge.NodeProcessManager
 import com.github.yhk1038.claudecodegui.bridge.RpcUserFacingException
@@ -344,6 +345,12 @@ class NodeBackendService : Disposable {
 
             override suspend fun getIdeRoot(workingDir: String?): String? = basePath.ifBlank { null }
 
+            // The debug-log switch belongs to the IDE as a whole, not to a panel, so it is answered
+            // here and never forwarded to a panel's handler (issue #723).
+            override suspend fun getDebugLogging(): Boolean = DebugLoggingWatcher.isEnabled()
+
+            override suspend fun setDebugLogging(enabled: Boolean) = DebugLoggingWatcher.apply(enabled)
+
             override suspend fun showNotification(title: String, body: String, panelId: String?): NotificationOutcome {
                 // Route to the originating panel so its "Open session" action returns
                 // to the right tab; fall back to any panel when the id is unknown
@@ -457,6 +464,25 @@ class NodeBackendService : Disposable {
             }
         }
 
+        // The IDE's debug-log switch moved by itself, for instance in Debug Log Settings: tell the
+        // backend, which saves it as the "Debug Mode" setting so the two stay one switch (#723).
+        private val debugLoggingListener: (Boolean) -> Unit = { enabled ->
+            sendNotification("DEBUG_LOGGING_CHANGED", buildJsonObject { put("enabled", enabled) })
+        }
+        private var watchingDebugLogging = false
+
+        private fun startWatchingDebugLogging() {
+            if (watchingDebugLogging) return
+            watchingDebugLogging = true
+            DebugLoggingWatcher.addListener(debugLoggingListener)
+        }
+
+        private fun stopWatchingDebugLogging() {
+            if (!watchingDebugLogging) return
+            watchingDebugLogging = false
+            DebugLoggingWatcher.removeListener(debugLoggingListener)
+        }
+
         private fun connect(port: Int) {
             rpcClient?.dispose()
             val client = RpcWebSocketClient(
@@ -489,6 +515,7 @@ class NodeBackendService : Disposable {
                 authToken = authToken,
             )
             rpcClient = client
+            startWatchingDebugLogging()
             client.connect(port)
             logger.info("RPC WebSocket client connecting to port $port (basePath=$basePath)")
         }
@@ -633,12 +660,14 @@ class NodeBackendService : Disposable {
 
         /** Kill the process — used by restart() for a clean slate. */
         fun stop() {
+            stopWatchingDebugLogging()
             rpcClient?.dispose(); rpcClient = null
             nodeProcessManager?.dispose(); nodeProcessManager = null
         }
 
         /** Detach without killing — the Node.js process self-exits on idle. */
         fun detach() {
+            stopWatchingDebugLogging()
             rpcClient?.dispose(); rpcClient = null
             nodeProcessManager?.detach(); nodeProcessManager = null
         }
@@ -648,6 +677,7 @@ class NodeBackendService : Disposable {
          * down its own CLI children (see [NodeProcessManager.killNow]).
          */
         fun kill() {
+            stopWatchingDebugLogging()
             rpcClient?.dispose(); rpcClient = null
             nodeProcessManager?.killNow(); nodeProcessManager = null
         }

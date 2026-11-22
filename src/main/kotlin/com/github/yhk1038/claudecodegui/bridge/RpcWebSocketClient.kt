@@ -618,6 +618,15 @@ class RpcWebSocketClient(
                     if (ideRoot != null) put("ideRoot", ideRoot) else put("ideRoot", JsonNull)
                 }
             }
+            "GET_DEBUG_LOGGING" -> {
+                val enabled = rpcHandler.getDebugLogging()
+                buildJsonObject { put("enabled", enabled) }
+            }
+            "SET_DEBUG_LOGGING" -> {
+                val enabled = params["enabled"]?.jsonPrimitive?.booleanOrNull == true
+                rpcHandler.setDebugLogging(enabled)
+                buildJsonObject { put("enabled", enabled) }
+            }
             "SHOW_NOTIFICATION" -> {
                 val title = params["title"]?.jsonPrimitive?.content
                     ?: throw IllegalArgumentException("Missing 'title' param")

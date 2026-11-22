@@ -26,7 +26,10 @@ object JsSettingsParser {
      * @throws IllegalArgumentException 파싱 실패 시
      */
     fun parse(jsContent: String): Map<String, JsonElement> {
-        val stripped = stripComments(jsContent)
+        // A UTF-8 byte order mark is not part of the content. Windows tools (PowerShell's
+        // `-Encoding UTF8`, Notepad) put one at the start of a file, and the parser below
+        // reads it as a stray character before `export` and rejects the whole file.
+        val stripped = stripComments(jsContent.removePrefix("\uFEFF"))
         val unwrapped = unwrapExportDefault(stripped)
         val noTrailing = removeTrailingCommas(unwrapped)
         val quoted = quoteUnquotedKeys(noTrailing)

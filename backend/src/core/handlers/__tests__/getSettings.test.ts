@@ -8,6 +8,9 @@ vi.mock('../../features/settings', () => ({
 vi.mock('../../features/settings-watcher', () => ({
   getSettingsWatcher: vi.fn(() => undefined),
 }));
+vi.mock('../../features/debugLogging', () => ({
+  reconcileOnPanelOpen: vi.fn(async () => undefined),
+}));
 vi.mock('../../../config/environment', () => ({
   ccgClientInfo: 'IntelliJ IDEA 2024.1.4 (IC-241.18034.62)',
 }));

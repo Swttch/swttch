@@ -6,6 +6,7 @@ import { CliUpdateControl } from './CliUpdateControl';
 import { CliAutoUpdateRow } from './CliAutoUpdateRow';
 import { VersionLine } from './VersionLine';
 import { DependenciesSection } from './Dependencies';
+import { DebugModeRow } from '../Advanced/Debugging/DebugModeRow';
 
 export function AboutSettings() {
   const { t } = useTranslation('settings');
@@ -46,6 +47,13 @@ export function AboutSettings() {
             {osInfo ?? t('about.versionInfo.notDetected')}
           </span>
         </SettingRow>
+      </SettingSection>
+
+      {/* Where a bug report is prepared, so the switch that makes the logs worth attaching sits
+          here too. Only this row: the Advanced page is not reachable, and the log-level row on it
+          is not wired to anything (issue #723). */}
+      <SettingSection title={t('advanced.debugging.sectionTitle')}>
+        <DebugModeRow />
       </SettingSection>
 
       <DependenciesSection />
