@@ -7,6 +7,7 @@ import { useDiffs } from '../hooks/useDiffs';
 import { useTools } from '../hooks/useTools';
 import { useBridgeContext } from './BridgeContext';
 import { takePendingTranscriptView } from '@/utils/pendingTranscriptView';
+import { findLastRecordedRun } from '@/utils/lastRecordedRun';
 import { SettingKey } from '@/types/settings';
 import { useSessionContext, type SessionHandoff } from './SessionContext';
 import { useOptionalAllowAllCommands } from './AllowAllCommandsContext';
@@ -593,6 +594,20 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   const rememberEffortPick = useCallback(
     (model: string | null, level: string) => setEffortPick({ model, level }),
     [],
+  );
+
+  // The newest page of a session that was just opened. Beside showing the messages, it says which model answered last
+  // and at what effort, and those two are put back on the screen: leaving a session empties them (the model tag then
+  // showed the saved default, the slider nothing) and no running CLI is there to report them until the next send.
+  // What the screen already holds stays: a pick made on this screen is newer than the transcript.
+  const loadMessages = useCallback(
+    (msgs: LoadedMessageDto[], hasOlder?: boolean) => {
+      chatStreamLoadMessages(msgs, hasOlder);
+      const recorded = findLastRecordedRun(msgs);
+      if (recorded.model) setSessionModel((prev) => prev ?? recorded.model);
+      if (recorded.effort) setAppliedEffort((prev) => prev ?? recorded.effort);
+    },
+    [chatStreamLoadMessages],
   );
 
   // Matched on sessionId, since a push for a session this connection has left must not
@@ -1198,7 +1213,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
 
     // Message manipulation
     clearMessages: chatStreamClearMessages,
-    loadMessages: chatStreamLoadMessages,
+    loadMessages,
     refreshMessages: chatStreamRefreshMessages,
     resumeTurn: chatStreamResumeTurn,
     prependOlderMessages: chatStreamPrependOlderMessages,
@@ -1265,7 +1280,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     rememberEffortPick,
     chatStreamResetStreamState,
     chatStreamClearMessages,
-    chatStreamLoadMessages,
+    loadMessages,
     chatStreamRefreshMessages,
     chatStreamResumeTurn,
     chatStreamPrependOlderMessages,

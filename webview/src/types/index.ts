@@ -60,6 +60,10 @@ export class LoadedMessageDto {
 
   message_id?: string;
 
+  // `assistant` entries: the effort level the CLI ran that response at. Named as the CLI names it.
+  effort?: string;
+  perTurnEffort?: string;
+
   // system-specific: a `local_command` entry keeps what a slash command printed
   // here, wrapped in <local-command-stdout>, rather than in `message`.
   content?: string;

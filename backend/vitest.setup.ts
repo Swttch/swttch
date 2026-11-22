@@ -75,6 +75,11 @@ if (homedir() === realHome) {
   );
 }
 
+// A child process another test started (the `npm root -g` lookup in extend-kit runs for real) can still be
+// writing its log under this directory while it is removed: it inherited this HOME, and it outlives the file
+// that started it. The removal then stops at ENOTEMPTY and fails whichever file happened to hold the
+// directory, and the directory stays behind. Retrying lets the writer finish, so the file that did nothing
+// wrong is not the one reported.
 afterAll(() => {
-  rmSync(testHome, { recursive: true, force: true });
+  rmSync(testHome, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 });
