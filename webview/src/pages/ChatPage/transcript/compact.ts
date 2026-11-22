@@ -22,9 +22,15 @@ export function isCliNotice(message: LoadedMessageDto): boolean {
   return message.type === 'system' && message.subtype === 'informational' && Boolean(message.content?.trim());
 }
 
-/** `828311` as `828.3k`, `1250000` as `1.3M`: the way the desktop app writes how many tokens a compaction saved. */
-export function formatTokenCount(count: number): string {
-  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
-  if (count >= 1_000) return `${(count / 1_000).toFixed(1)}k`;
-  return String(count);
+/**
+ * How many tokens this compaction saved: what the conversation held before it minus what it holds after. The saved
+ * session also carries a running total over every compaction so far (`cumulativeDroppedTokens`), which the desktop
+ * app does not show; it only equals this figure for the first compaction of a session.
+ */
+export function compactSavedTokens(message: LoadedMessageDto): number | undefined {
+  const meta = message.compactMetadata;
+  if (!meta) return undefined;
+  const { preTokens, postTokens, cumulativeDroppedTokens } = meta;
+  if (typeof preTokens === 'number' && typeof postTokens === 'number') return preTokens - postTokens;
+  return typeof cumulativeDroppedTokens === 'number' ? cumulativeDroppedTokens : undefined;
 }

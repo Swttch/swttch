@@ -11,6 +11,7 @@ import { i18n } from '@/i18n';
 import { WorkingDirMissingError } from './WorkingDirMissingError';
 import { parseControlRequestResult } from './controlRequestResult';
 import { SIDE_QUESTION_SUBTYPE } from '../contexts/SideQuestionContext';
+import { isCompactBoundary } from '../pages/ChatPage/transcript/compact';
 import {
   appendNewer,
   dropPage,
@@ -48,6 +49,15 @@ interface ModelUsageEntry {
  * assistant message above it; splitting that bubble for an entry that renders
  * nothing would leave a visible seam for no reason.
  */
+/** `{ pre_tokens: 1 }` as `{ preTokens: 1 }`: the names a saved session gives the same fields. Values are left alone. */
+function snakeKeysToCamel(source: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(source)) {
+    result[key.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase())] = value;
+  }
+  return result;
+}
+
 /** Two content blocks that are the same one written twice: a call by its id, text and thinking by their words. */
 function isSameBlock(a: AnyContentBlockDto, b: AnyContentBlockDto): boolean {
   if (a.type !== b.type) return false;
@@ -365,6 +375,18 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     setMessages(prev => {
       if (atEnd) return [...prev, message];
       const ts = message.timestamp ? new Date(message.timestamp).getTime() : Infinity;
+      // The summary of a compaction goes right after the boundary that announced it, as the saved session has them.
+      // Its own time cannot say that: a compaction the CLI prepared while the user was away (automatic or idle)
+      // carries the time the summary was written, an hour or more before the boundary, which would put it among
+      // the replies the compaction already dropped (#722).
+      if (message.isCompactSummary) {
+        for (let i = prev.length - 1; i >= 0; i--) {
+          if (!isCompactBoundary(prev[i])) continue;
+          const next = [...prev];
+          next.splice(i + 1, 0, message);
+          return next;
+        }
+      }
       // Fast path: most messages arrive in order (timestamp >= last message)
       const lastTs = prev.length > 0 && prev[prev.length - 1].timestamp
         ? new Date(prev[prev.length - 1].timestamp!).getTime()
@@ -1061,6 +1083,34 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
             pendingThinkingTokensRef.current = estimate;
             scheduleFlush();
           }
+        }
+        // The divider the CLI draws where a conversation was compacted (#722). It is a transcript entry, not a
+        // status: a reopened session reads it back from the saved file, so it has to be an entry on the live
+        // screen too, or it shows up only after a reload. The saved entry names its metadata in camelCase
+        // (`compactMetadata`), the live event in snake_case (`compact_metadata`); the saved names are the ones
+        // the screen reads.
+        if (cliEvent.subtype === 'compact_boundary') {
+          const metadata = cliEvent.compact_metadata;
+          appendMessage({
+            type: 'system',
+            subtype: 'compact_boundary',
+            uuid: typeof cliEvent.uuid === 'string' ? cliEvent.uuid : crypto.randomUUID(),
+            timestamp: typeof cliEvent.timestamp === 'string' ? cliEvent.timestamp : undefined,
+            logicalParentUuid: cliEvent.logical_parent_uuid as string | undefined,
+            compactMetadata: metadata && typeof metadata === 'object' ? snakeKeysToCamel(metadata as Record<string, unknown>) : undefined,
+          } as LoadedMessageDto);
+        }
+        // A notice the CLI raises about the session ("Compacted using a summary written while you were away …"):
+        // a reopened session draws it as "Claude Code 알림", so the live screen keeps it as an entry as well.
+        if (cliEvent.subtype === 'informational' && typeof cliEvent.content === 'string' && cliEvent.content.trim()) {
+          appendMessage({
+            type: 'system',
+            subtype: 'informational',
+            content: cliEvent.content,
+            level: typeof cliEvent.level === 'string' ? cliEvent.level : undefined,
+            uuid: typeof cliEvent.uuid === 'string' ? cliEvent.uuid : crypto.randomUUID(),
+            timestamp: typeof cliEvent.timestamp === 'string' ? cliEvent.timestamp : undefined,
+          } as LoadedMessageDto);
         }
         onSystemMessageRef.current?.(cliEvent as Record<string, unknown>);
         return;
