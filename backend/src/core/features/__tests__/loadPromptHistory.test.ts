@@ -90,6 +90,18 @@ describe('isTypedPrompt', () => {
     expect(isTypedPrompt(prompt('u3', '<system-reminder>a</system-reminder>\n<task-notification>x</task-notification>'), true)).toBe(false);
   });
 
+  it('keeps what was typed after the IDE context the plugin wrote ahead of it (#719)', () => {
+    // The plugin puts the open file or the selection in the same entry, in front of the typed words
+    // (`injectIdeContext`). Dropping the entry for the tag at its start left such a send out of the Up walk.
+    const file = '<ide_opened_file>The user opened the file src/a.ts in the IDE. This may or may not be related to the current task.</ide_opened_file>';
+    const selection = '<ide_selection>The user selected the lines 1 to 2 from src/a.ts:\nfoo\n\nThis may or may not be related to the current task.</ide_selection>';
+    expect(isTypedPrompt(prompt('u1', `${file}fix it`), true)).toBe(true);
+    expect(isTypedPrompt(prompt('u2', `${selection}fix it`), true)).toBe(true);
+    // An entry that is only the context has nothing typed in it.
+    expect(isTypedPrompt(prompt('u3', file), true)).toBe(false);
+    expect(isTypedPrompt(prompt('u4', selection), true)).toBe(false);
+  });
+
   it('rejects the desktop app\'s note about sessions this one started', () => {
     const note = '<system-reminder>The session "x" finished a turn.</system-reminder>\n<side-sessions-event>None of the sessions is working now.</side-sessions-event>';
     expect(isTypedPrompt(prompt('u1', note), true)).toBe(false);

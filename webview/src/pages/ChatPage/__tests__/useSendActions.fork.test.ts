@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import type { LoadedMessageDto } from '../../../types';
 import { MessageType } from '@/shared';
 import { buildSessionMentionTag } from '../ChatInput/sessionMentionTag';
+import { formatReplyBlocks } from '../message-renderers/utils/replyBlocks';
+import { getPendingReplies, removePendingReply } from '@/utils/composerReplies';
 
 const session = {
   currentSessionId: 's1',
@@ -56,6 +58,8 @@ describe('forking from a card (#719)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     bridge.send.mockResolvedValue({ status: 'ok', sessionId: 'branch' });
+    // The cards waiting above the composer are held outside React, so one test's cards would reach the next.
+    getPendingReplies().forEach((card) => removePendingReply(card.id));
   });
 
   it('keeps output the CLI wrote and leaves the composer empty', async () => {
@@ -107,5 +111,121 @@ describe('forking from a card (#719)', () => {
 
     expect(forkRequest()).toEqual({ sessionId: 's1', sendUuid: 'u-2', workingDir: '/w' });
     expect(composerText()).toBe('fix the bug');
+  });
+
+  it('leaves out the IDE context the plugin put ahead of a typed send', async () => {
+    const selection =
+      '<ide_selection>The user selected the lines 1 to 2 from src/a.ts:\nfoo\n\nThis may or may not be related to the current task.</ide_selection>';
+
+    await fork([userEntry('u-3', `${selection}fix it`)], 'u-3');
+
+    expect(forkRequest()).toEqual({ sessionId: 's1', sendUuid: 'u-3', workingDir: '/w' });
+    expect(composerText()).toBe('fix it');
+  });
+
+  it('cuts before a send made only of pictures and leaves the composer empty', async () => {
+    const pictures = {
+      type: 'user',
+      uuid: 'u-4',
+      message: { role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'AAAA' } }] },
+    } as unknown as LoadedMessageDto;
+
+    await fork([pictures], 'u-4');
+
+    // An empty text is not output the CLI wrote: the send is still something the user made, so the cut is before it.
+    expect(forkRequest()).toEqual({ sessionId: 's1', sendUuid: 'u-4', workingDir: '/w' });
+    expect(composerText()).toBe('');
+  });
+
+  it('keeps output the CLI wrote when a reminder rides in front of it', async () => {
+    const output = userEntry('out-2', '<system-reminder>a note</system-reminder><local-command-stdout>Done</local-command-stdout>');
+
+    await fork([output], 'out-2');
+
+    expect(forkRequest()).toEqual({ sessionId: 's1', throughUuid: 'out-2', workingDir: '/w' });
+    expect(composerText()).toBe('');
+  });
+
+  it('still cuts before a send that only quotes the output tag', async () => {
+    const quoting = 'what does <local-command-stdout> mean in the transcript?';
+
+    await fork([userEntry('u-5', quoting)], 'u-5');
+
+    expect(forkRequest()).toEqual({ sessionId: 's1', sendUuid: 'u-5', workingDir: '/w' });
+    expect(composerText()).toBe(quoting);
+  });
+
+  it('leaves out what a picked page element stands for', async () => {
+    const picked = 'change this Element button#ok\n<picked-element>\nElement button#ok\n<button id="ok"/>\n</picked-element>';
+
+    await fork([userEntry('u-6', picked)], 'u-6');
+
+    expect(composerText()).toBe('change this Element button#ok');
+  });
+
+  it('puts the reply cards back above the composer and leaves only the typed words in it', async () => {
+    const raw = `${formatReplyBlocks([{ quote: 'quoted words', comment: 'my comment' }], ['an excerpt'])}the typed words`;
+
+    await fork([userEntry('u-7', raw)], 'u-7');
+
+    expect(composerText()).toBe('the typed words');
+    expect(getPendingReplies().map(({ quote, comment }) => ({ quote, comment }))).toEqual([
+      { quote: 'quoted words', comment: 'my comment' },
+      { quote: 'an excerpt', comment: '' },
+    ]);
+  });
+
+  it('opens the branch as a session that already has its transcript, and leaves the reading to SessionLoader', async () => {
+    await fork([userEntry('u-9', 'fix the bug')], 'u-9');
+
+    // A branch is not "just created, nothing on disk": marked so, SessionLoader neither cleared the screen nor read it,
+    // and the read the fork asked for itself could beat the navigation and be dropped as stale.
+    expect(session.addNewSession.mock.calls[0]?.[2]).toEqual({ promptText: 'fix the bug', hasTranscript: true });
+    expect(api.sessions.load).not.toHaveBeenCalled();
+  });
+
+  it('opens a branch from a reply the same way', async () => {
+    const reply = { type: 'assistant', uuid: 'a-1', message: { role: 'assistant', content: [] } } as unknown as LoadedMessageDto;
+    const { result } = renderHook(() => useSendActions([reply]));
+
+    // `forkAtReply` on the value is fire-and-forget, so what it does is waited for rather than awaited.
+    act(() => { result.current.forkAtReply('a-1'); });
+    await waitFor(() => expect(session.addNewSession).toHaveBeenCalled());
+
+    expect(forkRequest()).toEqual({ sessionId: 's1', throughUuid: 'a-1', workingDir: '/w' });
+    expect(session.addNewSession.mock.calls[0]?.[2]).toEqual({ promptText: '', hasTranscript: true });
+    expect(api.sessions.load).not.toHaveBeenCalled();
+  });
+
+  it('rewinds the code first and opens the branch the same way once that worked', async () => {
+    const { result } = renderHook(() => useSendActions([userEntry('u-10', 'fix the bug')]));
+
+    act(() => { result.current.forkAndRewind('u-10'); });
+    await waitFor(() => expect(session.addNewSession).toHaveBeenCalled());
+
+    expect(bridge.send.mock.calls.map(([type]) => type)).toEqual([MessageType.REWIND_CODE, MessageType.FORK_SESSION]);
+    expect(session.addNewSession.mock.calls[0]?.[2]).toEqual({ promptText: 'fix the bug', hasTranscript: true });
+  });
+
+  it('opens no branch when the code could not be rewound', async () => {
+    bridge.send.mockResolvedValueOnce({ status: 'error', error: 'no checkpoint' });
+    const { result } = renderHook(() => useSendActions([userEntry('u-11', 'fix the bug')]));
+
+    act(() => { result.current.forkAndRewind('u-11'); });
+    await waitFor(() => expect(bridge.send).toHaveBeenCalledTimes(1));
+    // Let the rest of the chain run: a branch opened after a failed rewind would show up as a second request.
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+
+    expect(bridge.send).toHaveBeenCalledTimes(1);
+    expect(session.addNewSession).not.toHaveBeenCalled();
+  });
+
+  it('puts no card back when the branch could not be made', async () => {
+    bridge.send.mockResolvedValue({ status: 'error', error: 'no' });
+    const raw = `${formatReplyBlocks([{ quote: 'quoted words', comment: 'my comment' }], [])}the typed words`;
+
+    await fork([userEntry('u-8', raw)], 'u-8');
+
+    expect(getPendingReplies()).toEqual([]);
   });
 });

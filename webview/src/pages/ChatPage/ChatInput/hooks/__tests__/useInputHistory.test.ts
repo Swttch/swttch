@@ -59,6 +59,22 @@ describe('useInputHistory', () => {
     act(() => { expect(result.current.navigateUp('draft')).toBeNull() });
   });
 
+  it('recalls what was typed, without the notes the GUI and the IDE put around it (#232, #719)', async () => {
+    const ide =
+      '<ide_selection>The user selected the lines 1 to 2 from src/a.ts:\nfoo\n\nThis may or may not be related to the current task.</ide_selection>';
+    sendMock.mockResolvedValue(
+      page([
+        entry('u1', `${ide}fix it`),
+        entry('u2', 'rename the helper\n<system-reminder>Call SendMessage now.</system-reminder>'),
+      ]),
+    );
+    const { result } = render();
+    await waitFor(() => expect(result.current.isEmpty).toBe(false));
+
+    act(() => { expect(result.current.navigateUp('draft')).toBe('rename the helper') });
+    act(() => { expect(result.current.navigateUp('draft')).toBe('fix it') });
+  });
+
   it('restores the draft when walking back down past the newest', async () => {
     sendMock.mockResolvedValue(page([entry('u1', 'sent before')]));
     const { result } = render();

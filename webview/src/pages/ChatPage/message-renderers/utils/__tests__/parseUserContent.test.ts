@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseUserContent } from '../parseUserContent';
+import { parseUserContent, unwrapPastedContent } from '../parseUserContent';
 
 describe('parseUserContent', () => {
   it('붙여넣기 블록을 감싼 <pasted_content> 태그(닫는 태그의 id 포함)만 지우고 본문은 남긴다', () => {
@@ -133,5 +133,11 @@ describe('parseUserContent', () => {
 
   it("카드가 없는 글은 replies가 비어 있다", () => {
     expect(parseUserContent("그냥 글").replies).toEqual([]);
+  });
+});
+
+describe('unwrapPastedContent', () => {
+  it('drops the tags the app puts round a pasted block and keeps what was pasted', () => {
+    expect(unwrapPastedContent('look <pasted_content id="6c03">pasted\nbody</pasted_content>!')).toBe('look pasted\nbody!');
   });
 });

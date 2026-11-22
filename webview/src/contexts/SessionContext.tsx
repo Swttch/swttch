@@ -186,6 +186,12 @@ export interface SessionHandoff {
    * have to retype from memory the message they were reworking.
    */
   promptText?: string;
+  /**
+   * The session being opened already has its transcript on disk. A fork writes the branch before it opens it, so the
+   * session is new to the list but not to the disk: `addNewSession` then does not mark it as "just created", and
+   * SessionLoader clears the screen and reads the transcript like it does for any session opened from the list.
+   */
+  hasTranscript?: boolean;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -775,7 +781,10 @@ export function SessionProvider({ children }: SessionProviderProps) {
       messageCount: 0,
       isSidechain: false,
     });
-    newlyCreatedSessionIds.current.add(sessionId);
+    // The mark says the first send is on screen and not on disk yet, so SessionLoader must neither clear nor read.
+    // A branch is the other way round: its transcript was written before it was opened, and the screen still holds
+    // the session it came from (#719).
+    if (!handoff?.hasTranscript) newlyCreatedSessionIds.current.add(sessionId);
     setSessions(prev => [newSession, ...prev]);
 
     // Hand the very same row to every other window.
