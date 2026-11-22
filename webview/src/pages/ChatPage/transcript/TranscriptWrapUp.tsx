@@ -37,18 +37,18 @@ const Closing: FC<{ next: LoadedMessageDto | null; wrapUp: Record<string, unknow
   return (
     <>
       {recap && (
-        <div className="px-4 [&_.markdown-content_p:first-child]:mt-0" data-transcript-wrap-up-preview>
+        <div className="px-[0.9rem] [&_.markdown-content_p:first-child]:mt-0" data-transcript-wrap-up-preview>
           <StreamingMessage
             plain
             content={recap}
             isStreaming={false}
-            className="text-[var(--tr-text)] text-[1rem] leading-relaxed"
+            className="text-[var(--tr-text)] text-[0.9375rem] leading-[var(--chat-line-height,1.6)]"
           />
         </div>
       )}
       {/* The box holds the question and its answers, and the recap above them when there is a question. It stands
           clear of the reply above it: the desktop app leaves about a line and a half between the two. */}
-      <div className={hasQuestion ? 'pt-6' : undefined} data-transcript-wrap-up-box>
+      <div className={hasQuestion ? 'pt-[1.35rem]' : undefined} data-transcript-wrap-up-box>
         <WrapUpBox
           input={hasQuestion ? wrapUp : { ...wrapUp, recap: undefined }}
           reply={reply}

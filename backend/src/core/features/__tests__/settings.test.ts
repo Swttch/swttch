@@ -792,9 +792,10 @@ describe('settings', () => {
         cliPath: null,
         nodePath: null,
         theme: 'system',
-        fontSize: 13,
+        fontSize: 16,
         zoomLevel: 1,
-        lineHeight: 1.6,
+        lineHeight: null,
+        desktopScaleMigrated: false,
         autoScrollThreshold: 80,
         softWrap: false,
         debugMode: false,
@@ -931,7 +932,7 @@ export default {
 
       const result = await readSettingsFile();
       expect(result.theme).toBe('dark');
-      expect(result.fontSize).toBe(13); // default
+      expect(result.fontSize).toBe(16); // default
       expect(result.debugMode).toBe(false); // default
     });
 
@@ -944,9 +945,10 @@ export default {
         cliPath: null,
         nodePath: null,
         theme: 'system',
-        fontSize: 13,
+        fontSize: 16,
         zoomLevel: 1,
-        lineHeight: 1.6,
+        lineHeight: null,
+        desktopScaleMigrated: false,
         autoScrollThreshold: 80,
         softWrap: false,
         debugMode: false,

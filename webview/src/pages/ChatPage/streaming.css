@@ -473,7 +473,7 @@
   under the chat's top bar. The layer is `fixed`, but it is drawn inside the
   scroll container, and that container's `z-0` keeps everything in it below the
   bar's `z-30` whatever their own z-index — the button was there, just covered.
-  Moving it down by the bar's height (TOP_BAR_HEIGHT, 40px) brings it into view;
+  Moving it down by the bar's height (TOP_BAR_HEIGHT, 45px) brings it into view;
   with the bar hidden it only sits a little lower than it would.
 */
 [data-streamdown="mermaid-block"] button[title="Exit fullscreen"] {

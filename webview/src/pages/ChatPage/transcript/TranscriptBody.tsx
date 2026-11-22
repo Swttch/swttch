@@ -71,7 +71,7 @@ function TranscriptBlocks({
               plain
               content={thinking.thinking}
               isStreaming={streaming}
-              className="text-[var(--tr-text)] text-[1.02rem] leading-[1.3]"
+              className="text-[var(--tr-text)] text-[0.9375rem] leading-[1.3]"
               message={message}
             />
           );
@@ -90,14 +90,14 @@ function TranscriptBlocks({
               content={text}
               isStreaming={streaming}
               fadeWords={liveTail && index === blocks.length - 1}
-              className={`text-[var(--tr-text)] text-[1.02rem] leading-[1.3]${summaryShown && showFooter && !streaming ? ' [&_.markdown-content>*:last-child]:mb-0 [&_.markdown-content>div>*:last-child]:mb-0 [&_.markdown-content>div>ul:last-child]:pb-0 [&_.markdown-content>div>ol:last-child]:pb-0 [&_.markdown-content>div>ul:last-child>li:last-child]:pb-0 [&_.markdown-content>div>ol:last-child>li:last-child]:pb-0' : ''}`}
+              className={`text-[var(--tr-text)] text-[0.9375rem] leading-[1.3]${summaryShown && showFooter && !streaming ? ' [&_.markdown-content>*:last-child]:mb-0 [&_.markdown-content>div>*:last-child]:mb-0 [&_.markdown-content>div>ul:last-child]:pb-0 [&_.markdown-content>div>ol:last-child]:pb-0 [&_.markdown-content>div>ul:last-child>li:last-child]:pb-0 [&_.markdown-content>div>ol:last-child>li:last-child]:pb-0' : ''}`}
               message={message}
               footer={
                 streaming || !showFooter ? undefined : (
                   <>
                     {summary}
                     <TranscriptReplyFooter
-                      className="mt-1.5"
+                      className="mt-[0.3376rem]"
                       copyText={text}
                       readAloudKey={message.uuid ? `${message.uuid}:${index}` : undefined}
                       timestamp={message.timestamp}
@@ -126,7 +126,7 @@ function SegmentView({ segment, endsTurn, onRetry, summary, summaryShown, liveTa
       return <MessageBubble message={segment.message} onRetry={onRetry} />;
     case 'blocks':
       return (
-        <div className="group transcript-prose px-4 [&_.markdown-content_p:first-child]:mt-0">
+        <div className="group transcript-prose px-[0.9rem] [&_.markdown-content_p:first-child]:mt-0">
           <TranscriptBlocks message={segment.message} blocks={segment.blocks} showFooter={endsTurn} summary={summary} summaryShown={summaryShown} liveTail={liveTail} />
         </div>
       );
@@ -134,12 +134,12 @@ function SegmentView({ segment, endsTurn, onRetry, summary, summaryShown, liveTa
       return <TranscriptToolRun calls={segment.calls} />;
     case 'card':
       return (
-        <div data-transcript-card className="px-4">
+        <div data-transcript-card className="px-[0.9rem]">
           <ToolRenderer toolUse={segment.call.toolUse} message={segment.call.message} />
         </div>
       );
     case 'chapter':
-      return <h3 className="px-4 pb-[1.8125rem] pt-3 text-[1rem] font-semibold leading-relaxed text-[var(--tr-text)]">{segment.title}</h3>;
+      return <h3 className="px-[0.9rem] pb-[1.6313rem] pt-[0.675rem] text-[0.9rem] font-semibold leading-relaxed text-[var(--tr-text)]">{segment.title}</h3>;
     case 'taskNotice':
       return <TranscriptTaskNotice message={segment.message} />;
   }
@@ -172,7 +172,7 @@ function TranscriptPlan({ body, running }: { body: LoadedMessageDto[]; running: 
   const plan = useMemo(() => planOfTurn(body), [body]);
   if (!running || plan.length === 0) return null;
   return (
-    <div className="px-4 py-2" data-transcript-plan>
+    <div className="px-[0.9rem] py-[0.45rem]" data-transcript-plan>
       <PlanBox plan={plan} running />
     </div>
   );

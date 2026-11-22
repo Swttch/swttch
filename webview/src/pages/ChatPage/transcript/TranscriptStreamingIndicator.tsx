@@ -36,20 +36,20 @@ export function TranscriptStreamingIndicator({
   }
 
   return (
-    <div className={`flex items-center gap-2.5 px-4 py-[1.0625rem] text-[0.9375rem] text-[var(--tr-muted)]${afterBubble ? ' -mt-[1.0875rem]' : ''}`} role="status" data-transcript-streaming>
+    <div className={`flex items-center gap-[0.5624rem] px-[0.9rem] py-[0.9563rem] text-[0.92rem] text-[var(--tr-muted)]${afterBubble ? ' -mt-[0.9787rem]' : ''}`} role="status" data-transcript-streaming>
       <ActivityGlyph />
       <span>
         {turnOutputTokens > 0 ? (
           // Measured on the desktop app: the tokens alone while the model thinks, and once it writes its answer the time
           // first, then the tokens ("25초 · 71 토큰").
           <>
-            {replyStarted && <span className="me-1.5">{formatElapsed(seconds)} ·</span>}
+            {replyStarted && <span className="me-[0.3376rem]">{formatElapsed(seconds)} ·</span>}
             <span className="transcript-shimmer">{t('transcript.streaming.tokens', { count: formatTokenCount(turnOutputTokens) })}</span>
           </>
         ) : (
           <>
             <span className="transcript-shimmer">{t('transcript.streaming.thinking')}</span>
-            {seconds >= 2 && <span className="ms-2">{formatElapsed(seconds)}</span>}
+            {seconds >= 2 && <span className="ms-[0.45rem]">{formatElapsed(seconds)}</span>}
           </>
         )}
       </span>

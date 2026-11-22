@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { TopBarProvider, useTopBar, TOP_BAR_HEIGHT } from '../TopBarContext';
+import { SIDE_PANEL_HEADER_CLASS } from '@/components/AgentTranscriptModal/RunViewControls';
 
 afterEach(() => {
   window.history.replaceState(null, '', '/');
@@ -88,5 +89,9 @@ describe('TopBarProvider', () => {
     const { result } = renderHook(() => useTopBar(), { wrapper: wrapperFor({ displayed: true }) });
 
     expect(result.current.isTopBarDisplayed).toBe(true);
+  });
+
+  it('keeps the side panel header as high as the top bar, so the two bars read as one line across the window', () => {
+    expect(SIDE_PANEL_HEADER_CLASS).toContain(`h-[${TOP_BAR_HEIGHT}px]`);
   });
 });

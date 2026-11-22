@@ -15,14 +15,14 @@ export function DropdownToggle({ sessionTitle, titleArrivedAt, isOpen, onClick }
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-1 px-2 py-0.5 text-[1rem] text-text-primary hover:bg-surface-hover rounded transition-colors min-w-0 max-w-full"
+      className="flex items-center gap-[0.85rem] px-2 py-0.5 text-[0.875rem] text-text-primary hover:bg-surface-hover rounded transition-colors min-w-0 max-w-full"
     >
       <TypewriterText
         className="min-w-0 max-w-[260px] truncate"
         text={sessionTitle || t('sessionHeader.sessionDropdown.newChat')}
         arrivedAt={titleArrivedAt}
       />
-      <ChevronDownIcon className={`w-5 h-5 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      <ChevronDownIcon className={`w-[1.125rem] h-[1.125rem] flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
     </button>
   );
 }

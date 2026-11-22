@@ -11,7 +11,7 @@ import { AccountSwitcher } from './AccountSwitcher';
  */
 export function SessionHeader() {
   return (
-    <div className="flex justify-between items-center px-2 py-1">
+    <div className="flex h-full justify-between items-center px-2 py-1">
       {/* Left: Working directory dropdown + Session dropdown */}
       <div className="min-w-0 flex-1 flex items-center">
         <WorkingDirDropdown />

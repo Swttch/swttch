@@ -12,6 +12,12 @@ interface ImageAttachmentsProps {
    * the session index cannot point at it and the viewer stays inside the message.
    */
   entryUuid?: string;
+  /**
+   * 'chip' (the classic chat's): a row of small cropped squares under the message. 'preview' (the Transcript view
+   * modes'): each picture keeps its own proportions at up to 15rem wide and 10rem high, the row flush with the
+   * message's right edge, as the desktop app draws the pictures over a message (measured on its screen).
+   */
+  size?: 'chip' | 'preview';
 }
 
 const getImageSrc = (image: ImageBlockDto): string => {
@@ -21,7 +27,7 @@ const getImageSrc = (image: ImageBlockDto): string => {
   return image.source.data; // URL type
 };
 
-export const ImageAttachments: React.FC<ImageAttachmentsProps> = ({ images, entryUuid }) => {
+export const ImageAttachments: React.FC<ImageAttachmentsProps> = ({ images, entryUuid, size = 'chip' }) => {
   // The clicked position, not its src: the viewer steps through neighbours, and
   // a src alone cannot say which image comes next.
   const [openedIndex, setOpenedIndex] = useState<number | null>(null);
@@ -31,18 +37,18 @@ export const ImageAttachments: React.FC<ImageAttachmentsProps> = ({ images, entr
 
   return (
     <>
-      <div className="flex flex-wrap gap-2">
+      <div className={size === 'preview' ? 'flex flex-wrap items-end justify-end gap-[0.375rem]' : 'flex flex-wrap gap-2'}>
         {images.map((image, index) => (
           <div
             key={`img-${index}-${image.source.media_type}`}
             className="group relative cursor-pointer"
             onClick={() => setOpenedIndex(index)}
           >
-            <div className="overflow-hidden rounded-md border border-border-default bg-surface-hover hover:bg-surface-hover/80 transition-colors">
+            <div className={`overflow-hidden border border-border-default bg-surface-hover hover:bg-surface-hover/80 transition-colors ${size === 'preview' ? 'rounded-[0.5rem]' : 'rounded-md'}`}>
               <img
                 src={getImageSrc(image)}
                 alt={t('attachments.imageAlt', { index: index + 1 })}
-                className="w-[110px] h-[60px] object-cover"
+                className={size === 'preview' ? 'block h-auto max-h-[10rem] w-auto max-w-[15rem]' : 'w-[110px] h-[60px] object-cover'}
               />
             </div>
           </div>

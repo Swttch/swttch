@@ -8,6 +8,10 @@ import { ActivityGlyph } from './TranscriptActivity';
  * program this backend does not run works on it (a session the session-management MCP woke with a message, one
  * in the desktop app), and its turn is not streamed here. The same working dots as a turn of its own, with the
  * word the desktop app says for work in general, so the session does not look stopped while it works.
+ *
+ * The last section keeps 3.0376rem of room under it for the reply that has not come; this line is that reply's place,
+ * so it takes the room back (the negative margin) and stands where the desktop app's does: 40px (line to line) under
+ * the text above it, its mark 3px in from the text's edge and the words 32px in (measured on the desktop app's screen).
  */
 export function TranscriptExternalWorking({ sessionId }: { sessionId: string | null | undefined }) {
   const { t } = useTranslation('chat');
@@ -15,7 +19,7 @@ export function TranscriptExternalWorking({ sessionId }: { sessionId: string | n
   if (session?.activity !== SessionActivity.Running) return null;
 
   return (
-    <div className="flex items-center gap-2.5 px-4 py-[1.0625rem] text-[0.9375rem] text-[var(--tr-muted)]" role="status" data-transcript-external-working>
+    <div className="-mt-[3.0376rem] flex items-center gap-[0.75rem] px-[0.9rem] pb-[0.9563rem] pt-[1.125rem] text-[0.92rem] text-[var(--tr-muted)]" role="status" data-transcript-external-working>
       <ActivityGlyph />
       <span className="transcript-shimmer">{t('transcript.streaming.activity.working')}</span>
     </div>

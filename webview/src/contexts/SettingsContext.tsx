@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { SettingsState, DEFAULT_SETTINGS, SettingKey, ThemeMode, UiDirection } from '@/types/settings';
+import { SettingsState, DEFAULT_SETTINGS, SettingKey, ThemeMode, UiDirection, defaultLineHeightFor } from '@/types/settings';
+import { useTranslation } from '@/i18n';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { useWorkingDir } from '@/contexts/WorkingDirContext';
 import { getLogForwarder } from '@/api/logging';
@@ -71,6 +72,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
   const { isConnected, send, subscribe } = useBridgeContext();
   const { workingDirectory } = useWorkingDir();
   const queryClient = useQueryClient();
+  const { i18n } = useTranslation();
   const [scope, setScope] = useState<'global' | 'project'>('global');
 
   const mergedQuery = useQuery<SettingsResponse>({
@@ -142,10 +144,10 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
   // fallback in CSS keeps the previous look when the value is unset/invalid.
   useEffect(() => {
     const lineHeight = settings[SettingKey.LINE_HEIGHT];
-    if (typeof lineHeight === 'number' && Number.isFinite(lineHeight)) {
-      document.documentElement.style.setProperty('--chat-line-height', String(lineHeight));
-    }
-  }, [settings]);
+    // Unset means what the desktop app draws for the UI language (1.6 Korean, Japanese, Chinese; 1.5 otherwise).
+    const resolved = typeof lineHeight === 'number' && Number.isFinite(lineHeight) ? lineHeight : defaultLineHeightFor(i18n.language);
+    document.documentElement.style.setProperty('--chat-line-height', String(resolved));
+  }, [settings, i18n.language]);
 
   // Fold long lines in the monospace blocks (diffs, tool input/output) instead
   // of scrolling them sideways. Carried as a class on <html> rather than read by

@@ -53,7 +53,7 @@ export const TranscriptUserMessage = memo(function TranscriptUserMessage(props: 
 });
 
 /** How tall a long send is before it folds (measured on the desktop app: about eight lines, the last one fading out). */
-const FOLDED_HEIGHT = '13.3rem';
+const FOLDED_HEIGHT = '11.97rem';
 
 /**
  * The text of a send. One that runs past about eight lines is folded with its last line fading out and "Show more"
@@ -81,7 +81,7 @@ function FoldedText({ className, children }: { className: string; children: Reac
     <>
       <div
         ref={ref}
-        className={`${className} ${folded ? 'overflow-hidden' : ''} ${folded && overflows ? '[mask-image:linear-gradient(to_bottom,black_calc(100%-2.2rem),transparent)]' : ''}`}
+        className={`${className} ${folded ? 'overflow-hidden' : ''} ${folded && overflows ? '[mask-image:linear-gradient(to_bottom,black_calc(100%-1.98rem),transparent)]' : ''}`}
         style={folded ? { maxHeight: FOLDED_HEIGHT } : undefined}
       >
         {children}
@@ -90,7 +90,7 @@ function FoldedText({ className, children }: { className: string; children: Reac
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
-          className="mb-[0.3rem] mt-[1.2rem] block text-start text-[0.9rem] leading-[1.25rem] text-text-primary"
+          className="mb-[0.27rem] mt-[1.08rem] block text-start text-[0.81rem] leading-[1.125rem] text-text-primary"
         >
           {open ? t('transcript.userMessage.showLess') : t('transcript.userMessage.showMore')}
         </button>
@@ -165,13 +165,19 @@ function SendBubble({ message, sectionKey }: Props) {
     <IfVisible
       extra={imageBlocks.length > 0 || contexts.length > 0 || parsed.replies.length > 0 || parsed.excerpts.length > 0}
     >
-      <div className="group flex flex-col items-end gap-1.5 pt-2 pb-[2.2188rem] px-4" data-transcript-user>
+      <div className="group flex flex-col items-end gap-[0.3376rem] pt-[0.45rem] pb-[1.9969rem] px-[0.9rem]" data-transcript-user>
         {parsed.excerpts.length > 0 && <ExcerptCards excerpts={parsed.excerpts} />}
+
+        {imageBlocks.length > 0 && (
+          <div className="mb-[0.1624rem] max-w-full">
+            <ImageAttachments images={imageBlocks} entryUuid={message.uuid} size="preview" />
+          </div>
+        )}
 
         {hasBubble && (
           <div className={USER_BUBBLE_CLASS}>
             {parsed.replies.length > 0 && <ReplyQuotes replies={parsed.replies} followedByText={parsed.text !== ''} />}
-            <FoldedText className="text-[var(--tr-text)] text-[1rem] leading-[1.5] whitespace-pre-wrap [overflow-wrap:anywhere]">
+            <FoldedText className="text-[var(--tr-text)] text-[0.9375rem] leading-[var(--chat-line-height,1.6)] whitespace-pre-wrap [overflow-wrap:anywhere]">
               {isCommand ? (
                 <>
                   <span className="text-text-primary/50">{'/'}</span>
@@ -185,7 +191,6 @@ function SendBubble({ message, sectionKey }: Props) {
           </div>
         )}
 
-        {imageBlocks.length > 0 && <ImageAttachments images={imageBlocks} entryUuid={message.uuid} />}
         {contexts.length > 0 && <ContextPills context={contexts} />}
 
         {hasBubble && footerOverlaid && (

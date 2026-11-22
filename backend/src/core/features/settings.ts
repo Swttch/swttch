@@ -66,9 +66,12 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   cliPath: null,
   nodePath: null,
   theme: 'system',
-  fontSize: 13,
+  fontSize: 16,
   zoomLevel: 1,
-  lineHeight: 1.6,
+  // null = the line spacing of the desktop app for the UI language (1.6 for Korean, Japanese and Chinese, 1.5 otherwise)
+  lineHeight: null,
+  // Set once the base font size has moved from the old default 13 to 16, the desktop app's 1rem (see settings-migration.ts)
+  desktopScaleMigrated: false,
   autoScrollThreshold: 80,
   softWrap: false,
   debugMode: false,
@@ -162,7 +165,8 @@ const COMMENT_MAP: Record<string, string> = {
   theme: '테마: "system" | "light" | "dark" ("system"은 JetBrains 모드에서 IDE 테마의 색상까지 따라간다)',
   fontSize: '글꼴 크기 (8~32)',
   zoomLevel: 'UI 배율(0.5~3). Ctrl/Cmd +,- 와 Ctrl/Cmd + 휠로 조절. 글꼴 크기와 별개로 아이콘·여백까지 함께 확대',
-  lineHeight: '채팅 메시지 줄 간격(line-height 배수, 0.5~10)',
+  lineHeight: '채팅 메시지 줄 간격(line-height 배수, 0.5~10). 비우면 UI 언어에 맞는 데스크탑 값(한국어·일본어·중국어 1.6, 그 외 1.5)',
+  desktopScaleMigrated: '[내부] 글꼴 크기 기본값을 13에서 16(데스크탑의 1rem)으로 옮겼는지. 직접 지우지 않는다',
   autoScrollThreshold: '자동 스크롤 임계점(px). 메시지 끝에서 이 거리 안에 있을 때만 스트림을 따라 내려간다',
   softWrap: '긴 줄을 코드 블록 너비에 맞춰 접는다(diff, 도구 입출력 등). false면 가로 스크롤',
   debugMode: '디버그 모드 활성화',
@@ -389,6 +393,7 @@ function validateSetting(key: string, value: unknown): string | null {
       break;
     }
     case 'lineHeight': {
+      if (value === null) break;
       const n = Number(value);
       if (!Number.isFinite(n) || n < 0.5 || n > 10) {
         return 'lineHeight must be a number between 0.5 and 10';

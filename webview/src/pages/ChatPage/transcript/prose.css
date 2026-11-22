@@ -28,7 +28,7 @@
 .transcript-prose [data-streamdown="inline-code"] {
   background-color: var(--tr-chip) !important;
   color: var(--tr-text) !important;
-  border-radius: 4px !important;
+  border-radius: 0.225rem !important;
   font-size: 0.82em !important;
   padding: 0.05em 0.35em !important;
 }
@@ -36,7 +36,7 @@
 .transcript-prose a {
   color: var(--tr-link) !important;
   text-decoration: underline !important;
-  text-underline-offset: 2px;
+  text-underline-offset: 0.1126rem;
 }
 
 /* A link to a session is the same underlined text, not the classic chat's chip on a blue background. */
@@ -49,7 +49,7 @@
 /* The cards of the sessions Claude started are spaced 22px apart, and the text after the last of them stands as far
    from it as they stand from each other. */
 [data-seg]:has(> [data-transcript-started-session]) + [data-seg]:not(:has(> [data-transcript-started-session])):not(:empty) {
-  padding-top: 11px;
+  padding-top: 0.6188rem;
 }
 
 /* The three dots of the streaming indicator breathe in turn. */
@@ -62,7 +62,7 @@
    right under the bubble it would be 24px too far; this takes that back. Some entries draw nothing and
    leave an empty wrapper, so the run is picked as the first wrapper that is not empty, not as the first. */
 [data-after-send] > [data-seg="tools"]:not(:empty):not(:not(:empty) ~ *) {
-  margin-top: -24px;
+  margin-top: -1.35rem;
 }
 
 /* A session brief is a card, not a bubble, and it leaves no room of its own for the run of calls to take back, so
@@ -71,11 +71,38 @@
   margin-top: 0;
 }
 
-/* The desktop app sets the reply's lines closer than the classic chat's 1.6; the chat's own line spacing variable is
-   read by every paragraph and list item in the markdown, so it is set here, for the reply only. */
-.transcript-prose {
-  --chat-line-height: 1.44;
+/* The markdown library draws a list with Tailwind classes of its own (`py-1` on an item, a 1rem gap above a list),
+   which no class in this folder can reach and which the classic chat shares. They are written here for the
+   transcript only, in the same unit as the rest of the transcript's sizes (see below). */
+.transcript-prose [data-streamdown="list-item"] {
+  padding-top: 0.125rem;
+  padding-bottom: 0.125rem;
 }
+.transcript-prose .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: calc(0.9rem * calc(1 - var(--tw-space-y-reverse)));
+}
+/* Measured on the desktop app's screen (frames of the same session side by side): the first item of a bulleted
+   list stands 11px under the line above it, and one item stands 4px from the next. */
+.transcript-prose .space-y-4 > [data-streamdown="unordered-list"]:not([hidden]) {
+  margin-top: 0.5625rem;
+  padding-top: 0;
+}
+
+/* A heading in a reply is the size of the text around it and bold, whatever its level: the desktop app draws every one
+   of them as `font-claude-response-heading` (the body's own size, weight 600) and sets the reply's headings one level
+   down (`headingLevelOffset`). The classic chat's sizes (1.7em, 1.5em, 1.2em), its rule under the first level and its
+   padding are not drawn. Measured on the desktop app's screen: a heading stands 47px (line to line) under the text
+   before it and 31px above the text after it. */
+.transcript-prose [data-streamdown^="heading-"] {
+  font-size: 1em !important;
+  line-height: var(--chat-line-height, 1.6) !important;
+  font-weight: 600;
+  margin: 1.5em 0 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+.transcript-prose [data-streamdown^="heading-"]:first-child { margin-top: 0 !important; }
+.transcript-prose [data-streamdown^="heading-"] + p { margin-top: 0.4667em !important; }
 
 /* The reply's paragraphs stand a little closer than the classic chat's. */
 .transcript-prose p { margin: 0.65em 0 0 !important; }
@@ -98,7 +125,7 @@
 [data-seg="blocks"] + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + [data-seg="blocks"],
 [data-seg="blocks"] + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + [data-seg="blocks"],
 [data-seg="blocks"] + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + :is([data-seg]:empty, [data-seg="message"]:has(> .hidden:only-child)) + [data-seg="blocks"] {
-  margin-top: 1.25rem;
+  margin-top: 1.125rem;
 }
 
 /* The words of what is running are swept by a lighter band from left to right, over and over. */

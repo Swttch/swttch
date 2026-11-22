@@ -16,14 +16,14 @@ export function TranscriptViewDefaultOffer({ offer, accept, dismiss }: DefaultVi
   return (
     <div
       role="status"
-      className="fixed bottom-28 end-4 z-[100] flex max-w-[20rem] items-start gap-3 rounded-lg border border-border-default bg-surface-raised px-3 py-2.5 shadow-xl"
+      className="fixed bottom-[6.3rem] end-[0.9rem] z-[100] flex max-w-[18rem] items-start gap-[0.675rem] rounded-[0.45rem] border border-border-default bg-surface-raised px-[0.675rem] py-[0.5624rem] shadow-xl"
     >
-      <div className="flex min-w-0 flex-1 flex-col items-start gap-2">
-        <span className="text-sm text-text-primary">{t('sessionHeader.transcriptView.defaultOffer.title', { mode })}</span>
+      <div className="flex min-w-0 flex-1 flex-col items-start gap-[0.45rem]">
+        <span className="text-[0.7874rem] leading-[1.125rem] text-text-primary">{t('sessionHeader.transcriptView.defaultOffer.title', { mode })}</span>
         <button
           type="button"
           onClick={accept}
-          className="rounded-md border border-border-default bg-surface-overlay px-2.5 py-1 text-xs text-text-primary hover:bg-surface-hover"
+          className="rounded-[0.3376rem] border border-border-default bg-surface-overlay px-[0.5624rem] py-[0.225rem] text-[0.675rem] leading-[0.9rem] text-text-primary hover:bg-surface-hover"
         >
           {t('sessionHeader.transcriptView.defaultOffer.action')}
         </button>
@@ -34,7 +34,7 @@ export function TranscriptViewDefaultOffer({ offer, accept, dismiss }: DefaultVi
         aria-label={t('inputBanner.close')}
         className="text-text-tertiary hover:text-text-secondary"
       >
-        <XMarkIcon className="h-4 w-4" />
+        <XMarkIcon className="h-[0.9rem] w-[0.9rem]" />
       </button>
     </div>
   );

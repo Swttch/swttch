@@ -1,8 +1,11 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 import { readIsDesktopFromUrl, readTopBarDisplayFromUrl } from './topBarDisplayParam';
 
-/** How tall the top bar is when drawn. The one place this number is written. */
-export const TOP_BAR_HEIGHT = 40;
+/**
+ * How tall the top bar is when drawn. The one place this number is written. 45px is the desktop app's top bar (measured on
+ * its screen); the bar's own content fills this height, so a change here moves the content, banners and the pinned send together.
+ */
+export const TOP_BAR_HEIGHT = 45;
 
 export interface TopBarValue {
   /** Whether the top bar is drawn. */
