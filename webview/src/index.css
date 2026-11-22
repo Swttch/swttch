@@ -607,6 +607,21 @@ html.ide-theme-sync[data-ide-colors='available'] {
   --accent-primary-rgb: var(--ccg-ide-accent-rgb, var(--own-accent-primary-rgb));
   --accent-primary:     rgb(var(--accent-primary-rgb));
 
+  /* Transcript palette (prose.css, issue #720). It is declared per palette in
+     `:root`/`.dark` there, so without this the Transcript view modes keep the
+     own palette's near-white/near-black text on an IDE whose editor colors
+     differ. Derived from the tokens synced above rather than read from
+     `--ccg-ide-*`, so the fallback chain (and the no-literal-fallback rule)
+     is inherited and components still never touch `--ccg-ide-*`. Muted/soft/
+     hover are the editor text mixed toward the editor surface; chip is the
+     reverse (a faint wash of text over the surface). */
+  --tr-text:  var(--text-primary);
+  --tr-link:  var(--text-link);
+  --tr-hover: color-mix(in srgb, var(--text-primary) 90%, var(--surface-base));
+  --tr-soft:  color-mix(in srgb, var(--text-primary) 80%, var(--surface-base));
+  --tr-muted: color-mix(in srgb, var(--text-primary) 65%, var(--surface-base));
+  --tr-chip:  color-mix(in srgb, var(--text-primary) 10%, var(--surface-base));
+
   /* Panel chrome (defined further down) follows the same IDE surfaces. */
   --panel-bg: var(--surface-overlay);
   --hover-bg: var(--surface-hover);

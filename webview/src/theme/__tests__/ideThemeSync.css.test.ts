@@ -95,4 +95,16 @@ describe('IDE theme sync — stylesheet structure (issue #267)', () => {
       expect(defined.has(name), `${name} referenced but never defined`).toBe(true);
     }
   });
+
+  it('re-points every transcript --tr-* color inside the sync block (issue #720)', () => {
+    // prose.css declares the --tr-* palette per `:root`/`.dark`; if the sync block
+    // stops overriding one, the Transcript view modes keep the own palette's text
+    // on a differently colored IDE editor. They derive from synced tokens, so no
+    // --ccg-ide-* read (and no fallback literal) is needed here.
+    const body = block(SYNC_SELECTOR);
+    for (const name of ['text', 'muted', 'link', 'hover', 'soft', 'chip']) {
+      expect(body, `--tr-${name} not re-pointed`).toMatch(new RegExp(`--tr-${name}:\\s+(var|color-mix)\\(`));
+    }
+    expect(body).not.toMatch(/--tr-[a-z-]+:\s*#/);
+  });
 });
