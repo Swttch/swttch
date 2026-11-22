@@ -16,6 +16,7 @@ import { StartupMigrations } from './core/entities/migration/StartupMigrations';
 import { migrationStatus } from './core/features/migration-status';
 import { unreadFolderRetry } from './core/features/unread-folder-retry';
 import { migrationRetry } from './core/features/migration-retry';
+import { onHostDebugLoggingChanged } from './core/features/debugLogging';
 import { MIGRATIONS } from './core/migrations/registry';
 import { initSettingsWatcher, stopSettingsWatcher } from './core/features/settings-watcher';
 import { migrateSettingsToCorrectStore } from './core/features/settings-migration';
@@ -524,6 +525,14 @@ async function main() {
   // with zero /ws connections arms the idle timer immediately (see
   // ConnectionManager.setKeepAlive), which also closes the pre-existing
   // prewarm leak where a backend that never received a /ws client lived forever.
+  // The IDE's debug-log switch moved by itself (the user used Debug Log Settings): the
+  // "Debug Mode" setting follows it, so the two stay one switch (issue #723).
+  (bridges[ClientEnv.JETBRAINS] as JetBrainsBridge).onNotification(MessageType.DEBUG_LOGGING_CHANGED, (_method, params) => {
+    void onHostDebugLoggingChanged(params.enabled === true, connections).catch((err) => {
+      console.error('[node-backend]', 'DEBUG_LOGGING_CHANGED failed:', err);
+    });
+  });
+
   (bridges[ClientEnv.JETBRAINS] as JetBrainsBridge).onNotification(MessageType.SET_KEEP_ALIVE, (_method, params) => {
     connections.setKeepAlive(params.enabled === true);
   });

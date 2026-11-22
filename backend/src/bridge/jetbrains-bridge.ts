@@ -515,6 +515,15 @@ export class JetBrainsBridge implements Bridge {
     return typeof ideRoot === 'string' && ideRoot.length > 0 ? ideRoot : null;
   }
 
+  async getDebugLogging(): Promise<boolean> {
+    const result = await this.request(MessageType.GET_DEBUG_LOGGING, {});
+    return result['enabled'] === true;
+  }
+
+  async setDebugLogging(enabled: boolean): Promise<void> {
+    await this.request(MessageType.SET_DEBUG_LOGGING, { enabled });
+  }
+
   async showNotification(params: {
     title: string;
     body: string;

@@ -191,6 +191,22 @@ export interface Bridge {
    */
   getIdeRoot(workingDir?: string): Promise<string | null>;
   /**
+   * Whether the host's own debug-log switch is on (issue #723).
+   *
+   * A Bridge capability because WHERE debug lines are recorded differs per
+   * environment, and the "Debug Mode" setting has to stay one switch with the
+   * place the user may also turn it on from:
+   *
+   *   JetBrains:  the DEBUG level of the plugin's log categories in idea.log, which
+   *               the user can also change in the IDE's Debug Log Settings.
+   *   Standalone: there is no host log; the backend's own log floor is the switch.
+   *
+   * Reads the live state, so a change made on the host's side is seen.
+   */
+  getDebugLogging(): Promise<boolean>;
+  /** Turn the host's debug-log switch on or off. See [getDebugLogging]. */
+  setDebugLogging(enabled: boolean): Promise<void>;
+  /**
    * Whether a live IDE host is currently attached to this bridge. Only the
    * JetBrains bridge tracks IDE (Kotlin RPC) clients; the browser bridge has no
    * host and omits this. Used to route a browser client's `openFile` to the IDE

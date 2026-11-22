@@ -1130,6 +1130,25 @@ export enum MessageType {
    */
   SET_KEEP_ALIVE = 'SET_KEEP_ALIVE',
 
+  /**
+   * Ask the host whether its own debug-log switch is on (Node→host RPC; answered with
+   * { enabled: boolean }). In the IDE the switch is the DEBUG level of the plugin's log
+   * categories in idea.log; the backend asks it when a panel opens, to learn whether
+   * the user turned debug logging on from the IDE's side (issue #723).
+   */
+  GET_DEBUG_LOGGING = 'GET_DEBUG_LOGGING',
+  /**
+   * Turn the host's debug-log switch on or off (Node→host RPC). params: { enabled: boolean }.
+   * Sent when the "Debug Mode" setting is saved.
+   */
+  SET_DEBUG_LOGGING = 'SET_DEBUG_LOGGING',
+  /**
+   * The host's debug-log switch moved by itself (host→Node notification), e.g. the user
+   * changed it in the IDE's Debug Log Settings. params: { enabled: boolean }. The backend
+   * saves it as the "Debug Mode" setting so both stay one switch.
+   */
+  DEBUG_LOGGING_CHANGED = 'DEBUG_LOGGING_CHANGED',
+
   // ───────────────────────────────────────────────────────────────────────
   // Logging channel (webview LogForwarder → backend log-ws)
   //

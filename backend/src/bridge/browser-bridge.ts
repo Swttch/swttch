@@ -4,6 +4,7 @@ import { writeFile } from 'fs/promises';
 import { dirname } from 'path';
 import type { Bridge } from './bridge-interface';
 import { readMergedSettings } from '../core/features/settings';
+import { isBackendDebugOn, setBackendDebugFloor } from '../core/features/debugLogging';
 import { Claude } from '../core/claude';
 import { assertPowerShellUsable, isPowerShellUsable } from '../core/win-job';
 import { detectInstalledEditors } from '../core/features/detectEditors';
@@ -564,6 +565,16 @@ if ($dialog.ShowDialog() -eq 'OK') {
 
   async requiresRestart(): Promise<boolean> {
     return true;
+  }
+
+  // Standalone has no host log. The backend's own log floor is the one place debug
+  // lines are recorded here, so it is what the setting switches (issue #723).
+  async getDebugLogging(): Promise<boolean> {
+    return isBackendDebugOn();
+  }
+
+  async setDebugLogging(enabled: boolean): Promise<void> {
+    setBackendDebugFloor(enabled);
   }
 
   async getIdeRoot(_workingDir?: string): Promise<string | null> {

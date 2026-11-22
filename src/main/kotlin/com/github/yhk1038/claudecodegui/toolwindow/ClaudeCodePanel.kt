@@ -2,6 +2,7 @@ package com.github.yhk1038.claudecodegui.toolwindow
 
 import com.github.yhk1038.claudecodegui.actions.OpenClaudeCodeAction
 import com.github.yhk1038.claudecodegui.bridge.ClipboardContents
+import com.github.yhk1038.claudecodegui.bridge.DebugLoggingWatcher
 import com.github.yhk1038.claudecodegui.bridge.NodeProcessManager
 import com.github.yhk1038.claudecodegui.bridge.NotificationOutcome
 import com.github.yhk1038.claudecodegui.bridge.OpenFileTargets
@@ -1239,6 +1240,12 @@ class ClaudeCodePanel(
                         logger.warn("$logPrefix $message (source: $source:$line)")
                     org.cef.CefSettings.LogSeverity.LOGSEVERITY_WARNING ->
                         logger.warn("$logPrefix $message")
+                    // console.debug arrives as VERBOSE (JCEF has no DEBUG constant).
+                    // Keep it off INFO: per-event bridge traces wrote ~10 MB of
+                    // idea.log per 25 minutes. Opt in through Debug Log Settings.
+                    // See issue #723.
+                    org.cef.CefSettings.LogSeverity.LOGSEVERITY_VERBOSE ->
+                        logger.debug("$logPrefix $message")
                     else ->
                         logger.info("$logPrefix $message")
                 }
@@ -3100,6 +3107,12 @@ class ClaudeCodePanel(
                 // panel before this is ever reached.
                 return project.basePath
             }
+
+            // Answered by NodeBackendService's router, which never forwards it to a panel; the
+            // interface still needs it here, and it means the same thing.
+            override suspend fun getDebugLogging(): Boolean = DebugLoggingWatcher.isEnabled()
+
+            override suspend fun setDebugLogging(enabled: Boolean) = DebugLoggingWatcher.apply(enabled)
 
             override suspend fun showNotification(title: String, body: String, panelId: String?): NotificationOutcome {
                 // panelId already routed us to the right panel (see NodeBackendService

@@ -123,3 +123,57 @@ describe('saveSettingsHandler hostMode push', () => {
     ).resolves.toBeUndefined();
   });
 });
+
+// "Debug Mode" is one switch in the backend, the host and the page (issue #723).
+describe('saveSettingsHandler debugMode', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    delete process.env['CCG_LOG_LEVEL'];
+    vi.mocked(readMergedSettings).mockResolvedValue({ settings: {}, overrides: [] });
+    vi.mocked(saveSettingToScope).mockResolvedValue({ status: 'ok' });
+  });
+
+  function debugMessage(value: unknown, scope: 'global' | 'project' = 'global'): IPCMessage {
+    return {
+      type: MessageType.SAVE_SETTINGS,
+      payload: { key: 'debugMode', value, scope, workingDir: '/proj' },
+      timestamp: 0,
+      requestId: 'req-dbg',
+    };
+  }
+
+  function hostBridge() {
+    return { setDebugLogging: vi.fn(async () => undefined) } as unknown as Bridge & {
+      setDebugLogging: ReturnType<typeof vi.fn>;
+    };
+  }
+
+  it('turns the host switch on when Debug Mode is saved on', async () => {
+    const bridge = hostBridge();
+    await saveSettingsHandler('conn-1', debugMessage(true), createMockConnections(), bridge);
+    expect(bridge.setDebugLogging).toHaveBeenCalledWith(true);
+    expect(process.env['CCG_LOG_LEVEL']).toBe('debug');
+  });
+
+  it('turns it off again when saved off', async () => {
+    const bridge = hostBridge();
+    await saveSettingsHandler('conn-1', debugMessage(true), createMockConnections(), bridge);
+    await saveSettingsHandler('conn-1', debugMessage(false), createMockConnections(), bridge);
+    expect(bridge.setDebugLogging).toHaveBeenLastCalledWith(false);
+    expect(process.env['CCG_LOG_LEVEL']).toBeUndefined();
+  });
+
+  // Logging is process-wide; one project must not turn it on for every window.
+  it('does not move the switch for a project-scoped value', async () => {
+    const bridge = hostBridge();
+    await saveSettingsHandler('conn-1', debugMessage(true, 'project'), createMockConnections(), bridge);
+    expect(bridge.setDebugLogging).not.toHaveBeenCalled();
+  });
+
+  it('does not move the switch when the save failed', async () => {
+    vi.mocked(saveSettingToScope).mockResolvedValue({ status: 'error', error: 'disk full' });
+    const bridge = hostBridge();
+    await saveSettingsHandler('conn-1', debugMessage(true), createMockConnections(), bridge);
+    expect(bridge.setDebugLogging).not.toHaveBeenCalled();
+  });
+});

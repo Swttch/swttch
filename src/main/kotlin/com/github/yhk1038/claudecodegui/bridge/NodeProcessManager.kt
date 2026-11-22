@@ -378,6 +378,15 @@ class NodeProcessManager(
          * traversal in the working-directory dropdown.
          */
         suspend fun getIdeRoot(workingDir: String?): String?
+
+        /**
+         * Whether the IDE's debug-log switch for this plugin is on (issue #723). Read live, so a
+         * change made in the IDE's Debug Log Settings is seen. Not tied to any panel.
+         */
+        suspend fun getDebugLogging(): Boolean
+
+        /** Turn the IDE's debug-log switch for this plugin on or off. */
+        suspend fun setDebugLogging(enabled: Boolean)
         /**
          * Raise a host-native desktop notification for an "attention needed" /
          * "response complete" event. Called when the webview cannot raise its own

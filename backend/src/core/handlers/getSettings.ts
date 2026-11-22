@@ -5,6 +5,7 @@ import { ClientEnv, MessageType } from '../../shared';
 import { readMergedSettings, readSettingsFile, readProjectSettings } from '../features/settings';
 import { getSettingsWatcher } from '../features/settings-watcher';
 import { ccgClientInfo } from '../../config/environment';
+import { reconcileOnPanelOpen } from '../features/debugLogging';
 
 /**
  * Extract a short, human-readable IDE product name out of the raw client-info
@@ -21,9 +22,13 @@ export async function getSettingsHandler(
   connectionId: string,
   message: IPCMessage,
   connections: ConnectionManager,
-  _bridge: Bridge,
+  bridge: Bridge,
   bridges: Record<ClientEnv, Bridge>,
 ): Promise<void> {
+  // A change made on the host's side (the IDE's Debug Log Settings) is noticed here, before the
+  // settings are read, so the page opens already showing it (issue #723).
+  await reconcileOnPanelOpen(bridge, connections);
+
   const workingDir = message.payload?.workingDir as string | undefined;
   const scope = message.payload?.scope as 'global' | 'project' | 'merged' | undefined;
 

@@ -1,4 +1,5 @@
 import { MessageType } from '@/shared';
+import { isJetBrains } from '../../config/environment';
 import { authSubprotocols, ensureAuthTokenReady, isRemoteBlocked } from '../bridge/authToken';
 
 enum LogLevel {
@@ -101,6 +102,18 @@ export class LogForwarder {
     }
     this.minLevel = normalized;
     return `forwarding levels >= ${normalized}`;
+  }
+
+  /**
+   * The "Debug Mode" setting (issue #723): forward DEBUG lines while it is on, and go back to
+   * the default floor when it is off.
+   *
+   * The floor is also what decides whether a DEBUG line reaches the JetBrains log at all (see
+   * `interceptConsole`), so the setting and the IDE's own debug-log switch have to move together;
+   * the backend keeps them equal.
+   */
+  setDebugLogging(enabled: boolean): void {
+    this.minLevel = enabled ? 'debug' : DEFAULT_MIN_LEVEL;
   }
 
   start(): void {
@@ -228,7 +241,15 @@ export class LogForwarder {
       this.originalConsole[method] = original;
 
       console[method] = (...args: unknown[]) => {
-        original(...args);
+        // In the JetBrains webview the native console has exactly one consumer:
+        // idea.log, via the Kotlin console handler (DevTools is not practically
+        // usable in JCEF). A line below the floor would cross the JCEF process
+        // boundary only to be written to idea.log (issue #723: ~62,000 lines in
+        // 25 minutes). It stays in the local history for `ccgLogs`. A standalone
+        // browser keeps the native console, where DevTools is the reader.
+        if (!(isJetBrains() && !this.isForwarded(method))) {
+          original(...args);
+        }
 
         const message = args
           .map((a) => {

@@ -104,10 +104,30 @@
 
 | 대상 | 방법 |
 |------|------|
+| 전부 한 번에 | 설정 > 고급 > 디버깅 > **디버그 모드**. 백엔드, 웹뷰, IDE 로그를 함께 켠다 (아래 참고) |
 | 백엔드 | `CCG_LOG_LEVEL=debug` 환경변수 |
 | 웹뷰 | 브라우저 콘솔에서 `ccgLogs.setLevel('debug')` (세션 한정, 영속 안 됨) |
 
-웹뷰 쪽이 영속되지 않는 것은 의도다. JetBrains 웹뷰는 실행마다 origin이 바뀌어서 `localStorage`가 매번 빈 채로 시작한다.
+웹뷰 쪽이 영속되지 않는 것은 의도다. JetBrains 웹뷰는 실행마다 origin이 바뀌어서 `localStorage`가 매번 빈 채로 시작한다. 디버그 모드 설정은 `settings.js`에 저장되므로 이 한계가 없다.
+
+### 디버그 모드와 `idea.log` (#723)
+
+웹뷰의 `console.debug`는 JetBrains에서 `idea.log`로도 흘러간다. 웹뷰 콘솔 → JCEF → Kotlin 콘솔 핸들러(`ClaudeCodePanel.onConsoleMessage`) → IDE 로그 순서다. 이 줄들이 `INFO`로 적히던 시절에는 평소 사용만으로 25분에 10MB가 쌓였다. 지금은 세 가지가 이를 막는다.
+
+| 단계 | 동작 |
+|------|------|
+| Kotlin 핸들러 | JCEF의 `VERBOSE`(= `console.debug`)를 `logger.debug`로 적는다. IDE는 기본으로 `DEBUG`를 파일에 안 쓴다 |
+| 웹뷰 `LogForwarder` | JetBrains에서는 기록 하한 아래의 줄을 브라우저 콘솔로 아예 내보내지 않는다. JCEF 경계를 건너는 비용이 없어진다. 줄은 `ccgLogs` 기록에는 남는다 |
+| 디버그 모드 | 켜면 웹뷰 하한이 `debug`로 내려가고, 백엔드 하한도 `debug`가 되고, IDE 쪽 스위치도 켜진다. 그때부터의 줄이 `idea.log`에 `FINE`(= IDE의 DEBUG 표기)로 적힌다 |
+
+**디버그 모드는 하나의 스위치다.** 설정 화면의 토글과 IDE의 `Help > Diagnostic Tools > Debug Log Settings`가 서로 따라간다. 연동은 `Bridge`의 `getDebugLogging` / `setDebugLogging`이 맡고, 환경마다 구현이 다르다.
+
+| 환경 | 호스트 스위치 | 바뀐 것을 알리는 방법 |
+|------|--------------|----------------------|
+| JetBrains | 플러그인 로거들의 레벨(`java.util.logging`) | Kotlin이 3초마다 읽어 바뀌면 `DEBUG_LOGGING_CHANGED`를 보낸다 |
+| standalone | 백엔드 자신의 하한(`CCG_LOG_LEVEL`) | 알릴 호스트가 없다. 시작할 때 `CCG_LOG_LEVEL=debug`면 패널을 열 때 설정이 따라온다 |
+
+**한계.** IDE의 Debug Log Settings 창은 내부 클래스로 저장하므로 공개 API로는 그 창의 저장 값을 쓸 수 없다. 설정 쪽에서 켠 것은 세션 동안만 IDE에 적용되고 창에는 안 보이며, IDE를 다시 켜면 설정이 켜져 있는 것을 보고 패널을 열 때 다시 적용한다. 켜기 **전**의 줄은 어디에도 남지 않는다. 켠 시점부터 쌓인다.
 
 레벨 필터는 **양쪽에 다 있다.** 웹뷰가 보내기 전에 한 번 거르고, 백엔드가 받아서 또 거른다. 캐시된 구버전 웹뷰가 붙더라도 디스크에 무엇이 남을지는 백엔드가 정하기 때문이다.
 

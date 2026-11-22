@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { SettingsState, DEFAULT_SETTINGS, SettingKey, ThemeMode, UiDirection } from '@/types/settings';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { useWorkingDir } from '@/contexts/WorkingDirContext';
+import { getLogForwarder } from '@/api/logging';
 import { isJetBrains, isMobile, getIdeTheme, subscribeIdeTheme } from '@/config/environment';
 import { applyZoom, MOBILE_BASE_ZOOM, ZOOM_DEFAULT } from '@/utils/zoom';
 import { MessageType } from '@/shared';
@@ -97,6 +98,14 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
   const ideProduct = mergedQuery.data?.ideProduct ?? '';
   const scopeSettings = scopeQuery.data?.settings ?? {};
   const isLoading = mergedQuery.isLoading && !mergedQuery.data;
+
+  // "Debug Mode" decides how much of the page's own log is forwarded, which is also how much of
+  // it can reach the IDE log (issue #723). Merged, so a project that overrides it is honoured here;
+  // the IDE's switch itself follows the global value only, as logging is process-wide.
+  const debugMode = settings[SettingKey.DEBUG_MODE] === true;
+  useEffect(() => {
+    getLogForwarder()?.setDebugLogging(debugMode);
+  }, [debugMode]);
 
   // Mirror the live settings value into openSettingsAt's module scope so hook-free
   // callers (toast actions, command-palette items) read the same source of truth

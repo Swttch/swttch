@@ -5,6 +5,7 @@ import { saveSettingToScope, readMergedSettings } from '../features/settings';
 import { Claude } from '../claude';
 import { desktopSyncSettingChanged } from '../features/desktopSync';
 import { MessageType } from '../../shared';
+import { applyDebugLogging } from '../features/debugLogging';
 
 export async function saveSettingsHandler(
   connectionId: string,
@@ -37,6 +38,12 @@ export async function saveSettingsHandler(
       pushHostModeForProject?: (hostMode: string, projectPath?: string) => void;
     };
     pushable.pushHostModeForProject?.(value, scope === 'project' ? workingDir : undefined);
+  }
+
+  // "Debug Mode" is one switch kept equal in the backend, the host and the page
+  // (issue #723). Process-wide, so only the global value moves it.
+  if (result.status === 'ok' && key === 'debugMode' && typeof value === 'boolean' && scope === 'global') {
+    await applyDebugLogging(value, bridge);
   }
 
   // The switch that shows the Claude desktop app's records in the lists changes what the lists draw.

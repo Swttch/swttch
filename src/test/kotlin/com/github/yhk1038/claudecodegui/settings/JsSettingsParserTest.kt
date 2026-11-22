@@ -134,6 +134,15 @@ class JsSettingsParserTest {
         }
 
         @Test
+        fun `should parse a file that starts with a UTF-8 byte order mark`() {
+            // PowerShell's `-Encoding UTF8` and Notepad write the mark in front of `export`.
+            val input = "\uFEFFexport default {\n  theme: \"dark\",\n  fontSize: 16\n};\n"
+            val result = JsSettingsParser.parse(input)
+            assertEquals(JsonPrimitive("dark"), result["theme"])
+            assertEquals(JsonPrimitive(16), result["fontSize"])
+        }
+
+        @Test
         fun `should parse settings without export default`() {
             val input = """{ theme: "light", fontSize: 14 }"""
             val result = JsSettingsParser.parse(input)
