@@ -4,7 +4,7 @@ import { ArrowUturnLeftIcon } from '@heroicons/react/20/solid';
 import { useTranslation } from '@/i18n';
 import { Tooltip } from '@/components/Tooltip';
 import { useConfirmDialog } from '@/components/ConfirmDialog/useConfirmDialog';
-import { timeAgo } from '@/utils/timeAgo';
+import { useTimeAgo } from '@/hooks/useTimeAgo';
 import { CopyIcon, ForkIcon } from './footerIcons';
 
 const BUTTON =
@@ -50,6 +50,7 @@ export function TranscriptUserFooter({
   const { confirmDialog, confirm } = useConfirmDialog();
   const sentAt = timestamp ? Date.parse(timestamp) : NaN;
   const known = !Number.isNaN(sentAt);
+  const ago = useTimeAgo(known ? sentAt : undefined, i18n.language);
   const exact = known
     ? new Intl.DateTimeFormat(i18n.language, { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(sentAt)
     : '';
@@ -87,7 +88,7 @@ export function TranscriptUserFooter({
             </span>
           </Tooltip>
           <Tooltip content={exact} placement="top">
-            <span className="">{timeAgo(sentAt, i18n.language)}</span>
+            <span className="">{ago}</span>
           </Tooltip>
         </div>
       )}

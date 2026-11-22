@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { useTranslation } from '@/i18n';
 import { Tooltip } from '@/components/Tooltip';
 import { useConfirmDialog } from '@/components/ConfirmDialog/useConfirmDialog';
-import { timeAgo } from '@/utils/timeAgo';
+import { useTimeAgo } from '@/hooks/useTimeAgo';
 import { useReadAloud } from '@/hooks/useReadAloud';
 import { speakableText } from '@/utils/readAloud/speakableText';
 import { CopyIcon, ForkIcon, PauseIcon, PlayIcon, SpeakerIcon } from './footerIcons';
@@ -57,6 +57,7 @@ export function TranscriptReplyFooter({
   const sentAt = timestamp ? Date.parse(timestamp) : NaN;
   const known = !Number.isNaN(sentAt);
   const exact = known
+  const ago = useTimeAgo(known ? sentAt : undefined, i18n.language);
     ? new Intl.DateTimeFormat(i18n.language, { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(sentAt)
     : '';
 
@@ -133,7 +134,7 @@ export function TranscriptReplyFooter({
       {known && (
         <div className="inline-flex items-center gap-0.5">
           <Tooltip content={exact} placement="top">
-            <span>{timeAgo(sentAt, i18n.language)}</span>
+            <span>{ago}</span>
           </Tooltip>
         </div>
       )}

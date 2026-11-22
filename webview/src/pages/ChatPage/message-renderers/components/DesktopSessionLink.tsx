@@ -7,7 +7,7 @@ import { i18n, useTranslation } from '@/i18n';
 import { Tooltip } from '@/components/Tooltip';
 import type { DesktopSession } from '@/hooks/useDesktopSession';
 import { useBacklinkedSession } from '@/contexts/BacklinkedSessionsContext';
-import { timeAgo } from '@/utils/timeAgo';
+import { useTimeAgo } from '@/hooks/useTimeAgo';
 import { sessionToPath } from '@/router';
 
 /** A link to a Claude Desktop session as the chat text writes it: `[title](#local_<id>)`. */
@@ -22,7 +22,7 @@ export function desktopSessionIdOf(href: string | undefined): string | undefined
 export const SessionFacts: React.FC<{ session: DesktopSession }> =({ session }) => {
   const { t, i18n: i18nInstance } = useTranslation('chatTools');
   const folder = session.cwd?.split(/[\\/]/).filter(Boolean).pop();
-  const ago = session.lastActivityAt !== undefined ? timeAgo(session.lastActivityAt, i18nInstance.language) : undefined;
+  const ago = useTimeAgo(session.lastActivityAt, i18nInstance.language);
   if (!session.isArchived && !folder && !ago) return null;
   return (
     <div className="flex items-center gap-3">

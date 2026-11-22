@@ -3,7 +3,7 @@ import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/20/solid';
 import { useTranslation } from '@/i18n';
 import { useSessionParent } from '@/hooks/useSessionParent';
 import { useSessionContextOrNull } from '@/contexts/SessionContext';
-import { timeAgo } from '@/utils/timeAgo';
+import { useTimeAgo } from '@/hooks/useTimeAgo';
 import type { LoadedMessageDto } from '../../../types';
 import type { SessionBrief } from '../message-renderers/utils/sessionBrief';
 import { UserMessageText } from '../message-renderers/components/UserMessageText';
@@ -77,7 +77,7 @@ export function TranscriptSessionBrief({ brief, message }: { brief: SessionBrief
   const parent = useSessionParent(true);
   const sessionTitle = useSessionContextOrNull()?.currentSession?.title || undefined;
   const sent = message.timestamp ? Date.parse(message.timestamp) : NaN;
-  const ago = Number.isNaN(sent) ? undefined : timeAgo(sent, i18n.language);
+  const ago = useTimeAgo(Number.isNaN(sent) ? undefined : sent, i18n.language);
   const toggle = () => setOpen((value) => !value);
 
   return (
