@@ -221,6 +221,68 @@ describe('useHostClipboardPaste', () => {
       expect(insertText).not.toHaveBeenCalled();
     });
 
+    describe('a paste that carried markup but no plain text (#715)', () => {
+      it('finishes the paste from the host when the browser put nothing in, without undoing what was typed before', async () => {
+        sendMock.mockResolvedValue({ text: 'copied outside', image: null });
+        const { paste } = renderPaste();
+
+        await paste(editorWithPastedText('typed before'), { pastedText: '', textBefore: 'typed before' });
+
+        expect(insertText).not.toHaveBeenCalledWith('undo');
+        expect(insertText).toHaveBeenCalledWith('insertText', false, 'copied outside');
+        expect(sendMock).toHaveBeenCalledWith(
+          MessageType.GET_CLIPBOARD,
+          { workingDir: '/proj' },
+          { timeout: 5_000 },
+        );
+      });
+
+      it('attaches the host image when the browser put nothing in', async () => {
+        sendMock.mockResolvedValue({ text: null, image: { mimeType: 'image/png', base64: btoa('png') } });
+        const { paste, addImageAttachment } = renderPaste();
+
+        await paste(editorWithPastedText('typed before'), { pastedText: '', textBefore: 'typed before' });
+
+        expect(insertText).not.toHaveBeenCalled();
+        expect(addImageAttachment).toHaveBeenCalledTimes(1);
+      });
+
+      it('takes back what the browser made of the markup when the host holds other text', async () => {
+        sendMock.mockResolvedValue({ text: 'copied outside', image: null });
+        const { paste } = renderPaste();
+
+        await paste(editorWithPastedText('typed beforestale words'), { pastedText: '', textBefore: 'typed before' });
+
+        expect(insertText).toHaveBeenNthCalledWith(1, 'undo');
+        expect(insertText).toHaveBeenNthCalledWith(2, 'insertText', false, 'copied outside');
+      });
+
+      it('does nothing when the browser put nothing in and the host holds nothing', async () => {
+        sendMock.mockResolvedValue({ text: null, image: null });
+        const { paste, addImageAttachment } = renderPaste();
+
+        await paste(editorWithPastedText('typed before'), { pastedText: '', textBefore: 'typed before' });
+
+        expect(insertText).not.toHaveBeenCalled();
+        expect(addImageAttachment).not.toHaveBeenCalled();
+      });
+
+      it('does nothing once the user has gone on typing before the host answered', async () => {
+        let answer: (value: unknown) => void = () => {};
+        sendMock.mockReturnValue(new Promise(resolve => { answer = resolve; }));
+        const { paste } = renderPaste();
+        const editor = editorWithPastedText('typed before');
+
+        const pasting = paste(editor, { pastedText: '', textBefore: 'typed before' });
+        await new Promise(resolve => setTimeout(resolve, 5));
+        editor.textContent = 'typed before and more';
+        answer({ text: 'copied outside', image: null });
+        await pasting;
+
+        expect(insertText).not.toHaveBeenCalled();
+      });
+    });
+
     it('leaves the paste alone when the host cannot be asked, so a paste is never lost', async () => {
       sendMock.mockRejectedValue(new Error('No IDE host connected'));
       const { paste } = renderPaste();

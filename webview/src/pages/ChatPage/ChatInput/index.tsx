@@ -1284,8 +1284,10 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
     // knows. The text still goes in the way it always did (below); the host is asked beside it,
     // and when it holds files their chips replace the names that went in.
     if (isJetBrains()) {
+      // A paste with markup but no plain text is asked too (#715): the browser can have nothing
+      // useful to insert for it, and the host knows what the clipboard really holds.
       const text = e.clipboardData.getData('text/plain');
-      if (text.length > 0) void pasteFromHost(e.currentTarget, { pastedText: text });
+      void pasteFromHost(e.currentTarget, { pastedText: text, textBefore: e.currentTarget.textContent ?? '' });
     }
 
     // Text falls through untouched: the default paste inserts it, records the

@@ -28,8 +28,14 @@ export type HostPasteOptions = {
    * are the paste. The browser's own clipboard can also be stale (#715), so when the host
    * holds other text, or an image and no text, the browser's text is taken back and the
    * host's goes in. An empty or failed answer changes nothing: the browser's paste stands.
+   *
+   * An empty string means the paste carried no plain text (markup only, for one). Pass
+   * [textBefore] with it: when the browser then put nothing in, the paste is finished from
+   * the host like an empty one; when it did put something in, it is checked like any other.
    */
   pastedText?: string;
+  /** What the composer held just before the browser's own paste, for a paste that carried no plain text. */
+  textBefore?: string;
 };
 
 /**
@@ -100,20 +106,27 @@ export function useHostClipboardPaste(options: {
         await afterNativePaste();
         afterPaste = editor.textContent;
       }
+      // A paste with no plain text that the browser left the composer untouched for is a paste
+      // of nothing, which the host finishes (#715), the way it finishes a paste that came up empty.
+      const browserInsertedNothing = browserPastedText
+        && pasteOptions?.pastedText === ''
+        && pasteOptions.textBefore !== undefined
+        && afterPaste === pasteOptions.textBefore;
+      const checkingBrowserPaste = browserPastedText && !browserInsertedNothing;
 
       let host = HostClipboard.NONE;
       try {
         const response = await send<HostClipboardResponse>(
           MessageType.GET_CLIPBOARD,
           { workingDir: workingDirectory ?? undefined },
-          { timeout: browserPastedText ? HOST_FILE_CHECK_TIMEOUT_MS : HOST_CLIPBOARD_TIMEOUT_MS },
+          { timeout: checkingBrowserPaste ? HOST_FILE_CHECK_TIMEOUT_MS : HOST_CLIPBOARD_TIMEOUT_MS },
         );
         host = HostClipboard.from(response);
       } catch {
         return;
       }
 
-      if (browserPastedText) {
+      if (checkingBrowserPaste) {
         // The composer has changed since the browser's paste (the user typed on, or the
         // focus moved): leave it alone, whatever the host says.
         if (editor.textContent !== afterPaste) return;
@@ -145,6 +158,9 @@ export function useHostClipboardPaste(options: {
         document.execCommand('insertText', false, host.text as string);
         return;
       }
+
+      // The user typed on while the host answered a paste the browser had left empty.
+      if (browserInsertedNothing && editor.textContent !== afterPaste) return;
 
       // Files the host sent on arrive as chips of their own, so the paste is answered.
       if (host.fileCount > 0) return;
