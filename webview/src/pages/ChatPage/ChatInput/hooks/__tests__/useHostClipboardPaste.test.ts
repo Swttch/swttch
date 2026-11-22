@@ -165,14 +165,60 @@ describe('useHostClipboardPaste', () => {
       expect(insertText).toHaveBeenCalledWith('undo');
     });
 
-    it('leaves the browser paste alone when the host holds no files', async () => {
-      sendMock.mockResolvedValue({ text: 'from the host', image: null });
+    it('leaves the browser paste alone when the host holds the same text, even with other line endings', async () => {
+      sendMock.mockResolvedValue({ text: 'one\r\ntwo', image: null });
       const { paste, addImageAttachment } = renderPaste();
+
+      await paste(editorWithPastedText('one\ntwo'), { pastedText: 'one\ntwo' });
+
+      expect(insertText).not.toHaveBeenCalled();
+      expect(addImageAttachment).not.toHaveBeenCalled();
+    });
+
+    it('leaves the browser paste alone when the host holds nothing', async () => {
+      sendMock.mockResolvedValue({ text: null, image: null });
+      const { paste } = renderPaste();
 
       await paste(editorWithPastedText('what the user copied'), { pastedText: 'what the user copied' });
 
       expect(insertText).not.toHaveBeenCalled();
-      expect(addImageAttachment).not.toHaveBeenCalled();
+    });
+
+    it('replaces the browser text with the host text when the browser clipboard is stale (#715)', async () => {
+      sendMock.mockResolvedValue({ text: 'copied outside', image: null });
+      const { paste } = renderPaste();
+
+      await paste(editorWithPastedText('copied in the chat'), { pastedText: 'copied in the chat' });
+
+      expect(insertText).toHaveBeenNthCalledWith(1, 'undo');
+      expect(insertText).toHaveBeenNthCalledWith(2, 'insertText', false, 'copied outside');
+    });
+
+    it('attaches the host image and takes the stale text back out when the host holds an image and no text', async () => {
+      const base64 = btoa('png');
+      sendMock.mockResolvedValue({ text: null, image: { mimeType: 'image/png', base64 } });
+      const { paste, addImageAttachment } = renderPaste();
+
+      await paste(editorWithPastedText('copied in the chat'), { pastedText: 'copied in the chat' });
+
+      expect(insertText).toHaveBeenCalledWith('undo');
+      expect(insertText).not.toHaveBeenCalledWith('insertText', false, expect.anything());
+      expect(addImageAttachment).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not replace anything once the user has gone on typing before the host answered', async () => {
+      let answer: (value: unknown) => void = () => {};
+      sendMock.mockReturnValue(new Promise(resolve => { answer = resolve; }));
+      const { paste } = renderPaste();
+      const editor = editorWithPastedText('stale');
+
+      const pasting = paste(editor, { pastedText: 'stale' });
+      await new Promise(resolve => setTimeout(resolve, 5));
+      editor.textContent = 'stale and more typing';
+      answer({ text: 'fresh', image: null });
+      await pasting;
+
+      expect(insertText).not.toHaveBeenCalled();
     });
 
     it('leaves the paste alone when the host cannot be asked, so a paste is never lost', async () => {
