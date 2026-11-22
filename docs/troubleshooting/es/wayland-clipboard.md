@@ -54,7 +54,7 @@ Con `-Dawt.toolkit.name=XToolkit`, la propia ventana del IDE pasa a ser una vent
 
 El mismo síntoma se ha reportado en otros plugins de JetBrains que usan JCEF.
 
-El propio proceso del IDE sí puede leer ese portapapeles, así que las versiones nuevas del plugin se lo piden al IDE cada vez que un pegado llega vacío, y entonces pegar funciona sin ningún ajuste.
+El propio proceso del IDE sí puede leer ese portapapeles, así que las versiones nuevas del plugin se lo piden al IDE cada vez que un pegado llega vacío, y entonces pegar funciona sin ningún ajuste. Un pegado que llega con texto se comprueba del mismo modo: si copia algo dentro del plugin y luego copia otra cosa fuera, el IDE tiene el texto más reciente y es ese el que se pega.
 
 El texto copiado dentro del plugin también se quedaba solo en ese portapapeles X11 y no llegaba al editor ni a otros programas, así que las versiones nuevas del plugin entregan al IDE lo que copias en el chat y el IDE lo coloca en el portapapeles del sistema.
 

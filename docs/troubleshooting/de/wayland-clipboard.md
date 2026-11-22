@@ -54,7 +54,7 @@ Mit `-Dawt.toolkit.name=XToolkit` wird das IDE-Fenster selbst zu einem X11-Fenst
 
 Dasselbe Symptom wird auch in anderen JetBrains-Plugins gemeldet, die JCEF verwenden.
 
-Der IDE-Prozess selbst kann diese Zwischenablage lesen, deshalb fragen neuere Plugin-Versionen die IDE danach, sooft ein Einfügen leer ankommt, und das Einfügen funktioniert dann ohne jede Einstellung.
+Der IDE-Prozess selbst kann diese Zwischenablage lesen, deshalb fragen neuere Plugin-Versionen die IDE danach, sooft ein Einfügen leer ankommt, und das Einfügen funktioniert dann ohne jede Einstellung. Ein Einfügen, das mit Text ankommt, wird genauso geprüft: Wenn Sie erst im Plugin und dann woanders außerhalb etwas kopieren, hält die IDE den neueren Text, und genau dieser wird eingefügt.
 
 Auch Text, der innerhalb des Plugins kopiert wurde, blieb nur in dieser X11-Zwischenablage und gelangte nicht in den Editor oder andere Programme, deshalb übergeben neuere Plugin-Versionen den im Chat kopierten Text an die IDE, die ihn in die System-Zwischenablage legt.
 
