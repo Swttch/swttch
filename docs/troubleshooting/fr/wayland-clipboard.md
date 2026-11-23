@@ -54,7 +54,7 @@ Avec `-Dawt.toolkit.name=XToolkit`, la fenêtre de l'IDE devient elle-même une 
 
 Le même symptôme est signalé dans d'autres plugins JetBrains qui utilisent JCEF.
 
-Le processus de l'IDE lui-même peut lire ce presse-papiers, donc les versions récentes du plugin le demandent à l'IDE chaque fois qu'un collage arrive vide, et le collage fonctionne alors sans aucun réglage.
+Le processus de l'IDE lui-même peut lire ce presse-papiers, donc les versions récentes du plugin le demandent à l'IDE chaque fois qu'un collage arrive vide, et le collage fonctionne alors sans aucun réglage. Un collage qui arrive avec du texte est vérifié de la même façon : si vous copiez dans le plugin puis copiez autre chose à l'extérieur, l'IDE détient le texte le plus récent, et c'est celui-ci qui est collé.
 
 Le texte copié dans le plugin restait lui aussi uniquement dans ce presse-papiers X11 et n'arrivait ni dans l'éditeur ni dans d'autres programmes ; les versions récentes du plugin transmettent donc à l'IDE ce que vous copiez dans le chat, et l'IDE le place dans le presse-papiers du système.
 

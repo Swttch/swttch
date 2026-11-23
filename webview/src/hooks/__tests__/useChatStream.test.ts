@@ -2381,4 +2381,85 @@ describe('peer 세션 메시지의 라이브 표시 (issue #423)', () => {
 
     expect(result.current.messages).toHaveLength(0);
   });
+  // #722: the divider the CLI draws where a conversation was compacted. A reopened session reads it back from the
+  // saved file as an entry; the live screen dropped the event, so it appeared only after a reload.
+  describe('compact_boundary', () => {
+    it('keeps the boundary as an entry, named the way the saved session names it', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'system', subtype: 'compact_boundary', uuid: 'b-1', logical_parent_uuid: 'p-1',
+          compact_metadata: { trigger: 'manual', pre_tokens: 51200, cumulative_dropped_tokens: 51200 },
+        });
+      });
+
+      expect(result.current.messages).toHaveLength(1);
+      const entry = result.current.messages[0];
+      expect(entry.type).toBe('system');
+      expect(entry.subtype).toBe('compact_boundary');
+      expect(entry.uuid).toBe('b-1');
+      expect(entry.compactMetadata).toEqual({ trigger: 'manual', preTokens: 51200, cumulativeDroppedTokens: 51200 });
+    });
+
+    it('still reports the event to onSystemMessage', () => {
+      const { bridge, emit } = createMockBridge();
+      const onSystemMessage = vi.fn();
+      renderHook(() => useChatStream({ bridge, onSystemMessage }));
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, { type: 'system', subtype: 'compact_boundary', uuid: 'b-1' });
+      });
+
+      expect(onSystemMessage).toHaveBeenCalledWith(expect.objectContaining({ subtype: 'compact_boundary' }));
+    });
+
+    it('adds no entry for the other system events', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, { type: 'system', subtype: 'api_retry', attempt: 1, max_retries: 3 });
+      });
+
+      expect(result.current.messages).toHaveLength(0);
+    });
+
+    it('keeps the notice the CLI raises about the compaction, as a reopened session has it', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'system', subtype: 'informational', uuid: 'n-1', level: 'notice', timestamp: '2026-11-22T16:05:03.627Z',
+          content: 'Compacted using a summary written while you were away',
+        });
+        emit(MessageType.CLI_EVENT, { type: 'system', subtype: 'informational', content: '   ' });
+      });
+
+      expect(result.current.messages).toHaveLength(1);
+      expect(result.current.messages[0]).toMatchObject({ type: 'system', subtype: 'informational', uuid: 'n-1' });
+    });
+
+    it('puts the summary right after the boundary even when the CLI stamped it hours earlier', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'user', uuid: 'q', timestamp: '2026-11-22T16:00:00.000Z', message: { role: 'user', content: 'question' },
+        });
+        emit(MessageType.CLI_EVENT, {
+          type: 'system', subtype: 'compact_boundary', uuid: 'b', timestamp: '2026-11-22T16:05:03.613Z',
+        });
+        emit(MessageType.CLI_EVENT, {
+          type: 'user', uuid: 's', timestamp: '2026-11-22T15:05:13.587Z', isCompactSummary: true,
+          message: { role: 'user', content: 'This session is being continued from a previous conversation' },
+        });
+      });
+
+      expect(result.current.messages.map((m) => m.uuid)).toEqual(['q', 'b', 's']);
+    });
+  });
 });

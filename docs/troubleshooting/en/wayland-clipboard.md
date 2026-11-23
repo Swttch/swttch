@@ -54,7 +54,7 @@ With `-Dawt.toolkit.name=XToolkit`, the IDE window itself becomes an X11 window,
 
 The same symptom is reported in other JetBrains plugins that use JCEF.
 
-The IDE process itself can read that clipboard, so newer plugin versions ask the IDE for it whenever a paste arrives empty, and the paste then works without any setting.
+The IDE process itself can read that clipboard, so newer plugin versions ask the IDE for it whenever a paste arrives empty, and the paste then works without any setting. A paste that arrives with text is checked the same way: after you copy inside the plugin and then copy something else outside it, the IDE holds the newer text, and that is what gets pasted.
 
 Text copied inside the plugin used to stay on that separate X11 clipboard as well and never reached the editor or other programs, so newer plugin versions also hand what you copy in the chat to the IDE, which puts it on the system clipboard.
 

@@ -25,9 +25,17 @@ export type HostPasteOptions = {
    * of the copied files as text on the system clipboard, so text alone cannot say "files".
    * The host is asked after the browser has put the text in; when it answers that it handed
    * files to the chat, the text the browser just put in is taken back, because the chips
-   * are the paste. Anything else the host answers changes nothing: the browser's paste stands.
+   * are the paste. The browser's own clipboard can also be stale (#715), so when the host
+   * holds other text, or an image and no text, the browser's text is taken back and the
+   * host's goes in. An empty or failed answer changes nothing: the browser's paste stands.
+   *
+   * An empty string means the paste carried no plain text (markup only, for one). Pass
+   * [textBefore] with it: when the browser then put nothing in, the paste is finished from
+   * the host like an empty one; when it did put something in, it is checked like any other.
    */
   pastedText?: string;
+  /** What the composer held just before the browser's own paste, for a paste that carried no plain text. */
+  textBefore?: string;
 };
 
 /**
@@ -46,6 +54,11 @@ function endTypingRun(): void {
   const range = selection.getRangeAt(0);
   selection.removeAllRanges();
   selection.addRange(range);
+}
+
+/** The two clipboards' readers may end lines differently; the words are what is compared. */
+function normalizeNewlines(text: string): string {
+  return text.replace(/\r\n?/g, '\n');
 }
 
 /** Wait until the browser has finished the paste it was in the middle of when the event fired. */
@@ -69,6 +82,8 @@ function afterNativePaste(): Promise<void> {
  *     lands on the undo stack and fires `input`, exactly as a native paste does
  *     (issue #286). Writing it through `onChange` instead would skip both.
  * - A paste that carried text, which the browser pastes itself (see [HostPasteOptions]).
+ *   The host is asked beside it, and its answer wins when it differs: files, an image, or
+ *   other text mean the browser's copy of the clipboard was stale (#715).
  *
  * Nothing is shown when the host has nothing or cannot be asked: the user pressed
  * paste, and a paste of nothing does nothing, as it did before.
@@ -91,27 +106,61 @@ export function useHostClipboardPaste(options: {
         await afterNativePaste();
         afterPaste = editor.textContent;
       }
+      // A paste with no plain text that the browser left the composer untouched for is a paste
+      // of nothing, which the host finishes (#715), the way it finishes a paste that came up empty.
+      const browserInsertedNothing = browserPastedText
+        && pasteOptions?.pastedText === ''
+        && pasteOptions.textBefore !== undefined
+        && afterPaste === pasteOptions.textBefore;
+      const checkingBrowserPaste = browserPastedText && !browserInsertedNothing;
 
       let host = HostClipboard.NONE;
       try {
         const response = await send<HostClipboardResponse>(
           MessageType.GET_CLIPBOARD,
           { workingDir: workingDirectory ?? undefined },
-          { timeout: browserPastedText ? HOST_FILE_CHECK_TIMEOUT_MS : HOST_CLIPBOARD_TIMEOUT_MS },
+          { timeout: checkingBrowserPaste ? HOST_FILE_CHECK_TIMEOUT_MS : HOST_CLIPBOARD_TIMEOUT_MS },
         );
         host = HostClipboard.from(response);
       } catch {
         return;
       }
 
-      if (browserPastedText) {
-        // Only files change the outcome: their chips are the paste, so the names the browser
-        // just typed come back out. If the composer has changed since, leave it alone.
-        if (host.fileCount > 0 && editor.textContent === afterPaste) {
+      if (checkingBrowserPaste) {
+        // The composer has changed since the browser's paste (the user typed on, or the
+        // focus moved): leave it alone, whatever the host says.
+        if (editor.textContent !== afterPaste) return;
+
+        // Files change the outcome: their chips are the paste, so the names the browser
+        // just typed come back out.
+        if (host.fileCount > 0) {
           document.execCommand('undo');
+          return;
         }
+
+        // The browser's clipboard can be stale (#715). On a Wayland desktop the embedded
+        // browser keeps the last thing copied inside the chat, and the desktop does not
+        // refresh it while the IDE window has the focus, so a paste carries that old text
+        // although the user has since copied something else outside. The host reads the
+        // real clipboard, so when it holds something other than what the browser pasted,
+        // the browser's text comes back out and the host's goes in.
+        const hostImage = host.text === null ? host.toImageFile() : null;
+        const staleText = host.text !== null
+          && normalizeNewlines(host.text) !== normalizeNewlines(pasteOptions?.pastedText ?? '');
+        if (!staleText && !hostImage) return;
+        document.execCommand('undo');
+        if (hostImage) {
+          await addImageAttachment(hostImage, ImageAttachSource.Paste);
+          return;
+        }
+        if (!editor.contains(document.activeElement)) return;
+        endTypingRun();
+        document.execCommand('insertText', false, host.text as string);
         return;
       }
+
+      // The user typed on while the host answered a paste the browser had left empty.
+      if (browserInsertedNothing && editor.textContent !== afterPaste) return;
 
       // Files the host sent on arrive as chips of their own, so the paste is answered.
       if (host.fileCount > 0) return;

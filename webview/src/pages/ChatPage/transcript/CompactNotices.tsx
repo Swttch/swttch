@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import { useTranslation } from '@/i18n';
 import type { LoadedMessageDto } from '../../../types';
-import { formatTokenCount } from './compact';
+import { formatTokensFor } from '@/utils/workflowFormat';
+import { compactSavedTokens } from './compact';
 
 /** The quiet grey of a summary line, as in the tool runs. */
 const QUIET_TEXT = 'text-[var(--tr-muted)]';
@@ -12,13 +13,12 @@ const QUIET_TEXT = 'text-[var(--tr-muted)]';
  * between the replies it kept and the ones that follow, in place of the summary the model was handed.
  */
 export function CompactDivider({ message }: { message: LoadedMessageDto }) {
-  const { t } = useTranslation('chat');
-  const dropped = message.compactMetadata?.cumulativeDroppedTokens;
+  const { t, i18n } = useTranslation('chat');
+  const saved = compactSavedTokens(message);
+  const tokens = saved === undefined ? undefined : formatTokensFor(i18n.language, saved);
   return (
     <div className={`-mt-2 px-4 py-[0.625rem] text-[0.8438rem] leading-[1rem] ${QUIET_TEXT}`} data-transcript-compact-divider>
-      {typeof dropped === 'number' && dropped > 0
-        ? t('transcript.compact.saved', { tokens: formatTokenCount(dropped) })
-        : t('transcript.compact.title')}
+      {tokens ? t('transcript.compact.saved', { tokens }) : t('transcript.compact.title')}
     </div>
   );
 }
