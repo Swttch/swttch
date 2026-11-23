@@ -50,7 +50,7 @@ In a JetBrains IDE each dropdown has one more entry, **Follow IDE**:
 | **Chat Font** | The font of the IDE's own interface (menus, tool windows) |
 | **Code Font** | The font of the IDE's **editor** (*Settings → Editor → Font*) |
 
-The chat keeps following the IDE: the font is read when the chat opens and again whenever the IDE changes its look (for example, when you switch the IDE theme). If the IDE does not give a usable font name, the built-in font is used.
+The font is read when the chat opens, and again whenever the IDE changes its look (when you switch the IDE theme, or turn its custom interface font on or off). **If you only change the editor font, reopen the chat to make it follow.** If the IDE does not give a usable font name (on a Mac the IDE's default interface font is a system-internal one), the built-in font is used.
 
 **Follow IDE does not appear in the browser** (standalone mode), because there is no IDE there to follow.
 
