@@ -1366,5 +1366,8 @@
   "answerNotDelivered": {
     "otherBackend": "This session is running in another window, so the question has to be answered there. Your answer was not sent.",
     "notRunning": "Claude is not running for this session, so your answer was not sent. Send a message to start it again."
+  },
+  "messageNotDelivered": {
+    "heldElsewhere": "This session is running in another window, and that window did not take your message. Send it again, or send it from that window."
   }
 }

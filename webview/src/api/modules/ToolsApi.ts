@@ -141,10 +141,10 @@ export class ToolsApi {
       toolUseId,
       approved: true,
       result,
-      ...(options?.controlRequestId && {
-        controlRequestId: options.controlRequestId,
-        updatedInput: options.updatedInput,
-      }),
+      ...(options?.controlRequestId && { controlRequestId: options.controlRequestId }),
+      // Sent with or without the request number: a card of a session that another IDE window's backend holds does not
+      // have it (it was drawn from the transcript), and the answer it hands over must still say what was chosen.
+      ...(options?.updatedInput && { updatedInput: options.updatedInput }),
     });
   }
 

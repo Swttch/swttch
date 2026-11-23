@@ -1,10 +1,8 @@
-import { join } from 'path';
-import { stat } from 'fs/promises';
 import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { MessageType } from '../../shared';
-import { getProjectSessionsPath } from '../features/getProjectSessionsPath';
+import { findSessionTranscript } from '../features/findSessionTranscript';
 import { watchSessions } from '../features/sessionTranscriptFollower';
 import { isSessionStarting } from '../features/sessionToolAnnouncer';
 
@@ -50,21 +48,15 @@ export async function getSessionsExistHandler(
   const workingDir = (message.payload as { workingDir?: unknown } | undefined)?.workingDir;
   const missing: string[] = [];
   if (typeof workingDir === 'string' && workingDir !== '') {
-    try {
-      const dir = await getProjectSessionsPath(workingDir);
-      await Promise.all(
-        idsOf(message).map(async (id) => {
-          try {
-            await stat(join(dir, `${id}.jsonl`));
-          } catch {
-            // A session that is still being started has no transcript yet; that is not a deleted one.
-            if (!isSessionStarting(id)) missing.push(id);
-          }
-        }),
-      );
-    } catch {
-      // No folder to look in: nothing is said to be missing.
-    }
+    await Promise.all(
+      idsOf(message).map(async (id) => {
+        // A session another session started lives in the folder it was started for, not in the one of the screen
+        // that asks: it is deleted only when no project folder holds its transcript.
+        if ((await findSessionTranscript(id, workingDir)) !== undefined) return;
+        // A session that is still being started has no transcript yet; that is not a deleted one.
+        if (!isSessionStarting(id)) missing.push(id);
+      }),
+    );
   }
   connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId, status: 'ok', missing });
 }

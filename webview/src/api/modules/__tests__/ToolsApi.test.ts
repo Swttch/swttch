@@ -75,6 +75,31 @@ describe('ToolsApi', () => {
         result: 'custom result',
       });
     });
+
+    // A card of a session another IDE window's backend holds has no request number, but the answer it hands over
+    // must still say what was chosen (#711).
+    it('sends the chosen answer even when the card has no control request id', async () => {
+      const updatedInput = { questions: [{ question: 'q' }], answers: { q: 'red' } };
+      await api.respond('tool-1', 'red', { updatedInput });
+      expect(bridge.request).toHaveBeenCalledWith(MessageType.TOOL_RESPONSE, {
+        toolUseId: 'tool-1',
+        approved: true,
+        result: 'red',
+        updatedInput,
+      });
+    });
+
+    it('sends the request number with the chosen answer when the card has one', async () => {
+      const updatedInput = { answers: { q: 'red' } };
+      await api.respond('tool-1', 'red', { controlRequestId: 'ctrl-1', updatedInput });
+      expect(bridge.request).toHaveBeenCalledWith(MessageType.TOOL_RESPONSE, {
+        toolUseId: 'tool-1',
+        approved: true,
+        result: 'red',
+        controlRequestId: 'ctrl-1',
+        updatedInput,
+      });
+    });
   });
 
   describe('openDiff()', () => {

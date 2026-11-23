@@ -6,6 +6,8 @@ interface ActivityPayload {
   activity?: SessionActivityMap;
   /** Ids of the sessions some tab currently has open. */
   open?: string[];
+  /** Ids of the sessions whose CLI the backend of another IDE window holds: this backend only watches them. */
+  heldElsewhere?: string[];
 }
 
 interface ActivityAck extends ActivityPayload {
@@ -20,6 +22,11 @@ export interface UseSessionActivityReturn {
    * nothing is watching it, and a row says so by drawing no marker at all.
    */
   open: Set<string>;
+  /**
+   * Sessions the backend of another IDE window holds the CLI of. A tab here hands what the person does in such a
+   * session (a message, a stop, an answer) to that backend, and does not run a turn of its own.
+   */
+  heldElsewhere: Set<string>;
   /** Tell the backend the user has now looked at this session. */
   markRead: (sessionId: string) => void;
 }
@@ -44,6 +51,7 @@ export function useSessionActivity(enabled: boolean = true): UseSessionActivityR
   const { send, subscribe } = useBridge();
   const [activity, setActivity] = useState<SessionActivityMap>({});
   const [open, setOpen] = useState<Set<string>>(() => new Set());
+  const [heldElsewhere, setHeldElsewhere] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     // Not asked for: nothing is read and nothing is listened to (a screen whose answer comes from elsewhere).
@@ -56,6 +64,7 @@ export function useSessionActivity(enabled: boolean = true): UseSessionActivityR
         if (cancelled || res.status !== 'ok') return;
         setActivity(res.activity ?? {});
         setOpen(new Set(res.open ?? []));
+        setHeldElsewhere(new Set(res.heldElsewhere ?? []));
       } catch {
         // Not knowing is the same as everything being idle: every row renders
         // with the ordinary marker, which is what it did before this existed.
@@ -66,6 +75,7 @@ export function useSessionActivity(enabled: boolean = true): UseSessionActivityR
       const payload = message.payload as ActivityPayload | undefined;
       setActivity(payload?.activity ?? {});
       setOpen(new Set(payload?.open ?? []));
+      setHeldElsewhere(new Set(payload?.heldElsewhere ?? []));
     });
 
     return () => {
@@ -83,7 +93,7 @@ export function useSessionActivity(enabled: boolean = true): UseSessionActivityR
     [send],
   );
 
-  return { activity, open, markRead };
+  return { activity, open, heldElsewhere, markRead };
 }
 
 /** What a row should show for a session, with absence meaning idle. */

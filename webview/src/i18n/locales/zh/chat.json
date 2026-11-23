@@ -1342,5 +1342,8 @@
   "answerNotDelivered": {
     "otherBackend": "此会话正在另一个窗口中运行，因此需要在那里回答问题。你的回答未发送。",
     "notRunning": "此会话中 Claude 未在运行，因此你的回答未发送。请发送一条消息以重新启动。"
+  },
+  "messageNotDelivered": {
+    "heldElsewhere": "此会话正在另一个窗口中运行，该窗口未接收你的消息。请重新发送，或在该窗口中发送。"
   }
 }

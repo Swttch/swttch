@@ -825,6 +825,19 @@ export class ConnectionManager {
     this.getOrCreateSession(sessionId).openRequests.set(requestId, event);
   }
 
+  /**
+   * The open request the CLI raised for one tool call, as `{ requestId, event }`. A screen of another backend knows a
+   * card only by its tool call (it was drawn from the transcript, which has no request numbers), so an answer it hands
+   * over is matched to the request this way.
+   */
+  findOpenRequestByToolUseId(sessionId: string, toolUseId: string): { requestId: string; event: Record<string, unknown> } | undefined {
+    for (const [requestId, event] of this.sessionRegistry.get(sessionId)?.openRequests ?? []) {
+      const request = event.request as Record<string, unknown> | undefined;
+      if (request?.tool_use_id === toolUseId) return { requestId, event };
+    }
+    return undefined;
+  }
+
   /** The request was answered or cancelled; it no longer needs a card. */
   forgetOpenRequest(sessionId: string, requestId: unknown): void {
     if (typeof requestId !== 'string') return;
@@ -1085,9 +1098,12 @@ export class ConnectionManager {
     // One whose program answered and that the person has not looked at since is unread, which is `done`.
     for (const sessionId of this.externalDone) if (activity[sessionId] === undefined) activity[sessionId] = SessionActivity.Done;
     for (const session of this.sessionRegistry.values()) {
-      if (session.activity !== SessionActivity.Idle) {
-        activity[session.sessionId] = session.activity;
-      }
+      if (session.activity === SessionActivity.Idle) continue;
+      // A tab here that sent a message the backend of another window holds ends the turn it opened as soon as the
+      // message is handed over, which reads as a finished turn (`done`). The turn is still running over there, so
+      // that `done` must not take the running state away: it is unread only once the other program stops working.
+      if (session.activity === SessionActivity.Done && activity[session.sessionId] === SessionActivity.Running) continue;
+      activity[session.sessionId] = session.activity;
     }
     return activity;
   }
@@ -1100,6 +1116,20 @@ export class ConnectionManager {
 
   /** Sessions another program ran whose last response the person has not looked at. */
   private externalDone = new Set<string>();
+
+  /**
+   * Sessions whose CLI the backend of another IDE window holds (and can be reached): this backend only watches them.
+   * A tab here hands what the person does (a message, a stop, an answer) to that backend instead of acting itself.
+   */
+  private heldElsewhere = new Set<string>();
+
+  /** Mark a session as held by another window's backend (or not), and tell every connection when that moved. */
+  setHeldElsewhere(sessionId: string, held: boolean): void {
+    if (this.heldElsewhere.has(sessionId) === held) return;
+    if (held) this.heldElsewhere.add(sessionId);
+    else this.heldElsewhere.delete(sessionId);
+    this.announceSessions();
+  }
 
   /** Mark a session another program ran as unread (or read), and tell every connection when that moved. */
   setExternalDone(sessionId: string, unread: boolean): void {
@@ -1153,8 +1183,8 @@ export class ConnectionManager {
   }
 
   /** The whole session-list picture, as one payload. */
-  getSessionActivityPayload(): { activity: SessionActivityMap; open: string[] } {
-    return { activity: this.getSessionActivity(), open: this.getOpenSessionIds() };
+  getSessionActivityPayload(): { activity: SessionActivityMap; open: string[]; heldElsewhere: string[] } {
+    return { activity: this.getSessionActivity(), open: this.getOpenSessionIds(), heldElsewhere: [...this.heldElsewhere] };
   }
 
   /**

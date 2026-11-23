@@ -1342,5 +1342,8 @@
   "answerNotDelivered": {
     "otherBackend": "이 세션은 다른 창에서 실행 중이라 질문에는 그 창에서 답해야 해요. 답변은 전송되지 않았어요.",
     "notRunning": "이 세션에서는 Claude가 실행 중이 아니라서 답변이 전송되지 않았어요. 메시지를 보내 다시 시작하세요."
+  },
+  "messageNotDelivered": {
+    "heldElsewhere": "이 세션은 다른 창에서 실행 중인데 그 창이 메시지를 받지 않았어요. 다시 보내거나 그 창에서 보내 주세요."
   }
 }

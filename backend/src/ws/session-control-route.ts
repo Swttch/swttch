@@ -4,12 +4,14 @@ import { turnEndCount, waitForTurnEnd } from '../core/features/turnEnds';
 import {
   CLI_FLAG_TO_INPUT_MODE,
   ensureClaudeProcess,
+  sendControlResponseToProcess,
   sendInterruptToProcess,
   sendMessageToProcess,
   sendSetModelToProcess,
   sendSetPermissionModeToProcess,
 } from '../core/claude-process';
-import { MessageType } from '../shared';
+import { MessageType, SessionActivity } from '../shared';
+import { buildControlResponse } from '../core/control-response';
 import { normalizeSessionName, renameSessionThroughCli } from '../core/features/cli-rename';
 
 export interface SessionControlRouteResult {
@@ -25,7 +27,9 @@ const fail = (status: number, error: string): SessionControlRouteResult => ({ st
  *
  * Body: `{ sessionId, action, ... }` with action one of
  *   interrupt                       stop the turn in flight
- *   send_message  { text }          hand the CLI a user message
+ *   send_message  { text, attachments?, messageUuid? }  hand the CLI a user message (a tab of another IDE window's backend sends here, see forward-to-holder.ts)
+ *   answer_tool   { toolUseId, approved, updatedInput?, updatedPermissions?, reason? }  answer the question or permission prompt the CLI raised for that tool call (a tab of another IDE window's backend sends here: its card knows only the tool call)
+ *   activity                        what the session is doing: its `activity` (running, awaiting, idle ...) and `turnStartedAt` (null when no turn is in flight), for another backend's tab that follows the session
  *   set_model     { model }         switch the model of the running CLI
  *   set_permission_mode { mode }    one of the CLI's own mode names (default, acceptEdits, plan, auto, bypassPermissions)
  *   rename        { title }         give the session a name, the way this app renames one (see `handleSessionControl`)
@@ -49,6 +53,8 @@ export function handleSessionControlRequest(connections: ConnectionManager, rawB
   switch (action) {
     case 'interrupt':
     case 'send_message':
+    case 'answer_tool':
+    case 'activity':
     case 'set_model':
     case 'set_permission_mode':
       break;
@@ -56,18 +62,47 @@ export function handleSessionControlRequest(connections: ConnectionManager, rawB
       return fail(400, `Unknown action: ${action}`);
   }
   if (!connections.getSession(sessionId)?.process) return fail(404, 'This backend holds no process for that session');
+  // `turnStartedAt` is this backend's own knowledge of a turn in flight (from the CLI's events, whatever screens are
+  // open), which a session nobody has open here still has; `activity` is what the screens said.
+  if (action === 'activity') {
+    return {
+      status: 200,
+      body: { ok: true, activity: connections.getSession(sessionId)?.activity ?? SessionActivity.Idle, turnStartedAt: connections.getTurnStartedAt(sessionId) },
+    };
+  }
 
   if (action === 'interrupt') {
     sent = sendInterruptToProcess(connections, sessionId);
   } else if (action === 'send_message') {
     if (typeof request.text !== 'string' || request.text === '') return fail(400, 'text is required');
-    sent = sendMessageToProcess(connections, sessionId, request.text);
+    if (request.attachments !== undefined && !Array.isArray(request.attachments)) return fail(400, 'attachments must be an array');
+    const messageUuid = typeof request.messageUuid === 'string' && request.messageUuid !== '' ? request.messageUuid : undefined;
+    sent = sendMessageToProcess(connections, sessionId, request.text, request.attachments as never, messageUuid);
     // The CLI does not echo what it is handed, so the screens showing this session would see
     // Claude answer a message that never appeared. Tell them, the way a message sent from
     // another tab is told.
     if (sent) {
       connections.broadcastToSession(sessionId, MessageType.USER_MESSAGE_BROADCAST, { content: request.text, sessionId });
     }
+  } else if (action === 'answer_tool') {
+    if (typeof request.toolUseId !== 'string' || request.toolUseId === '') return fail(400, 'toolUseId is required');
+    if (typeof request.approved !== 'boolean') return fail(400, 'approved is required');
+    if (request.updatedInput !== undefined && (request.updatedInput === null || typeof request.updatedInput !== 'object' || Array.isArray(request.updatedInput))) {
+      return fail(400, 'updatedInput must be an object');
+    }
+    if (request.updatedPermissions !== undefined && !Array.isArray(request.updatedPermissions)) return fail(400, 'updatedPermissions must be an array');
+    const open = connections.findOpenRequestByToolUseId(sessionId, request.toolUseId);
+    if (!open) return fail(404, 'No open request for that tool call');
+    sent = sendControlResponseToProcess(
+      connections,
+      sessionId,
+      buildControlResponse(open.requestId, {
+        approved: request.approved,
+        updatedInput: request.updatedInput as Record<string, unknown> | undefined,
+        updatedPermissions: request.updatedPermissions as never,
+        reason: typeof request.reason === 'string' ? request.reason : undefined,
+      }),
+    );
   } else if (action === 'set_model') {
     if (typeof request.model !== 'string' || request.model === '') return fail(400, 'model is required');
     sent = sendSetModelToProcess(connections, sessionId, request.model);
@@ -83,7 +118,7 @@ export function handleSessionControlRequest(connections: ConnectionManager, rawB
  * What this route can do, as `capabilities` answers it. A program that wants to use a newer action asks first, so
  * that an older backend, which answers "unknown action" to `capabilities` itself, is told apart from one that can.
  */
-const SUPPORTED_ACTIONS = ['interrupt', 'send_message', 'set_model', 'set_permission_mode', 'rename', 'start_session', 'await_turn_end'];
+const SUPPORTED_ACTIONS = ['interrupt', 'send_message', 'answer_tool', 'activity', 'set_model', 'set_permission_mode', 'rename', 'start_session', 'await_turn_end'];
 
 /** The longest a request may wait for a turn to end; the program asking comes back for the next stretch. */
 const MAX_WAIT_MS = 55_000;

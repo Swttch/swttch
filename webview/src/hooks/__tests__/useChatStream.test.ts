@@ -1021,6 +1021,149 @@ describe('useChatStream', () => {
       expect(result.current.windowState.hasOlder).toBe(before.hasOlder);
     });
 
+    // A message handed to the backend of another IDE window is drawn here at once, and the CLI writes it to the
+    // transcript only where it takes it up, seconds later (#711): the transcript is read again in between.
+    describe('a message handed to another window\'s backend', () => {
+      const echoed = (result: { current: ReturnType<typeof useChatStream> }) => result.current.messages.map((m) => m.uuid);
+
+      it('draws the bubble without beginning a turn', () => {
+        const { bridge } = createMockBridge();
+        const { result } = renderHook(() => useChatStream({ bridge }));
+        act(() => {
+          result.current.loadMessages([entry('a', 'one')]);
+          result.current.appendEchoMessage('hello', 'u-1');
+        });
+
+        expect(echoed(result)).toEqual(['a', 'u-1']);
+        expect(result.current.isStreaming).toBe(false);
+        expect(result.current.messages.some((m) => m.isStreaming)).toBe(false);
+      });
+
+      it('keeps the bubble through a read of the transcript that does not hold the message yet', () => {
+        const { bridge } = createMockBridge();
+        const { result } = renderHook(() => useChatStream({ bridge }));
+        act(() => {
+          result.current.loadMessages([entry('a', 'one')]);
+          result.current.appendEchoMessage('hello', 'u-1');
+        });
+
+        act(() => {
+          result.current.refreshMessages([entry('a', 'one'), entry('b', 'two')]);
+        });
+
+        expect(echoed(result)).toEqual(['a', 'b', 'u-1']);
+      });
+
+      it('lets the transcript\'s own entry take the place of the bubble once the CLI has written the message', () => {
+        const { bridge } = createMockBridge();
+        const { result } = renderHook(() => useChatStream({ bridge }));
+        act(() => {
+          result.current.loadMessages([entry('a', 'one')]);
+          result.current.appendEchoMessage('hello', 'u-1');
+        });
+
+        act(() => {
+          result.current.refreshMessages([entry('a', 'one'), { ...entry('u-1', 'hello'), type: LoadedMessageType.User, message: { role: MessageRole.User, content: 'hello' } }, entry('b', 'two')]);
+        });
+        // and a later read does not bring the bubble back
+        act(() => {
+          result.current.refreshMessages([entry('a', 'one'), { ...entry('u-1', 'hello'), type: LoadedMessageType.User, message: { role: MessageRole.User, content: 'hello' } }, entry('b', 'two'), entry('c', 'three')]);
+        });
+
+        expect(echoed(result)).toEqual(['a', 'u-1', 'b', 'c']);
+      });
+
+      // In the middle of a turn the CLI does not write a `user` line: it absorbs the message, and records it as a
+      // `queued_command` attachment that names the id the message was sent with.
+      it('lets a message the CLI absorbed in the middle of a turn take the place of the bubble', () => {
+        const { bridge } = createMockBridge();
+        const { result } = renderHook(() => useChatStream({ bridge }));
+        act(() => {
+          result.current.loadMessages([entry('a', 'one')]);
+          result.current.appendEchoMessage('absorbed words', 'u-1');
+        });
+        const absorbed = {
+          uuid: 'att-1',
+          type: 'attachment',
+          timestamp: new Date().toISOString(),
+          attachment: { type: 'queued_command', prompt: 'absorbed words', source_uuid: 'u-1' },
+        } as unknown as LoadedMessage;
+
+        act(() => {
+          result.current.refreshMessages([entry('a', 'one'), absorbed]);
+        });
+
+        expect(echoed(result)).toEqual(['a', 'att-1']);
+      });
+
+      it('lets the same words written just after the bubble was drawn take its place, whatever id the CLI gave them', () => {
+        const { bridge } = createMockBridge();
+        const { result } = renderHook(() => useChatStream({ bridge }));
+        act(() => {
+          result.current.loadMessages([entry('a', 'one')]);
+          result.current.appendEchoMessage('same words', 'u-1');
+        });
+        const written = { ...entry('other-id', 'same words'), type: LoadedMessageType.User, message: { role: MessageRole.User, content: 'same words' }, timestamp: new Date().toISOString() };
+
+        act(() => {
+          result.current.refreshMessages([entry('a', 'one'), written]);
+        });
+
+        expect(echoed(result)).toEqual(['a', 'other-id']);
+      });
+
+      it('keeps the bubble when only older words match: that was an earlier message', () => {
+        const { bridge } = createMockBridge();
+        const { result } = renderHook(() => useChatStream({ bridge }));
+        act(() => {
+          result.current.loadMessages([entry('a', 'one')]);
+          result.current.appendEchoMessage('again', 'u-2');
+        });
+        const earlier = { ...entry('old', 'again'), type: LoadedMessageType.User, message: { role: MessageRole.User, content: 'again' }, timestamp: '2020-01-01T00:00:00Z' };
+
+        act(() => {
+          result.current.refreshMessages([entry('a', 'one'), earlier]);
+        });
+
+        expect(echoed(result)).toEqual(['a', 'old', 'u-2']);
+      });
+
+      it('takes the bubble back when the backend that holds the session did not take the message', () => {
+        const { bridge } = createMockBridge();
+        const { result } = renderHook(() => useChatStream({ bridge }));
+        act(() => {
+          result.current.loadMessages([entry('a', 'one')]);
+          result.current.appendEchoMessage('hello', 'u-1');
+        });
+
+        act(() => {
+          result.current.dropUnconfirmedEchoes();
+        });
+
+        expect(echoed(result)).toEqual(['a']);
+        act(() => {
+          result.current.refreshMessages([entry('a', 'one'), entry('b', 'two')]);
+        });
+        expect(echoed(result)).toEqual(['a', 'b']);
+      });
+
+      it('leaves no bubble behind when the session is opened again', () => {
+        const { bridge } = createMockBridge();
+        const { result } = renderHook(() => useChatStream({ bridge }));
+        act(() => {
+          result.current.loadMessages([entry('a', 'one')]);
+          result.current.appendEchoMessage('hello', 'u-1');
+        });
+
+        act(() => {
+          result.current.loadMessages([entry('a', 'one')]);
+          result.current.refreshMessages([entry('a', 'one'), entry('b', 'two')]);
+        });
+
+        expect(echoed(result)).toEqual(['a', 'b']);
+      });
+    });
+
     it('starts over when the page begins at an entry that is not held', () => {
       const { bridge } = createMockBridge();
       const { result } = renderHook(() => useChatStream({ bridge }));

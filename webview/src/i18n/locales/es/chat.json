@@ -1371,5 +1371,8 @@
   "answerNotDelivered": {
     "otherBackend": "Esta sesión se está ejecutando en otra ventana, así que la pregunta debe responderse allí. Tu respuesta no se envió.",
     "notRunning": "Claude no se está ejecutando en esta sesión, así que tu respuesta no se envió. Envía un mensaje para iniciarlo de nuevo."
+  },
+  "messageNotDelivered": {
+    "heldElsewhere": "Esta sesión se está ejecutando en otra ventana y esa ventana no aceptó tu mensaje. Envíalo de nuevo o envíalo desde esa ventana."
   }
 }

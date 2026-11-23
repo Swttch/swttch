@@ -1,8 +1,11 @@
 import { join } from 'path';
 import { stat } from 'fs/promises';
 import type { ConnectionManager } from '../../ws/connection-manager';
-import { MessageType } from '../../shared';
+import { MessageType, SessionActivity } from '../../shared';
+import { askHolderActivity } from '../forward-to-holder';
 import { getProjectSessionsPath } from './getProjectSessionsPath';
+import { findSessionTranscript } from './findSessionTranscript';
+import { userInputUnanswered } from './userInputUnanswered';
 import { lastResponseAt } from './lastResponseAt';
 import { lastReadAt } from './sessionReadLedger';
 
@@ -30,6 +33,9 @@ const DEFAULT_POLL_MS = 800;
 /** A burst of writes is one piece of news. */
 const DEFAULT_DEBOUNCE_MS = 250;
 
+/** How often the project folders are searched for a transcript that is not where the screen's folder says. */
+const LOOKUP_EVERY_MS = 3_000;
+
 /** How long after its transcript last grew a session still counts as running. A turn writes at least this often. */
 const DEFAULT_RUNNING_GRACE_MS = 6_000;
 
@@ -41,6 +47,8 @@ interface Tracked {
   shown: boolean;
   debounce?: ReturnType<typeof setTimeout>;
   runningUntil?: ReturnType<typeof setTimeout>;
+  /** When the file was last looked for in the other project folders (it was not where the screen's folder said). */
+  lastLookup?: number;
 }
 
 interface ScreenFollowing {
@@ -77,6 +85,16 @@ function release(entry: Tracked, connections?: ConnectionManager): void {
     clearTimeout(entry.runningUntil);
     connections?.setExternalRunning(entry.sessionId, false);
   }
+  connections?.setHeldElsewhere(entry.sessionId, false);
+}
+
+/** The session does not work any more, as far as the backend that runs it says: it settles now, not after the grace. */
+function stopRunning(entry: Tracked, connections: ConnectionManager): void {
+  if (!entry.runningUntil) return;
+  clearTimeout(entry.runningUntil);
+  entry.runningUntil = undefined;
+  connections.setExternalRunning(entry.sessionId, false);
+  void settle(entry, connections);
 }
 
 function stopScreen(connectionId: string, connections?: ConnectionManager): void {
@@ -93,6 +111,19 @@ async function settle(entry: Tracked, connections: ConnectionManager): Promise<v
   connections.setExternalDone(entry.sessionId, await isUnread(entry.sessionId, entry.file));
 }
 
+/** The session counts as running for [graceMs] more; when that ends it settles (unread or not). */
+function markRunning(entry: Tracked, connections: ConnectionManager, graceMs: number): void {
+  connections.setExternalDone(entry.sessionId, false);
+  connections.setExternalRunning(entry.sessionId, true);
+  if (entry.runningUntil) clearTimeout(entry.runningUntil);
+  entry.runningUntil = setTimeout(() => {
+    entry.runningUntil = undefined;
+    connections.setExternalRunning(entry.sessionId, false);
+    void settle(entry, connections);
+  }, graceMs);
+  entry.runningUntil.unref?.();
+}
+
 function onGrowth(
   connectionId: string,
   entry: Tracked,
@@ -103,15 +134,7 @@ function onGrowth(
   // A session this backend runs is streamed by its own program.
   if (connections.getProcess(entry.sessionId)) return;
 
-  connections.setExternalDone(entry.sessionId, false);
-  connections.setExternalRunning(entry.sessionId, true);
-  if (entry.runningUntil) clearTimeout(entry.runningUntil);
-  entry.runningUntil = setTimeout(() => {
-    entry.runningUntil = undefined;
-    connections.setExternalRunning(entry.sessionId, false);
-    void settle(entry, connections);
-  }, graceMs);
-  entry.runningUntil.unref?.();
+  markRunning(entry, connections, graceMs);
 
   if (entry.shown) {
     if (entry.debounce) clearTimeout(entry.debounce);
@@ -134,11 +157,45 @@ function startPolling(connectionId: string, screen: ScreenFollowing, connections
     looking = true;
     void Promise.all(
       [...screen.tracked.values()].map(async (entry) => {
-        const size = await sizeOf(entry.file);
+        let size = await sizeOf(entry.file);
+        // The file is not there: a session another session started for another project's folder is not in the folder
+        // the screen knows. Looked for in every folder, not on every poll.
+        if (size === 0 && Date.now() - (entry.lastLookup ?? 0) > LOOKUP_EVERY_MS) {
+          entry.lastLookup = Date.now();
+          const found = await findSessionTranscript(entry.sessionId, screen.workingDir);
+          if (found && found !== entry.file) {
+            entry.file = found;
+            size = await sizeOf(found);
+          }
+        }
         if (screens.get(connectionId) !== screen || screen.tracked.get(entry.sessionId) !== entry) return;
         const before = entry.size;
         entry.size = size;
         if (size > before) onGrowth(connectionId, entry, connections, debounceMs, graceMs);
+        // The transcript says nothing while a long tool call runs (a turn can be silent for minutes), so for the
+        // session the screen shows, the backend that runs the CLI is asked whether the session is at work.
+        if (entry.shown && !connections.getProcess(entry.sessionId)) {
+          const holder = await askHolderActivity(entry.sessionId);
+          if (screens.get(connectionId) !== screen || screen.tracked.get(entry.sessionId) !== entry) return;
+          // Another window's backend runs it (and answered): what a tab here does is handed to that backend.
+          connections.setHeldElsewhere(entry.sessionId, holder !== undefined);
+          if (holder) {
+            const working =
+              (holder.turnStartedAt !== undefined && holder.turnStartedAt !== null) ||
+              holder.activity === SessionActivity.Running ||
+              holder.activity === SessionActivity.Awaiting;
+            if (working) markRunning(entry, connections, graceMs);
+            else if (holder.turnStartedAt === null) {
+              // It knows its own turns and says none is in flight. A message it was handed at the end of a turn starts
+              // the next one at once, though that turn's first output comes seconds later: input the transcript shows
+              // unanswered is a turn that is about to show itself, not work that is over.
+              const pending = await userInputUnanswered(entry.file);
+              if (screens.get(connectionId) !== screen || screen.tracked.get(entry.sessionId) !== entry) return;
+              if (pending) markRunning(entry, connections, graceMs);
+              else stopRunning(entry, connections);
+            }
+          }
+        }
       }),
     ).finally(() => {
       looking = false;
@@ -158,7 +215,8 @@ async function track(
 ): Promise<void> {
   let file: string;
   try {
-    file = join(await getProjectSessionsPath(workingDir), `${sessionId}.jsonl`);
+    // Where the session really is: the screen's folder, or else wherever a session started for another project is.
+    file = (await findSessionTranscript(sessionId, workingDir)) ?? join(await getProjectSessionsPath(workingDir), `${sessionId}.jsonl`);
   } catch {
     return; // no folder to look in: nothing to follow
   }

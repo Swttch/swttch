@@ -2,6 +2,7 @@ import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { sendInterruptToProcess } from '../claude-process';
+import { forwardToHolder } from '../forward-to-holder';
 import { clearAccountPoolRecovery } from '../features/account-pool-recovery-store';
 import { Claude } from '../claude';
 import { MessageType } from '../../shared';
@@ -40,6 +41,10 @@ export function stopSessionHandler(
         console.error('[node-backend]', `Interrupt failed, falling back to SIGTERM for ${sessionId}`);
         Claude.killTree(session.process);
       }
+    } else {
+      // The session's CLI may belong to the backend of another IDE window, which this tab only watches: the stop
+      // is handed to that backend, the only one that can write to the CLI (see stopGenerationHandler).
+      void forwardToHolder(sessionId, { action: 'interrupt' });
     }
   }
   connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId });

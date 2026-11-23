@@ -1342,5 +1342,8 @@
   "answerNotDelivered": {
     "otherBackend": "此工作階段正在另一個視窗中執行，因此需要在那裡回答問題。你的回答未送出。",
     "notRunning": "此工作階段中 Claude 未在執行，因此你的回答未送出。請傳送一則訊息以重新啟動。"
+  },
+  "messageNotDelivered": {
+    "heldElsewhere": "此工作階段正在另一個視窗中執行，該視窗未接收你的訊息。請重新傳送，或在該視窗中傳送。"
   }
 }

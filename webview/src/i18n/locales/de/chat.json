@@ -1362,5 +1362,8 @@
   "answerNotDelivered": {
     "otherBackend": "Diese Sitzung läuft in einem anderen Fenster, daher muss die Frage dort beantwortet werden. Deine Antwort wurde nicht gesendet.",
     "notRunning": "Für diese Sitzung läuft Claude nicht, daher wurde deine Antwort nicht gesendet. Sende eine Nachricht, um Claude neu zu starten."
+  },
+  "messageNotDelivered": {
+    "heldElsewhere": "Diese Sitzung läuft in einem anderen Fenster, und dieses Fenster hat deine Nachricht nicht angenommen. Sende sie erneut oder sende sie aus jenem Fenster."
   }
 }

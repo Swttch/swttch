@@ -92,7 +92,8 @@ import {
   invertKeyLabel,
   ComposerKeyAction,
 } from '@/utils/composerShortcut';
-import { FollowUpBehavior, resolveFollowUpBehavior } from '@/shared';
+import { FollowUpBehavior, SessionActivity, resolveFollowUpBehavior } from '@/shared';
+import { useSessionActivity } from '@/hooks/useSessionActivity';
 import { arrowRecallsHistory } from './caretAtEdge';
 import { basename } from './basename';
 import {
@@ -925,7 +926,17 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
     }
   }, [currentSessionId, clearAttachments]);
 
+  // A session another IDE window's backend runs: this tab only watches it (its stream is the transcript), so nothing
+  // here says it is working. The backends say so through the session activity, and the stop button follows it: the stop
+  // is handed to the backend that runs the CLI. Only for a session such a backend holds: one that runs in the desktop
+  // app or in a program of its own cannot be stopped from here.
+  const { activity: sessionActivity, heldElsewhere } = useSessionActivity();
+  const doingElsewhere = currentSessionId ? sessionActivity[currentSessionId] : undefined;
+  const runningElsewhere =
+    !!currentSessionId && heldElsewhere.has(currentSessionId) && (doingElsewhere === SessionActivity.Running || doingElsewhere === SessionActivity.Awaiting);
+
   const isActive = isStreaming
+    || runningElsewhere
     || sessionState === SessionState.WaitingPermission
     || sessionState === SessionState.HasDiff;
 

@@ -855,12 +855,14 @@ export async function ensureClaudeProcess(
   if (conflict) {
     if (conflict.ownerAlive) {
       const reason =
-        `Session ${targetSessionId} is already active under another backend ` +
-        `(CLI PID ${conflict.entry.pid}, backend PID ${conflict.entry.owner.pid}). ` +
-        'Refusing to start a second writer on the same session.';
+        `Session ${targetSessionId} is running in another IDE window ` +
+        `(CLI PID ${conflict.entry.pid}, backend PID ${conflict.entry.owner.pid}) and that window did not take the message. ` +
+        'Send it from that window, or wait until the turn ends. Refusing to start a second writer on the same session.';
       console.error('[node-backend]', reason);
       connections.broadcastToSession(targetSessionId, MessageType.SERVICE_ERROR, {
         type: MessageType.SPAWN_ERROR,
+        // The screen words this as a notice and leaves the composer open: the person can send it again from this tab.
+        cause: 'heldElsewhere',
         reason,
         error: reason,
       });
