@@ -24,6 +24,7 @@ import {
   CONFIG_DIR_ENV_KEY,
   LEGACY_SHOW_DIFF_IN_IDE_KEY,
   DIFF_SURFACE_KEY,
+  DESKTOP_SCALE_MARKER_KEY,
 } from '../settings-migration';
 import { DiffSurface } from '../../../shared';
 
@@ -302,7 +303,7 @@ describe('migrateSettingsToCorrectStore', () => {
         language: 'korean',
         permissions: { defaultMode: 'auto' },
       });
-      mockReadSettingsFile.mockResolvedValue({ theme: 'dark', fontSize: 13 });
+      mockReadSettingsFile.mockResolvedValue({ theme: 'dark', fontSize: 13, desktopScaleMigrated: true });
 
       await migrateSettingsToCorrectStore();
 
@@ -356,7 +357,7 @@ describe('migrateSettingsToCorrectStore', () => {
     });
 
     it('does nothing when the legacy key is absent', async () => {
-      mockReadSettingsFile.mockResolvedValue({});
+      mockReadSettingsFile.mockResolvedValue({ [DESKTOP_SCALE_MARKER_KEY]: true });
 
       await migrateSettingsToCorrectStore();
 
@@ -366,7 +367,7 @@ describe('migrateSettingsToCorrectStore', () => {
     // Idempotency: the first run clears the legacy key, so a second run reads an
     // app store without it and has nothing to do.
     it('does nothing when the legacy key was already cleared to null', async () => {
-      mockReadSettingsFile.mockResolvedValue({ [LEGACY_SHOW_DIFF_IN_IDE_KEY]: null });
+      mockReadSettingsFile.mockResolvedValue({ [LEGACY_SHOW_DIFF_IN_IDE_KEY]: null, [DESKTOP_SCALE_MARKER_KEY]: true });
 
       await migrateSettingsToCorrectStore();
 
@@ -416,6 +417,45 @@ describe('migrateSettingsToCorrectStore', () => {
         LEGACY_SHOW_DIFF_IN_IDE_KEY,
         null,
       );
+    });
+  });
+
+  // The base font size's default moved from 13 to 16 (the desktop app's 1rem). A stored 13 is the old default; it moves
+  // once, and the marker keeps a later deliberate 13 where the user put it.
+  describe('font size default 13 → 16', () => {
+    it('moves the old default and marks the migration done', async () => {
+      mockReadSettingsFile.mockResolvedValue({ fontSize: 13 });
+
+      await migrateSettingsToCorrectStore();
+
+      expect(mockSaveSettingToFile).toHaveBeenCalledWith('fontSize', 16);
+      expect(mockSaveSettingToFile).toHaveBeenCalledWith(DESKTOP_SCALE_MARKER_KEY, true);
+    });
+
+    it('leaves a size the user chose, and still marks the migration done', async () => {
+      mockReadSettingsFile.mockResolvedValue({ fontSize: 14 });
+
+      await migrateSettingsToCorrectStore();
+
+      expect(mockSaveSettingToFile).not.toHaveBeenCalledWith('fontSize', expect.anything());
+      expect(mockSaveSettingToFile).toHaveBeenCalledWith(DESKTOP_SCALE_MARKER_KEY, true);
+    });
+
+    it('does not move a 13 chosen after the migration ran', async () => {
+      mockReadSettingsFile.mockResolvedValue({ fontSize: 13, [DESKTOP_SCALE_MARKER_KEY]: true });
+
+      await migrateSettingsToCorrectStore();
+
+      expect(mockSaveSettingToFile).not.toHaveBeenCalled();
+    });
+
+    it('is not marked when the move failed, so the next startup tries again', async () => {
+      mockReadSettingsFile.mockResolvedValue({ fontSize: 13 });
+      mockSaveSettingToFile.mockResolvedValue({ status: 'error', error: 'disk full' });
+
+      await migrateSettingsToCorrectStore();
+
+      expect(mockSaveSettingToFile).not.toHaveBeenCalledWith(DESKTOP_SCALE_MARKER_KEY, true);
     });
   });
 });

@@ -12,11 +12,11 @@
 }
 
 .morph-fade-end {
-  mask-image: linear-gradient(to right, black calc(100% - 1.5rem), transparent);
+  mask-image: linear-gradient(to right, black calc(100% - 1.35rem), transparent);
 }
 
 [dir='rtl'] .morph-fade-end {
-  mask-image: linear-gradient(to left, black calc(100% - 1.5rem), transparent);
+  mask-image: linear-gradient(to left, black calc(100% - 1.35rem), transparent);
 }
 
 .morph-text-animated {

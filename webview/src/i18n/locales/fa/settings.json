@@ -373,7 +373,20 @@
       "lineSpacing": {
         "label": "فاصله خطوط",
         "description": "ارتفاع خط متن پیام‌های گفتگو"
-      }
+      },
+      "chatFont": {
+        "label": "فونت گفتگو",
+        "description": "فونت متن گفتگو و رابط کاربری. در JetBrains IDE می‌توانید از فونت رابط IDE پیروی کنید."
+      },
+      "codeFont": {
+        "label": "فونت کد",
+        "description": "فونت بلوک‌های کد، خروجی ابزارها و تفاوت‌ها (diff) (فقط فونت‌های هم‌عرض). در JetBrains IDE می‌توانید از فونت ویرایشگر IDE پیروی کنید."
+      },
+      "fontDefault": "پیش‌فرض",
+      "fontFollowIde": "پیروی از IDE",
+      "fontLoadAll": "نمایش همه فونت‌های نصب‌شده…",
+      "fontSearch": "جستجوی فونت",
+      "fontNoMatch": "فونتی مطابقت ندارد"
     },
     "softWrap": {
       "label": "شکستن خودکار خط",

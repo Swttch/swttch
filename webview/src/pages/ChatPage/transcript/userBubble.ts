@@ -8,4 +8,4 @@
  * for the bubble's own width under `break-words` (it only breaks the word once it overflows), so the bubble grew past
  * the line and, sitting against the right edge, ran off the left of the screen with its first letters cut.
  */
-export const USER_BUBBLE_CLASS = 'max-w-[37rem] min-w-0 rounded-2xl bg-surface-hover px-[1.05rem] py-[0.84375rem]';
+export const USER_BUBBLE_CLASS = 'max-w-[33.3rem] min-w-0 rounded-[0.9rem] bg-surface-hover px-[0.945rem] py-[0.7594rem]';

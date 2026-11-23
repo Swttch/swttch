@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { StickySendHeader } from '../StickySendHeader';
 import { FOLD_MAX_HEIGHT, FOLD_MIN_HEIGHT, PINNED_TOP_INSET } from '../useScrollFold';
 import { useScrollFoldValue } from '../ScrollFoldContext';
-import { TopBarProvider } from '@/contexts/TopBarContext';
+import { TopBarProvider, TOP_BAR_HEIGHT } from '@/contexts/TopBarContext';
 import { ChatFollowContext } from '../ChatFollowContext';
 
 /**
@@ -122,7 +122,7 @@ describe('StickySendHeader', () => {
   it('keeps the band behind the top bar out of the viewport it watches for the pin', () => {
     render(<StickySendHeader onClick={() => {}}>msg</StickySendHeader>);
 
-    expect(observedRootMargin).toBe('-40px 0px 0px 0px');
+    expect(observedRootMargin).toBe(`-${TOP_BAR_HEIGHT}px 0px 0px 0px`);
   });
 
   it('watches the whole viewport for the pin when the top bar is hidden, since nothing sits behind it', () => {

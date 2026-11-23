@@ -1615,6 +1615,15 @@ class ClaudeCodePanel(
             val sb = StringBuilder()
             sb.append(setPropertyJs("--ide-selection-bg", hex(selBg)))
             sb.append(setPropertyJs("--ide-selection-fg", hex(selFg)))
+            // The editor font, for the code font setting's "Use IDE editor font" (issue #729). Only a name made of
+            // the characters a font name is made of is handed over, see [IdeEditorFont].
+            // A font that cannot be handed over (a system-internal name, say) removes the variable, so a value from
+            // before (the IDE's custom font that was just switched off) does not stay behind.
+            sb.append(setOrRemovePropertyJs("--ccg-ide-editor-font", IdeEditorFont.cssValueOrNull(scheme.editorFontName)))
+            // The font of the IDE's own interface, for the chat font's "Follow IDE", and the families installed on this
+            // computer, for the dropdowns.
+            sb.append(setOrRemovePropertyJs("--ccg-ide-ui-font", IdeEditorFont.cssValueOrNull(UIUtil.getLabelFont().family)))
+            sb.append(IdeEditorFont.installedFamiliesScript)
             for ((name, color) in vars) {
                 // Emit both the hex form and an `R G B` channel triple. Tailwind
                 // utilities in this project apply opacity modifiers (`/NN`) to the
@@ -1647,6 +1656,9 @@ class ClaudeCodePanel(
      * Builds a `style.setProperty` call. Values are generated locally from color
      * channels ([hex]/[channels]), so they contain no quotes or newlines to escape.
      */
+    private fun setOrRemovePropertyJs(name: String, value: String?): String =
+        if (value != null) setPropertyJs(name, value) else "document.documentElement.style.removeProperty('$name');"
+
     private fun setPropertyJs(name: String, value: String): String =
         "document.documentElement.style.setProperty('$name', '$value');"
 

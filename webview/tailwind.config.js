@@ -125,8 +125,16 @@ export default {
         focus: 'rgb(var(--border-focus-rgb) / <alpha-value>)',
       },
       fontFamily: {
-        'ide-ui': 'var(--ide-font-ui)',
-        'ide-code': 'var(--ide-font-code)',
+        // The chat font and the code font of Settings → Appearance (issue #729) take the place of the built-in fonts
+        // wherever a class names a font: `font-sans`, `font-mono` and the two below. Unset, each is its old font.
+        'ide-ui': 'var(--user-font-ui, var(--ide-font-ui))',
+        'ide-code': 'var(--user-font-code, var(--ide-font-code))',
+        sans: [
+          'var(--user-font-ui, ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji")',
+        ],
+        mono: [
+          'var(--user-font-code, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace)',
+        ],
       },
       animation: {
         'fade-in': 'fadeIn 0.2s ease-out',

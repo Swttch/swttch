@@ -8,4 +8,6 @@ export interface SelectOption {
    * plays while the pointer is on that icon (not on the row) and stops when it leaves.
    */
   previewUrl?: string;
+  /** A CSS font-family: the option (and the trigger when selected) is written in that font, as a font picker does. */
+  fontFamily?: string;
 }

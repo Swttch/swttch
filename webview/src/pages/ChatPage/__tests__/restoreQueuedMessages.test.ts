@@ -141,4 +141,28 @@ describe('restoreQueuedMessages', () => {
 
     expect(result).toBe(messages);
   });
+
+  it('restores a message that carried images, with the images, from the attachment that holds the same message', () => {
+    const blocks = [
+      { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'AAAA' } },
+      { type: 'text', text: 'look at this picture' },
+    ];
+    const messages = [
+      user('u1', 'first'),
+      // The image is not text, so the CLI enqueues the message without a content.
+      { type: 'queue-operation', operation: 'enqueue', timestamp: '2026-11-22T16:07:13.413Z' } as unknown as LoadedMessageDto,
+      { ...queueOp('remove', 'look at this picture', '2026-11-22T16:07:27.582Z'), commandUuid: 'cmd-1' } as unknown as LoadedMessageDto,
+      {
+        type: 'attachment',
+        uuid: 'att-1',
+        attachment: { type: 'queued_command', prompt: blocks, source_uuid: 'cmd-1', origin: { kind: 'human' } },
+      } as unknown as LoadedMessageDto,
+      assistant('a1', 'seen'),
+    ];
+
+    const result = restoreQueuedMessages(messages);
+
+    const restored = result.find(m => m.uuid?.startsWith('queued-'));
+    expect(restored?.message?.content).toEqual(blocks);
+  });
 });

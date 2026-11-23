@@ -16,7 +16,7 @@ const CLAMP: Record<number, string> = { 1: 'line-clamp-1', 2: 'line-clamp-2', 3:
  * reply feature (the bubble, the cards, the dialog, the reply box) goes through this, so they look alike.
  */
 export function QuoteBlock({ children, clamp, size = 'md', className = '' }: Props) {
-  const text = size === 'sm' ? 'text-[0.7692rem] leading-[1.4]' : 'text-[1rem] leading-[1.55]';
+  const text = size === 'sm' ? 'text-[0.7692rem] leading-[1.4]' : 'text-[1rem] leading-[var(--chat-line-height,1.6)]';
   const gap = size === 'sm' ? 'gap-1.5' : 'gap-3';
   const bar = size === 'sm' ? 'w-[2px]' : 'w-[3px]';
   return (

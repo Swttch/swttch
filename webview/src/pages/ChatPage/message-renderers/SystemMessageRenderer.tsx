@@ -32,8 +32,8 @@ export const SystemMessageRenderer: React.FC<SystemMessageRendererProps> = ({ me
   if (reply) return <AssistantMessageRenderer message={reply} />;
 
   return (
-    <div className="justify-center py-3 hidden">
-      <div className="px-4 py-2 bg-surface-hover border border-border-default/50 rounded-lg text-[0.7692rem] text-text-secondary font-mono">
+    <div className="justify-center py-[0.675rem] hidden">
+      <div className="px-[0.9rem] py-[0.45rem] bg-surface-hover border border-border-default/50 rounded-[0.45rem] text-[0.6923rem] text-text-secondary font-mono">
         {getTextContent(message)}
       </div>
     </div>

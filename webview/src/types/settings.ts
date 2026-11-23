@@ -22,7 +22,13 @@ export const RUN_VIEW_PLACEMENTS: readonly RunViewPlacement[] = ['side', 'center
  * streaming.css (`.streaming-message` etc.) so turning the setting off/absent
  * renders exactly as before. Kept in sync with the backend validator range.
  */
-export const LINE_HEIGHT_DEFAULT = 1.6;
+/**
+ * The line spacing the desktop app draws a reply with when the reader has not chosen one: 1.6 for Korean, Japanese and
+ * Chinese (their text is set looser), 1.5 for every other language. It is what an empty line spacing setting means.
+ */
+export function defaultLineHeightFor(language: string | undefined): number {
+  return /^(ko|ja|zh)(-|_|$)/i.test(language ?? '') ? 1.6 : 1.5;
+}
 export const LINE_HEIGHT_MIN = 0.5;
 export const LINE_HEIGHT_MAX = 10;
 export const LINE_HEIGHT_STEP = 0.1;
@@ -46,6 +52,12 @@ export enum SettingKey {
   // Independent of FONT_SIZE: effective text size is fontSize × zoomLevel.
   ZOOM_LEVEL = 'zoomLevel',
   LINE_HEIGHT = 'lineHeight',
+  // The typeface of the chat text and of code (code blocks, tool output, diffs). null = the built-in fonts.
+  // CHAT_FONT_FROM_IDE takes the font of the IDE interface and CODE_FONT_FROM_IDE the IDE editor font instead (JetBrains mode); they win over the family.
+  CHAT_FONT_FAMILY = 'chatFontFamily',
+  CHAT_FONT_FROM_IDE = 'chatFontFromIde',
+  CODE_FONT_FAMILY = 'codeFontFamily',
+  CODE_FONT_FROM_IDE = 'codeFontFromIde',
   AUTO_SCROLL_THRESHOLD = 'autoScrollThreshold',
   // Fold long lines to the width of the code block instead of scrolling them
   // sideways — diffs, tool input/output, and the other monospace blocks that
@@ -506,7 +518,12 @@ export interface SettingsState {
   [SettingKey.THEME]: ThemeMode;
   [SettingKey.FONT_SIZE]: number;
   [SettingKey.ZOOM_LEVEL]: number;
-  [SettingKey.LINE_HEIGHT]: number;
+  /** null = the desktop app's line spacing for the UI language (see defaultLineHeightFor). */
+  [SettingKey.LINE_HEIGHT]: number | null;
+  [SettingKey.CHAT_FONT_FAMILY]: string | null;
+  [SettingKey.CHAT_FONT_FROM_IDE]: boolean;
+  [SettingKey.CODE_FONT_FAMILY]: string | null;
+  [SettingKey.CODE_FONT_FROM_IDE]: boolean;
   [SettingKey.AUTO_SCROLL_THRESHOLD]: number;
   [SettingKey.SOFT_WRAP]: boolean;
   [SettingKey.DEBUG_MODE]: boolean;
@@ -561,9 +578,14 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.CLI_PATH]: null,
   [SettingKey.NODE_PATH]: null,
   [SettingKey.THEME]: ThemeMode.SYSTEM,
-  [SettingKey.FONT_SIZE]: 13,
+  // 16: 1rem is the desktop app's 16px, which the Transcript view modes' sizes are written in.
+  [SettingKey.FONT_SIZE]: 16,
   [SettingKey.ZOOM_LEVEL]: ZOOM_DEFAULT,
-  [SettingKey.LINE_HEIGHT]: LINE_HEIGHT_DEFAULT,
+  [SettingKey.LINE_HEIGHT]: null,
+  [SettingKey.CHAT_FONT_FAMILY]: null,
+  [SettingKey.CHAT_FONT_FROM_IDE]: false,
+  [SettingKey.CODE_FONT_FAMILY]: null,
+  [SettingKey.CODE_FONT_FROM_IDE]: false,
   [SettingKey.AUTO_SCROLL_THRESHOLD]: AUTO_SCROLL_THRESHOLD_DEFAULT,
   [SettingKey.SOFT_WRAP]: false,
   [SettingKey.DEBUG_MODE]: false,

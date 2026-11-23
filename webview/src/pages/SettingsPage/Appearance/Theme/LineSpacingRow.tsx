@@ -2,7 +2,7 @@ import { SettingRow } from '../../common';
 import { useSettings } from '@/contexts/SettingsContext';
 import {
   SettingKey,
-  LINE_HEIGHT_DEFAULT,
+  defaultLineHeightFor,
   LINE_HEIGHT_MIN,
   LINE_HEIGHT_MAX,
   LINE_HEIGHT_STEP,
@@ -12,12 +12,12 @@ import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsSc
 
 /** How far apart the lines of a chat message sit, as a multiplier. */
 export function LineSpacingRow() {
-  const { t } = useTranslation('settings');
+  const { t, i18n } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { updateSetting, scope, resetToGlobal } = useSettings();
   const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
-  const rawLineHeight = displaySettings[SettingKey.LINE_HEIGHT] as number | undefined;
+  const rawLineHeight = displaySettings[SettingKey.LINE_HEIGHT] as number | null | undefined;
   const inherited = isInherited(SettingKey.LINE_HEIGHT);
 
   return (
@@ -33,13 +33,15 @@ export function LineSpacingRow() {
         min={LINE_HEIGHT_MIN}
         max={LINE_HEIGHT_MAX}
         step={LINE_HEIGHT_STEP}
-        value={rawLineHeight ?? LINE_HEIGHT_DEFAULT}
+        value={rawLineHeight ?? ''}
+        placeholder={String(defaultLineHeightFor(i18n.language))}
         onChange={(e) => {
           const value = e.target.value;
           if (value === '') {
-            if (scope === 'project') {
-              resetToGlobal(SettingKey.LINE_HEIGHT);
-            }
+            // Empty means "the desktop app's value for the language": the project goes back to the global one, and
+            // the global setting itself goes back to unset.
+            if (scope === 'project') resetToGlobal(SettingKey.LINE_HEIGHT);
+            else updateSetting(SettingKey.LINE_HEIGHT, null);
             return;
           }
           const parsed = parseFloat(value);

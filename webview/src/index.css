@@ -638,7 +638,7 @@ html, body {
 }
 
 body {
-  font-family: var(--ide-font-ui);
+  font-family: var(--user-font-ui, var(--ide-font-ui));
   background-color: var(--surface-base);
   color: var(--text-primary);
 }
@@ -719,7 +719,7 @@ body {
 
 .diff-viewer .diff-code {
   white-space: pre;
-  font-family: var(--ide-font-code);
+  font-family: var(--user-font-code, var(--ide-font-code));
   font-size: 0.875rem;
 }
 

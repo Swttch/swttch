@@ -45,7 +45,7 @@ export function changedFilesOf(body: LoadedMessageDto[]): FileTotal[] {
 
 function Counts({ stats }: { stats: LineStats }) {
   return (
-    <span className="flex flex-shrink-0 items-baseline gap-[0.55rem] text-[0.9656rem]">
+    <span className="flex flex-shrink-0 items-baseline gap-[0.495rem] text-[0.869rem]">
       <span className="text-[rgb(98,190,102)]">+{stats.added}</span>
       <span className="text-[rgb(214,69,96)]">−{stats.removed}</span>
     </span>
@@ -72,11 +72,11 @@ function UndoButton({ paths }: { paths: string[] }) {
   const send = stream?.sendMessage;
   if (!send || inputMode === undefined) return null;
   return (
-    <Tooltip content={t('transcript.fileChanges.undoHint')} desktop="large" maxWidth="10.5rem">
+    <Tooltip content={t('transcript.fileChanges.undoHint')} desktop="large" maxWidth="9.45rem">
       <button
         type="button"
         onClick={() => send(undoPromptOf(paths), inputMode)}
-        className="-my-1 rounded-[0.4375rem] px-[0.55rem] py-[0.2062rem] text-text-secondary transition-colors hover:bg-text-primary/[0.1] hover:text-text-primary"
+        className="-my-[0.225rem] rounded-[0.3937rem] px-[0.495rem] py-[0.1856rem] text-text-secondary transition-colors hover:bg-text-primary/[0.1] hover:text-text-primary"
       >
         {t('transcript.fileChanges.undo')}
       </button>
@@ -97,13 +97,13 @@ export function TranscriptFileChanges({ body, hidden }: { body: LoadedMessageDto
   const files = useMemo(() => changedFilesOf(body), [body]);
   const [all, setAll] = useState(false);
   if (hidden || files.length < 1) return null;
-  const border = 'rounded-[0.6875rem] border border-text-primary/[0.07]';
+  const border = 'rounded-[0.6188rem] border border-text-primary/[0.07]';
   if (files.length === 1) {
     const [file] = files;
     return (
-      <div className="pb-[0.25rem] pt-[1.8rem]" data-transcript-file-changes>
-        <div className={`flex h-[2.775rem] items-center gap-[0.625rem] px-[1.0625rem] text-[0.9656rem] text-text-primary transition-colors hover:bg-text-primary/[0.065] ${border}`}>
-          <DocumentIcon className="h-4 w-4 flex-shrink-0 text-text-secondary" />
+      <div className="pb-[0.225rem] pt-[1.62rem]" data-transcript-file-changes>
+        <div className={`flex h-[2.4974rem] items-center gap-[0.5624rem] px-[0.9563rem] text-[0.869rem] text-text-primary transition-colors hover:bg-text-primary/[0.065] ${border}`}>
+          <DocumentIcon className="h-[0.9rem] w-[0.9rem] flex-shrink-0 text-text-secondary" />
           <span className="min-w-0 flex-1 truncate">{baseName(file.path)}</span>
           <UndoButton paths={[file.path]} />
           <Counts stats={file.stats} />
@@ -116,16 +116,16 @@ export function TranscriptFileChanges({ body, hidden }: { body: LoadedMessageDto
     { added: 0, removed: 0 },
   );
   return (
-    <div className="pb-[0.25rem] pt-[1.8rem]" data-transcript-file-changes>
-      <div className={`overflow-hidden text-[0.9656rem] text-text-primary ${border}`}>
-        <div className="flex h-[2.625rem] items-center justify-between border-b border-text-primary/[0.07] px-[1.0625rem]">
+    <div className="pb-[0.225rem] pt-[1.62rem]" data-transcript-file-changes>
+      <div className={`overflow-hidden text-[0.869rem] text-text-primary ${border}`}>
+        <div className="flex h-[2.3624rem] items-center justify-between border-b border-text-primary/[0.07] px-[0.9563rem]">
           <span>{t('transcript.fileChanges.title', { count: files.length })}</span>
           <UndoButton paths={files.map((file) => file.path)} />
         </div>
-        <div className="flex flex-col px-[0.34rem] py-[0.3rem]">
+        <div className="flex flex-col px-[0.306rem] py-[0.27rem]">
           {(files.length > SHOWN_FILES && !all ? files.slice(0, SHOWN_FILES) : files).map((file) => (
-            <div key={file.path} className="flex h-[1.9062rem] items-center gap-[0.625rem] rounded-[0.4rem] px-[0.72rem] transition-colors hover:bg-text-primary/[0.065]">
-              <DocumentIcon className="h-4 w-4 flex-shrink-0 text-text-secondary" />
+            <div key={file.path} className="flex h-[1.7156rem] items-center gap-[0.5624rem] rounded-[0.36rem] px-[0.648rem] transition-colors hover:bg-text-primary/[0.065]">
+              <DocumentIcon className="h-[0.9rem] w-[0.9rem] flex-shrink-0 text-text-secondary" />
               <span className="min-w-0 flex-1 truncate">{baseName(file.path)}</span>
               <Counts stats={file.stats} />
             </div>
@@ -134,13 +134,13 @@ export function TranscriptFileChanges({ body, hidden }: { body: LoadedMessageDto
             <button
               type="button"
               onClick={() => setAll((open) => !open)}
-              className="flex h-[1.9062rem] items-center justify-between rounded-[0.4rem] px-[0.72rem] text-start transition-colors hover:bg-text-primary/[0.065]"
+              className="flex h-[1.7156rem] items-center justify-between rounded-[0.36rem] px-[0.648rem] text-start transition-colors hover:bg-text-primary/[0.065]"
             >
               <span>{t(all ? 'transcript.fileChanges.viewLess' : 'transcript.fileChanges.viewAll')}</span>
               <Counts stats={total} />
             </button>
           ) : (
-            <div className="flex h-[1.9062rem] items-center justify-between rounded-[0.4rem] px-[0.72rem]">
+            <div className="flex h-[1.7156rem] items-center justify-between rounded-[0.36rem] px-[0.648rem]">
               <span>{t('transcript.fileChanges.total')}</span>
               <Counts stats={total} />
             </div>

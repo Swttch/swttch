@@ -154,7 +154,7 @@ const TranscriptSection = memo(function TranscriptSection({
       )}
       {/* Sent while the card holds the turn: right after the latest message, above the calls still running, as in the desktop app. */}
       {awaitingInput && <TranscriptHeldMessages />}
-      <div ref={lastBodyRef ?? undefined} data-section-body data-after-send={section.head ? '' : undefined} className={`${section.body.length > 0 || (isLast && streaming) ? 'pt-[0.1875rem] ' : ''}${!isLast ? (section.body.length > 0 ? 'pb-[2.2188rem]' : 'pb-[0.8125rem]') : streaming || awaitingInput ? 'pb-0' : 'pb-[3.375rem]'}`}>
+      <div ref={lastBodyRef ?? undefined} data-section-body data-after-send={section.head ? '' : undefined} className={`${section.body.length > 0 || (isLast && streaming) ? 'pt-[0.1688rem] ' : ''}${!isLast ? (section.body.length > 0 ? 'pb-[1.9969rem]' : 'pb-[0.7313rem]') : streaming || awaitingInput ? 'pb-0' : 'pb-[3.0376rem]'}`}>
         <TranscriptBody body={section.body} mergedMessagesRef={mergedMessagesRef} onRetry={onRetry} turnRunning={streaming} sectionKey={section.key} waiting={isLast ? <TranscriptPendingMessages /> : undefined} />
         {/* The turn's wrap-up is drawn here, after its last message, not where its call sits: a recap as text until the closing message begins, then the question and its answers. */}
         <TranscriptWrapUp body={section.body} next={nextHead} />
@@ -252,7 +252,7 @@ export function TranscriptArea(props: TranscriptAreaProps) {
     if (isJetBrains()) {
       return (
         <div className="h-full flex items-center justify-center">
-          <p className="text-text-tertiary text-sm">{t('chatMessageArea.loadingWorkingDirectory')}</p>
+          <p className="text-text-tertiary text-[0.7874rem] leading-[1.125rem]">{t('chatMessageArea.loadingWorkingDirectory')}</p>
         </div>
       );
     }
@@ -262,20 +262,20 @@ export function TranscriptArea(props: TranscriptAreaProps) {
   if (isEmpty) return <EmptyState />;
 
   return (
-    <div ref={containerRef} className="flex-1 w-full max-w-[calc(var(--chat-column-max,70rem)_-_var(--chat-column-px,2rem))] mx-auto sm:px-4 text-xs antialiased">
+    <div ref={containerRef} className="flex-1 w-full max-w-[calc(var(--chat-column-max,70rem)_-_var(--chat-column-px,2rem))] mx-auto sm:px-4 antialiased">
       <ChatSearchBar search={search} />
       <SelectionReplyLayer containerRef={containerRef} />
       {(isLoadingMore || hasMore) && (
-        <div className="flex justify-center py-4">
+        <div className="flex justify-center py-[0.9rem]">
           {isLoadingMore ? (
-            <span className="inline-flex items-center gap-2 text-xs text-text-tertiary">
-              <span className="w-3.5 h-3.5 border-2 border-border-default border-t-text-secondary rounded-full animate-spin" />
+            <span className="inline-flex items-center gap-[0.45rem] text-[0.675rem] leading-[0.9rem] text-text-tertiary">
+              <span className="w-[0.7874rem] h-[0.7874rem] border-2 border-border-default border-t-text-secondary rounded-full animate-spin" />
               {t('chatMessageArea.loadingEarlierMessages')}
             </span>
           ) : (
             <button
               onClick={onLoadMore}
-              className="px-4 py-1.5 bg-surface-raised border border-border-default rounded-full text-xs font-medium text-text-secondary hover:bg-surface-hover hover:text-text-primary transition-colors duration-200 shadow-sm"
+              className="px-4 py-[0.3376rem] bg-surface-raised border border-border-default rounded-full text-[0.675rem] leading-[0.9rem] font-medium text-text-secondary hover:bg-surface-hover hover:text-text-primary transition-colors duration-200 shadow-sm"
             >
               {t('chatMessageArea.loadOlderMessages')}
             </button>

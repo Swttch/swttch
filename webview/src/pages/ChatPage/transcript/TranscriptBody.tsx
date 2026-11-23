@@ -71,7 +71,7 @@ function TranscriptBlocks({
               plain
               content={thinking.thinking}
               isStreaming={streaming}
-              className="text-[var(--tr-text)] text-[1.02rem] leading-[1.3]"
+              className="text-[var(--tr-text)] text-[0.9375rem] leading-[1.3]"
               message={message}
             />
           );
@@ -90,14 +90,14 @@ function TranscriptBlocks({
               content={text}
               isStreaming={streaming}
               fadeWords={liveTail && index === blocks.length - 1}
-              className={`text-[var(--tr-text)] text-[1.02rem] leading-[1.3]${summaryShown && showFooter && !streaming ? ' [&_.markdown-content>*:last-child]:mb-0 [&_.markdown-content>div>*:last-child]:mb-0 [&_.markdown-content>div>ul:last-child]:pb-0 [&_.markdown-content>div>ol:last-child]:pb-0 [&_.markdown-content>div>ul:last-child>li:last-child]:pb-0 [&_.markdown-content>div>ol:last-child>li:last-child]:pb-0' : ''}`}
+              className={`text-[var(--tr-text)] text-[0.9375rem] leading-[1.3]${summaryShown && showFooter && !streaming ? ' [&_.markdown-content>*:last-child]:mb-0 [&_.markdown-content>div>*:last-child]:mb-0 [&_.markdown-content>div>ul:last-child]:pb-0 [&_.markdown-content>div>ol:last-child]:pb-0 [&_.markdown-content>div>ul:last-child>li:last-child]:pb-0 [&_.markdown-content>div>ol:last-child>li:last-child]:pb-0' : ''}`}
               message={message}
               footer={
                 streaming || !showFooter ? undefined : (
                   <>
                     {summary}
                     <TranscriptReplyFooter
-                      className="mt-1.5"
+                      className="mt-[0.3376rem]"
                       copyText={text}
                       readAloudKey={message.uuid ? `${message.uuid}:${index}` : undefined}
                       timestamp={message.timestamp}
@@ -139,7 +139,7 @@ function SegmentView({ segment, endsTurn, onRetry, summary, summaryShown, liveTa
         </div>
       );
     case 'chapter':
-      return <h3 className="px-4 pb-[1.8125rem] pt-3 text-[1rem] font-semibold leading-relaxed text-[var(--tr-text)]">{segment.title}</h3>;
+      return <h3 className="px-4 pb-[1.6313rem] pt-[0.675rem] text-[0.9rem] font-semibold leading-relaxed text-[var(--tr-text)]">{segment.title}</h3>;
     case 'taskNotice':
       return <TranscriptTaskNotice message={segment.message} />;
   }
@@ -172,7 +172,7 @@ function TranscriptPlan({ body, running }: { body: LoadedMessageDto[]; running: 
   const plan = useMemo(() => planOfTurn(body), [body]);
   if (!running || plan.length === 0) return null;
   return (
-    <div className="px-4 py-2" data-transcript-plan>
+    <div className="px-4 py-[0.45rem]" data-transcript-plan>
       <PlanBox plan={plan} running />
     </div>
   );
@@ -219,6 +219,26 @@ export const TranscriptBody = memo(function TranscriptBody({ body, mergedMessage
   // done now (see TranscriptToolRun). The plan stands above it; otherwise it stands at the very end.
   const planBefore = turnRunning && segments.length > 0 && segments[segments.length - 1].kind === 'tools' ? segments[segments.length - 1].key : null;
   const plan = <TranscriptPlan body={body} running={turnRunning} />;
+  // A run of calls right under a reply's text: prose.css takes back some of the space the two leave between them.
+  // Entries that leave nothing on screen (the summary written for the model after a compaction, system and
+  // notification entries with no line of their own) do not count as in between; a bubble, the compaction line and
+  // the CLI notice do.
+  const afterReply = useMemo(() => {
+    const keys = new Set<string>();
+    segments.forEach((segment, index) => {
+      if (segment.kind !== 'tools') return;
+      let before = index - 1;
+      while (before >= 0) {
+        const candidate = segments[before];
+        if (candidate.kind !== 'message') break;
+        const drawn = candidate.message.type === 'user' || isCompactBoundary(candidate.message) || isCliNotice(candidate.message);
+        if (drawn) break;
+        before -= 1;
+      }
+      if (before >= 0 && segments[before].kind === 'blocks') keys.add(segment.key);
+    });
+    return keys;
+  }, [segments]);
   const hasFileSummary = useMemo(() => !turnRunning && changedFilesOf(body).length > 0, [body, turnRunning]);
 
   return (
@@ -230,6 +250,7 @@ export const TranscriptBody = memo(function TranscriptBody({ body, mergedMessage
           // What kind of segment this is, for prose.css: some entries draw nothing and leave an empty
           // wrapper, so "the first thing under the bubble" cannot be read off the position in this list.
           data-seg={segment.kind}
+          data-after-reply={afterReply.has(segment.key) ? '' : undefined}
           {...entryMarker(entryOf(segment).uuid)}
           onClick={() => {
             const entry = entryOf(segment);

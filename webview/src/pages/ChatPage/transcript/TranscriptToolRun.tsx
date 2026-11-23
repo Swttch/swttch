@@ -69,9 +69,9 @@ const BOX_BORDER = 'border-border-default/70';
 function LineStatsView({ stats }: { stats: LineStats }) {
   if (stats.added === 0 && stats.removed === 0) return null;
   return (
-    <span className="flex-shrink-0 font-mono text-[0.8461rem]">
+    <span className="flex-shrink-0 font-mono text-[0.7616rem]">
       {stats.added > 0 && <span className="text-green-500">+{stats.added}</span>}
-      {stats.removed > 0 && <span className="ms-2 text-red-500">−{stats.removed}</span>}
+      {stats.removed > 0 && <span className="ms-[0.45rem] text-red-500">−{stats.removed}</span>}
     </span>
   );
 }
@@ -79,7 +79,7 @@ function LineStatsView({ stats }: { stats: LineStats }) {
 function Chevron({ open }: { open: boolean }) {
   return (
     <ChevronRightIcon
-      className={`-ms-1.5 w-4 h-4 flex-shrink-0 transition-transform rtl:-scale-x-100 ${open ? 'rotate-90 rtl:-rotate-90' : ''}`}
+      className={`-ms-[0.3376rem] w-[0.9rem] h-[0.9rem] flex-shrink-0 transition-transform rtl:-scale-x-100 ${open ? 'rotate-90 rtl:-rotate-90' : ''}`}
     />
   );
 }
@@ -96,7 +96,7 @@ function NoOutput({ call, output }: { call: ToolCall; output: string }) {
   if (output.trim() !== '' || !call.toolUse.tool_result) return null;
   // A call the user stopped has no output to wait for: it was cut off, and the desktop app says that where the output would be.
   const text = wasStopped(call) ? t('transcript.tools.interruptedNote') : t('transcript.tools.noOutput');
-  return <div className="px-1 pb-3 text-[0.9375rem] text-[var(--tr-muted)]">{text}</div>;
+  return <div className="px-[0.225rem] pb-[0.675rem] text-[0.8438rem] text-[var(--tr-muted)]">{text}</div>;
 }
 
 /** A copy button over a code box, in its top corner. */
@@ -112,10 +112,10 @@ function CopyButton({ text }: { text: string }) {
           () => toast.error(t('sendActions.copyFailed')),
         );
       }}
-      className="absolute end-2 top-2 rounded p-1 text-[var(--tr-muted)] hover:text-[var(--tr-text)] hover:bg-surface-hover"
+      className="absolute end-[0.45rem] top-[0.45rem] rounded-[0.225rem] p-[0.225rem] text-[var(--tr-muted)] hover:text-[var(--tr-text)] hover:bg-surface-hover"
       aria-label={t('sendActions.copyMessage')}
     >
-      <ClipboardDocumentIcon className="w-4 h-4" />
+      <ClipboardDocumentIcon className="w-[0.9rem] h-[0.9rem]" />
     </button>
   );
 }
@@ -127,10 +127,10 @@ function OutputText({ output }: { output: string }) {
   const rest = exit ? output.slice(exit[0].length) : output;
   if (!output) return null;
   return (
-    <div className="px-3 pb-3 font-mono text-[0.8461rem] leading-[1.5]">
+    <div className="px-[0.675rem] pb-[0.675rem] font-mono text-[0.7616rem] leading-[1.5]">
       {exit && <div className="text-red-400">{t('transcript.tools.exitCode', { code: exit[1] })}</div>}
       {rest && (
-        <pre className="mt-2 whitespace-pre-wrap break-words text-[var(--tr-muted)] max-h-[24rem] overflow-y-auto">{rest}</pre>
+        <pre className="mt-[0.45rem] whitespace-pre-wrap break-words text-[var(--tr-muted)] max-h-[21.6rem] overflow-y-auto">{rest}</pre>
       )}
     </div>
   );
@@ -139,10 +139,10 @@ function OutputText({ output }: { output: string }) {
 /** A box titled with the tool's name, around code and what it printed. */
 function CodeBox({ title, code, language, output }: { title: string; code: string; language: string; output: string }) {
   return (
-    <div className={`relative mb-2 rounded-lg border ${BOX_BORDER} overflow-hidden`} data-transcript-code-box>
-      <div className="px-3 pt-2 pb-1 text-[0.8461rem] text-[var(--tr-muted)]">{title}</div>
+    <div className={`relative mb-[0.45rem] rounded-[0.45rem] border ${BOX_BORDER} overflow-hidden`} data-transcript-code-box>
+      <div className="px-[0.675rem] pt-[0.45rem] pb-[0.225rem] text-[0.7616rem] text-[var(--tr-muted)]">{title}</div>
       <CopyButton text={code} />
-      <pre className="mx-2 mb-2 max-h-[16rem] overflow-y-auto whitespace-pre-wrap break-words rounded-md bg-surface-hover px-3 py-2 font-mono text-[0.8461rem] leading-[1.5] text-[var(--tr-text)]">
+      <pre className="mx-[0.45rem] mb-[0.45rem] max-h-[14.4rem] overflow-y-auto whitespace-pre-wrap break-words rounded-[0.3376rem] bg-surface-hover px-[0.675rem] py-[0.45rem] font-mono text-[0.7616rem] leading-[1.5] text-[var(--tr-text)]">
         {language === 'bash' && <span className="text-[var(--tr-muted)] select-none">$ </span>}
         <HighlightedCode text={code} language={language} />
       </pre>
@@ -219,10 +219,10 @@ function Thumbnails({ pictures, onOpen }: { pictures: PictureRef[]; onOpen: (pic
   const shown = pictures.slice(0, MAX_THUMBNAILS);
   const more = pictures.length - shown.length;
   return (
-    <span className="ms-auto flex flex-shrink-0 items-center gap-2">
+    <span className="ms-auto flex flex-shrink-0 items-center gap-[0.45rem]">
       {/* The pictures that are not shown are counted before the ones that are, as the desktop app does. */}
       {more > 0 && <span className="whitespace-nowrap">+{more}</span>}
-      <span data-transcript-thumbnails className="flex items-center gap-1.5">
+      <span data-transcript-thumbnails className="flex items-center gap-[0.3376rem]">
         {shown.map((picture) => (
           // The line these sit in opens and shuts on a click; a click on a thumbnail opens the picture in the viewer instead and goes no further.
           <span
@@ -241,7 +241,7 @@ function Thumbnails({ pictures, onOpen }: { pictures: PictureRef[]; onOpen: (pic
             }}
             className="flex flex-shrink-0 cursor-zoom-in"
           >
-            <img src={picture.src} alt="" className="h-7 w-auto max-w-[3.5rem] rounded-[0.1875rem] border border-border-default/70 object-contain" />
+            <img src={picture.src} alt="" className="h-[1.575rem] w-auto max-w-[3.15rem] rounded-[0.1688rem] border border-border-default/70 object-contain" />
           </span>
         ))}
       </span>
@@ -286,7 +286,7 @@ function PlainDetail({ call }: { call: ToolCall }) {
   // The text parts are joined without a break, so the note can sit at the front of a line of text; it is cut out wherever it is.
   const text = toolKindOf(call) === 'capture' ? '' : stripImageNotes(toolResultText(result).replace(/\[Image: source: [^\]]*\]/g, '\n')).trim();
   return (
-    <div className="px-1 pb-3 text-[0.9375rem] leading-[1.5] text-[var(--tr-muted)]">
+    <div className="px-[0.225rem] pb-[0.675rem] text-[0.8438rem] leading-[var(--chat-line-height,1.6)] text-[var(--tr-muted)]">
       {text && <div className="whitespace-pre-wrap break-words">{text}</div>}
       <ResultPictures call={call} />
     </div>
@@ -302,8 +302,8 @@ function ResultPictures({ call }: { call: ToolCall }) {
   return (
     <>
       {images.map((src, index) => (
-        <button key={index} type="button" onClick={() => setViewing(index)} className="mt-2 block max-w-full cursor-zoom-in">
-          <img src={src} alt="" className="block h-auto max-w-md rounded-md" />
+        <button key={index} type="button" onClick={() => setViewing(index)} className="mt-[0.45rem] block max-w-full cursor-zoom-in">
+          <img src={src} alt="" className="block h-auto max-w-md rounded-[0.3376rem]" />
         </button>
       ))}
       {viewing !== null && (
@@ -323,8 +323,8 @@ function ResultPictures({ call }: { call: ToolCall }) {
 function MarkdownDetail({ text, message, bare = false }: { text: string; message: LoadedMessageDto; bare?: boolean }) {
   // `bare` is for text that sits in a box which has its own padding: no sides or room below of its own.
   return (
-    <div className={bare ? 'transcript-prose' : 'transcript-prose px-1 pb-3'}>
-      <StreamingMessage plain content={text} isStreaming={false} className="text-[0.9375rem] leading-[1.5] text-[var(--tr-soft)]" message={message} />
+    <div className={bare ? 'transcript-prose' : 'transcript-prose pb-3'}>
+      <StreamingMessage plain content={text} isStreaming={false} className="text-sm leading-[var(--chat-line-height,1.6)]" message={message} />
     </div>
   );
 }
@@ -332,8 +332,8 @@ function MarkdownDetail({ text, message, bare = false }: { text: string; message
 /** A label in the quiet grey and the value beside it. */
 function DetailPair({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex gap-6 py-0.5">
-      <span className="w-[4.5rem] flex-shrink-0 text-[var(--tr-muted)]">{label}</span>
+    <div className="flex gap-[1.35rem] py-[0.1126rem]">
+      <span className="w-[4.05rem] flex-shrink-0 text-[var(--tr-muted)]">{label}</span>
       <span className="min-w-0 break-words text-[var(--tr-text)]">{value}</span>
     </div>
   );
@@ -344,7 +344,7 @@ function RenameDetail({ call }: { call: ToolCall }) {
   const { t } = useTranslation('chat');
   const { before, after } = renameOutcome(call);
   return (
-    <div className="px-1 pb-3 text-[0.9375rem] leading-[1.5]">
+    <div className="px-[0.225rem] pb-[0.675rem] text-[0.8438rem] leading-[var(--chat-line-height,1.6)]">
       {before && <DetailPair label={t('transcript.tools.titleBefore')} value={before} />}
       <DetailPair label={t('transcript.tools.titleAfter')} value={after} />
     </div>
@@ -356,11 +356,11 @@ function InputDetail({ call }: { call: ToolCall }) {
   const { t } = useTranslation('chat');
   const entries = Object.entries(call.toolUse.input ?? {});
   return (
-    <div className="px-1 pb-3 text-[0.9375rem] leading-[1.5]">
-      <div className="pb-1 text-[var(--tr-muted)]">{t('transcript.tools.inputHeading')}</div>
+    <div className="px-[0.225rem] pb-[0.675rem] text-[0.8438rem] leading-[var(--chat-line-height,1.6)]">
+      <div className="pb-[0.225rem] text-[var(--tr-muted)]">{t('transcript.tools.inputHeading')}</div>
       {entries.map(([key, value]) => (
-        <div key={key} className="pb-1.5">
-          <div className="text-[0.8461rem] text-[var(--tr-muted)]">{key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ').replace(/\b(id)\b/g, 'ID')}</div>
+        <div key={key} className="pb-[0.3376rem]">
+          <div className="text-[0.7616rem] text-[var(--tr-muted)]">{key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ').replace(/\b(id)\b/g, 'ID')}</div>
           <div className="break-words text-[var(--tr-text)]">{typeof value === 'string' ? value : JSON.stringify(value)}</div>
         </div>
       ))}
@@ -378,10 +378,10 @@ function InputOutputDetail({ call, withPictures = true }: { call: ToolCall; with
   return (
     <>
       <InputDetail call={call} />
-      {withPictures && <div className="px-1 pb-3"><ResultPictures call={call} /></div>}
+      {withPictures && <div className="px-[0.225rem] pb-[0.675rem]"><ResultPictures call={call} /></div>}
       {output && (
-        <div className={`mx-1 mb-3 border-t ${BOX_BORDER} pt-3 text-[0.9375rem] leading-[1.5]`}>
-          <div className="pb-1 text-[var(--tr-muted)]">{t('transcript.tools.outputHeading')}</div>
+        <div className={`mx-[0.225rem] mb-[0.675rem] border-t ${BOX_BORDER} pt-[0.675rem] text-[0.8438rem] leading-[var(--chat-line-height,1.6)]`}>
+          <div className="pb-[0.225rem] text-[var(--tr-muted)]">{t('transcript.tools.outputHeading')}</div>
           <div className="whitespace-pre-wrap break-words text-[var(--tr-muted)]">{output}</div>
         </div>
       )}
@@ -397,11 +397,11 @@ function SentMessageDetail({ call }: { call: ToolCall }) {
   const toAgent = isAgentMessage(call);
   return (
     // A box goes to the row's own sides; the plain text of a message to a session keeps the small inset.
-    <div className={toAgent ? 'pb-3' : 'px-1 pb-3'}>
-      {delivery && <div className="pb-2 text-[0.9375rem] text-[var(--tr-muted)]">{delivery === 'delivered' ? t('sendMessage.delivered') : delivery}</div>}
+    <div className={toAgent ? 'pb-[0.675rem]' : 'px-[0.225rem] pb-[0.675rem]'}>
+      {delivery && <div className="pb-[0.45rem] text-[0.8438rem] text-[var(--tr-muted)]">{delivery === 'delivered' ? t('sendMessage.delivered') : delivery}</div>}
       {/* What was said to an agent sits in a box of its own, as the desktop app draws it. */}
       {toAgent ? (
-        <div className={`rounded-xl border ${BOX_BORDER} px-4 py-3`} data-testid="agent-message-box">
+        <div className={`rounded-[0.675rem] border ${BOX_BORDER} px-4 py-[0.675rem]`} data-testid="agent-message-box">
           <MarkdownDetail text={text} message={call.message} bare />
         </div>
       ) : (
@@ -445,16 +445,16 @@ function SessionFactsDetail({ call }: { call: ToolCall }) {
     ],
   ];
   return (
-    <div className="px-1 pb-3 text-[0.9375rem] leading-[1.5]">
-      <div className="flex gap-4 px-2 py-2 text-[var(--tr-muted)]">
-        <span className="w-[6rem] flex-shrink-0">{t('transcript.tools.factField')}</span>
+    <div className="px-[0.225rem] pb-[0.675rem] text-[0.8438rem] leading-[var(--chat-line-height,1.6)]">
+      <div className="flex gap-[0.9rem] px-[0.45rem] py-[0.45rem] text-[var(--tr-muted)]">
+        <span className="w-[5.4rem] flex-shrink-0">{t('transcript.tools.factField')}</span>
         <span>{t('transcript.tools.factValue')}</span>
       </div>
       {rows
         .filter((row): row is [string, string] => row[1] !== undefined)
         .map(([label, value]) => (
-          <div key={label} className={`flex gap-4 border-t ${BOX_BORDER} px-2 py-3`}>
-            <span className="w-[6rem] flex-shrink-0 text-[var(--tr-text)]">{label}</span>
+          <div key={label} className={`flex gap-[0.9rem] border-t ${BOX_BORDER} px-[0.45rem] py-[0.675rem]`}>
+            <span className="w-[5.4rem] flex-shrink-0 text-[var(--tr-text)]">{label}</span>
             <span className="min-w-0 break-words text-[var(--tr-text)]">{value}</span>
           </div>
         ))}
@@ -493,7 +493,7 @@ export function AgentRunLink({ call }: { call: ToolCall }) {
       type="button"
       data-testid="agent-run-link"
       onClick={() => workflow.openRun(task.toolUseId)}
-      className={`group mb-2 flex w-full items-baseline gap-2 rounded-lg border ${BOX_BORDER} px-3 py-2 text-start text-[0.9375rem] ${SUMMARY_TEXT}`}
+      className={`group mb-[0.45rem] flex w-full items-baseline gap-[0.45rem] rounded-[0.45rem] border ${BOX_BORDER} px-[0.675rem] py-[0.45rem] text-start text-[0.8438rem] ${SUMMARY_TEXT}`}
     >
       {/* While the agent works the words carry the same moving light as the working line. */}
       <span className={`flex-shrink-0${running ? ' transcript-shimmer' : ''}`}>{running ? t('transcript.streaming.activity.agent') : t('transcript.tools.ranAgent')}</span>
@@ -562,11 +562,11 @@ function ToolDetail({ calls, withPictures = true }: { calls: ToolCall[]; withPic
   }
   if (kind === 'sessionStart' && hasFailed(call)) {
     // A start the app refused shows what it said, in the quiet grey (the classic card paints it red), and not what was asked for.
-    return <div className="whitespace-pre-wrap break-words px-1 pb-3 text-[0.9375rem] leading-[1.5] text-[var(--tr-muted)]">{output}</div>;
+    return <div className="whitespace-pre-wrap break-words px-[0.225rem] pb-[0.675rem] text-[0.8438rem] leading-[var(--chat-line-height,1.6)] text-[var(--tr-muted)]">{output}</div>;
   }
   if ((kind === 'sessionArchive' || kind === 'sessionDelete') && typeof call.toolUse.input?.reason === 'string' && call.toolUse.input.reason) {
     // What archiving or deleting a session shows is the reason it was archived for, in the quiet grey, and nothing of what the call returned.
-    return <div className="whitespace-pre-wrap break-words px-1 pb-3 text-[0.9375rem] leading-[1.5] text-[var(--tr-muted)]">{call.toolUse.input.reason as string}</div>;
+    return <div className="whitespace-pre-wrap break-words px-[0.225rem] pb-[0.675rem] text-[0.8438rem] leading-[var(--chat-line-height,1.6)] text-[var(--tr-muted)]">{call.toolUse.input.reason as string}</div>;
   }
   if (kind === 'sessionLookup') return <SessionFactsDetail call={call} />;
   if (kind === 'sessionRename') return <RenameDetail call={call} />;
@@ -601,7 +601,7 @@ function RowMeta({ call, meta }: { call: ToolCall; meta?: string }) {
       <button
         type="button"
         data-testid="agent-message-target"
-        className={`ms-2 ${LINK_TEXT} hover:underline`}
+        className={`ms-[0.45rem] ${LINK_TEXT} hover:underline`}
         // The row toggles open on a click; going to the agent is not that.
         onClick={(event) => {
           event.stopPropagation();
@@ -618,19 +618,19 @@ function RowMeta({ call, meta }: { call: ToolCall; meta?: string }) {
   // The session-management MCP names the sender by its CLI session: a way in when this conversation started it.
   if (isCliSessionId(from)) {
     return (
-      <span className={`ms-2 ${LINK_TEXT}`}>
+      <span className={`ms-[0.45rem] ${LINK_TEXT}`}>
         <StartedSessionLink id={from} plain>{shown}</StartedSessionLink>
       </span>
     );
   }
   if (from.startsWith('local_')) {
     return (
-      <span className={`ms-2 ${LINK_TEXT}`}>
+      <span className={`ms-[0.45rem] ${LINK_TEXT}`}>
         <DesktopSessionLink id={from} plain>{shown}</DesktopSessionLink>
       </span>
     );
   }
-  return <span className={`ms-2 ${LINK_TEXT}`}>{shown}</span>;
+  return <span className={`ms-[0.45rem] ${LINK_TEXT}`}>{shown}</span>;
 }
 
 /** A session Claude started: a card with its title, which goes to that session, as the desktop app draws it. */
@@ -708,21 +708,21 @@ export function StartedSessionCard({ call }: { call: ToolCall }) {
   const busy = starting || working;
   const state = notStarted ? 'not-started' : starting ? 'starting' : deleted ? 'deleted' : working ? 'working' : awaiting ? 'needs-input' : archived ? 'archived' : unread ? 'unread' : 'idle';
   return (
-    <div className="px-4 py-[0.6875rem]" data-transcript-started-session data-state={state}>
+    <div className="px-4 py-[0.6188rem]" data-transcript-started-session data-state={state}>
       <a
         href={href}
         rel="noreferrer"
         onClick={onClick}
         aria-disabled={href ? undefined : true}
-        className={`flex w-fit min-w-[min(100%,30.5556rem)] max-w-[max(75%,min(100%,30.5556rem))] items-center gap-2 rounded-lg border ${BOX_BORDER} min-h-[2.4306rem] ps-[0.6944rem] pe-3.5 py-[0.4237rem] text-start text-[0.9375rem] text-[var(--tr-text)] ${href || deleted ? 'cursor-pointer' : 'cursor-default'}${href ? ' hover:bg-[var(--tr-chip)]' : ''}`}
+        className={`flex w-fit min-w-[min(100%,27.5rem)] max-w-[max(75%,min(100%,27.5rem))] items-center gap-[0.45rem] rounded-[0.45rem] border ${BOX_BORDER} min-h-[2.1876rem] ps-[0.625rem] pe-[0.7874rem] py-[0.3813rem] text-start text-[0.8438rem] text-[var(--tr-text)] ${href || deleted ? 'cursor-pointer' : 'cursor-default'}${href ? ' hover:bg-[var(--tr-chip)]' : ''}`}
       >
         <span className="flex min-w-0 flex-1 flex-col">
           {/* With a second line the two lines stand 1.3194rem apart and the card is 3.6111rem tall (measured on the desktop app's card). */}
-          <span className={`min-w-0 truncate${secondLine !== undefined ? ' leading-[1.3194rem]' : ''}${busy ? ' transcript-shimmer transcript-card-shimmer' : ''}`}>{title || t('transcript.tools.startingSession')}</span>
+          <span className={`min-w-0 truncate${secondLine !== undefined ? ' leading-[1.1876rem]' : ''}${busy ? ' transcript-shimmer transcript-card-shimmer' : ''}`}>{title || t('transcript.tools.startingSession')}</span>
           {/* `w-0 min-w-full`: the line fills the card but does not make it wider, so a long command is cut at the
               card's edge and the card keeps the width of one without a second line (as the desktop app's does). */}
           {secondLine !== undefined && (
-            <span data-started-session-activity className="block w-0 min-w-full text-[0.866rem] leading-[1.3194rem] text-[var(--tr-muted)]">
+            <span data-started-session-activity className="block w-0 min-w-full text-[0.7794rem] leading-[1.1876rem] text-[var(--tr-muted)]">
               {/* The line is replaced by the next one the way the summary line of a chat is: crossed, and growing or shrinking. */}
               <MorphText id={secondLine || 'working'}>
                 {secondLine || (
@@ -738,10 +738,10 @@ export function StartedSessionCard({ call }: { call: ToolCall }) {
             </span>
           )}
         </span>
-        {chip && <span className={`me-[0.4407rem] flex-shrink-0 text-[0.8461rem] ${chip.className}`}>{chip.text}</span>}
-        {busy && <span aria-hidden="true" className="transcript-card-dot me-[0.598rem] h-[0.4167rem] w-[0.4167rem] flex-shrink-0 rounded-full bg-[var(--tr-muted)]" data-started-session-dot />}
-        {!busy && !chip && unread && <span aria-hidden="true" className="me-[0.598rem] h-[0.4167rem] w-[0.4167rem] flex-shrink-0 rounded-full bg-[#d99a2b]" data-started-session-unread />}
-        <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-[var(--tr-muted)] rtl:-scale-x-100" />
+        {chip && <span className={`me-[0.3966rem] flex-shrink-0 text-[0.7616rem] ${chip.className}`}>{chip.text}</span>}
+        {busy && <span aria-hidden="true" className="transcript-card-dot me-[0.5382rem] h-[0.375rem] w-[0.375rem] flex-shrink-0 rounded-full bg-[var(--tr-muted)]" data-started-session-dot />}
+        {!busy && !chip && unread && <span aria-hidden="true" className="me-[0.5382rem] h-[0.375rem] w-[0.375rem] flex-shrink-0 rounded-full bg-[#d99a2b]" data-started-session-unread />}
+        <ChevronRightIcon className="h-[0.9rem] w-[0.9rem] flex-shrink-0 text-[var(--tr-muted)] rtl:-scale-x-100" />
       </a>
     </div>
   );
@@ -803,12 +803,12 @@ function TurnElapsed() {
 function EndNote({ text, onOpen }: { text: string; onOpen: () => void }) {
   const { t } = useTranslation('chat');
   return (
-    <div className="pb-2 text-[0.9375rem] text-[var(--tr-muted)]" data-testid="end-note">
+    <div className="pb-[0.45rem] text-[0.8438rem] text-[var(--tr-muted)]" data-testid="end-note">
       <div className="line-clamp-3 whitespace-pre-wrap">{text}</div>
       <button
         type="button"
         onClick={onOpen}
-        className="mt-2 rounded-lg bg-surface-hover px-3 py-1.5 text-[0.9375rem] text-[var(--tr-text)] transition-colors hover:bg-surface-pressed"
+        className="mt-[0.45rem] rounded-[0.45rem] bg-surface-hover px-[0.675rem] py-[0.3376rem] text-[0.8438rem] text-[var(--tr-text)] transition-colors hover:bg-surface-pressed"
       >
         {t('transcript.tools.viewInBackgroundTasks')}
       </button>
@@ -871,16 +871,17 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive, liveTool
         type="button"
         aria-expanded={open}
         onClick={() => expandable && setOpen((v) => !v)}
-        className={`flex w-full items-center gap-2.5 ${inBox ? 'px-3' : ''} py-[0.625rem] text-start text-[0.9656rem] transition-colors ${SUMMARY_TEXT} ${running && !waitedOn ? 'animate-pulse' : ''}`}
+        className={`flex w-full items-center gap-[0.5624rem] ${inBox ? 'px-[0.675rem] py-[0.672rem]' : 'py-[0.5624rem]'} text-start leading-[0.9rem] ${live ? 'text-[0.92rem]' : 'text-[0.869rem]'} transition-colors ${SUMMARY_TEXT} ${running && !waitedOn ? 'animate-pulse' : ''}`}
       >
         {live && <ActivityGlyph activity={live.mark} />}
         {/* One MorphText stays through what is running and what was done, as in the summary line over a group. */}
-        <MorphText id={live ? `live:${live.label}` : `row:${JSON.stringify([label.before, label.fileName, label.after])}`}>
+        <MorphText id={live ? `live:${live.label}` : `row:${JSON.stringify([label.before, label.fileName, label.after, label.emphasis])}`}>
           {live ? (
             <span className="transcript-shimmer">{live.label}</span>
           ) : (
             <span className={`${label.fileName ? 'flex min-w-0 items-baseline whitespace-nowrap' : 'whitespace-nowrap'}${waitedOn ? ' transcript-shimmer' : ''}`}>
-              <span className={label.fileName ? 'me-2 flex-shrink-0' : undefined}>{label.before}</span>
+              <span className={label.fileName ? 'me-[0.45rem] flex-shrink-0' : undefined}>{label.before}</span>
+              {label.emphasis && <span className="text-[var(--tr-soft)]">{label.emphasis}</span>}
               {label.fileName && (
                 <span
                   role="link"
@@ -910,7 +911,7 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive, liveTool
                     }
                   }}
                   data-testid="finished-run-link"
-                  className={`ms-2 min-w-0 cursor-pointer truncate ${LINK_TEXT} hover:underline`}
+                  className={`ms-[0.45rem] min-w-0 cursor-pointer truncate ${LINK_TEXT} hover:underline`}
                 >
                   {label.meta}
                 </span>
@@ -929,9 +930,9 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive, liveTool
       </button>
       {thumbnailViewer}
       {/* A call of its own that read a picture shows the picture under its line at its own size, as the desktop app does; in a run, the lines carry thumbnails and the picture is under the call once it is opened. */}
-      {!inBox && pictures.length > 0 && <div className="pb-2"><ResultPictures call={call} /></div>}
+      {!inBox && pictures.length > 0 && <div className="pb-[0.45rem]"><ResultPictures call={call} /></div>}
       {open && expandable && (
-        <div className={inBox ? 'px-2' : ''}>
+        <div className={inBox ? (call.toolUse.name === 'Edit' || call.toolUse.name === 'Write' ? 'px-[0.75rem]' : 'px-[0.45rem]') : ''}>
           {endNote !== undefined && runTask ? (
             <EndNote text={endNote} onOpen={() => workflowState?.openPanel(runTask.toolUseId)} />
           ) : (
@@ -983,8 +984,8 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
     // A capture on its own is shown open, as the desktop app shows it: its line has nothing to fold and no thumbnail,
     // since the picture itself is right under it.
     return (
-      <div className="px-4 pt-3 pb-[0.6875rem]" data-transcript-tool-run-single>
-        <div className="py-[0.625rem] text-[0.9375rem] text-[var(--tr-muted)]">{rowLabel(calls[0], t).before}</div>
+      <div className="px-4 pt-[0.675rem] pb-[0.6188rem]" data-transcript-tool-run-single>
+        <div className="py-[0.5624rem] text-[0.8438rem] text-[var(--tr-muted)]">{rowLabel(calls[0], t).before}</div>
         <PlainDetail call={calls[0]} />
       </div>
     );
@@ -992,7 +993,7 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
 
   if (calls.length === 1) {
     return (
-      <div className="px-4 pt-3 pb-[0.6875rem]" data-transcript-tool-run-single>
+      <div className="px-4 pt-[0.675rem] pb-[0.6188rem]" data-transcript-tool-run-single>
         <TranscriptToolRow
           calls={[calls[0]]}
           defaultOpen={verbose}
@@ -1006,24 +1007,25 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
   const summaryParts = groupLabelParts(calls, t);
 
   return (
-    <div className="px-4 pt-3 pb-[0.6875rem]" data-transcript-tool-run>
+    <div className="px-4 pt-[0.675rem] pb-[0.6188rem]" data-transcript-tool-run>
+      {/* The line of a running call is set a little larger than the lines of finished ones: the desktop app draws "Running command 9s" at about 14.7px where its finished lines are 13.9px (measured by the width of the same words on its screen). */}
       <button
         type="button"
         aria-expanded={open}
         onClick={toggle}
-        className={`flex w-full items-center gap-1 py-2 text-start text-[0.9656rem] transition-colors ${SUMMARY_TEXT}`}
+        className={`flex w-full items-center gap-[0.225rem] py-[0.6531rem] text-start leading-[0.9rem] ${active && live ? 'text-[0.92rem]' : 'text-[0.869rem]'} transition-colors ${SUMMARY_TEXT}`}
       >
         {/* One MorphText stays through the three states of the line (what is running, an agent that runs, what was done),
             so that the sentence is replaced the way the desktop app's is: crossed, and the line growing or shrinking. */}
         {active && live ? (
-          <span className="me-2 flex"><ActivityGlyph activity={live.mark} /></span>
+          <span className="me-[0.45rem] flex"><ActivityGlyph activity={live.mark} /></span>
         ) : runningAgentLive ? (
-          <span className="me-2 flex"><ActivityGlyph activity={runningAgentLive.mark} /></span>
+          <span className="me-[0.45rem] flex"><ActivityGlyph activity={runningAgentLive.mark} /></span>
         ) : null}
         {/* What was done has no seconds beside it as the running lines have, whose margin keeps the arrow off the text;
             the margin is given to it here so that the arrow does not sit against the last letter. */}
         <MorphText
-          className={active && live || runningAgentLive ? '' : 'me-1.5'}
+          className={active && live || runningAgentLive ? '' : 'me-[0.3376rem]'}
           id={active && live ? `live:${liveText}` : runningAgentLive ? `agent:${runningAgentLive.label}` : `done:${JSON.stringify(summaryParts)}`}
         >
           {active && live ? (
@@ -1035,9 +1037,9 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
           )}
         </MorphText>
         {active && live ? (
-          !live.file && <span className="ms-2 me-1 flex-shrink-0"><TurnElapsed /></span>
+          !live.file && <span className="ms-[0.45rem] me-[0.225rem] flex-shrink-0"><TurnElapsed /></span>
         ) : runningAgentLive ? (
-          <span className="ms-2 me-1 flex-shrink-0">{runningAgentLive.elapsed}</span>
+          <span className="ms-[0.45rem] me-[0.225rem] flex-shrink-0">{runningAgentLive.elapsed}</span>
         ) : (
           <LineStatsView stats={sumLineStats(calls)} />
         )}
@@ -1046,7 +1048,7 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
       </button>
       {thumbnailViewer}
       {open && (
-        <div className={`mt-3 rounded-lg border ${BOX_BORDER} divide-y divide-border-default/70 overflow-hidden`}>
+        <div className={`mt-[0.15rem] mb-[0.6rem] rounded-[0.45rem] border ${BOX_BORDER} divide-y divide-border-default/70 overflow-hidden`}>
           {groupIntoRows(calls).map((row) => (
             <TranscriptToolRow key={row[0].toolUse.id} calls={row} defaultOpen={verbose} inBox liveToolUseId={active ? live?.toolUseId : undefined} />
           ))}

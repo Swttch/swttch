@@ -140,7 +140,8 @@ describe('commandStandIn', () => {
 
   it('names what a command begins with in its row, and a command with a description is that description', () => {
     const tWhat = ((key: string, o?: { what?: string }) => (o?.what ? `${key.split('.').pop()}:${o.what}` : key.split('.').pop())) as unknown as TFunction;
-    expect(rowLabel(call('1', 'Bash', { command: 'cat >> a.txt' }), tWhat).before).toBe('ranCommandOf:cat…');
+    // The command is drawn apart from the words that say it was run (the desktop app's "Ran" line has two colours).
+    expect(rowLabel(call('1', 'Bash', { command: 'cat >> a.txt' }), tWhat)).toMatchObject({ before: 'ranCommandOf:', after: '', emphasis: 'cat…' });
     expect(rowLabel(call('2', 'Bash', { command: 'cat >> a.txt', description: 'Show a' }), tWhat).before).toBe('Show a');
   });
 });

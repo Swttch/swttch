@@ -206,6 +206,32 @@ describe('settings', () => {
       expect(wide.status).toBe('ok');
     });
 
+    it('should accept a font family name, a list of them and null for the chat and code fonts', async () => {
+      for (const key of ['chatFontFamily', 'codeFontFamily']) {
+        expect((await saveSettingToFile(key, 'Google Sans Code')).status).toBe('ok');
+        expect((await saveSettingToFile(key, "'JetBrains Mono', Consolas, monospace")).status).toBe('ok');
+        expect((await saveSettingToFile(key, 'D2Coding알파')).status).toBe('ok');
+        expect((await saveSettingToFile(key, null)).status).toBe('ok');
+      }
+    });
+
+    it('should reject a font family that is empty, too long or could end the CSS declaration', async () => {
+      for (const key of ['chatFontFamily', 'codeFontFamily']) {
+        for (const bad of ['', '   ', 42, 'a'.repeat(201), 'Arial; color: red', 'x} body {', 'url(javascript:1)', 'a\\b']) {
+          const result = await saveSettingToFile(key, bad);
+          expect(result.status).toBe('error');
+          expect(result.error).toContain('must be null or a font family name');
+        }
+      }
+    });
+
+    it('should reject a non-boolean chatFontFromIde and codeFontFromIde and accept a boolean', async () => {
+      for (const key of ['chatFontFromIde', 'codeFontFromIde']) {
+        expect((await saveSettingToFile(key, 'yes')).status).toBe('error');
+        expect((await saveSettingToFile(key, true)).status).toBe('ok');
+      }
+    });
+
     it('should reject non-boolean debugMode', async () => {
       const result = await saveSettingToFile('debugMode', 'true');
       expect(result.status).toBe('error');
@@ -792,9 +818,14 @@ describe('settings', () => {
         cliPath: null,
         nodePath: null,
         theme: 'system',
-        fontSize: 13,
+        fontSize: 16,
         zoomLevel: 1,
-        lineHeight: 1.6,
+        lineHeight: null,
+        chatFontFamily: null,
+        chatFontFromIde: false,
+        codeFontFamily: null,
+        codeFontFromIde: false,
+        desktopScaleMigrated: false,
         autoScrollThreshold: 80,
         softWrap: false,
         debugMode: false,
@@ -931,7 +962,7 @@ export default {
 
       const result = await readSettingsFile();
       expect(result.theme).toBe('dark');
-      expect(result.fontSize).toBe(13); // default
+      expect(result.fontSize).toBe(16); // default
       expect(result.debugMode).toBe(false); // default
     });
 
@@ -944,9 +975,14 @@ export default {
         cliPath: null,
         nodePath: null,
         theme: 'system',
-        fontSize: 13,
+        fontSize: 16,
         zoomLevel: 1,
-        lineHeight: 1.6,
+        lineHeight: null,
+        chatFontFamily: null,
+        chatFontFromIde: false,
+        codeFontFamily: null,
+        codeFontFromIde: false,
+        desktopScaleMigrated: false,
         autoScrollThreshold: 80,
         softWrap: false,
         debugMode: false,

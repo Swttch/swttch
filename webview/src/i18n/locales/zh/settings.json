@@ -373,7 +373,20 @@
       "lineSpacing": {
         "label": "行间距",
         "description": "聊天消息文本的行高"
-      }
+      },
+      "chatFont": {
+        "label": "聊天字体",
+        "description": "聊天文字和界面所用的字体。在 JetBrains IDE 中可以跟随 IDE 界面的字体。"
+      },
+      "codeFont": {
+        "label": "代码字体",
+        "description": "代码块、工具输出和差异（diff）所用的字体（只列出等宽字体）。在 JetBrains IDE 中可以跟随 IDE 编辑器的字体。"
+      },
+      "fontDefault": "默认",
+      "fontFollowIde": "跟随 IDE",
+      "fontLoadAll": "显示所有已安装的字体…",
+      "fontSearch": "搜索字体",
+      "fontNoMatch": "没有匹配的字体"
     },
     "softWrap": {
       "label": "软换行",

@@ -85,6 +85,31 @@ export const RENAMED_TO_NATIVE_KEYS: Record<string, string> = {
 export const LEGACY_SHOW_DIFF_IN_IDE_KEY = 'showDiffInIde';
 export const DIFF_SURFACE_KEY = 'diffSurface';
 
+/**
+ * App → app, once: the base font size's default moved from 13 to 16, so that 1rem is the desktop app's 16px and the
+ * Transcript view modes' sizes are written in the desktop app's own units.
+ *
+ * A stored 13 is the old default (every settings file is written with all defaults at creation), so it moves to 16
+ * with the rest. Another value was chosen by the user and stays. It runs ONCE, marked by a key of its own: otherwise
+ * a user who later picks 13 on purpose would be moved again at every start.
+ */
+export const DESKTOP_SCALE_MARKER_KEY = 'desktopScaleMigrated';
+export const OLD_FONT_SIZE_DEFAULT = 13;
+export const DESKTOP_FONT_SIZE = 16;
+
+async function migrateDesktopScale(app: Record<string, unknown>): Promise<void> {
+  if (app[DESKTOP_SCALE_MARKER_KEY] === true) return;
+  if (app['fontSize'] === OLD_FONT_SIZE_DEFAULT) {
+    const moved = await saveSettingToFile('fontSize', DESKTOP_FONT_SIZE);
+    if (moved.status !== 'ok') {
+      // Not marked, so the next startup tries again.
+      console.error('[node-backend]', 'settings migration: failed to move fontSize to 16, keeping 13:', moved.error);
+      return;
+    }
+  }
+  await saveSettingToFile(DESKTOP_SCALE_MARKER_KEY, true);
+}
+
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -331,6 +356,7 @@ export async function migrateSettingsToCorrectStore(): Promise<void> {
     await reclaimNativeKeys(native, app);
     await migrateRenamedKeys(native, app);
     await migrateDiffSurface(app);
+    await migrateDesktopScale(app);
   } catch (err) {
     console.error('[node-backend]', 'settings migration failed (non-fatal):', err);
   }

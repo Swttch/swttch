@@ -4,18 +4,18 @@ import { ArrowUturnLeftIcon } from '@heroicons/react/20/solid';
 import { useTranslation } from '@/i18n';
 import { Tooltip } from '@/components/Tooltip';
 import { useConfirmDialog } from '@/components/ConfirmDialog/useConfirmDialog';
-import { timeAgo } from '@/utils/timeAgo';
+import { useTimeAgo } from '@/hooks/useTimeAgo';
 import { CopyIcon, ForkIcon } from './footerIcons';
 
 const BUTTON =
-  'flex w-6 h-6 cursor-pointer items-center justify-center rounded-md text-[var(--tr-muted)] transition-colors hover:bg-surface-hover hover:text-[var(--tr-text)]';
+  'flex w-[1.35rem] h-[1.35rem] cursor-pointer items-center justify-center rounded-[0.3376rem] text-[var(--tr-muted)] transition-colors hover:bg-surface-hover hover:text-[var(--tr-text)]';
 
 /** A tooltip with a title and, under it, what the button does. */
 function Hint({ title, text }: { title: string; text?: string }): ReactNode {
   return (
-    <div className="max-w-[16rem] text-start">
+    <div className="max-w-[14.4rem] text-start">
       <div className="font-medium">{title}</div>
-      {text && <div className="mt-0.5 opacity-70">{text}</div>}
+      {text && <div className="mt-[0.1126rem] opacity-70">{text}</div>}
     </div>
   );
 }
@@ -50,6 +50,7 @@ export function TranscriptUserFooter({
   const { confirmDialog, confirm } = useConfirmDialog();
   const sentAt = timestamp ? Date.parse(timestamp) : NaN;
   const known = !Number.isNaN(sentAt);
+  const ago = useTimeAgo(known ? sentAt : undefined, i18n.language);
   const exact = known
     ? new Intl.DateTimeFormat(i18n.language, { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(sentAt)
     : '';
@@ -75,43 +76,43 @@ export function TranscriptUserFooter({
   if (copyText === undefined && !onFork && !onRewind && !known) return null;
   return (
     <div
-      className={`pointer-events-none opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 inline-flex select-none items-center gap-1.5 text-xs text-text-secondary -me-1`}
+      className={`pointer-events-none opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 inline-flex select-none items-center gap-[0.3376rem] text-[0.75rem] leading-[1rem] text-text-secondary -me-[0.225rem]`}
       data-copy-ignore="true"
       onClick={(event) => event.stopPropagation()}
     >
       {known && (
-        <div className="inline-flex items-center gap-0.5">
+        <div className="inline-flex items-center gap-[0.1126rem]">
           <Tooltip content={t('transcript.userFooter.read')} placement="top">
-            <span className="flex h-[1.375rem] w-5 items-center justify-center">
-              <ReadIcon className="h-[0.875rem] w-[0.875rem]" />
+            <span className="flex h-[1.2376rem] w-[1.125rem] items-center justify-center">
+              <ReadIcon className="h-[0.7874rem] w-[0.7874rem]" />
             </span>
           </Tooltip>
           <Tooltip content={exact} placement="top">
-            <span className="">{timeAgo(sentAt, i18n.language)}</span>
+            <span className="">{ago}</span>
           </Tooltip>
         </div>
       )}
       {known && (copyText !== undefined || onRewind || onFork) && <span aria-hidden="true">·</span>}
 
-      <div className="inline-flex items-center gap-0.5">
+      <div className="inline-flex items-center gap-[0.1126rem]">
         {copyText !== undefined && (
           <Tooltip content={t('transcript.userFooter.copy')} placement="top">
             <button type="button" onClick={copy} aria-label={t('transcript.userFooter.copy')} className={BUTTON}>
-              <CopyIcon className="w-[0.95rem] h-[0.95rem]" />
+              <CopyIcon className="w-[0.855rem] h-[0.855rem]" />
             </button>
           </Tooltip>
         )}
         {onRewind && (
           <Tooltip content={<Hint title={t('transcript.userFooter.rewind')} text={t('transcript.userFooter.rewindHint')} />} placement="top">
             <button type="button" onClick={onRewind} aria-label={t('transcript.userFooter.rewind')} className={BUTTON}>
-              <ArrowUturnLeftIcon className="w-[0.95rem] h-[0.95rem]" />
+              <ArrowUturnLeftIcon className="w-[0.855rem] h-[0.855rem]" />
             </button>
           </Tooltip>
         )}
         {onFork && (
           <Tooltip content={<Hint title={t('transcript.userFooter.fork')} text={t('transcript.userFooter.forkHint')} />} placement="top">
             <button type="button" onClick={fork} aria-label={t('transcript.userFooter.fork')} className={BUTTON}>
-              <ForkIcon className="w-[0.95rem] h-[0.95rem]" />
+              <ForkIcon className="w-[0.855rem] h-[0.855rem]" />
             </button>
           </Tooltip>
         )}

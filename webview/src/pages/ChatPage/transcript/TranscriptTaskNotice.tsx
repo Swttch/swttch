@@ -43,7 +43,7 @@ export function TranscriptTaskNotice({ message }: { message: LoadedMessageDto })
     (notice.taskId !== null ? workflow?.tasks.find((candidate) => candidate.taskId === notice.taskId) : undefined);
   const opens = !!workflow && task !== undefined;
   // The space above and below is what the desktop app leaves around it (measured: 40px from one line of text to the next).
-  const className = `flex w-full items-baseline px-4 py-[1.3125rem] text-start text-[0.9375rem] leading-[1.375rem] text-[var(--tr-muted)]${opens ? ' cursor-pointer transition-[filter] hover:brightness-[1.25]' : ''}`;
+  const className = `flex w-full items-baseline px-4 py-[1.1813rem] text-start text-[0.8438rem] leading-[1.2376rem] text-[var(--tr-muted)]${opens ? ' cursor-pointer transition-[filter] hover:brightness-[1.25]' : ''}`;
   const content = (
     <>
       {/* What gives way on a narrow screen is the name, as in the desktop app ("… · f… · 1m 18s took"); the time stays. */}

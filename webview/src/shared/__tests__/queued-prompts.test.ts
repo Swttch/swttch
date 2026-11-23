@@ -52,4 +52,15 @@ describe('queuedMidTurnCounts', () => {
     ]);
     expect(counts.size).toBe(0);
   });
+
+  it('pairs a message that carried an image: enqueued with no content, removed with its text', () => {
+    // The image is not text, so the CLI enqueues the message without a content and removes it with the words.
+    const counts = queuedMidTurnCounts([{ type: QUEUE_OPERATION, operation: 'enqueue' }, op('remove', 'look at this picture')]);
+    expect(counts.get('look at this picture')).toBe(1);
+  });
+
+  it('does not pair a remove with the contentless enqueue of a message accepted while idle', () => {
+    const counts = queuedMidTurnCounts([{ type: QUEUE_OPERATION, operation: 'enqueue' }, { type: QUEUE_OPERATION, operation: 'dequeue' }, op('remove', 'has no enqueue of its own')]);
+    expect(counts.size).toBe(0);
+  });
 });

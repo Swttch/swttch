@@ -1,6 +1,6 @@
 import { SettingRow } from '../../common';
 import { useSettings } from '@/contexts/SettingsContext';
-import { SettingKey } from '@/types/settings';
+import { DEFAULT_SETTINGS, SettingKey } from '@/types/settings';
 import { useTranslation } from '@/i18n';
 import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 
@@ -26,7 +26,7 @@ export function FontSizeRow() {
         type="number"
         min="8"
         max="32"
-        value={rawFontSize ?? 13}
+        value={rawFontSize ?? DEFAULT_SETTINGS[SettingKey.FONT_SIZE]}
         onChange={(e) => {
           const value = e.target.value;
           // Emptying the field at project scope is how the project stops

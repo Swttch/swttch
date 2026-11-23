@@ -10,6 +10,21 @@ function isOnlyEnvelopes(text: string): boolean {
 }
 
 /**
+ * What a human typed while a turn was running, as the `attachment` entry the CLI also writes for it: the blocks of the
+ * prompt (the pictures and the words), by the id the `remove` of the bookkeeping quotes as its `commandUuid`.
+ */
+function humanPromptsByCommand(messages: LoadedMessageDto[]): Map<string, unknown[]> {
+  const prompts = new Map<string, unknown[]>();
+  for (const message of messages) {
+    if ((message.type as string) !== 'attachment') continue;
+    const attachment = (message as unknown as { attachment?: { type?: string; prompt?: unknown; source_uuid?: unknown } }).attachment;
+    if (attachment?.type !== 'queued_command' || typeof attachment.source_uuid !== 'string') continue;
+    if (Array.isArray(attachment.prompt) && attachment.prompt.length > 0) prompts.set(attachment.source_uuid, attachment.prompt);
+  }
+  return prompts;
+}
+
+/**
  * Rebuild the user messages that the CLI only recorded as queue bookkeeping.
  *
  * When a message is typed while a turn is already running, the CLI does not
@@ -40,6 +55,7 @@ export function restoreQueuedMessages(messages: LoadedMessageDto[]): LoadedMessa
   if (!hasQueueOperation) return messages;
 
   const restorable = queuedMidTurnCounts(messages);
+  const promptsByCommand = humanPromptsByCommand(messages);
 
   const rebuiltSoFar = new Map<string, number>();
   const result: LoadedMessageDto[] = [];
@@ -64,7 +80,8 @@ export function restoreQueuedMessages(messages: LoadedMessageDto[]): LoadedMessa
       // Stable across reloads so React keys and uuid-based dedupe stay put.
       uuid: `queued-${entry.timestamp ?? ''}-${index}`,
       timestamp: entry.timestamp,
-      message: { role: MessageRole.User, content: entry.content },
+      // The attachment that carries the same message keeps its pictures; the bookkeeping has only the words.
+      message: { role: MessageRole.User, content: (entry.commandUuid && promptsByCommand.get(entry.commandUuid)) || entry.content },
     } as LoadedMessageDto);
   }
 

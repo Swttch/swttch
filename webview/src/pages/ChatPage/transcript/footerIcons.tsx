@@ -24,16 +24,6 @@ export function ForkIcon({ className }: { className?: string }) {
   );
 }
 
-export function SpeakerIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <path d="M3.5 8v4h2.8L10.5 15.5v-11L6.3 8H3.5z" />
-      <path d="M13.2 7.3a3.7 3.7 0 0 1 0 5.4" />
-      <path d="M15.2 5.3a6.5 6.5 0 0 1 0 9.4" />
-    </svg>
-  );
-}
-
 export function PauseIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 20 20" fill="currentColor" className={className} aria-hidden="true">

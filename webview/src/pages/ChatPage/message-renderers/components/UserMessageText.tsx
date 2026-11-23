@@ -13,7 +13,7 @@ const InlineText: React.FC<{ text: string }> = ({ text }) => (
         // The same look as `code` in a reply; a path inside it stays code, not a chip.
         <code
           key={partIdx}
-          className="rounded px-1 py-0.5 font-mono text-[0.875em]"
+          className="rounded-[0.225rem] px-[0.225rem] py-[0.1125rem] font-mono text-[0.875em]"
           style={{ background: 'var(--md-inline-code-bg)', color: 'var(--md-inline-code-fg)' }}
         >
           {part.text}

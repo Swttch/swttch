@@ -382,6 +382,11 @@ export interface RowLabel {
   after: string;
   /** What the call was about when that is not a file (a session's title, who a message came from), drawn after the text. */
   meta?: string;
+  /**
+   * What the call ran when the line quotes it ("cat …"), drawn in the reader's text colour after the words of the line, as
+   * the desktop app draws the command of its "Ran" lines apart from the word that says it was run.
+   */
+  emphasis?: string;
 }
 
 /**
@@ -444,7 +449,13 @@ export function rowLabel(call: ToolCall, t: TFunction, agentName?: (to: string) 
       if (description) return plain(description);
       // Without a description of its own the row says what the command begins with ("Ran cat …"), as the desktop app does.
       const standIn = inputString(call, 'description').trim() === '' ? commandStandIn(inputString(call, 'command')) : '';
-      if (standIn) return plain(t(unfinished ? 'transcript.tools.runningCommandOf' : 'transcript.tools.ranCommandOf', { ns: 'chat', what: standIn }));
+      if (standIn) {
+        const text = t(unfinished ? 'transcript.tools.runningCommandOf' : 'transcript.tools.ranCommandOf', { ns: 'chat', what: NAME_TOKEN });
+        const at = text.indexOf(NAME_TOKEN);
+        return at < 0
+          ? plain(text)
+          : { before: text.slice(0, at), fileName: '', after: text.slice(at + NAME_TOKEN.length), emphasis: standIn };
+      }
       return plain(t(unfinished ? 'transcript.tools.runningCommand' : 'transcript.tools.ranCommand', { ns: 'chat' }));
     }
     case 'sessionRename': {

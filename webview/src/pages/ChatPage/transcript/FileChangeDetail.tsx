@@ -69,7 +69,7 @@ function PathLine({ path }: { path: string }) {
   const shown = withHomeAsTilde(path);
   const cut = shown.lastIndexOf('/') + 1;
   return (
-    <div dir="ltr" className="group mb-[0.7625rem] flex min-w-0 items-center gap-2 text-[0.9rem] text-text-primary">
+    <div dir="ltr" className="group mb-[0.6863rem] flex min-w-0 items-center gap-[0.45rem] text-[0.81rem] text-text-primary">
       {/* The whole path is in the tooltip: the line itself may have cut the folders out of the middle. */}
       <Tooltip content={path} placement="top">
         <div role="link" tabIndex={0} onClick={() => void openChatFile(path)} className="flex min-w-0 cursor-pointer hover:underline">
@@ -86,10 +86,10 @@ function PathLine({ path }: { path: string }) {
             () => toast.error(t('sendActions.copyFailed')),
           )
         }
-        className="flex-shrink-0 rounded p-0.5 text-[var(--tr-muted)] opacity-0 hover:text-[var(--tr-text)] focus-visible:opacity-100 group-hover:opacity-100"
+        className="flex-shrink-0 rounded-[0.225rem] p-[0.1126rem] text-[var(--tr-muted)] opacity-0 hover:text-[var(--tr-text)] focus-visible:opacity-100 group-hover:opacity-100"
         aria-label={t('sendActions.copyMessage')}
       >
-        <ClipboardDocumentIcon className="h-4 w-4" />
+        <ClipboardDocumentIcon className="h-[0.9rem] w-[0.9rem]" />
       </button>
     </div>
   );
@@ -146,7 +146,7 @@ function MarkedText({ marked, chip }: { marked: MarkedLine; chip: string }) {
     <>
       {marked.tokens.map((token, index) =>
         marked.marks[index] ? (
-          <span key={index} className={`rounded-[0.1875rem] px-[0.125rem] ${chip}`}>
+          <span key={index} className={`rounded-[0.1688rem] px-[0.1126rem] ${chip}`}>
             {token}
           </span>
         ) : (
@@ -163,9 +163,9 @@ function DiffRow({ line, marked, language }: { line: DiffLine; marked: MarkedLin
   const hasChip = marked !== null && marked.marks.some(Boolean);
   return (
     <div className={`flex ${ROW_TINT[line.type]}`}>
-      <span className={`w-[0.4375rem] flex-shrink-0 ${ROW_BAR[line.type]}`} />
-      <span className="w-[2.2313rem] flex-shrink-0 select-none text-end text-text-secondary">{line.newNo ?? line.oldNo}</span>
-      <span className="min-w-0 flex-1 whitespace-pre-wrap break-words ps-[1.05rem] pe-3">
+      <span className={`w-[0.3937rem] flex-shrink-0 ${ROW_BAR[line.type]}`} />
+      <span className="w-[2.0082rem] flex-shrink-0 select-none text-end text-text-secondary">{line.newNo ?? line.oldNo}</span>
+      <span className="min-w-0 flex-1 whitespace-pre-wrap break-words ps-[0.945rem] pe-[0.675rem]">
         {hasChip ? (
           <MarkedText marked={marked} chip={CHIP[line.type]} />
         ) : (
@@ -211,22 +211,22 @@ function OneChange({ call, inBox }: { call: ToolCall; inBox: boolean }) {
   // The path and the box sit in a card of their own: 12px in on the sides and above, 8px under (on screen). Inside a
   // group's box they stand bare: the group's box is the card (measured on the desktop app's failed edit).
   return (
-    <div className={inBox ? 'pb-3 pt-1' : 'mb-3 mt-1 rounded-[0.8125rem] border border-text-primary/[0.05] px-[0.6625rem] pb-[0.8063rem] pt-[1.0375rem]'}>
+    <div className={inBox ? 'pb-[0.675rem] pt-[0.225rem] [&:not(:first-child)]:pt-[0.7rem]' : 'mb-[0.675rem] mt-[0.225rem] rounded-[0.7313rem] border border-text-primary/[0.05] px-[0.5962rem] pb-[0.7257rem] pt-[0.9338rem]'}>
       <PathLine path={path} />
       {lines.length > 0 && (
         <div
           dir="ltr"
-          className="max-h-[24rem] overflow-y-auto rounded-[0.5625rem] border border-text-primary/[0.04] py-[0.4169rem] font-mono text-[0.8461rem] leading-[1.3188rem] text-[var(--tr-text)]"
+          className="max-h-[21.6rem] overflow-y-auto rounded-[0.5062rem] border border-text-primary/[0.04] py-[0.3752rem] font-mono text-[0.7616rem] leading-[1.1869rem] text-[var(--tr-text)]"
         >
           {declined && (
-            <div className="px-[0.875rem] pb-[0.9rem] pt-[0.3rem] font-sans text-[0.9rem] leading-[1.1875rem] text-text-secondary">
+            <div className="px-[0.7874rem] pb-[0.81rem] pt-[0.27rem] font-sans text-[0.81rem] leading-[1.0688rem] text-text-secondary">
               {t('transcript.tools.interrupted')}
             </div>
           )}
           {errorText !== '' && (
-            <div className="px-[0.875rem] pb-[0.75rem] pt-[0.3rem] leading-[1.1875rem]">
-              <div className="whitespace-pre-wrap break-words font-sans text-[0.9656rem] text-[rgb(214,85,105)]">{errorText}</div>
-              <div className="mt-[0.5rem] font-sans text-[0.9rem] text-text-secondary">{t('transcript.tools.notApplied')}</div>
+            <div className="px-[0.7874rem] pb-[0.675rem] pt-[0.27rem] leading-[1.0688rem]">
+              <div className="whitespace-pre-wrap break-words font-sans text-[0.869rem] text-[rgb(214,85,105)]">{errorText}</div>
+              <div className="mt-[0.45rem] font-sans text-[0.81rem] text-text-secondary">{t('transcript.tools.notApplied')}</div>
             </div>
           )}
           {lines.map((line, index) => (

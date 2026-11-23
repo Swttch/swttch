@@ -52,10 +52,11 @@ const ICON_BUTTON_CLASS = TITLE_ICON_BUTTON_CLASS;
 
 /**
  * The header row of the Background tasks panel, for its list and for a run shown in it: as high as the session's top
- * bar (its `py-1` around a 30px icon button) and with the same `px-2` at the sides, so the two bars read as one line
- * across the window.
+ * bar (`TOP_BAR_HEIGHT`, 45px, the bottom border inside it) and with the same `px-2` at the sides, so the two bars read as
+ * one line across the window. The height is written out here because a class has to be spelled in full; a test holds it
+ * to `TOP_BAR_HEIGHT`.
  */
-export const SIDE_PANEL_HEADER_CLASS = 'flex h-[2.39rem] shrink-0 items-center justify-between gap-1 px-2';
+export const SIDE_PANEL_HEADER_CLASS = 'flex h-[45px] shrink-0 items-center justify-between gap-1 px-2';
 
 /**
  * The word button that flips between the short and the detailed view.
