@@ -1,5 +1,6 @@
 import { SettingSection } from '../../common';
 import { AutoScrollThresholdRow } from './AutoScrollThresholdRow';
+import { WheelScrollSpeedRow } from './WheelScrollSpeedRow';
 import { useTranslation } from '@/i18n';
 
 /** When the chat follows the stream, and when it lets the reader stay put. */
@@ -9,6 +10,7 @@ export function ScrollingSection() {
   return (
     <SettingSection title={t('appearance.scrolling.sectionTitle')}>
       <AutoScrollThresholdRow />
+      <WheelScrollSpeedRow />
     </SettingSection>
   );
 }

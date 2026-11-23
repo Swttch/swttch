@@ -436,6 +436,10 @@
       "autoScrollThreshold": {
         "label": "Wiederaufnahme-Abstand für automatisches Scrollen",
         "description": "Wenn du weiter als diese Pixelanzahl vom unteren Rand nach oben scrollst, pausiert das automatische Scrollen, damit du ungestört lesen kannst. Es wird fortgesetzt, sobald du wieder in diesen Bereich zurückscrollst. Ein kleinerer Wert bedeutet, dass du näher zurückkehren musst, um es erneut zu aktivieren. Standard {{value}}."
+      },
+      "wheelScrollSpeed": {
+        "label": "Scrollgeschwindigkeit",
+        "description": "Legt fest, wie weit eine Bewegung des Mausrads oder Trackpads den Chat scrollt, als Vielfaches der üblichen Strecke ({{min}} bis {{max}}). Werte über 1 scrollen weiter, Werte unter 1 weniger weit. Standard {{value}}."
       }
     }
   },

@@ -436,6 +436,10 @@
       "autoScrollThreshold": {
         "label": "Distância para retomar a rolagem automática",
         "description": "Rolar além desta quantidade de pixels a partir do final pausa a rolagem automática para que você possa ler livremente. Ela é retomada assim que você voltar para dentro dessa distância. Um valor menor significa que você precisa voltar mais perto para reengajar. Padrão {{value}}."
+      },
+      "wheelScrollSpeed": {
+        "label": "Velocidade de rolagem",
+        "description": "Define quanto o chat rola a cada movimento da roda do mouse ou do trackpad, como múltiplo da distância habitual ({{min}} a {{max}}). Acima de 1 rola mais, abaixo de 1 rola menos. Padrão {{value}}."
       }
     }
   },

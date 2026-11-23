@@ -436,6 +436,10 @@
       "autoScrollThreshold": {
         "label": "Auto-scroll resume distance",
         "description": "Scrolling further than this many pixels from the bottom pauses auto-scroll so you can read freely. It resumes once you scroll back within that distance. Smaller means you must return closer to re-engage. Default {{value}}."
+      },
+      "wheelScrollSpeed": {
+        "label": "Scroll speed",
+        "description": "How far one mouse wheel or trackpad movement scrolls the chat, as a multiple of the usual distance ({{min}} to {{max}}). Above 1 scrolls farther, below 1 scrolls less. Default {{value}}."
       }
     }
   },

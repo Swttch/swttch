@@ -66,6 +66,7 @@ import { LogLevelRow } from '../Advanced/Debugging/LogLevelRow';
 import { ColorThemeRow } from '../Appearance/Theme/ColorThemeRow';
 import { FontSizeRow } from '../Appearance/Theme/FontSizeRow';
 import { LineSpacingRow } from '../Appearance/Theme/LineSpacingRow';
+import { WheelScrollSpeedRow } from '../Appearance/Scrolling/WheelScrollSpeedRow';
 import { AutoScrollThresholdRow } from '../Appearance/Scrolling/AutoScrollThresholdRow';
 import { UiLanguageRow } from '../General/Basics/UiLanguageRow';
 import { BypassModeRow } from '../Permissions/BypassMode/BypassModeRow';
@@ -156,6 +157,15 @@ const NOT_SET_ROWS: NotSetRow[] = [
     withValue: (v) => ({ lineHeight: v }),
     inheritedValue: 1.8,
     ownValue: 1.4,
+    expectShows: (v) => expect(screen.getByRole('spinbutton')).toHaveValue(v as number),
+  },
+  {
+    name: 'WheelScrollSpeedRow',
+    Row: WheelScrollSpeedRow,
+    store: 'app',
+    withValue: (v) => ({ wheelScrollSpeed: v }),
+    inheritedValue: 3,
+    ownValue: 0.5,
     expectShows: (v) => expect(screen.getByRole('spinbutton')).toHaveValue(v as number),
   },
   {

@@ -1,5 +1,6 @@
 import { AUTO_SCROLL_THRESHOLD_DEFAULT } from '@/utils/autoScroll';
 import { ZOOM_DEFAULT } from '@/utils/zoom';
+import { WHEEL_SCROLL_SPEED_DEFAULT } from '@/utils/wheelScrollSpeed';
 import {
   DiffSurface,
   BrowserDiffPresentation,
@@ -59,6 +60,8 @@ export enum SettingKey {
   CODE_FONT_FAMILY = 'codeFontFamily',
   CODE_FONT_FROM_IDE = 'codeFontFromIde',
   AUTO_SCROLL_THRESHOLD = 'autoScrollThreshold',
+  // How far one wheel or trackpad movement scrolls the chat, as a multiplier (0.5 to 5, 1 = the usual distance).
+  WHEEL_SCROLL_SPEED = 'wheelScrollSpeed',
   // Fold long lines to the width of the code block instead of scrolling them
   // sideways — diffs, tool input/output, and the other monospace blocks that
   // render with `whitespace-pre`. Off by default so the existing horizontal
@@ -525,6 +528,7 @@ export interface SettingsState {
   [SettingKey.CODE_FONT_FAMILY]: string | null;
   [SettingKey.CODE_FONT_FROM_IDE]: boolean;
   [SettingKey.AUTO_SCROLL_THRESHOLD]: number;
+  [SettingKey.WHEEL_SCROLL_SPEED]: number;
   [SettingKey.SOFT_WRAP]: boolean;
   [SettingKey.DEBUG_MODE]: boolean;
   [SettingKey.LOG_LEVEL]: LogLevel;
@@ -587,6 +591,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.CODE_FONT_FAMILY]: null,
   [SettingKey.CODE_FONT_FROM_IDE]: false,
   [SettingKey.AUTO_SCROLL_THRESHOLD]: AUTO_SCROLL_THRESHOLD_DEFAULT,
+  [SettingKey.WHEEL_SCROLL_SPEED]: WHEEL_SCROLL_SPEED_DEFAULT,
   [SettingKey.SOFT_WRAP]: false,
   [SettingKey.DEBUG_MODE]: false,
   [SettingKey.LOG_LEVEL]: LogLevel.INFO,

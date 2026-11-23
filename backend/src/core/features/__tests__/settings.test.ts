@@ -198,6 +198,17 @@ describe('settings', () => {
       expect(tooLarge.status).toBe('error');
     });
 
+    it('should accept a wheelScrollSpeed from 0.5 to 5 and reject the rest', async () => {
+      for (const ok of [0.5, 1, 2.25, 5]) {
+        expect((await saveSettingToFile('wheelScrollSpeed', ok)).status).toBe('ok');
+      }
+      const tooSmall = await saveSettingToFile('wheelScrollSpeed', 0.4);
+      expect(tooSmall.status).toBe('error');
+      expect(tooSmall.error).toContain('wheelScrollSpeed must be a number between 0.5 and 5');
+      expect((await saveSettingToFile('wheelScrollSpeed', 5.1)).status).toBe('error');
+      expect((await saveSettingToFile('wheelScrollSpeed', 'fast')).status).toBe('error');
+    });
+
     it('should accept fractional lineHeight', async () => {
       const result = await saveSettingToFile('lineHeight', 1.8);
       expect(result.status).toBe('ok');
@@ -827,6 +838,7 @@ describe('settings', () => {
         codeFontFromIde: false,
         desktopScaleMigrated: false,
         autoScrollThreshold: 80,
+        wheelScrollSpeed: 1,
         softWrap: false,
         debugMode: false,
         logLevel: 'info',
@@ -984,6 +996,7 @@ export default {
         codeFontFromIde: false,
         desktopScaleMigrated: false,
         autoScrollThreshold: 80,
+        wheelScrollSpeed: 1,
         softWrap: false,
         debugMode: false,
         logLevel: 'info',
