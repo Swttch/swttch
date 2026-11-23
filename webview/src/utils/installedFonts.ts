@@ -94,9 +94,14 @@ export function canQueryLocalFonts(): boolean {
   return typeof window !== 'undefined' && typeof (window as unknown as { queryLocalFonts?: unknown }).queryLocalFonts === 'function';
 }
 
-/** The family names of every font installed, as the browser reports them. Rejects when the person says no. */
+/**
+ * The family names of every font installed, as the browser reports them. Rejects when the person says no, and when the
+ * browser answers with no font at all (an embedded browser can have the API and no fonts to give), so the caller keeps
+ * the list it already has instead of replacing it with an empty one.
+ */
 export async function queryAllLocalFamilies(): Promise<string[]> {
   const query = (window as unknown as { queryLocalFonts: () => Promise<{ family: string }[]> }).queryLocalFonts;
   const fonts = await query.call(window);
+  if (fonts.length === 0) throw new Error('The browser reported no installed fonts');
   return fonts.map((font) => font.family);
 }

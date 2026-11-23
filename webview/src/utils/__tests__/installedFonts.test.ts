@@ -70,6 +70,18 @@ describe('installed fonts', () => {
     expect(filterInstalled(['Fake Sans'])).toEqual([]);
   });
 
+  it('gives the families the browser reports, and rejects when it reports none or the person refuses', async () => {
+    const { queryAllLocalFamilies } = await import('../installedFonts');
+    const w = window as unknown as { queryLocalFonts?: () => Promise<{ family: string }[]> };
+    w.queryLocalFonts = () => Promise.resolve([{ family: 'Menlo' }, { family: 'Arial' }]);
+    await expect(queryAllLocalFamilies()).resolves.toEqual(['Menlo', 'Arial']);
+    w.queryLocalFonts = () => Promise.resolve([]);
+    await expect(queryAllLocalFamilies()).rejects.toThrow('no installed fonts');
+    w.queryLocalFonts = () => Promise.reject(new DOMException('denied', 'NotAllowedError'));
+    await expect(queryAllLocalFamilies()).rejects.toThrow('denied');
+    delete w.queryLocalFonts;
+  });
+
   it('reads the list the IDE host hands over, and ignores anything that is not a list of names', async () => {
     const { hostFontFamilies } = await import('../installedFonts');
     const w = window as unknown as { __IDE_FONT_FAMILIES__?: unknown };
