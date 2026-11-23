@@ -262,7 +262,7 @@ export function TranscriptArea(props: TranscriptAreaProps) {
   if (isEmpty) return <EmptyState />;
 
   return (
-    <div ref={containerRef} className="flex-1 w-full max-w-[calc(var(--chat-column-max,63rem)_-_var(--chat-column-px,1.8rem))] mx-auto sm:px-[0.9rem] text-[0.675rem] leading-[0.9rem] antialiased">
+    <div ref={containerRef} className="flex-1 w-full max-w-[calc(var(--chat-column-max,70rem)_-_var(--chat-column-px,2rem))] mx-auto sm:px-4 antialiased">
       <ChatSearchBar search={search} />
       <SelectionReplyLayer containerRef={containerRef} />
       {(isLoadingMore || hasMore) && (
@@ -275,7 +275,7 @@ export function TranscriptArea(props: TranscriptAreaProps) {
           ) : (
             <button
               onClick={onLoadMore}
-              className="px-[0.9rem] py-[0.3376rem] bg-surface-raised border border-border-default rounded-full text-[0.675rem] leading-[0.9rem] font-medium text-text-secondary hover:bg-surface-hover hover:text-text-primary transition-colors duration-200 shadow-sm"
+              className="px-4 py-[0.3376rem] bg-surface-raised border border-border-default rounded-full text-[0.675rem] leading-[0.9rem] font-medium text-text-secondary hover:bg-surface-hover hover:text-text-primary transition-colors duration-200 shadow-sm"
             >
               {t('chatMessageArea.loadOlderMessages')}
             </button>

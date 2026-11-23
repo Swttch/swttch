@@ -81,7 +81,7 @@ export function TranscriptSessionBrief({ brief, message }: { brief: SessionBrief
   const toggle = () => setOpen((value) => !value);
 
   return (
-    <div className="flex flex-col gap-[1.0125rem] px-[0.9rem] pt-[0.45rem] pb-0 -mb-[0.175rem]" data-transcript-brief>
+    <div className="flex flex-col gap-[1.0125rem] px-4 pt-[0.45rem] pb-0 -mb-[0.175rem]" data-transcript-brief>
       <div className={`flex w-fit max-w-full items-center gap-[0.5875rem] text-[0.9375rem] ${QUIET_TEXT}`}>
         {/* The starter's title is a link to it, so it cannot sit inside the button that folds the cards: the line is the
             words before it, the link, and the rest, the two button parts both folding the cards. */}

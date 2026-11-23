@@ -11,7 +11,7 @@ import type { ReactNode } from 'react';
 export function InputColumn({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
     <div
-      className={`w-full max-w-[var(--chat-column-max,44rem)] mx-auto px-4 sm:px-[var(--chat-column-px,1rem)] pb-[14px] pt-2 ${className}`}
+      className={`w-full max-w-[var(--chat-column-max,44rem)] mx-auto px-4 sm:px-[var(--chat-column-px,1rem)] pb-4 pt-2 ${className}`}
     >
       {children}
     </div>

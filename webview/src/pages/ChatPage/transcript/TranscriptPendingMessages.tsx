@@ -67,7 +67,7 @@ export function TranscriptPendingMessages() {
   return (
     <div className="mt-[1.8168rem]" data-transcript-pending>
       {sentWhileRunning.map((sent: SentWhileRunning) => (
-        <div key={sent.id} className="group flex flex-col items-end gap-[0.3376rem] pt-[0.45rem] px-[0.9rem] pb-[1.4287rem]" data-pending-sent-message>
+        <div key={sent.id} className="group flex flex-col items-end gap-[0.3376rem] pt-[0.45rem] px-4 pb-[1.4287rem]" data-pending-sent-message>
           <div className={USER_BUBBLE_CLASS}>
             <div className="text-text-primary/80 text-[0.9375rem] leading-[var(--chat-line-height,1.6)] whitespace-pre-wrap [overflow-wrap:anywhere]">{sent.content}</div>
           </div>

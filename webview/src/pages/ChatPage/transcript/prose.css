@@ -65,6 +65,13 @@
   margin-top: -1.35rem;
 }
 
+/* A run of calls right under a reply's text. The text leaves 27px under its last line and the run brings 20px above its
+   own, so the line of the run stands 66px under the last line of the text; the desktop app's screen shows 49px (measured
+   with a reply, then a received-message line, side by side). This takes back the 17px. */
+[data-seg="tools"][data-after-reply]:not(:empty) {
+  margin-top: -1.0625rem;
+}
+
 /* A session brief is a card, not a bubble, and it leaves no room of its own for the run of calls to take back, so
    the run keeps the 17px it brings. Without this the line of the run sits under the card's edge. */
 :has(> [data-transcript-brief]) + [data-section-body][data-after-send] > [data-seg="tools"]:not(:empty):not(:not(:empty) ~ *) {
@@ -86,6 +93,13 @@
 .transcript-prose .space-y-4 > [data-streamdown="unordered-list"]:not([hidden]) {
   margin-top: 0.5625rem;
   padding-top: 0;
+}
+
+/* The markdown library draws a table cell with `text-sm`, which fixes the line at 20px. A cell is text of the reply, so
+   its line follows the Line Spacing setting like the paragraphs around the table. */
+.transcript-prose table th,
+.transcript-prose table td {
+  line-height: var(--chat-line-height, 1.6);
 }
 
 /* A heading in a reply is the size of the text around it and bold, whatever its level: the desktop app draws every one

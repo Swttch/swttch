@@ -22,7 +22,7 @@ export function TranscriptHeldMessages({ atEnd = false }: { atEnd?: boolean } = 
       {heldMessages.map((message, index) => (
         <div
           key={message.id}
-          className={`flex flex-col items-end gap-[0.3376rem] pt-[0.45rem] px-[0.9rem] ${atEnd ? (index === 0 && heldMessages.length > 1 ? 'pb-[1.35rem]' : 'pb-[1.4287rem]') : 'pb-[1.35rem]'}`}
+          className={`flex flex-col items-end gap-[0.3376rem] pt-[0.45rem] px-4 ${atEnd ? (index === 0 && heldMessages.length > 1 ? 'pb-[1.35rem]' : 'pb-[1.4287rem]') : 'pb-[1.35rem]'}`}
           data-transcript-held-message
         >
           <div className={USER_BUBBLE_CLASS}>

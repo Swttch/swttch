@@ -17,7 +17,7 @@ export const ReplyQuotes: React.FC<Props> = ({ replies, followedByText }) => (
     {replies.map((reply, index) => (
       <div key={index} className="space-y-2">
         <QuoteBlock>{reply.quote}</QuoteBlock>
-        <div className="text-text-primary/90 text-[1rem] leading-[1.5] whitespace-pre-wrap break-words">{reply.comment}</div>
+        <div className="text-text-primary/90 text-[1rem] leading-[var(--chat-line-height,1.6)] whitespace-pre-wrap break-words">{reply.comment}</div>
       </div>
     ))}
   </div>

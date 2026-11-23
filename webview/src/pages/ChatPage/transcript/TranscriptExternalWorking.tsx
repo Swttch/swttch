@@ -19,7 +19,7 @@ export function TranscriptExternalWorking({ sessionId }: { sessionId: string | n
   if (session?.activity !== SessionActivity.Running) return null;
 
   return (
-    <div className="-mt-[3.0376rem] flex items-center gap-[0.75rem] px-[0.9rem] pb-[0.9563rem] pt-[1.125rem] text-[0.92rem] text-[var(--tr-muted)]" role="status" data-transcript-external-working>
+    <div className="-mt-[3.0376rem] flex items-center gap-[0.75rem] px-4 pb-[0.9563rem] pt-[1.125rem] text-[0.92rem] leading-[0.9rem] text-[var(--tr-muted)]" role="status" data-transcript-external-working>
       <ActivityGlyph />
       <span className="transcript-shimmer">{t('transcript.streaming.activity.working')}</span>
     </div>

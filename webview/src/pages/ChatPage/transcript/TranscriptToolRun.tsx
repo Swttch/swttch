@@ -323,8 +323,8 @@ function ResultPictures({ call }: { call: ToolCall }) {
 function MarkdownDetail({ text, message, bare = false }: { text: string; message: LoadedMessageDto; bare?: boolean }) {
   // `bare` is for text that sits in a box which has its own padding: no sides or room below of its own.
   return (
-    <div className={bare ? 'transcript-prose' : 'transcript-prose px-[0.225rem] pb-[0.675rem]'}>
-      <StreamingMessage plain content={text} isStreaming={false} className="text-[0.8438rem] leading-[var(--chat-line-height,1.6)] text-[var(--tr-soft)]" message={message} />
+    <div className={bare ? 'transcript-prose' : 'transcript-prose pb-3'}>
+      <StreamingMessage plain content={text} isStreaming={false} className="text-sm leading-[var(--chat-line-height,1.6)]" message={message} />
     </div>
   );
 }
@@ -401,7 +401,7 @@ function SentMessageDetail({ call }: { call: ToolCall }) {
       {delivery && <div className="pb-[0.45rem] text-[0.8438rem] text-[var(--tr-muted)]">{delivery === 'delivered' ? t('sendMessage.delivered') : delivery}</div>}
       {/* What was said to an agent sits in a box of its own, as the desktop app draws it. */}
       {toAgent ? (
-        <div className={`rounded-[0.675rem] border ${BOX_BORDER} px-[0.9rem] py-[0.675rem]`} data-testid="agent-message-box">
+        <div className={`rounded-[0.675rem] border ${BOX_BORDER} px-4 py-[0.675rem]`} data-testid="agent-message-box">
           <MarkdownDetail text={text} message={call.message} bare />
         </div>
       ) : (
@@ -708,7 +708,7 @@ export function StartedSessionCard({ call }: { call: ToolCall }) {
   const busy = starting || working;
   const state = notStarted ? 'not-started' : starting ? 'starting' : deleted ? 'deleted' : working ? 'working' : awaiting ? 'needs-input' : archived ? 'archived' : unread ? 'unread' : 'idle';
   return (
-    <div className="px-[0.9rem] py-[0.6188rem]" data-transcript-started-session data-state={state}>
+    <div className="px-4 py-[0.6188rem]" data-transcript-started-session data-state={state}>
       <a
         href={href}
         rel="noreferrer"
@@ -871,7 +871,7 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive, liveTool
         type="button"
         aria-expanded={open}
         onClick={() => expandable && setOpen((v) => !v)}
-        className={`flex w-full items-center gap-[0.5624rem] ${inBox ? 'px-[0.675rem] py-[0.672rem]' : 'py-[0.5624rem]'} text-start ${live ? 'text-[0.92rem]' : 'text-[0.869rem]'} transition-colors ${SUMMARY_TEXT} ${running && !waitedOn ? 'animate-pulse' : ''}`}
+        className={`flex w-full items-center gap-[0.5624rem] ${inBox ? 'px-[0.675rem] py-[0.672rem]' : 'py-[0.5624rem]'} text-start leading-[0.9rem] ${live ? 'text-[0.92rem]' : 'text-[0.869rem]'} transition-colors ${SUMMARY_TEXT} ${running && !waitedOn ? 'animate-pulse' : ''}`}
       >
         {live && <ActivityGlyph activity={live.mark} />}
         {/* One MorphText stays through what is running and what was done, as in the summary line over a group. */}
@@ -984,7 +984,7 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
     // A capture on its own is shown open, as the desktop app shows it: its line has nothing to fold and no thumbnail,
     // since the picture itself is right under it.
     return (
-      <div className="px-[0.9rem] pt-[0.675rem] pb-[0.6188rem]" data-transcript-tool-run-single>
+      <div className="px-4 pt-[0.675rem] pb-[0.6188rem]" data-transcript-tool-run-single>
         <div className="py-[0.5624rem] text-[0.8438rem] text-[var(--tr-muted)]">{rowLabel(calls[0], t).before}</div>
         <PlainDetail call={calls[0]} />
       </div>
@@ -993,7 +993,7 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
 
   if (calls.length === 1) {
     return (
-      <div className="px-[0.9rem] pt-[0.675rem] pb-[0.6188rem]" data-transcript-tool-run-single>
+      <div className="px-4 pt-[0.675rem] pb-[0.6188rem]" data-transcript-tool-run-single>
         <TranscriptToolRow
           calls={[calls[0]]}
           defaultOpen={verbose}
@@ -1007,13 +1007,13 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
   const summaryParts = groupLabelParts(calls, t);
 
   return (
-    <div className="px-[0.9rem] pt-[0.675rem] pb-[0.6188rem]" data-transcript-tool-run>
+    <div className="px-4 pt-[0.675rem] pb-[0.6188rem]" data-transcript-tool-run>
       {/* The line of a running call is set a little larger than the lines of finished ones: the desktop app draws "Running command 9s" at about 14.7px where its finished lines are 13.9px (measured by the width of the same words on its screen). */}
       <button
         type="button"
         aria-expanded={open}
         onClick={toggle}
-        className={`flex w-full items-center gap-[0.225rem] py-[0.6531rem] text-start ${active && live ? 'text-[0.92rem]' : 'text-[0.869rem]'} transition-colors ${SUMMARY_TEXT}`}
+        className={`flex w-full items-center gap-[0.225rem] py-[0.6531rem] text-start leading-[0.9rem] ${active && live ? 'text-[0.92rem]' : 'text-[0.869rem]'} transition-colors ${SUMMARY_TEXT}`}
       >
         {/* One MorphText stays through the three states of the line (what is running, an agent that runs, what was done),
             so that the sentence is replaced the way the desktop app's is: crossed, and the line growing or shrinking. */}
