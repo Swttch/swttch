@@ -373,7 +373,20 @@
       "lineSpacing": {
         "label": "行間",
         "description": "チャットメッセージ本文の行の高さ"
-      }
+      },
+      "chatFont": {
+        "label": "チャットのフォント",
+        "description": "チャットの文字と画面に使うフォントです。JetBrains IDEではIDEのインターフェイスのフォントに合わせられます。"
+      },
+      "codeFont": {
+        "label": "コードのフォント",
+        "description": "コードブロック、ツールの出力、差分に使うフォントです（等幅フォントのみ表示されます）。JetBrains IDEではIDEのエディターのフォントに合わせられます。"
+      },
+      "fontDefault": "既定",
+      "fontFollowIde": "IDEの設定に合わせる",
+      "fontLoadAll": "インストール済みのすべてのフォントを表示…",
+      "fontSearch": "フォントを検索",
+      "fontNoMatch": "一致するフォントがありません"
     },
     "softWrap": {
       "label": "ソフトラップ",

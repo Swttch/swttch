@@ -373,7 +373,20 @@
       "lineSpacing": {
         "label": "Zeilenabstand",
         "description": "Zeilenhöhe für den Text von Chat-Nachrichten"
-      }
+      },
+      "chatFont": {
+        "label": "Chat-Schriftart",
+        "description": "Schriftart für den Chattext und die Oberfläche. In einer JetBrains-IDE kannst du der Schriftart der IDE-Oberfläche folgen."
+      },
+      "codeFont": {
+        "label": "Code-Schriftart",
+        "description": "Schriftart für Codeblöcke, Tool-Ausgaben und Diffs (nur nichtproportionale Schriftarten). In einer JetBrains-IDE kannst du der Schriftart des IDE-Editors folgen."
+      },
+      "fontDefault": "Standard",
+      "fontFollowIde": "IDE folgen",
+      "fontLoadAll": "Alle installierten Schriftarten anzeigen…",
+      "fontSearch": "Schriftarten suchen",
+      "fontNoMatch": "Keine passende Schriftart"
     },
     "softWrap": {
       "label": "Zeilenumbruch",

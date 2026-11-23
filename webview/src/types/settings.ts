@@ -52,6 +52,12 @@ export enum SettingKey {
   // Independent of FONT_SIZE: effective text size is fontSize × zoomLevel.
   ZOOM_LEVEL = 'zoomLevel',
   LINE_HEIGHT = 'lineHeight',
+  // The typeface of the chat text and of code (code blocks, tool output, diffs). null = the built-in fonts.
+  // CHAT_FONT_FROM_IDE takes the font of the IDE interface and CODE_FONT_FROM_IDE the IDE editor font instead (JetBrains mode); they win over the family.
+  CHAT_FONT_FAMILY = 'chatFontFamily',
+  CHAT_FONT_FROM_IDE = 'chatFontFromIde',
+  CODE_FONT_FAMILY = 'codeFontFamily',
+  CODE_FONT_FROM_IDE = 'codeFontFromIde',
   AUTO_SCROLL_THRESHOLD = 'autoScrollThreshold',
   // Fold long lines to the width of the code block instead of scrolling them
   // sideways — diffs, tool input/output, and the other monospace blocks that
@@ -514,6 +520,10 @@ export interface SettingsState {
   [SettingKey.ZOOM_LEVEL]: number;
   /** null = the desktop app's line spacing for the UI language (see defaultLineHeightFor). */
   [SettingKey.LINE_HEIGHT]: number | null;
+  [SettingKey.CHAT_FONT_FAMILY]: string | null;
+  [SettingKey.CHAT_FONT_FROM_IDE]: boolean;
+  [SettingKey.CODE_FONT_FAMILY]: string | null;
+  [SettingKey.CODE_FONT_FROM_IDE]: boolean;
   [SettingKey.AUTO_SCROLL_THRESHOLD]: number;
   [SettingKey.SOFT_WRAP]: boolean;
   [SettingKey.DEBUG_MODE]: boolean;
@@ -572,6 +582,10 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.FONT_SIZE]: 16,
   [SettingKey.ZOOM_LEVEL]: ZOOM_DEFAULT,
   [SettingKey.LINE_HEIGHT]: null,
+  [SettingKey.CHAT_FONT_FAMILY]: null,
+  [SettingKey.CHAT_FONT_FROM_IDE]: false,
+  [SettingKey.CODE_FONT_FAMILY]: null,
+  [SettingKey.CODE_FONT_FROM_IDE]: false,
   [SettingKey.AUTO_SCROLL_THRESHOLD]: AUTO_SCROLL_THRESHOLD_DEFAULT,
   [SettingKey.SOFT_WRAP]: false,
   [SettingKey.DEBUG_MODE]: false,

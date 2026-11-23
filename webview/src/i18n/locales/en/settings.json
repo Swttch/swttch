@@ -373,7 +373,20 @@
       "lineSpacing": {
         "label": "Line Spacing",
         "description": "Line height for chat message text"
-      }
+      },
+      "chatFont": {
+        "label": "Chat Font",
+        "description": "Font for the chat text and the interface. In a JetBrains IDE you can follow the font of the IDE’s interface."
+      },
+      "codeFont": {
+        "label": "Code Font",
+        "description": "Font for code blocks, tool output and diffs (monospaced fonts only). In a JetBrains IDE you can follow the font of the IDE’s editor."
+      },
+      "fontDefault": "Default",
+      "fontFollowIde": "Follow IDE",
+      "fontLoadAll": "Show all installed fonts…",
+      "fontSearch": "Search fonts",
+      "fontNoMatch": "No font matches"
     },
     "softWrap": {
       "label": "Soft Wrap",

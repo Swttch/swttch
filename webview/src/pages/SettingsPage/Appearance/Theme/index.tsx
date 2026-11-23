@@ -1,6 +1,7 @@
 import { SettingSection } from '../../common';
 import { ColorThemeRow } from './ColorThemeRow';
 import { FontSizeRow } from './FontSizeRow';
+import { ChatFontRow, CodeFontRow } from './FontFamilyRow';
 import { LineSpacingRow } from './LineSpacingRow';
 import { SoftWrapRow } from './SoftWrapRow';
 
@@ -16,6 +17,8 @@ export function ThemeSection() {
       <ColorThemeRow />
       <FontSizeRow />
       <LineSpacingRow />
+      <ChatFontRow />
+      <CodeFontRow />
       <SoftWrapRow />
     </SettingSection>
   );

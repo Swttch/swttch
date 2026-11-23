@@ -373,7 +373,20 @@
       "lineSpacing": {
         "label": "Interlineado",
         "description": "Altura de línea del texto de los mensajes del chat"
-      }
+      },
+      "chatFont": {
+        "label": "Fuente del chat",
+        "description": "Fuente del texto del chat y de la interfaz. En un IDE de JetBrains puedes seguir la fuente de la interfaz del IDE."
+      },
+      "codeFont": {
+        "label": "Fuente del código",
+        "description": "Fuente de los bloques de código, la salida de las herramientas y los diffs (solo fuentes monoespaciadas). En un IDE de JetBrains puedes seguir la fuente del editor del IDE."
+      },
+      "fontDefault": "Predeterminada",
+      "fontFollowIde": "Seguir el IDE",
+      "fontLoadAll": "Mostrar todas las fuentes instaladas…",
+      "fontSearch": "Buscar fuentes",
+      "fontNoMatch": "Ninguna fuente coincide"
     },
     "softWrap": {
       "label": "Ajuste de línea",

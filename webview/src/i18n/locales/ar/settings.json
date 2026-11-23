@@ -373,7 +373,20 @@
       "lineSpacing": {
         "label": "تباعد الأسطر",
         "description": "ارتفاع سطر نص رسائل المحادثة"
-      }
+      },
+      "chatFont": {
+        "label": "خط الدردشة",
+        "description": "الخط المستخدم لنص الدردشة والواجهة. في بيئة JetBrains IDE يمكنك اتباع خط واجهة IDE."
+      },
+      "codeFont": {
+        "label": "خط الشيفرة",
+        "description": "الخط المستخدم لكتل الشيفرة ومخرجات الأدوات واختلافات الملفات (خطوط أحادية المسافة فقط). في بيئة JetBrains IDE يمكنك اتباع خط محرر IDE."
+      },
+      "fontDefault": "الافتراضي",
+      "fontFollowIde": "اتباع IDE",
+      "fontLoadAll": "عرض كل الخطوط المثبّتة…",
+      "fontSearch": "ابحث عن خط",
+      "fontNoMatch": "لا يوجد خط مطابق"
     },
     "softWrap": {
       "label": "التفاف النص",

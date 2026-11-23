@@ -158,7 +158,7 @@ export function SelectMenu(props: Props) {
                 option.italic ? 'italic text-text-tertiary' : ''
               }`}
             >
-              <span className="truncate">{option.label}</span>
+              <span className="truncate" style={option.fontFamily ? { fontFamily: option.fontFamily } : undefined}>{option.label}</span>
               <span className="flex flex-shrink-0 items-center gap-2">
                 {option.previewUrl && (
                   // The sample plays while the pointer is on this icon, not on the row: moving down a list to pick

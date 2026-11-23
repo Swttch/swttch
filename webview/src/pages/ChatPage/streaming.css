@@ -4,7 +4,7 @@
 
 .streaming-message {
   position: relative;
-  font-family: var(--ide-font-ui);
+  font-family: var(--user-font-ui, var(--ide-font-ui));
   color: var(--ide-fg);
   line-height: var(--chat-line-height, 1.6);
 }
@@ -224,7 +224,7 @@
 [data-streamdown="inline-code"] {
   background: var(--md-inline-code-bg) !important;
   color: var(--md-inline-code-fg) !important;
-  font-family: var(--ide-font-code) !important;
+  font-family: var(--user-font-code, var(--ide-font-code)) !important;
 }
 
 /* Code block */
@@ -262,7 +262,7 @@
    untouched — only the backdrop is overridden. */
 [data-streamdown="code-block-body"] {
   padding: 0.85em !important;
-  font-family: var(--ide-font-code);
+  font-family: var(--user-font-code, var(--ide-font-code));
   /* Relative, not `13px` (#685): an absolute size ignores the Font size
      setting, which only moves the root `rem`, so the block stayed small while
      the text around it grew. Following the surrounding text keeps the two in

@@ -373,7 +373,20 @@
       "lineSpacing": {
         "label": "줄 간격",
         "description": "채팅 메시지 텍스트의 줄 간격"
-      }
+      },
+      "chatFont": {
+        "label": "채팅 글꼴",
+        "description": "채팅 글과 화면에 쓰는 글꼴입니다. JetBrains IDE에서는 IDE 인터페이스의 글꼴을 따라갈 수 있습니다."
+      },
+      "codeFont": {
+        "label": "코드 글꼴",
+        "description": "코드 블록, 도구 출력, 변경 내용(diff)에 쓰는 글꼴입니다(고정폭 글꼴만 나옵니다). JetBrains IDE에서는 IDE 에디터의 글꼴을 따라갈 수 있습니다."
+      },
+      "fontDefault": "기본",
+      "fontFollowIde": "IDE 설정 따르기",
+      "fontLoadAll": "설치된 모든 글꼴 보기…",
+      "fontSearch": "글꼴 검색",
+      "fontNoMatch": "맞는 글꼴이 없습니다"
     },
     "softWrap": {
       "label": "자동 줄바꿈",

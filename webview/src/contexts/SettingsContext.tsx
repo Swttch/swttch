@@ -7,6 +7,7 @@ import { useWorkingDir } from '@/contexts/WorkingDirContext';
 import { getLogForwarder } from '@/api/logging';
 import { isJetBrains, isMobile, getIdeTheme, subscribeIdeTheme } from '@/config/environment';
 import { applyZoom, MOBILE_BASE_ZOOM, ZOOM_DEFAULT } from '@/utils/zoom';
+import { IDE_EDITOR_FONT_PROPERTY, IDE_UI_FONT_PROPERTY, USER_FONT_CODE_PROPERTY, USER_FONT_UI_PROPERTY, userFontVariables } from '@/utils/fontFamily';
 import { MessageType } from '@/shared';
 import { setCurrentSettings } from '@/utils/openSettingsAt';
 import { applyUrlOverridesToSettings, mirrorSettingsForOverrides } from '@/utils/urlOverrides';
@@ -148,6 +149,30 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     const resolved = typeof lineHeight === 'number' && Number.isFinite(lineHeight) ? lineHeight : defaultLineHeightFor(i18n.language);
     document.documentElement.style.setProperty('--chat-line-height', String(resolved));
   }, [settings, i18n.language]);
+
+  // The chat font and the code font (issue #729), carried as two CSS variables that index.css and the Tailwind
+  // `font-sans` / `font-mono` families read; unset removes them and the built-in fonts apply. The IDE editor font is
+  // handed over by the JetBrains host as a variable of its own, which is re-read when the IDE changes its look.
+  useEffect(() => {
+    const apply = () => {
+      const root = document.documentElement;
+      const computed = getComputedStyle(root);
+      const { ui, code } = userFontVariables({
+        chatFont: settings[SettingKey.CHAT_FONT_FAMILY],
+        chatFromIde: settings[SettingKey.CHAT_FONT_FROM_IDE] === true,
+        codeFont: settings[SettingKey.CODE_FONT_FAMILY],
+        codeFromIde: settings[SettingKey.CODE_FONT_FROM_IDE] === true,
+        ideUiFont: computed.getPropertyValue(IDE_UI_FONT_PROPERTY).trim(),
+        ideEditorFont: computed.getPropertyValue(IDE_EDITOR_FONT_PROPERTY).trim(),
+      });
+      for (const [property, value] of [[USER_FONT_UI_PROPERTY, ui], [USER_FONT_CODE_PROPERTY, code]] as const) {
+        if (value) root.style.setProperty(property, value);
+        else root.style.removeProperty(property);
+      }
+    };
+    apply();
+    return subscribeIdeTheme(apply);
+  }, [settings]);
 
   // Fold long lines in the monospace blocks (diffs, tool input/output) instead
   // of scrolling them sideways. Carried as a class on <html> rather than read by

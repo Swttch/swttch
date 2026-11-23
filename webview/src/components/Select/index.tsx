@@ -215,7 +215,7 @@ export function Select(props: Props) {
           selected?.italic ? 'italic' : ''
         } ${className}`}
       >
-        <span className="truncate">{selected?.label ?? ''}</span>
+        <span className="truncate" style={selected?.fontFamily ? { fontFamily: selected.fontFamily } : undefined}>{selected?.label ?? ''}</span>
         <ChevronDownIcon
           className={`h-4 w-4 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}
         />

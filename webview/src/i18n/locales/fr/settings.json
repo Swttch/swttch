@@ -373,7 +373,20 @@
       "lineSpacing": {
         "label": "Interligne",
         "description": "Hauteur de ligne du texte des messages"
-      }
+      },
+      "chatFont": {
+        "label": "Police du chat",
+        "description": "Police du texte du chat et de l’interface. Dans un IDE JetBrains, vous pouvez suivre la police de l’interface de l’IDE."
+      },
+      "codeFont": {
+        "label": "Police du code",
+        "description": "Police des blocs de code, de la sortie des outils et des diffs (polices à chasse fixe uniquement). Dans un IDE JetBrains, vous pouvez suivre la police de l’éditeur de l’IDE."
+      },
+      "fontDefault": "Par défaut",
+      "fontFollowIde": "Suivre l’IDE",
+      "fontLoadAll": "Afficher toutes les polices installées…",
+      "fontSearch": "Rechercher une police",
+      "fontNoMatch": "Aucune police ne correspond"
     },
     "softWrap": {
       "label": "Retour à la ligne",

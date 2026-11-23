@@ -373,7 +373,20 @@
       "lineSpacing": {
         "label": "行距",
         "description": "聊天訊息文字的行高"
-      }
+      },
+      "chatFont": {
+        "label": "聊天字型",
+        "description": "聊天文字與介面所用的字型。在 JetBrains IDE 中可以跟隨 IDE 介面的字型。"
+      },
+      "codeFont": {
+        "label": "程式碼字型",
+        "description": "程式碼區塊、工具輸出與差異（diff）所用的字型（只列出等寬字型）。在 JetBrains IDE 中可以跟隨 IDE 編輯器的字型。"
+      },
+      "fontDefault": "預設",
+      "fontFollowIde": "跟隨 IDE",
+      "fontLoadAll": "顯示所有已安裝的字型…",
+      "fontSearch": "搜尋字型",
+      "fontNoMatch": "沒有符合的字型"
     },
     "softWrap": {
       "label": "軟換行",

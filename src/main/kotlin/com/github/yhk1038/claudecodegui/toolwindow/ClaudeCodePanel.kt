@@ -1615,6 +1615,13 @@ class ClaudeCodePanel(
             val sb = StringBuilder()
             sb.append(setPropertyJs("--ide-selection-bg", hex(selBg)))
             sb.append(setPropertyJs("--ide-selection-fg", hex(selFg)))
+            // The editor font, for the code font setting's "Use IDE editor font" (issue #729). Only a name made of
+            // the characters a font name is made of is handed over, see [IdeEditorFont].
+            IdeEditorFont.cssValueOrNull(scheme.editorFontName)?.let { sb.append(setPropertyJs("--ccg-ide-editor-font", it)) }
+            // The font of the IDE's own interface, for the chat font's "Follow IDE", and the families installed on this
+            // computer, for the dropdowns.
+            IdeEditorFont.cssValueOrNull(UIUtil.getLabelFont().family)?.let { sb.append(setPropertyJs("--ccg-ide-ui-font", it)) }
+            sb.append(IdeEditorFont.installedFamiliesScript)
             for ((name, color) in vars) {
                 // Emit both the hex form and an `R G B` channel triple. Tailwind
                 // utilities in this project apply opacity modifiers (`/NN`) to the
