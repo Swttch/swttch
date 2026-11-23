@@ -80,6 +80,8 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   // Set once the base font size has moved from the old default 13 to 16, the desktop app's 1rem (see settings-migration.ts)
   desktopScaleMigrated: false,
   autoScrollThreshold: 80,
+  // How far one wheel or trackpad movement scrolls the chat, as a multiplier of the usual distance (0.5 to 5).
+  wheelScrollSpeed: 1,
   softWrap: false,
   debugMode: false,
   logLevel: 'info',
@@ -179,6 +181,7 @@ const COMMENT_MAP: Record<string, string> = {
   codeFontFromIde: '코드 글꼴로 IDE 에디터 글꼴을 쓴다(JetBrains 모드에서만 적용). true면 codeFontFamily보다 우선',
   desktopScaleMigrated: '[내부] 글꼴 크기 기본값을 13에서 16(데스크탑의 1rem)으로 옮겼는지. 직접 지우지 않는다',
   autoScrollThreshold: '자동 스크롤 임계점(px). 메시지 끝에서 이 거리 안에 있을 때만 스트림을 따라 내려간다',
+  wheelScrollSpeed: '채팅 스크롤 속도(휠·트랙패드 한 번이 움직이는 거리의 배수, 0.5~5, 기본 1)',
   softWrap: '긴 줄을 코드 블록 너비에 맞춰 접는다(diff, 도구 입출력 등). false면 가로 스크롤',
   debugMode: '디버그 모드 활성화',
   logLevel: '로그 레벨: "debug" | "info" | "warn" | "error"',
@@ -431,6 +434,13 @@ function validateSetting(key: string, value: unknown): string | null {
       const n = Number(value);
       if (!Number.isInteger(n) || n < 1) {
         return 'autoScrollThreshold must be a positive integer';
+      }
+      break;
+    }
+    case 'wheelScrollSpeed': {
+      const n = Number(value);
+      if (!Number.isFinite(n) || n < 0.5 || n > 5) {
+        return 'wheelScrollSpeed must be a number between 0.5 and 5';
       }
       break;
     }

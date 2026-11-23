@@ -436,6 +436,10 @@
       "autoScrollThreshold": {
         "label": "Distance de reprise du défilement automatique",
         "description": "Si vous faites défiler au-delà de ce nombre de pixels depuis le bas, le défilement automatique se met en pause afin que vous puissiez lire librement. Il reprend dès que vous revenez dans cette distance. Plus la valeur est petite, plus vous devez revenir près du bas pour réactiver. Par défaut {{value}}."
+      },
+      "wheelScrollSpeed": {
+        "label": "Vitesse de défilement",
+        "description": "Définit de combien un mouvement de la molette ou du pavé tactile fait défiler le chat, en multiple de la distance habituelle ({{min}} à {{max}}). Au-dessus de 1, le défilement va plus loin ; en dessous, moins loin. Par défaut {{value}}."
       }
     }
   },

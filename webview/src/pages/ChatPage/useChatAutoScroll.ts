@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import type { LoadedMessageDto } from '../../types';
 import { useAutoScroll, type UseAutoScroll } from '@/hooks/useAutoScroll';
+import { useWheelScrollSpeed } from '@/hooks/useWheelScrollSpeed';
 import { findNewestUserUuid } from './paging';
 
 export interface UseChatAutoScroll extends UseAutoScroll {
@@ -36,6 +37,9 @@ export function useChatAutoScroll(
   const rememberScrollPosition = useCallback(() => {
     if (currentSessionId) handleScroll();
   }, [currentSessionId, handleScroll]);
+
+  // The "Scroll speed" setting: how far one wheel or trackpad movement scrolls the chat.
+  useWheelScrollSpeed(autoScroll.scrollRef);
 
   return { ...autoScroll, rememberScrollPosition };
 }
