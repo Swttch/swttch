@@ -50,7 +50,8 @@ export class ErrorBoundary extends Component<Props, State> {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            height: '100vh',
+            // Divided by the UI zoom, which scales viewport units too (see postcss-viewport-zoom.js).
+            height: 'calc(100vh / var(--ui-zoom, 1))',
             backgroundColor: '#1e1e1e',
             color: '#cccccc',
             fontFamily: 'system-ui, sans-serif',
