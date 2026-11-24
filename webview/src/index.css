@@ -637,6 +637,18 @@ html, body {
   overscroll-behavior-x: none;
 }
 
+/* On phones the chat frame follows the visual viewport, so the virtual keyboard never covers the
+   input or the end of the transcript (iOS Safari draws the keyboard over the layout viewport instead
+   of shrinking it). `--vv-top`/`--vv-height` are screen pixels from utils/visualViewportFit.ts; the
+   page's CSS `zoom` scales a fixed element's lengths once more, so they are divided by `--ui-zoom`.
+   The transform makes the frame the box its own fixed header is placed in, so the header moves with
+   the frame when Safari pans the page. */
+html[data-vv-fit] [data-app-frame] {
+  top: calc(var(--vv-top, 0px) / var(--ui-zoom, 1));
+  height: calc(var(--vv-height, 100%) / var(--ui-zoom, 1));
+  transform: translateZ(0);
+}
+
 body {
   font-family: var(--user-font-ui, var(--ide-font-ui));
   background-color: var(--surface-base);
