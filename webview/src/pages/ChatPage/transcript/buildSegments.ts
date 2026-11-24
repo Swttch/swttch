@@ -176,9 +176,12 @@ const FILE_CHANGE_TOOLS = new Set(['Edit', 'Write', 'NotebookEdit']);
  * A call whose card is the point of the turn (a question, a plan, what was sent), and so is not gathered.
  * The turn's checklist (`update_plan`) is one: the desktop app draws it as a box of its own, not as a tool call.
  */
-export function isCardTool(name: string): boolean {
+export function isCardTool(name: string, input?: Record<string, unknown>): boolean {
+  // Only an Artifact that publishes a page is a card; one that asks (listing the types, a quickstart) is a call like the others.
+  if (name === 'Artifact' && input?.action !== undefined && input.action !== 'publish') return false;
   // An Artifact (a page or a deck Claude made) is what the turn produced: its card opens it in the preview pane.
-  return (isAlwaysVisibleTool(name) && !FILE_CHANGE_TOOLS.has(name)) || name === UPDATE_PLAN_TOOL || name === 'Artifact';
+  // Starting plan mode is a line among the calls around it ("Loaded tools, Plan started"), not a card of its own.
+  return (isAlwaysVisibleTool(name) && !FILE_CHANGE_TOOLS.has(name) && name !== 'EnterPlanMode') || name === UPDATE_PLAN_TOOL || name === 'Artifact';
 }
 
 /**
@@ -321,7 +324,7 @@ export function buildSegments(body: LoadedMessageDto[]): Segment[] {
         segments.push({ kind: 'tools', key: `tools-${toolUse.id}`, calls: [call] });
         return;
       }
-      if (isCardTool(toolUse.name)) {
+      if (isCardTool(toolUse.name, toolUse.input as Record<string, unknown> | undefined)) {
         closeRun();
         segments.push({ kind: 'card', key: `card-${toolUse.id}`, call });
         return;

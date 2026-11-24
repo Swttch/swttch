@@ -11,11 +11,27 @@ import {useTranscriptViewMode} from "../transcriptViewMode";
 import {isUserDeclined} from "./common/toolStatus";
 import {findPlanFileContent} from "./planFromTranscript";
 import {Container, LabelValue, RendererProps, ToolHeader, ToolWrapper} from "./common";
+import {DesktopPlanCard, PlanProposingLine, planTitle} from "../../AcceptPlanPanel/DesktopPlanCard";
+import {usePendingPlan} from "../../AcceptPlanPanel/PendingPlanContext";
+import type {LoadedMessageDto} from "@/types";
 
 class ExitPlanModeToolUseDto extends ToolUseBlockDto {
     declare input: {
         plan?: string;
     };
+}
+
+/** Whether a message the person sent comes after this entry: then the turn this call belongs to is not the one that goes on. */
+function promptFollows(messages: LoadedMessageDto[] | undefined, uuid: string | undefined): boolean {
+    if (!messages || !uuid) return false;
+    const at = messages.findIndex((message) => message.uuid === uuid);
+    if (at === -1) return false;
+    return messages.slice(at + 1).some((message) => {
+        if (message.type !== 'user') return false;
+        const content = (message.message as { content?: unknown } | undefined)?.content;
+        // An answer to a call is a user entry too; only what the person typed is a later turn.
+        return !(Array.isArray(content) && content.length > 0 && content.every((block) => (block as { type?: unknown }).type === 'tool_result'));
+    });
 }
 
 export function ExitPlanModeRenderer(props: RendererProps) {
@@ -39,22 +55,27 @@ export function ExitPlanModeRenderer(props: RendererProps) {
 
     const headerName = plan ? t('exitPlanMode.title') : t('exitPlanMode.planModeTitle');
     const viewMode = useTranscriptViewMode();
+    const waitingPlan = usePendingPlan();
     const [open, setOpen] = useState(false);
     const { t: tChat } = useTranslation('chat');
 
     // In the views that follow the desktop app the plan is one line, "Proposing plan x" while it waits and "Proposed
     // plan x" after, that opens to the plan; the card under the chat is where it is answered.
     if (viewMode !== null) {
-        // While the plan waits, its line is drawn under the card that asks about it (DesktopPlanCard).
-        if (!toolResult) return <div hidden data-testid="plan-row" />;
+        // While the plan waits, the card that asks about it stands here, where the call stands in the conversation.
+        if (!toolResult) {
+            return waitingPlan !== null && waitingPlan.pending.toolUseId === toolUse.id
+                ? <DesktopPlanCard pending={waitingPlan.pending} onApprove={waitingPlan.onApprove} onDeny={waitingPlan.onDeny} />
+                : <PlanProposingLine title={planTitle(plan)} plan={plan} current={!promptFollows(messages, props.message?.uuid)} />;
+        }
         const title = (plan.split('\n').map((line) => line.trim()).find((line) => line !== '') ?? '').replace(/^#+\s*/, '');
         return (
-            <div data-testid="plan-row" className="mb-[1.4rem]">
+            <div data-testid="plan-row">
                 <button
                     type="button"
                     aria-expanded={open}
                     onClick={() => setOpen((value) => !value)}
-                    className="flex w-full items-center gap-[0.35rem] py-[0.625rem] text-start text-[0.9656rem] text-text-secondary"
+                    className="flex w-full items-center gap-[0.5624rem] pt-1 pb-1 text-start leading-[0.9rem] text-[0.9375rem] text-[var(--tr-muted)] transition-colors hover:text-[var(--tr-hover)]"
                 >
                     {isError && !declined ? (
                         <span className="min-w-0 truncate">
@@ -66,10 +87,10 @@ export function ExitPlanModeRenderer(props: RendererProps) {
                             {isError && declined ? ` ${tChat('acceptPlan.notApproved')}` : ''}
                         </span>
                     )}
-                    <ChevronRightIcon className={`h-4 w-4 shrink-0 transition-transform ${open ? 'rotate-90' : ''}`} />
+                    <ChevronRightIcon className={`-ms-[0.3376rem] h-[0.9rem] w-[0.9rem] shrink-0 transition-transform rtl:-scale-x-100 ${open ? 'rotate-90 rtl:-rotate-90' : ''}`} />
                 </button>
                 {open && plan && (
-                    <div className="markdown-content mb-2 text-text-primary text-[1rem] leading-relaxed">
+                    <div className="markdown-content mt-3 mb-1 text-text-primary text-[1rem] leading-relaxed">
                         <Streamdown mode="static" controls={{ code: true, table: true, mermaid: MERMAID_CONTROLS }} plugins={{ math, code, mermaid }} mermaid={mermaidOptions}>
                             {plan}
                         </Streamdown>

@@ -4,6 +4,7 @@ import {filePreviewPaneStore} from "@/utils/filePreviewPaneStore";
 import {ToolUseBlockDto} from "@/dto";
 import {useTranslation} from "@/i18n";
 import {Container, LabelValue, RendererProps, ToolHeader, ToolWrapper, toolResultText} from "./common";
+import {useTranscriptViewMode} from "../transcriptViewMode";
 
 class ArtifactToolUseDto extends ToolUseBlockDto {
     declare input: {
@@ -70,6 +71,7 @@ export function ArtifactRenderer(props: RendererProps) {
     const headerSubject = subject === pageUrl ? '' : subject;
     const pageFile = input?.file_path;
     const pageTitle = usePageTitle(pageFile);
+    const viewMode = useTranscriptViewMode();
 
     // A page that was published (or updated) is a card with its name that opens it, as Claude
     // Desktop draws it. The sentence the CLI answers with ("Published ... Version 1, version id ...")
@@ -86,15 +88,13 @@ export function ArtifactRenderer(props: RendererProps) {
         );
         // The page is a file on this machine, so it opens in the pane beside the chat as Desktop opens it;
         // a call that names no file can only point at the published address.
-        return (
-            <ToolWrapper message={props.message}>
-                {pageFile && /\.html?$/i.test(pageFile) ? (
-                    <button type="button" onClick={() => filePreviewPaneStore.open(pageFile, pageUrl)} className={cardClass}>{content}</button>
-                ) : (
-                    <a href={pageUrl} target="_blank" rel="noopener noreferrer" className={cardClass}>{content}</a>
-                )}
-            </ToolWrapper>
+        const card = pageFile && /\.html?$/i.test(pageFile) ? (
+            <button type="button" onClick={() => filePreviewPaneStore.open(pageFile, pageUrl)} className={cardClass}>{content}</button>
+        ) : (
+            <a href={pageUrl} target="_blank" rel="noopener noreferrer" className={cardClass}>{content}</a>
         );
+        // In the transcript views the card stands bare: the block around it gives the inset and the space below.
+        return viewMode !== null ? card : <ToolWrapper message={props.message}>{card}</ToolWrapper>;
     }
 
     return (

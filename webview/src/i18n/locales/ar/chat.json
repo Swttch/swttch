@@ -290,6 +290,8 @@
     "card": {
       "title": "اقترح Claude خطة",
       "openPlan": "فتح الخطة",
+      "collapsePlan": "طيّ",
+      "expandPlan": "توسيع",
       "revisePlaceholder": "ما الذي يجب تغييره؟ (اختياري)",
       "back": "رجوع",
       "reviseSubmit": "تعديل",

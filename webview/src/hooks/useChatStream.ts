@@ -322,6 +322,12 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
   } | null>(null);
   const [turnOutputTokens, setTurnOutputTokens] = useState(0);
   const [turnStartedAt, setTurnStartedAt] = useState<number | null>(null);
+  // A turn that runs here without this screen having started it or been told when it began (it went on from a question
+  // answered in the chat, or the screen was opened onto it) has no clock, and its line would say 0 seconds all the way.
+  // It counts from the moment it is seen to run.
+  useEffect(() => {
+    if (isStreaming && turnStartedAt === null) setTurnStartedAt(Date.now());
+  }, [isStreaming, turnStartedAt]);
 
   // Usage of the API message now streaming, built from its `message_start` and
   // `message_delta`. The `assistant` frame repeats only the `message_start`

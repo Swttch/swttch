@@ -165,11 +165,11 @@ function SendBubble({ message, sectionKey }: Props) {
     <IfVisible
       extra={imageBlocks.length > 0 || contexts.length > 0 || parsed.replies.length > 0 || parsed.excerpts.length > 0}
     >
-      <div className="group flex flex-col items-end gap-[0.3376rem] pt-[0.45rem] pb-[1.9969rem] px-4" data-transcript-user>
+      <div className="group flex flex-col items-end pb-2 px-4" data-transcript-user>
         {parsed.excerpts.length > 0 && <ExcerptCards excerpts={parsed.excerpts} />}
 
         {imageBlocks.length > 0 && (
-          <div className="mb-[0.1624rem] max-w-full">
+          <div className="mb-2 max-w-full">
             <ImageAttachments images={imageBlocks} entryUuid={message.uuid} size="preview" />
           </div>
         )}
@@ -194,8 +194,8 @@ function SendBubble({ message, sectionKey }: Props) {
         {contexts.length > 0 && <ContextPills context={contexts} />}
 
         {hasBubble && footerOverlaid && (
-          <div className="relative h-0 self-stretch">
-            <div className="absolute end-0 top-0 z-[1]">{footer}</div>
+          <div className="relative">
+            <div className="end-0 top-0 z-[1]">{footer}</div>
           </div>
         )}
         {hasBubble && !footerOverlaid && footer}

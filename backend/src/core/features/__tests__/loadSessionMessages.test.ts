@@ -356,6 +356,64 @@ describe('loadSessionMessages', () => {
       expect(result.lastReportedMode).toBe('bypass');
     });
 
+    // Plan mode is entered by the model's own call, after the prompt that was sent under another mode, so the
+    // prompt's stamp is not the mode any more: the CLI's `plan_mode` attachment is what says so.
+    it('is plan when the model entered plan mode after the last prompt', async () => {
+      await writeSession('sess-entered-plan', [
+        JSON.stringify({ type: 'user', uuid: 'u1', permissionMode: 'bypassPermissions' }),
+        JSON.stringify({ type: 'assistant', uuid: 'a1', parentUuid: 'u1', message: { content: [{ type: 'tool_use', id: 't1', name: 'EnterPlanMode', input: {} }] } }),
+        JSON.stringify({ type: 'user', uuid: 'u2', parentUuid: 'a1', message: { content: [{ type: 'tool_result', tool_use_id: 't1', content: 'Entered plan mode.' }] } }),
+        JSON.stringify({ type: 'attachment', uuid: 'x1', parentUuid: 'u2', attachment: { type: 'plan_mode', isSubAgent: false } }),
+        JSON.stringify({ type: 'assistant', uuid: 'a2', parentUuid: 'x1' }),
+      ]);
+
+      const result = await loadSessionMessages('/work', 'sess-entered-plan');
+      expect(result.lastReportedMode).toBe('plan');
+    });
+
+    // The reload reads one page, and a long conversation has put the plan_mode line far behind it: the session's
+    // index is what remembers it, so plan mode is still found.
+    it('is plan when the plan_mode line is further back than the newest page', async () => {
+      const lines = [
+        JSON.stringify({ type: 'user', uuid: 'u1', permissionMode: 'bypassPermissions' }),
+        JSON.stringify({ type: 'attachment', uuid: 'x1', parentUuid: 'u1', attachment: { type: 'plan_mode', isSubAgent: false } }),
+      ];
+      let parent = 'x1';
+      for (let i = 0; i < 120; i++) {
+        lines.push(JSON.stringify({ type: 'assistant', uuid: `a${i}`, parentUuid: parent }));
+        parent = `a${i}`;
+      }
+      await writeSession('sess-far-plan', lines);
+
+      const result = await loadSessionMessages('/work', 'sess-far-plan');
+      expect(result.messages.some((message) => message.uuid === 'x1')).toBe(false);
+      expect(result.lastReportedMode).toBe('plan');
+    });
+
+    it('is not plan again once a plan was approved', async () => {
+      await writeSession('sess-approved-plan', [
+        JSON.stringify({ type: 'user', uuid: 'u1', permissionMode: 'bypassPermissions' }),
+        JSON.stringify({ type: 'attachment', uuid: 'x1', parentUuid: 'u1', attachment: { type: 'plan_mode', isSubAgent: false } }),
+        JSON.stringify({ type: 'assistant', uuid: 'a1', parentUuid: 'x1', message: { content: [{ type: 'tool_use', id: 't2', name: 'ExitPlanMode', input: {} }] } }),
+        JSON.stringify({ type: 'user', uuid: 'u2', parentUuid: 'a1', message: { content: [{ type: 'tool_result', tool_use_id: 't2', content: 'approved' }] } }),
+      ]);
+
+      const result = await loadSessionMessages('/work', 'sess-approved-plan');
+      expect(result.lastReportedMode).toBe('bypass');
+    });
+
+    it('stays plan when the plan was turned down', async () => {
+      await writeSession('sess-denied-plan', [
+        JSON.stringify({ type: 'user', uuid: 'u1', permissionMode: 'bypassPermissions' }),
+        JSON.stringify({ type: 'attachment', uuid: 'x1', parentUuid: 'u1', attachment: { type: 'plan_mode', isSubAgent: false } }),
+        JSON.stringify({ type: 'assistant', uuid: 'a1', parentUuid: 'x1', message: { content: [{ type: 'tool_use', id: 't3', name: 'ExitPlanMode', input: {} }] } }),
+        JSON.stringify({ type: 'user', uuid: 'u2', parentUuid: 'a1', message: { content: [{ type: 'tool_result', tool_use_id: 't3', content: 'no', is_error: true }] } }),
+      ]);
+
+      const result = await loadSessionMessages('/work', 'sess-denied-plan');
+      expect(result.lastReportedMode).toBe('plan');
+    });
+
     it('is null when the newest page carries no permissionMode at all', async () => {
       await writeSession('sess-none', [
         JSON.stringify({ type: 'user', uuid: 'u1' }),

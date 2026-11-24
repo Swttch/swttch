@@ -290,6 +290,8 @@
     "card": {
       "title": "Claude hat einen Plan vorgeschlagen",
       "openPlan": "Plan öffnen",
+      "collapsePlan": "Einklappen",
+      "expandPlan": "Ausklappen",
       "revisePlaceholder": "Was soll sich ändern? (optional)",
       "back": "Zurück",
       "reviseSubmit": "Überarbeiten",

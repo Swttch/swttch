@@ -290,6 +290,8 @@
     "card": {
       "title": "Claude 提出了一個計畫",
       "openPlan": "開啟計畫",
+      "collapsePlan": "摺疊",
+      "expandPlan": "展開",
       "revisePlaceholder": "需要變更什麼？（選填）",
       "back": "返回",
       "reviseSubmit": "修改",

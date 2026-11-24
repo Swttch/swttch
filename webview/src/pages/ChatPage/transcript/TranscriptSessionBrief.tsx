@@ -4,7 +4,9 @@ import { useTranslation } from '@/i18n';
 import { useSessionParent } from '@/hooks/useSessionParent';
 import { useSessionContextOrNull } from '@/contexts/SessionContext';
 import { useTimeAgo } from '@/hooks/useTimeAgo';
-import type { LoadedMessageDto } from '../../../types';
+import { getTextContent, type LoadedMessageDto } from '../../../types';
+import { stripSystemReminders } from '../message-renderers/utils/parseUserContent';
+import { TranscriptUserFooter } from './TranscriptUserFooter';
 import type { SessionBrief } from '../message-renderers/utils/sessionBrief';
 import { UserMessageText } from '../message-renderers/components/UserMessageText';
 import { openSessionFromClick, sessionLinkHref } from '../message-renderers/components/DesktopSessionLink';
@@ -81,7 +83,7 @@ export function TranscriptSessionBrief({ brief, message }: { brief: SessionBrief
   const toggle = () => setOpen((value) => !value);
 
   return (
-    <div className="flex flex-col gap-[1.0125rem] px-4 pt-[0.45rem] pb-0 -mb-[0.175rem]" data-transcript-brief>
+    <div className="group flex flex-col gap-2 px-4 pb-2" data-transcript-brief>
       <div className={`flex w-fit max-w-full items-center gap-[0.5875rem] text-[0.9375rem] ${QUIET_TEXT}`}>
         {/* The starter's title is a link to it, so it cannot sit inside the button that folds the cards: the line is the
             words before it, the link, and the rest, the two button parts both folding the cards. */}
@@ -114,6 +116,12 @@ export function TranscriptSessionBrief({ brief, message }: { brief: SessionBrief
           <BriefStep label={i18n.t('sessionBrief.context', { ns: 'chatTools' })} text={brief.context} defaultOpen={false} divided />
         </div>
       )}
+      {/* The copy and time row under the card appears while the pointer is on it, as under a send's bubble. */}
+      <div className="relative self-end">
+        <div className="end-0 top-0 z-[1]">
+          <TranscriptUserFooter copyText={stripSystemReminders(getTextContent(message)).trim()} timestamp={message.timestamp} />
+        </div>
+      </div>
     </div>
   );
 }

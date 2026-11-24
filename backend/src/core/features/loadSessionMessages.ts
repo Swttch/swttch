@@ -206,12 +206,14 @@ export async function loadSessionMessages(
   */
   let chain: IndexedEntry[];
   let workflowChain: SessionMessage[];
+  let inPlanMode = false;
   try {
     const sessionsPath = await getProjectSessionsPath(workingDir);
     const sessionFile = join(sessionsPath, `${targetSessionId}.jsonl`);
     const index = await getSessionIndex(sessionFile, sessionsPath, targetSessionId);
     chain = index.entries;
     workflowChain = index.workflowChain;
+    inPlanMode = index.inPlanMode;
   } catch (err) {
     console.error('[node-backend]', 'Error loading session:', err);
     return {
@@ -374,7 +376,7 @@ export async function loadSessionMessages(
   // older "load older" page is history, not "what mode is this session in now".
   // A page served for a cursor miss IS the newest page, whatever was asked for.
   const lastReportedMode =
-    (beforeUuid || afterUuid || aroundUuid) && !reset ? null : findLastReportedModeInPage(slicedMessages);
+    (beforeUuid || afterUuid || aroundUuid) && !reset ? null : (inPlanMode ? 'plan' : findLastReportedModeInPage(slicedMessages));
 
   return {
     messages: slicedMessages,

@@ -290,6 +290,8 @@
     "card": {
       "title": "Claude가 계획을 제안했습니다",
       "openPlan": "계획 열기",
+      "collapsePlan": "접기",
+      "expandPlan": "펼치기",
       "revisePlaceholder": "무엇을 변경해야 하나요? (선택사항)",
       "back": "뒤로",
       "reviseSubmit": "수정",

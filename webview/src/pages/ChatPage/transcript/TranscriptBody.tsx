@@ -8,11 +8,9 @@ import {
 import { MessageBubble } from '../MessageBubble';
 import { StreamingMessage } from '../StreamingMessage';
 import { ToolRenderer } from '../message-renderers/ToolRenderer';
-import { TranscriptReplyFooter } from './TranscriptReplyFooter';
 import { TranscriptFileChanges, changedFilesOf } from './TranscriptFileChanges';
 import { ContextUsageCard } from '../message-renderers/components/ContextUsageCard';
 import { parseContextUsage } from '@/utils/parseContextUsage';
-import { useSendActionsValue } from '../SendActionsContext';
 import { APP_EVENT_TOOL, buildSegments, PEER_MESSAGE_TOOL, type Segment } from './buildSegments';
 import { TranscriptToolRun } from './TranscriptToolRun';
 import { TranscriptTaskNotice } from './TranscriptTaskNotice';
@@ -50,7 +48,6 @@ function TranscriptBlocks({
   /** The turn has a file summary under this text: the text's last paragraph or list gives up its own bottom margin to it. */
   summaryShown?: boolean;
 }) {
-  const sendActions = useSendActionsValue();
   const streaming = message.isStreaming ?? false;
   // Keyed by the id the reply was first drawn under, not its `uuid`, which a streamed reply changes with every
   // block it finishes (see `rowKey`).
@@ -96,13 +93,6 @@ function TranscriptBlocks({
                 streaming || !showFooter ? undefined : (
                   <>
                     {summary}
-                    <TranscriptReplyFooter
-                      className="mt-[0.3376rem]"
-                      copyText={text}
-                      readAloudKey={message.uuid ? `${message.uuid}:${index}` : undefined}
-                      timestamp={message.timestamp}
-                      onFork={sendActions && message.uuid && sendActions.canForkReply(message.uuid) ? () => sendActions.forkAtReply(message.uuid as string) : undefined}
-                    />
                   </>
                 )
               }
@@ -115,6 +105,15 @@ function TranscriptBlocks({
   );
 }
 
+/** The inset and the space below of a progress block, set once here for every kind that is one. */
+const PROGRESS_BLOCK_CLASS: Partial<Record<Segment['kind'], string>> = {
+  // A block that draws nothing (a thinking block with no text yet) is an empty element, and an empty one gives no space.
+  blocks: 'px-4 pb-4 empty:pb-0',
+  tools: 'px-4 pb-4 empty:pb-0',
+  card: 'px-4 pb-4 empty:pb-0',
+  chapter: 'px-4 pb-4 empty:pb-0',
+};
+
 function SegmentView({ segment, endsTurn, onRetry, summary, summaryShown, liveTail }: { segment: Segment; endsTurn: boolean; liveTail?: boolean; onRetry?: (messageId: string) => void; summary?: ReactNode; summaryShown?: boolean }) {
   switch (segment.kind) {
     case 'message':
@@ -125,8 +124,10 @@ function SegmentView({ segment, endsTurn, onRetry, summary, summaryShown, liveTa
       if (isCompactSummaryEntry(segment.message)) return null;
       return <MessageBubble message={segment.message} onRetry={onRetry} />;
     case 'blocks':
+      // Blocks that are all thinking with no text yet draw nothing (see TranscriptBlocks), so no box is drawn for them either.
+      if (segment.blocks.every((block) => block.type === ContentBlockType.Thinking && !(block as ThinkingBlockDto).thinking)) return null;
       return (
-        <div className="group transcript-prose px-4 [&_.markdown-content_p:first-child]:mt-0">
+        <div className="group transcript-prose [&_.markdown-content_p:first-child]:mt-0">
           <TranscriptBlocks message={segment.message} blocks={segment.blocks} showFooter={endsTurn} summary={summary} summaryShown={summaryShown} liveTail={liveTail} />
         </div>
       );
@@ -134,12 +135,12 @@ function SegmentView({ segment, endsTurn, onRetry, summary, summaryShown, liveTa
       return <TranscriptToolRun calls={segment.calls} />;
     case 'card':
       return (
-        <div data-transcript-card className="px-4">
+        <div data-transcript-card>
           <ToolRenderer toolUse={segment.call.toolUse} message={segment.call.message} />
         </div>
       );
     case 'chapter':
-      return <h3 className="px-4 pb-[1.6313rem] pt-[0.675rem] text-[0.9rem] font-semibold leading-relaxed text-[var(--tr-text)]">{segment.title}</h3>;
+      return <h3 className="pt-[0.675rem] text-[0.9rem] font-semibold leading-relaxed text-[var(--tr-text)]">{segment.title}</h3>;
     case 'taskNotice':
       return <TranscriptTaskNotice message={segment.message} />;
   }
@@ -172,7 +173,7 @@ function TranscriptPlan({ body, running }: { body: LoadedMessageDto[]; running: 
   const plan = useMemo(() => planOfTurn(body), [body]);
   if (!running || plan.length === 0) return null;
   return (
-    <div className="px-4 py-[0.45rem]" data-transcript-plan>
+    <div className="px-4 pb-4" data-transcript-plan>
       <PlanBox plan={plan} running />
     </div>
   );
@@ -250,6 +251,7 @@ export const TranscriptBody = memo(function TranscriptBody({ body, mergedMessage
           // What kind of segment this is, for prose.css: some entries draw nothing and leave an empty
           // wrapper, so "the first thing under the bubble" cannot be read off the position in this list.
           data-seg={segment.kind}
+          className={PROGRESS_BLOCK_CLASS[segment.kind]}
           data-after-reply={afterReply.has(segment.key) ? '' : undefined}
           {...entryMarker(entryOf(segment).uuid)}
           onClick={() => {

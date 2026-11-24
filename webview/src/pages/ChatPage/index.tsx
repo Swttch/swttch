@@ -15,6 +15,8 @@ import { REPLIED_IN_CHAT_ANSWER, repliedInChatAnswers } from './AskUserQuestionI
 import { usesDesktopPermissionCard } from './PermissionBanner/DesktopPermissionCard';
 import { AskUserQuestionInputPanel } from './AskUserQuestionInputPanel';
 import { AcceptPlanPanel } from './AcceptPlanPanel';
+import { PendingPlanContext } from './AcceptPlanPanel/PendingPlanContext';
+import { PendingQuestionContext } from './AskUserQuestionInputPanel/PendingQuestionContext';
 import { BannerArea } from './BannerArea';
 import { SettingsFileProblemBanner } from './SettingsFileProblemBanner';
 import { MigrationBanner } from './MigrationBanner';
@@ -727,20 +729,14 @@ function ChatPageContent() {
             findInChat={findInChat}
           />
         ) : (
+          <PendingPlanContext.Provider value={answerCard && pendingPlan ? { pending: pendingPlan, onApprove: approvePlan, onDeny: denyPlan } : null}>
+          <PendingQuestionContext.Provider value={answerCard && pendingUserAnswer ? { toolUse: pendingUserAnswer.toolUse, controlRequestId: pendingUserAnswer.controlRequestId, onDismiss: () => dismiss(pendingUserAnswer.toolUse.id) } : null}>
           <TranscriptArea
             isStreaming={isStreaming && !isAwaitingUser}
             awaitingInput={cardWaiting || answerCard}
-            awaitingInputLine={answerCard ? (pendingUserAnswer ? 'after' : 'none') : 'before'}
+            awaitingInputLine={answerCard ? 'none' : 'before'}
             trailing={
-              answerCard && pendingUserAnswer ? (
-                <AskUserQuestionInputPanel
-                  toolUse={pendingUserAnswer.toolUse}
-                  controlRequestId={pendingUserAnswer.controlRequestId}
-                  onDismiss={() => dismiss(pendingUserAnswer.toolUse.id)}
-                />
-              ) : answerCard && pendingPlan ? (
-                <AcceptPlanPanel pending={pendingPlan} onApprove={approvePlan} onDeny={denyPlan} />
-              ) : cardWaiting && pendingPermission ? (
+              cardWaiting && pendingPermission ? (
                 <PermissionBanner
                   permission={pendingPermission}
                   onApprove={() => answerAfterHeld(() => approvePermission(pendingPermission.controlRequestId))}
@@ -763,6 +759,8 @@ function ChatPageContent() {
             isLoadingGap={isLoadingGap}
             findInChat={findInChat}
           />
+          </PendingQuestionContext.Provider>
+          </PendingPlanContext.Provider>
         )}
 
         {/* Input Area */}

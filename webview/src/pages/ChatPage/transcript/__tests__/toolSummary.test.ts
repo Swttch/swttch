@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { TFunction } from 'i18next';
 import type { LoadedMessageDto } from '../../../../types';
 import type { ToolCall } from '../buildSegments';
-import { commandStandIn, groupIntoRows, groupLabel, groupLabelParts, hasFailed, isExpandable, rowLabel, sumLineStats, wasStopped } from '../toolSummary';
+import { commandStandIn, groupIntoRows, groupLabel, groupLabelParts, hasFailed, isExpandable, rowLabel, sumLineStats, wasStopped, withoutMessagingToolLoad } from '../toolSummary';
 
 // A translator that shows what it was asked for: the key's last part, then what it was given.
 const t = ((key: string, options?: { count?: number; name?: string }) => {
@@ -220,5 +220,56 @@ describe('a call the user stopped', () => {
 
   it('reads as the running phrase on its line, as the desktop app draws it', () => {
     expect(rowLabel(stopped('3', { command: 'ping -c 100 127.0.0.1' }), t).before).toBe('runningCommandOf');
+  });
+});
+
+describe('withoutMessagingToolLoad', () => {
+  const load = (query: string) => call('l', 'ToolSearch', { query });
+
+  it('leaves only the message of a run made of the load of the tool that sends it and that message', () => {
+    const send = call('s', 'mcp__swttch_session_mgmt__send_message', { session_id: '3e4f8cef-43b9-42d7-84ec-5b1c4a22e7ab', message: 'hi' });
+    expect(withoutMessagingToolLoad([load('select:mcp__swttch_session_mgmt__send_message'), send])).toEqual([send]);
+  });
+
+  it('does the same when the message is one the call received or one sent with SendMessage', () => {
+    const sent = call('m', 'SendMessage', { to: 'someone', message: 'hi' });
+    expect(withoutMessagingToolLoad([sent, load('select:SendMessage')])).toEqual([sent]);
+  });
+
+  it('keeps both calls when the load is for another tool', () => {
+    const send = call('s', 'mcp__swttch_session_mgmt__send_message', { session_id: 'x', message: 'hi' });
+    const calls = [load('select:EnterPlanMode'), send];
+    expect(withoutMessagingToolLoad(calls)).toEqual(calls);
+  });
+
+  it('keeps a run of more than two calls whole', () => {
+    const calls = [load('select:SendMessage'), call('m', 'SendMessage', { to: 'x', message: 'hi' }), call('l2', 'ListAgents')];
+    expect(withoutMessagingToolLoad(calls)).toEqual(calls);
+  });
+});
+
+describe('groupLabelParts naming the sessions', () => {
+  const PARENT = '3e4f8cef-43b9-42d7-84ec-5b1c4a22e7ab';
+  const titles = (c: ToolCall) => (c.toolUse.input?.session_id === PARENT || c.toolUse.input?.to === PARENT || c.toolUse.input?.from === PARENT ? 'Parent session' : undefined);
+  const sent = call('s', 'mcp__swttch_session_mgmt__send_message', { session_id: PARENT, message: 'hi' });
+  const received = call('r', 'PeerMessage', { from: PARENT, body: 'hello' });
+  const other = call('b', 'Bash');
+
+  it('names each session once, after the last phrase about sessions, with the id it is named by', () => {
+    const parts = groupLabelParts([received, other, sent], t, titles);
+    // The phrase for the received message carries no name: the one after it does, so the name is said once.
+    expect(parts.pieces.some((piece) => typeof piece === 'object' && 'sessions' in piece)).toBe(true);
+    const named = parts.pieces.filter((piece) => typeof piece === 'object' && 'sessions' in piece);
+    expect(named).toHaveLength(1);
+    expect(named[0]).toMatchObject({ sessions: [{ title: 'Parent session', id: PARENT }] });
+  });
+
+  it('writes the names into the one line a group is read as', () => {
+    expect(groupLabel([other, sent], t, titles)).toMatch(/Parent session$/);
+  });
+
+  it('leaves a phrase as it is when the session has no name to give', () => {
+    const parts = groupLabelParts([other, sent], t, () => undefined);
+    expect(parts.pieces.every((piece) => typeof piece === 'string')).toBe(true);
   });
 });

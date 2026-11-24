@@ -1,6 +1,7 @@
 import type { TFunction } from 'i18next';
 import type { LoadedMessageDto } from '../../../types';
 import { parseSessionDelivery } from '../message-renderers/ToolRenderers/SendMessageRenderer';
+import { isCliSessionId } from '../message-renderers/utils/startedSessions';
 import { isUserDeclined, toolResultRawText, toolResultText, toolStatus } from '../message-renderers/ToolRenderers/common/toolStatus';
 import { APP_EVENT_TOOL, BACKGROUND_DONE_TOOL, PEER_MESSAGE_TOOL, type ToolCall } from './buildSegments';
 import { changedLineCounts } from './fileDiff';
@@ -27,6 +28,7 @@ export type ToolKind =
   | 'receivedMessage'
   | 'backgroundDone'
   | 'toolLoad'
+  | 'planStart'
   | 'sessionArchive'
   | 'sessionDetach'
   | 'sessionDelete'
@@ -118,6 +120,8 @@ export function toolKindOf(call: ToolCall): ToolKind {
       return 'backgroundDone';
     case 'ToolSearch':
       return 'toolLoad';
+    case 'EnterPlanMode':
+      return 'planStart';
     case 'Skill':
       return 'skill';
     case 'mcp__ccd_view__set_transcript_view':
@@ -244,6 +248,21 @@ export function wasStopped(call: ToolCall): boolean {
   return isUserDeclined(result) || toolResultRawText(result).startsWith(STOPPED_RESULT_PREFIX);
 }
 
+/**
+ * A run of exactly two calls, where one loads the tool that talks to other sessions and the other is a message sent to
+ * or received from another session: the load says nothing the message does not, so the run is the message alone, drawn
+ * as the single line of one call.
+ */
+export function withoutMessagingToolLoad(calls: ToolCall[]): ToolCall[] {
+  if (calls.length !== 2) return calls;
+  const load = calls.find((call) => toolKindOf(call) === 'toolLoad');
+  const message = calls.find((call) => ['messageSent', 'receivedMessage', 'sessionMessage'].includes(toolKindOf(call)));
+  if (!load || !message) return calls;
+  // The load is for messaging: what it asked for is the tool that sends a message.
+  if (!/send[\s_-]?message/i.test(inputString(load, 'query'))) return calls;
+  return [message];
+}
+
 export function hasFailed(call: ToolCall): boolean {
   if (wasStopped(call)) return false;
   return toolStatus(call.toolUse.tool_result as LoadedMessageDto | undefined, call.message.isStreaming ?? false) === 'error';
@@ -355,6 +374,25 @@ export function isAgentMessage(call: ToolCall): boolean {
   const to = inputString(call, 'to');
   if (to === '' || to.startsWith('local_')) return false;
   return parseSessionDelivery(toolResultText(call.toolUse.tool_result as LoadedMessageDto | undefined)).title === undefined;
+}
+
+/** The calls of the session-management tools that name the session they deal with by its `session_id`. */
+export const SESSION_CALL_KINDS: ToolKind[] = ['sessionMessage', 'sessionRename', 'sessionArchive', 'sessionDetach', 'sessionDelete', 'sessionLookup', 'sessionRead'];
+
+/**
+ * The session a call deals with, by the id it is named by (the CLI's or Desktop's `local_…`), or '' when the call
+ * names none: the one a message went to, the one it came from, or the one a session-management call names by
+ * `session_id`. The tools take the word "parent" for the session that started this one; then the answer names it
+ * ("delivered: … session afcd5b13-…").
+ */
+export function sessionTargetOf(call: ToolCall): string {
+  const kind = toolKindOf(call);
+  if (kind === 'messageSent') return inputString(call, 'to');
+  if (kind === 'receivedMessage') return inputString(call, 'from');
+  if (!SESSION_CALL_KINDS.includes(kind)) return '';
+  const named = inputString(call, 'session_id');
+  if (isCliSessionId(named) || named.startsWith('local_')) return named;
+  return /\bsession ([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/.exec(toolResultText(call.toolUse.tool_result as LoadedMessageDto | undefined))?.[1] ?? '';
 }
 
 /** The title of the session a `SendMessage` went to, when the answer names it. */
@@ -518,6 +556,10 @@ export function rowLabel(call: ToolCall, t: TFunction, agentName?: (to: string) 
       return plain(t('transcript.tools.appAskedReport', { ns: 'chat' }));
     case 'toolLoad':
       return { ...plain(t('transcript.tools.loadedTools', { ns: 'chat' })), meta: loadedToolNames(call) };
+    case 'planStart':
+      // The desktop app says "Plan started" when the call is answered, and that it is starting while it is not; a call
+      // that failed is not reported as started.
+      return plain(t(isRunning(call) || hasFailed(call) ? 'acceptPlan.starting' : 'acceptPlan.started', { ns: 'chat' }));
     case 'messageSent': {
       // A message to an agent says "Messaged agent" and the agent's name after it, as the desktop app does; one that is
       // still going out, or that failed, stays at its running wording ("Messaging agent"). Only a message to another
@@ -596,9 +638,11 @@ const PAGE_KINDS = new Set<ToolKind>(['pageScript', 'click', 'doubleClick', 'hov
  * count of times when there was more than one ("Clicked 3 times"). Calls with no phrase of their own are counted
  * together as other actions.
  */
-export function groupLabel(calls: ToolCall[], t: TFunction): string {
-  const { pieces, tail, tailIsParen } = groupLabelParts(calls, t);
-  const main = pieces.map((piece) => (typeof piece === 'string' ? piece : piece.before + piece.fileName + piece.after)).join(', ');
+export function groupLabel(calls: ToolCall[], t: TFunction, sessionTitleOf?: (call: ToolCall) => string | undefined): string {
+  const { pieces, tail, tailIsParen } = groupLabelParts(calls, t, sessionTitleOf);
+  const main = pieces
+    .map((piece) => (typeof piece === 'string' ? piece : 'sessions' in piece ? `${piece.before} ${piece.sessions.map((session) => session.title).join(', ')}` : piece.before + piece.fileName + piece.after))
+    .join(', ');
   if (!tail) return main;
   return main ? (tailIsParen ? `${main} ${tail}` : `${main}, ${tail}`) : tail;
 }
@@ -611,17 +655,24 @@ export interface GroupFilePiece {
   path: string;
 }
 
+/** A phrase about other sessions, and the names of the sessions it dealt with, so the screen can draw the names apart from the words. */
+export interface GroupSessionPiece {
+  before: string;
+  /** Each session by the name it is shown with and the id it is named by (empty when the call names none). */
+  sessions: Array<{ title: string; id: string }>;
+}
+
 /** What `groupLabelParts` hands the screen: the phrases that may be cut off, and the end of the line that never is. */
 export interface GroupLabelParts {
   /** The phrases in order; a phrase that names one file read is a `GroupFilePiece`. */
-  pieces: Array<string | GroupFilePiece>;
+  pieces: Array<string | GroupFilePiece | GroupSessionPiece>;
   /** "Other actions" and the count of failed calls, which stay in view at the end of the line. Empty when there is neither. */
   tail: string;
   /** True when the tail is the failed count alone, written in parentheses after a line of one phrase ("Ran 6 commands (2 failed)"). */
   tailIsParen: boolean;
 }
 
-export function groupLabelParts(calls: ToolCall[], t: TFunction): GroupLabelParts {
+export function groupLabelParts(calls: ToolCall[], t: TFunction, sessionTitleOf?: (call: ToolCall) => string | undefined): GroupLabelParts {
   const order: ToolKind[] = [];
   const keys = new Map<ToolKind, Set<string>>();
   const first = new Map<ToolKind, ToolCall>();
@@ -664,6 +715,7 @@ export function groupLabelParts(calls: ToolCall[], t: TFunction): GroupLabelPart
       case 'stopTask':
         return 4;
       case 'toolLoad':
+      case 'planStart':
         return 5;
       case 'sessionRename':
       case 'sessionArchive':
@@ -684,6 +736,26 @@ export function groupLabelParts(calls: ToolCall[], t: TFunction): GroupLabelPart
     }
   };
   order.sort((a, b) => rank(a) - rank(b));
+
+  // The sessions the group dealt with are named once, after the last phrase about sessions: the same name after each
+  // phrase ("Received 1 message X, Sent a message X") reads as a stutter.
+  const namesSessions = (kind: ToolKind): boolean => kind === 'messageSent' || kind === 'receivedMessage' || SESSION_CALL_KINDS.includes(kind);
+  const lastSessionKind = [...order].reverse().find(namesSessions);
+  const named = (kind: ToolKind, phrase: string): string | GroupSessionPiece => {
+    if (kind !== lastSessionKind) return phrase;
+    // The name the session has now first, then the one the row itself shows (what the call's answer says).
+    const titleOf = (call: ToolCall) => sessionTitleOf?.(call) || rowLabel(call, t).meta;
+    const seen = new Set<string>();
+    const sessions: Array<{ title: string; id: string }> = [];
+    for (const call of calls) {
+      if (!namesSessions(toolKindOf(call))) continue;
+      const title = titleOf(call);
+      if (!title || seen.has(title)) continue;
+      seen.add(title);
+      sessions.push({ title, id: sessionTargetOf(call) });
+    }
+    return sessions.length > 0 ? { before: phrase, sessions } : phrase;
+  };
 
   const parts = order
     .filter((kind) => !(readAndEdited && kind === 'edit'))
@@ -711,11 +783,13 @@ export function groupLabelParts(calls: ToolCall[], t: TFunction): GroupLabelPart
         case 'backgroundDone':
           return t('transcript.tools.finishedBackgroundCommands', { ns: 'chat', count });
         case 'receivedMessage':
-          return t('transcript.tools.receivedMessages', { ns: 'chat', count });
+          return named(kind, t('transcript.tools.receivedMessages', { ns: 'chat', count }));
         case 'toolLoad':
           return t('transcript.tools.loadedTools', { ns: 'chat' });
+        case 'planStart':
+          return t('acceptPlan.started', { ns: 'chat' });
         case 'messageSent':
-          return t('sendMessage.sent', { ns: 'chatTools' });
+          return named(kind, t('sendMessage.sent', { ns: 'chatTools' }));
         case 'appRequest':
           // The app's request for a report is not counted in the line over the group: the desktop app leaves it out.
           return '';
@@ -738,7 +812,7 @@ export function groupLabelParts(calls: ToolCall[], t: TFunction): GroupLabelPart
         case 'sessionMessage': {
           // A phrase of its own: the title it names is in the row, not in the line over the group. Said "n times" when repeated.
           const phrase = rowLabel(first.get(kind) as ToolCall, t).before;
-          return count > 1 ? t('transcript.tools.times', { ns: 'chat', label: phrase, count }) : phrase;
+          return named(kind, count > 1 ? t('transcript.tools.times', { ns: 'chat', label: phrase, count }) : phrase);
         }
         case 'other':
           return t('transcript.tools.otherActions', { ns: 'chat', count });
@@ -790,6 +864,7 @@ export { toolResultImages as imagesOfResult } from "../message-renderers/ToolRen
 export function isExpandable(call: ToolCall): boolean {
   switch (toolKindOf(call)) {
     case 'backgroundDone':
+    case 'planStart':
       return false;
     case 'resize':
       return call.toolUse.input?.width === undefined || call.toolUse.input?.height === undefined;

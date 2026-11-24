@@ -3,6 +3,7 @@ import {ArrowDownTrayIcon} from "@heroicons/react/24/outline";
 import {SessionGalleryViewer} from "@/components/SessionGalleryViewer";
 import {Tooltip} from "@/components/Tooltip";
 import {useTranslation} from "@/i18n";
+import {useTranscriptViewMode} from "../transcriptViewMode";
 import {openSentFile} from "@/utils/openChatFile";
 import {cn} from "@/utils/cn";
 import {RendererProps, ToolWrapper, toolResultBlockIndex} from "./common";
@@ -202,13 +203,13 @@ function Picture({file, alone, card, onOpen}: {file: SentFile; alone: boolean; c
             <button
                 type="button"
                 onClick={onOpen}
-                className="block max-w-full overflow-hidden rounded-lg border border-border-default bg-surface-hover/40"
+                className={cn("block max-w-full overflow-hidden rounded-lg border border-border-default bg-surface-hover/40", !alone && "h-full w-full")}
             >
                 <img
                     src={src}
                     alt={file.name}
                     // Claude Desktop letterboxes a thumbnail inside its card instead of cropping it.
-                    className={alone ? "block max-w-full" : "block h-[120px] w-[120px] object-contain"}
+                    className={alone ? "block max-w-full" : "block h-full w-full object-contain"}
                 />
             </button>
         </Item>
@@ -263,6 +264,10 @@ export function SendUserFileRenderer(props: RendererProps) {
     const {t} = useTranslation('chat');
     const {files} = sentFilesOf(props.toolUse.input, props.toolResult);
     const [opened, setOpened] = useState<number | null>(null);
+    // In the views that follow the desktop app the card is drawn bare: the block around it gives its inset and its space below.
+    const viewMode = useTranscriptViewMode();
+    const rawCaption = (props.toolUse.input as {caption?: unknown} | undefined)?.caption;
+    const caption = typeof rawCaption === 'string' ? rawCaption : '';
 
     const players = files.filter((f) => f.kind === 'video' || f.kind === 'audio');
     const rest = files.filter((f) => f.kind !== 'video' && f.kind !== 'audio');
@@ -278,33 +283,31 @@ export function SendUserFileRenderer(props: RendererProps) {
 
     // Until the CLI answers there is nothing to draw but what Claude Desktop says while it works.
     if (!props.toolResult) {
-        return (
-            <ToolWrapper message={props.message}>
-                <span className="text-text-secondary">{t('sentFiles.sharing')}</span>
-            </ToolWrapper>
-        );
+        const sharing = <span className="text-text-secondary">{t('sentFiles.sharing')}</span>;
+        return viewMode !== null ? sharing : <ToolWrapper message={props.message}>{sharing}</ToolWrapper>;
     }
 
-    return (
-        <ToolWrapper message={props.message}>
-            <div className="flex flex-col items-start gap-2">
-                {players.map((file) => (file.kind === 'video' ? <Video key={file.path} file={file} card={asCards}/> : <Audio key={file.path} file={file} card={asCards}/>))}
-                {rest.length > 0 && (
-                    <SentFileSelectionProvider files={rest}>
-                        <div className="flex flex-wrap gap-2">
-                            {rest.map((file) => {
-                                if (file.isImage) {
-                                    return <Picture key={file.path} file={file} alone={alone} card={asCards} onOpen={() => setOpened(pictures.indexOf(file))}/>;
-                                }
-                                return <FileBox key={file.path} file={file} card={asCards}/>;
-                            })}
-                        </div>
-                    </SentFileSelectionProvider>
-                )}
-                {opened !== null && <PictureViewer pictures={pictures} keys={pictureKeys} entryUuid={entryUuid} index={opened} onClose={() => setOpened(null)}/>}
-            </div>
-        </ToolWrapper>
+    const body = (
+        <div className="flex flex-col items-start gap-2">
+            {/* The words the CLI sent with the files, above them, as Claude Desktop draws them. */}
+            {caption !== '' && <div className="whitespace-pre-wrap break-words text-[0.9375rem] leading-[1.3] text-[var(--tr-text)]">{caption}</div>}
+            {players.map((file) => (file.kind === 'video' ? <Video key={file.path} file={file} card={asCards}/> : <Audio key={file.path} file={file} card={asCards}/>))}
+            {rest.length > 0 && (
+                <SentFileSelectionProvider files={rest}>
+                    <div className="flex flex-wrap gap-2">
+                        {rest.map((file) => {
+                            if (file.isImage) {
+                                return <Picture key={file.path} file={file} alone={alone} card={asCards} onOpen={() => setOpened(pictures.indexOf(file))}/>;
+                            }
+                            return <FileBox key={file.path} file={file} card={asCards}/>;
+                        })}
+                    </div>
+                </SentFileSelectionProvider>
+            )}
+            {opened !== null && <PictureViewer pictures={pictures} keys={pictureKeys} entryUuid={entryUuid} index={opened} onClose={() => setOpened(null)}/>}
+        </div>
     );
+    return viewMode !== null ? body : <ToolWrapper message={props.message}>{body}</ToolWrapper>;
 }
 
 /**

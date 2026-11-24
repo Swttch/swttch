@@ -229,6 +229,33 @@ export function useBacklinkedSessions(): Backlinks | undefined {
 }
 
 /**
+ * The names the chat knows of several sessions at once, by the id the transcript names each by. Naming them here is what
+ * has each read and kept current, as `useBacklinkedSession` does for one; a session whose name is not known is absent.
+ * Outside a chat (no provider) there is nothing to read from and the map is empty.
+ */
+export function useBacklinkedSessionTitles(refs: readonly string[]): ReadonlyMap<string, string> {
+  const context = useContext(BacklinkedSessionsContext);
+  const key = [...new Set(refs.filter((ref) => ref !== ''))].sort().join('\n');
+  const register = context?.register;
+  useEffect(() => {
+    if (!register || key === '') return undefined;
+    const undo = key.split('\n').map((ref) => register(ref));
+    return () => undo.forEach((fn) => fn());
+  }, [key, register]);
+
+  const sessions = context?.sessions;
+  return useMemo(() => {
+    const titles = new Map<string, string>();
+    if (!sessions || key === '') return titles;
+    for (const ref of key.split('\n')) {
+      const title = sessions.get(ref)?.title;
+      if (title) titles.set(ref, title);
+    }
+    return titles;
+  }, [sessions, key]);
+}
+
+/**
  * What the chat knows of one session its transcript points at, by the id the transcript names it by (Desktop's
  * `local_…` or the CLI's), or undefined while that is not known. Naming a session here is what has it read and
  * kept current. `enabled: false` names nothing (a place that has no session to point at yet).

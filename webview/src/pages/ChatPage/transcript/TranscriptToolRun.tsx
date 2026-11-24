@@ -1,4 +1,4 @@
-import { useContext, useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import toast from 'react-hot-toast';
 import { ChevronRightIcon, ClipboardDocumentIcon } from '@heroicons/react/20/solid';
 import { useTranslation } from '@/i18n';
@@ -22,7 +22,7 @@ import { FileChangeDetail } from './FileChangeDetail';
 import { useNavigate } from 'react-router-dom';
 import { isJetBrains } from '@/config/environment';
 import { SessionActivity } from '@/shared';
-import { useBacklinkedSession } from '@/contexts/BacklinkedSessionsContext';
+import { useBacklinkedSession, useBacklinkedSessionTitles } from '@/contexts/BacklinkedSessionsContext';
 import { useSessionActivityLine } from '@/hooks/useSessionActivityLine';
 import { DesktopSessionLink } from '../message-renderers/components/DesktopSessionLink';
 import { StartedSessionLink, sessionLinkProps } from '../message-renderers/components/StartedSessionLink';
@@ -51,6 +51,8 @@ import {
   sumLineStats,
   toolKindOf,
   type LineStats,
+  withoutMessagingToolLoad,
+  sessionTargetOf,
 } from './toolSummary';
 
 /**
@@ -184,6 +186,17 @@ function GroupSummaryText({ pieces, tail, tailIsParen }: GroupLabelParts) {
               {index > 0 && ', '}
               {typeof piece === 'string' ? (
                 piece
+              ) : 'sessions' in piece ? (
+                // The names of the sessions stand apart from the words, each a way into its session as in a row.
+                <>
+                  {piece.before}{' '}
+                  {piece.sessions.map((session, at) => (
+                    <span key={session.id || session.title}>
+                      {at > 0 && ', '}
+                      <SessionNameLink id={session.id} title={session.title} />
+                    </span>
+                  ))}
+                </>
               ) : (
                 <>
                   {piece.before}
@@ -391,14 +404,16 @@ function InputOutputDetail({ call, withPictures = true }: { call: ToolCall; with
 
 /** A message sent to another session: how it was delivered, and the message itself as the text it is. */
 function SentMessageDetail({ call }: { call: ToolCall }) {
-  const { t } = useTranslation('chatTools');
   const text = typeof call.toolUse.input?.message === 'string' ? (call.toolUse.input.message as string) : '';
   const delivery = parseSessionDelivery(toolResultText(call.toolUse.tool_result as LoadedMessageDto | undefined)).delivery;
   const toAgent = isAgentMessage(call);
+  // A message to a session that was delivered is drawn as a received one is: the text and nothing around it.
+  if (!toAgent && (!delivery || delivery === 'delivered')) return <MarkdownDetail text={text} message={call.message} />;
   return (
     // A box goes to the row's own sides; the plain text of a message to a session keeps the small inset.
     <div className={toAgent ? 'pb-[0.675rem]' : 'px-[0.225rem] pb-[0.675rem]'}>
-      {delivery && <div className="pb-[0.45rem] text-[0.8438rem] text-[var(--tr-muted)]">{delivery === 'delivered' ? t('sendMessage.delivered') : delivery}</div>}
+      {/* A delivered message is the normal case and says nothing; only a delivery that went another way is told. */}
+      {delivery && delivery !== 'delivered' && <div className="pb-[0.45rem] text-[0.8438rem] text-[var(--tr-muted)]">{delivery}</div>}
       {/* What was said to an agent sits in a box of its own, as the desktop app draws it. */}
       {toAgent ? (
         <div className={`rounded-[0.675rem] border ${BOX_BORDER} px-4 py-[0.675rem]`} data-testid="agent-message-box">
@@ -572,7 +587,7 @@ function ToolDetail({ calls, withPictures = true }: { calls: ToolCall[]; withPic
   if (kind === 'sessionRename') return <RenameDetail call={call} />;
   if (kind === 'toolLoad') return <InputDetail call={call} />;
   if (kind === 'skill' || kind === 'sessionRead') return <InputOutputDetail call={call} />;
-  if (kind === 'messageSent') return <SentMessageDetail call={call} />;
+  if (kind === 'messageSent' || kind === 'sessionMessage') return <SentMessageDetail call={call} />;
   if (call.toolUse.name === 'Edit' || call.toolUse.name === 'Write') return <FileChangeDetail calls={calls} inBox={withPictures} />;
   if (browserToolOf(call.toolUse.name) !== '') return <PlainDetail call={call} />;
   if (kind === 'agent') return <AgentDetail call={call} withPictures={withPictures} />;
@@ -586,12 +601,16 @@ function ToolDetail({ calls, withPictures = true }: { calls: ToolCall[]; withPic
  * when the answer to the call did not, Desktop's own session file does, as the classic chat looks it up.
  */
 function RowMeta({ call, meta }: { call: ToolCall; meta?: string }) {
-  const isSent = toolKindOf(call) === 'messageSent';
+  const kind = toolKindOf(call);
+  const isSent = kind === 'messageSent';
   const to = typeof call.toolUse.input?.to === 'string' ? (call.toolUse.input.to as string) : '';
   const answered = isSent ? sentTo(call) : '';
+  // Every call that deals with another session names that session: a message sent to it, one received from it, and the
+  // calls of the session-management tools that name it by `session_id`.
+  const target = sessionTargetOf(call);
   // The name the session has now comes first: a message sent to a session that was renamed since says the new name.
-  const looked = useBacklinkedSession(isSent ? to : '')?.title;
-  const shown = isSent ? looked || answered || meta : meta;
+  const looked = useBacklinkedSession(target)?.title;
+  const shown = isSent ? looked || answered || meta : looked || meta;
   // The agent a message went to is a way into that agent's run, as the agent's own line is, where the chat tracks it.
   const workflow = useOptionalWorkflowState();
   const agentTask = isSent && shown && isAgentMessage(call) ? workflow?.tasks.find((task) => agentAddressOf(task) === to) : undefined;
@@ -612,9 +631,8 @@ function RowMeta({ call, meta }: { call: ToolCall; meta?: string }) {
       </button>
     );
   }
-  // The session a message came from is a way into that session, named by the title it has now.
-  const fromInput = call.toolUse.input?.from;
-  const from = toolKindOf(call) === 'receivedMessage' && typeof fromInput === 'string' ? fromInput : '';
+  // The session a message came from, or went to, or a call dealt with, is a way into that session, named by the title it has now.
+  const from = target;
   // The session-management MCP names the sender by its CLI session: a way in when this conversation started it.
   if (isCliSessionId(from)) {
     return (
@@ -631,6 +649,13 @@ function RowMeta({ call, meta }: { call: ToolCall; meta?: string }) {
     );
   }
   return <span className={`ms-[0.45rem] ${LINK_TEXT}`}>{shown}</span>;
+}
+
+/** The name of a session in the line over a group: a link to it when it is known by an id, as in the rows under the line. */
+function SessionNameLink({ id, title }: { id: string; title: string }) {
+  if (isCliSessionId(id)) return <span className={LINK_TEXT}><StartedSessionLink id={id} plain>{title}</StartedSessionLink></span>;
+  if (id.startsWith('local_')) return <span className={LINK_TEXT}><DesktopSessionLink id={id} plain>{title}</DesktopSessionLink></span>;
+  return <span className={LINK_TEXT}>{title}</span>;
 }
 
 /** A session Claude started: a card with its title, which goes to that session, as the desktop app draws it. */
@@ -708,7 +733,7 @@ export function StartedSessionCard({ call }: { call: ToolCall }) {
   const busy = starting || working;
   const state = notStarted ? 'not-started' : starting ? 'starting' : deleted ? 'deleted' : working ? 'working' : awaiting ? 'needs-input' : archived ? 'archived' : unread ? 'unread' : 'idle';
   return (
-    <div className="px-4 py-[0.6188rem]" data-transcript-started-session data-state={state}>
+    <div data-transcript-started-session data-state={state}>
       <a
         href={href}
         rel="noreferrer"
@@ -871,7 +896,7 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive, liveTool
         type="button"
         aria-expanded={open}
         onClick={() => expandable && setOpen((v) => !v)}
-        className={`flex w-full items-center gap-[0.5624rem] ${inBox ? 'px-[0.675rem] py-[0.672rem]' : 'py-[0.5624rem]'} text-start leading-[0.9rem] ${live ? 'text-[0.92rem]' : 'text-[0.869rem]'} transition-colors ${SUMMARY_TEXT} ${running && !waitedOn ? 'animate-pulse' : ''}`}
+        className={`flex w-full items-center gap-[0.5624rem] ${inBox ? 'py-2.5 px-2.5' : 'pt-1 pb-1'} text-start leading-[0.9rem] text-[0.9375rem] transition-colors ${SUMMARY_TEXT} ${running && !waitedOn ? 'animate-pulse' : ''}`}
       >
         {live && <ActivityGlyph activity={live.mark} />}
         {/* One MorphText stays through what is running and what was done, as in the summary line over a group. */}
@@ -932,7 +957,7 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive, liveTool
       {/* A call of its own that read a picture shows the picture under its line at its own size, as the desktop app does; in a run, the lines carry thumbnails and the picture is under the call once it is opened. */}
       {!inBox && pictures.length > 0 && <div className="pb-[0.45rem]"><ResultPictures call={call} /></div>}
       {open && expandable && (
-        <div className={inBox ? (call.toolUse.name === 'Edit' || call.toolUse.name === 'Write' ? 'px-[0.75rem]' : 'px-[0.45rem]') : ''}>
+        <div className={inBox ? (call.toolUse.name === 'Edit' || call.toolUse.name === 'Write' ? 'px-[0.75rem]' : 'px-[0.45rem]') : 'mt-3 mb-1'}>
           {endNote !== undefined && runTask ? (
             <EndNote text={endNote} onOpen={() => workflowState?.openPanel(runTask.toolUseId)} />
           ) : (
@@ -952,8 +977,11 @@ function TranscriptToolRow({ calls, defaultOpen, inBox, live: turnLive, liveTool
  * call did. Verbose opens all of it from the start; Normal and Thinking leave it
  * shut, since the answer is what the reader came for and the work is a click away.
  */
-export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
+export function TranscriptToolRun({ calls: runCalls }: { calls: ToolCall[] }) {
+  const calls = useMemo(() => withoutMessagingToolLoad(runCalls), [runCalls]);
   const { t } = useTranslation('chat');
+  // The line over the group names the sessions its calls dealt with, as the rows under it do.
+  const sessionTitles = useBacklinkedSessionTitles(useMemo(() => calls.map(sessionTargetOf), [calls]));
   const verbose = useTranscriptViewMode() === 'verbose';
   // The live run: the turn is running and the call it is waiting on is in this run. Its line then says what the
   // model is doing and for how long, as the working indicator, and its list stays shut unless the reader opens it.
@@ -984,8 +1012,8 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
     // A capture on its own is shown open, as the desktop app shows it: its line has nothing to fold and no thumbnail,
     // since the picture itself is right under it.
     return (
-      <div className="px-4 pt-[0.675rem] pb-[0.6188rem]" data-transcript-tool-run-single>
-        <div className="py-[0.5624rem] text-[0.8438rem] text-[var(--tr-muted)]">{rowLabel(calls[0], t).before}</div>
+      <div data-transcript-tool-run-single>
+        <div className="text-[0.9375rem] text-[var(--tr-muted)]">{rowLabel(calls[0], t).before}</div>
         <PlainDetail call={calls[0]} />
       </div>
     );
@@ -993,7 +1021,7 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
 
   if (calls.length === 1) {
     return (
-      <div className="px-4 pt-[0.675rem] pb-[0.6188rem]" data-transcript-tool-run-single>
+      <div data-transcript-tool-run-single>
         <TranscriptToolRow
           calls={[calls[0]]}
           defaultOpen={verbose}
@@ -1004,16 +1032,16 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
     );
   }
 
-  const summaryParts = groupLabelParts(calls, t);
+  const summaryParts = groupLabelParts(calls, t, (call) => sessionTitles.get(sessionTargetOf(call)));
 
   return (
-    <div className="px-4 pt-[0.675rem] pb-[0.6188rem]" data-transcript-tool-run>
+    <div data-transcript-tool-run>
       {/* The line of a running call is set a little larger than the lines of finished ones: the desktop app draws "Running command 9s" at about 14.7px where its finished lines are 13.9px (measured by the width of the same words on its screen). */}
       <button
         type="button"
         aria-expanded={open}
         onClick={toggle}
-        className={`flex w-full items-center gap-[0.225rem] py-[0.6531rem] text-start leading-[0.9rem] ${active && live ? 'text-[0.92rem]' : 'text-[0.869rem]'} transition-colors ${SUMMARY_TEXT}`}
+        className={`flex w-full items-center gap-[0.225rem] pt-1 pb-1 text-start leading-[0.9rem] text-[0.9375rem] transition-colors ${SUMMARY_TEXT}`}
       >
         {/* One MorphText stays through the three states of the line (what is running, an agent that runs, what was done),
             so that the sentence is replaced the way the desktop app's is: crossed, and the line growing or shrinking. */}
@@ -1048,7 +1076,7 @@ export function TranscriptToolRun({ calls }: { calls: ToolCall[] }) {
       </button>
       {thumbnailViewer}
       {open && (
-        <div className={`mt-[0.15rem] mb-[0.6rem] rounded-[0.45rem] border ${BOX_BORDER} divide-y divide-border-default/70 overflow-hidden`}>
+        <div className={`mt-3 mb-1 rounded-[0.45rem] border ${BOX_BORDER} divide-y divide-border-default/70 overflow-hidden`}>
           {groupIntoRows(calls).map((row) => (
             <TranscriptToolRow key={row[0].toolUse.id} calls={row} defaultOpen={verbose} inBox liveToolUseId={active ? live?.toolUseId : undefined} />
           ))}

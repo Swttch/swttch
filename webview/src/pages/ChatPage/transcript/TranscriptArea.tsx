@@ -33,6 +33,7 @@ import { SEND_JUMP_SCROLL_MARGIN } from '../SendIndex/scrollToSend';
 import { TranscriptUserMessage } from './TranscriptUserMessage';
 import { TranscriptBody } from './TranscriptBody';
 import { TranscriptWrapUp } from './TranscriptWrapUp';
+import { TranscriptTurnFooter } from './TranscriptTurnFooter';
 import { WindowGapRow } from '../WindowGapRow';
 import { entryMarker } from '../useScrollAnchor';
 import './prose.css';
@@ -154,10 +155,11 @@ const TranscriptSection = memo(function TranscriptSection({
       )}
       {/* Sent while the card holds the turn: right after the latest message, above the calls still running, as in the desktop app. */}
       {awaitingInput && <TranscriptHeldMessages />}
-      <div ref={lastBodyRef ?? undefined} data-section-body data-after-send={section.head ? '' : undefined} className={`${section.body.length > 0 || (isLast && streaming) ? 'pt-[0.1688rem] ' : ''}${!isLast ? (section.body.length > 0 ? 'pb-[1.9969rem]' : 'pb-[0.7313rem]') : streaming || awaitingInput ? 'pb-0' : 'pb-[3.0376rem]'}`}>
+      <div ref={lastBodyRef ?? undefined} data-section-body data-after-send={section.head ? '' : undefined} className="group pb-5 [&:not(:has(>:not(:empty)))]:pb-0">
         <TranscriptBody body={section.body} mergedMessagesRef={mergedMessagesRef} onRetry={onRetry} turnRunning={streaming} sectionKey={section.key} waiting={isLast ? <TranscriptPendingMessages /> : undefined} />
         {/* The turn's wrap-up is drawn here, after its last message, not where its call sits: a recap as text until the closing message begins, then the question and its answers. */}
         <TranscriptWrapUp body={section.body} next={nextHead} />
+        <TranscriptTurnFooter body={section.body} sectionKey={section.key} running={streaming} />
       </div>
     </div>
   );

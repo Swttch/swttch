@@ -73,7 +73,7 @@ export function runningActivity(messages: LoadedMessageDto[]): StreamingActivity
       const toolUse = block as ToolUseBlockDto;
       if (toolUse.tool_result) continue;
       // A question, a plan, what was sent: drawn as a card of its own, not as a call in a run, so no run can say it is working.
-      if (isCardTool(toolUse.name)) return null;
+      if (isCardTool(toolUse.name, toolUse.input as Record<string, unknown> | undefined)) return null;
       return activityOfCall({ toolUse, message });
     }
   }
