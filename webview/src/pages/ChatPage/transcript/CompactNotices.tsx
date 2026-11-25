@@ -17,7 +17,7 @@ export function CompactDivider({ message }: { message: LoadedMessageDto }) {
   const saved = compactSavedTokens(message);
   const tokens = saved === undefined ? undefined : formatTokensFor(i18n.language, saved);
   return (
-    <div className={`-mt-2 px-4 py-[0.425rem] text-sm leading-[var(--chat-line-height,1.6)] ${QUIET_TEXT}`} data-transcript-compact-divider>
+    <div className={`px-4 py-[0.425rem] text-sm leading-[var(--chat-line-height,1.6)] ${QUIET_TEXT}`} data-transcript-compact-divider>
       {tokens ? t('transcript.compact.saved', { tokens }) : t('transcript.compact.title')}
     </div>
   );

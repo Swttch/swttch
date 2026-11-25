@@ -37,7 +37,7 @@ export const ImageAttachments: React.FC<ImageAttachmentsProps> = ({ images, entr
 
   return (
     <>
-      <div className={size === 'preview' ? 'flex flex-wrap items-end justify-end gap-[0.375rem]' : 'flex flex-wrap gap-2'}>
+      <div className={size === 'preview' ? 'flex flex-wrap items-end justify-end gap-1.5' : 'flex flex-wrap gap-2'}>
         {images.map((image, index) => (
           <div
             key={`img-${index}-${image.source.media_type}`}

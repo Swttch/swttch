@@ -45,15 +45,20 @@ export function useStartedSession(sessionId: string): StartedSession | undefined
  * A mention of a session this conversation started through the session-management MCP, drawn as the desktop
  * app draws a mention of a session: its name on a blue background, and a click opens that session in a new tab.
  *
- * Where the session runs is known only from the start that this conversation made. A link to any other session
- * is the name alone on the same background, with nothing to open, rather than a link that may lead nowhere.
+ * Where the session runs is known from the start that this conversation made, or from the folder the desktop app's
+ * own record gives for it. A session whose folder is known neither way is the name alone on the same background,
+ * with nothing to open, rather than a link that may lead nowhere.
  *
  * `plain` draws it as an underlined link in the text around it, not on the background: a name in a line of a run.
  */
 export const StartedSessionLink: React.FC<{ id: string; children?: ReactNode; plain?: boolean }> = ({ id, children, plain }) => {
-  const session = useStartedSession(id);
-  // The name the session has now, whatever the text called it when it was written.
-  const named = useBacklinkedSession(session ? id : '')?.title;
+  const started = useStartedSession(id);
+  // The name the session has now, whatever the text called it when it was written; and, for a session this conversation did
+  // not start (the session that started this one, a session that wrote to it), the folder the desktop app's own record
+  // says it works in, which is what a link to it needs.
+  const known = useBacklinkedSession(id);
+  const named = known?.title;
+  const session: StartedSession | undefined = started ?? (known?.cwd ? { sessionId: known.cliSessionId ?? id, cwd: known.cwd, title: known.title } : undefined);
   if (!session) return <span className={plain ? '' : 'richInputChip'}>{children}</span>;
   const { href, onClick } = sessionLinkProps(session);
   return (

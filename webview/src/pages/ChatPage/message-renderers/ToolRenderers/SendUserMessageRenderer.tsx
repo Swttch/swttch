@@ -2,6 +2,7 @@ import {ToolUseBlockDto} from "@/dto";
 import {useTranslation} from "@/i18n";
 import {RendererProps, ToolHeader, ToolWrapper} from "./common";
 import {StreamingMessage} from "../../StreamingMessage";
+import {useTranscriptViewMode} from "../transcriptViewMode";
 
 /** A device-uploaded file handed to the tool by reference rather than by path. */
 interface UploadedAttachmentDto {
@@ -36,6 +37,32 @@ export function SendUserMessageRenderer(props: RendererProps) {
     const input = toolUse.input ?? {};
     const rawAttachments = input.attachments;
     const attachments = Array.isArray(rawAttachments) ? rawAttachments : [];
+    const viewMode = useTranscriptViewMode();
+
+    // In the transcript views the message is drawn bare, as a reply's text is: no tool header and no bullet; the block
+    // around it gives the inset and the space below.
+    if (viewMode !== null) {
+        return (
+            <div className="transcript-prose [&_.markdown-content_p:first-child]:mt-0">
+                {input.message && (
+                    <StreamingMessage
+                        plain
+                        content={input.message}
+                        isStreaming={props.message?.isStreaming ?? false}
+                        className="text-[var(--tr-text)] text-[0.9375rem] leading-[1.3]"
+                        message={props.message}
+                    />
+                )}
+                {attachments.length > 0 && (
+                    <div dir="ltr" className="flex flex-col gap-0.5 font-mono text-[0.8461rem] text-text-tertiary">
+                        {attachments.map((attachment, index) => (
+                            <div key={index} className="truncate">{attachmentLabel(attachment)}</div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    }
 
     return (
         <ToolWrapper message={props.message}>

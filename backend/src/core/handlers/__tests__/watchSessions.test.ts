@@ -1,10 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
 let sessionsDir = '';
+let configDir = '';
 vi.mock('../../features/getProjectSessionsPath', () => ({ getProjectSessionsPath: async () => sessionsDir }));
+// Where the other project folders are searched: a folder of its own, never the real one.
+vi.mock('../../features/claudeConfigDir', () => ({ getClaudeConfigDir: () => configDir }));
 let starting = new Set<string>();
 vi.mock('../../features/sessionToolAnnouncer', () => ({ isSessionStarting: (id: string) => starting.has(id) }));
 const watchSessions = vi.fn();
@@ -23,16 +26,31 @@ describe('GET_SESSIONS_EXIST', () => {
 
   beforeEach(() => {
     sessionsDir = mkdtempSync(join(tmpdir(), 'exist-'));
+    configDir = mkdtempSync(join(tmpdir(), 'exist-config-'));
     starting = new Set();
     sendTo = vi.fn();
     connections = { sendTo } as unknown as ConnectionManager;
   });
-  afterEach(() => rmSync(sessionsDir, { recursive: true, force: true }));
+  afterEach(() => {
+    rmSync(sessionsDir, { recursive: true, force: true });
+    rmSync(configDir, { recursive: true, force: true });
+  });
 
   it('names the sessions whose transcript is gone, and only those', async () => {
     writeFileSync(join(sessionsDir, 'there.jsonl'), '{}\n');
 
     await getSessionsExistHandler('c', message({ sessionIds: ['there', 'gone'], workingDir: '/w' }), connections, {} as never);
+
+    expect(sendTo).toHaveBeenCalledWith('c', MessageType.ACK, { requestId: 'r1', status: 'ok', missing: ['gone'] });
+  });
+
+  // The card of a session another session started for another project's folder asks with its own folder (the
+  // session is in the other one); the session works and is not deleted (#711).
+  it('does not call a session deleted when it is in another project folder', async () => {
+    mkdirSync(join(configDir, 'projects', '-other-project'), { recursive: true });
+    writeFileSync(join(configDir, 'projects', '-other-project', 'started-for-b.jsonl'), '{}\n');
+
+    await getSessionsExistHandler('c', message({ sessionIds: ['started-for-b', 'gone'], workingDir: '/w' }), connections, {} as never);
 
     expect(sendTo).toHaveBeenCalledWith('c', MessageType.ACK, { requestId: 'r1', status: 'ok', missing: ['gone'] });
   });

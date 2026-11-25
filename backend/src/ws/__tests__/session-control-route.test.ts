@@ -29,6 +29,52 @@ describe('handleSessionControlRequest', () => {
   let cm: ConnectionManager;
   beforeEach(() => { cm = new ConnectionManager(); });
 
+  // A tab of another IDE window's backend knows a card only by its tool call (it was drawn from the transcript),
+  // so the holder finds its own open request by that tool call (#711).
+  it('answer_tool answers the open request the CLI raised for that tool call, with the chosen answer', () => {
+    const written = holdSession(cm, 's1');
+    cm.rememberOpenRequest('s1', { type: 'control_request', request_id: 'req-9', request: { subtype: 'can_use_tool', tool_name: 'AskUserQuestion', tool_use_id: 'tool-1' } });
+    const updatedInput = { answers: { q: 'red' } };
+    const result = handleSessionControlRequest(cm, body({ sessionId: 's1', action: 'answer_tool', toolUseId: 'tool-1', approved: true, updatedInput }));
+    expect(result).toEqual({ status: 200, body: { ok: true } });
+    const sent = lines(written)[0];
+    expect(sent.type).toBe('control_response');
+    expect(sent.response.request_id).toBe('req-9');
+    expect(sent.response.response).toEqual({ behavior: 'allow', updatedInput });
+    // answered: it needs no card any more
+    expect(cm.findOpenRequestByToolUseId('s1', 'tool-1')).toBeUndefined();
+  });
+
+  it('answer_tool carries a denial as the declined message', () => {
+    const written = holdSession(cm, 's1');
+    cm.rememberOpenRequest('s1', { type: 'control_request', request_id: 'req-9', request: { subtype: 'can_use_tool', tool_use_id: 'tool-1' } });
+    handleSessionControlRequest(cm, body({ sessionId: 's1', action: 'answer_tool', toolUseId: 'tool-1', approved: false, reason: 'no thanks' }));
+    const response = lines(written)[0].response.response;
+    expect(response.behavior).toBe('deny');
+    expect(response.message).toContain('no thanks');
+  });
+
+  it('answer_tool refuses a tool call with no open request, and a malformed answer', () => {
+    const written = holdSession(cm, 's1');
+    expect(handleSessionControlRequest(cm, body({ sessionId: 's1', action: 'answer_tool', toolUseId: 'nope', approved: true })).status).toBe(404);
+    expect(handleSessionControlRequest(cm, body({ sessionId: 's1', action: 'answer_tool', approved: true })).status).toBe(400);
+    expect(handleSessionControlRequest(cm, body({ sessionId: 's1', action: 'answer_tool', toolUseId: 't' })).status).toBe(400);
+    expect(handleSessionControlRequest(cm, body({ sessionId: 's1', action: 'answer_tool', toolUseId: 't', approved: true, updatedInput: [] })).status).toBe(400);
+    expect(written).toHaveLength(0);
+  });
+
+  it('activity says what the session is doing, for a tab of another backend that follows it', () => {
+    const session = { activity: 'awaiting', process: { stdin: { writable: true, write: () => true } } };
+    vi.spyOn(cm, 'getSession').mockImplementation((() => session) as never);
+    vi.spyOn(cm, 'getTurnStartedAt').mockReturnValue(null);
+    vi.spyOn(cm, 'getInputMode').mockReturnValue('default');
+    // the permission mode of its CLI is told too: a backend that takes the session over keeps it
+    expect(handleSessionControlRequest(cm, body({ sessionId: 's1', action: 'activity' }))).toEqual({ status: 200, body: { ok: true, activity: 'awaiting', turnStartedAt: null, inputMode: 'default' } });
+    // the backend's own knowledge of a turn in flight, which a session no screen has open still has
+    vi.spyOn(cm, 'getTurnStartedAt').mockReturnValue(1700000000000);
+    expect(handleSessionControlRequest(cm, body({ sessionId: 's1', action: 'activity' })).body.turnStartedAt).toBe(1700000000000);
+  });
+
   it('rejects a body that is not JSON, or that names no session or no action', () => {
     expect(handleSessionControlRequest(cm, 'nope').status).toBe(400);
     expect(handleSessionControlRequest(cm, body({ action: 'interrupt' })).status).toBe(400);
@@ -64,6 +110,21 @@ describe('handleSessionControlRequest', () => {
 
   // The CLI does not echo what it is handed, so without this the screens showing the session see
   // Claude start answering a message they never saw arrive.
+  it('send_message carries the attachments and the message id to the CLI', () => {
+    const written = holdSession(cm, 's1');
+    const att = [{ type: 'image', fileName: 'p.png', mimeType: 'image/png', base64: 'AAAA' }];
+    const result = handleSessionControlRequest(cm, body({ sessionId: 's1', action: 'send_message', text: 'look', attachments: att, messageUuid: 'u-1' }));
+    expect(result.status).toBe(200);
+    const sent = JSON.stringify(lines(written));
+    expect(sent).toContain('AAAA');
+    expect(sent).toContain('u-1');
+  });
+
+  it('send_message refuses attachments that are not a list', () => {
+    holdSession(cm, 's1');
+    expect(handleSessionControlRequest(cm, body({ sessionId: 's1', action: 'send_message', text: 'x', attachments: 'no' })).status).toBe(400);
+  });
+
   it('send_message shows the message to the screens that have the session open', () => {
     holdSession(cm, 's1');
     const shown = vi.spyOn(cm, 'broadcastToSession').mockImplementation(() => undefined as never);

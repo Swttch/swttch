@@ -323,18 +323,18 @@ describe('toolResponseHandler — session permission rules (#393)', () => {
  * the answer to; the answer must not vanish silently, the screen has to be told.
  */
 describe('toolResponseHandler: an answer no CLI here can take', () => {
-  const answer = (payload: Record<string, unknown>, connections = makeConnections()) => {
-    toolResponseHandler('conn-1', { requestId: 'r1', payload } as any, connections, bridge);
+  const answer = async (payload: Record<string, unknown>, connections = makeConnections()) => {
+    await toolResponseHandler('conn-1', { requestId: 'r1', payload } as any, connections, bridge);
     return connections;
   };
   const errorsSent = (connections: any) =>
     connections.sendTo.mock.calls.filter((c: unknown[]) => c[1] === MessageType.SERVICE_ERROR);
 
-  it('says the session runs under another backend when one owns its CLI (restored card, legacy path)', () => {
+  it('says the session runs under another backend when one owns its CLI (restored card, legacy path)', async () => {
     sendToolResultToProcess.mockReturnValue(false);
     findLiveCliForSession.mockReturnValue({ ownerAlive: true, entry: { pid: 111, owner: { pid: 222 } } });
 
-    const connections = answer({ toolUseId: 't1', approved: true });
+    const connections = await answer({ toolUseId: 't1', approved: true });
 
     const errors = errorsSent(connections);
     expect(errors).toHaveLength(1);
@@ -346,29 +346,80 @@ describe('toolResponseHandler: an answer no CLI here can take', () => {
     expect(errors[0][2].reason).not.toMatch(/\d{3}/);
   });
 
-  it('says the same on the control_response path', () => {
+  it('says the same on the control_response path', async () => {
     sendControlResponseToProcess.mockReturnValue(false);
     findLiveCliForSession.mockReturnValue({ ownerAlive: true, entry: { pid: 111, owner: { pid: 222 } } });
 
-    const connections = answer({ toolUseId: 't1', approved: true, controlRequestId: 'ctrl-1' });
+    const connections = await answer({ toolUseId: 't1', approved: true, controlRequestId: 'ctrl-1' });
 
     expect(errorsSent(connections)[0][2].reason).toContain('another window');
   });
 
-  it('says Claude is not running when nobody owns a CLI for the session', () => {
+  it('says Claude is not running when nobody owns a CLI for the session', async () => {
     sendToolResultToProcess.mockReturnValue(false);
 
-    const connections = answer({ toolUseId: 't1', approved: true });
+    const connections = await answer({ toolUseId: 't1', approved: true });
 
     expect(errorsSent(connections)[0][2].reason).toContain('not running');
     expect(errorsSent(connections)[0][2].cause).toBe('notRunning');
   });
 
-  it('stays quiet when the answer was delivered', () => {
+  it('stays quiet when the answer was delivered', async () => {
     sendToolResultToProcess.mockReturnValue(true);
     sendControlResponseToProcess.mockReturnValue(true);
 
-    expect(errorsSent(answer({ toolUseId: 't1', approved: true }))).toHaveLength(0);
-    expect(errorsSent(answer({ toolUseId: 't1', approved: true, controlRequestId: 'c' }))).toHaveLength(0);
+    expect(errorsSent(await answer({ toolUseId: 't1', approved: true }))).toHaveLength(0);
+    expect(errorsSent(await answer({ toolUseId: 't1', approved: true, controlRequestId: 'c' }))).toHaveLength(0);
+  });
+
+  describe('when the backend that holds the CLI can be reached', () => {
+    const fetchMock = vi.fn();
+    beforeEach(() => {
+      fetchMock.mockReset();
+      vi.stubGlobal('fetch', fetchMock);
+      findLiveCliForSession.mockReturnValue({
+        ownerAlive: true,
+        entry: { pid: 111, owner: { pid: 222 }, control: { port: 4567, token: 'tok' } },
+      });
+    });
+    afterEach(() => vi.unstubAllGlobals());
+
+    it('hands the answer over by its tool call, with what was chosen, and tells the screen nothing', async () => {
+      sendToolResultToProcess.mockReturnValue(false);
+      fetchMock.mockResolvedValue({ ok: true });
+      const updatedInput = { questions: [{ question: 'q' }], answers: { q: 'red' } };
+
+      const connections = await answer({ toolUseId: 't1', approved: true, result: 'text', updatedInput });
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock.mock.calls[0][0]).toBe('http://127.0.0.1:4567/internal/session-control');
+      expect(fetchMock.mock.calls[0][1].headers['x-ccg-token']).toBe('tok');
+      expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+        sessionId: 'sess-1',
+        action: 'answer_tool',
+        toolUseId: 't1',
+        approved: true,
+        updatedInput,
+      });
+      expect(errorsSent(connections)).toHaveLength(0);
+    });
+
+    it('hands over a denial with its reason', async () => {
+      sendToolResultToProcess.mockReturnValue(false);
+      fetchMock.mockResolvedValue({ ok: true });
+
+      await answer({ toolUseId: 't1', approved: false, reason: 'not now' });
+
+      expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ approved: false, reason: 'not now' });
+    });
+
+    it('still says where to answer when the holding backend refuses it', async () => {
+      sendToolResultToProcess.mockReturnValue(false);
+      fetchMock.mockResolvedValue({ ok: false, status: 404 });
+
+      const connections = await answer({ toolUseId: 't1', approved: true });
+
+      expect(errorsSent(connections)[0][2].cause).toBe('otherBackend');
+    });
   });
 });

@@ -40,6 +40,18 @@ export interface SessionIndex {
   promptChain: SessionMessage[];
   /** What `reconstructWorkflowTasks` reads of the active chain. See `createWorkflowProjection`. */
   workflowChain: SessionMessage[];
+  /** Whether the newest thing the active chain says about the mode is that plan mode was entered and not left. */
+  inPlanMode: boolean;
+}
+
+/**
+ * What changes whether a session is in plan mode, in the order it was written. Plan mode is entered by the model's own
+ * call, after the prompt that was sent under another mode, so no prompt says so: the CLI records it as a `plan_mode`
+ * attachment, and a plan that was approved ends it. A prompt carrying a `permissionMode` settles the mode again.
+ */
+interface PlanModeMarker {
+  uuid: string | undefined;
+  kind: 'entered' | 'left' | 'prompt';
 }
 
 interface PromptCandidate {
@@ -62,6 +74,9 @@ interface FileScan {
   callIndexByToolUse: Map<string, number>;
   workflow: WorkflowProjection;
   prompts: PromptCandidate[];
+  /** The ids of the calls to ExitPlanMode, so that the answer to one that was approved can be told. */
+  exitPlanCallIds: Set<string>;
+  planModeMarkers: PlanModeMarker[];
 }
 
 const AGENT_ID_PATTERN = /agentId:\s*([a-f0-9]+)/;
@@ -77,6 +92,8 @@ function newFileScan(): FileScan {
     callIndexByToolUse: new Map(),
     workflow: createWorkflowProjection(),
     prompts: [],
+    exitPlanCallIds: new Set(),
+    planModeMarkers: [],
   };
 }
 
@@ -128,8 +145,18 @@ function takeLine(scan: FileScan, file: string, offset: number, length: number, 
 
   scan.workflow.add(entry);
 
+  const uuid = typeof entry.uuid === 'string' ? entry.uuid : undefined;
+  if (entry.type === 'attachment') {
+    const attachment = entry.attachment as { type?: unknown; isSubAgent?: unknown } | undefined;
+    if (attachment?.type === 'plan_mode' && attachment.isSubAgent !== true && entry.isSidechain !== true) {
+      scan.planModeMarkers.push({ uuid, kind: 'entered' });
+    }
+    return;
+  }
+
   if (entry.type === 'assistant') {
     for (const block of contentBlocks(entry)) {
+      if (block.type === 'tool_use' && block.name === 'ExitPlanMode' && typeof block.id === 'string') scan.exitPlanCallIds.add(block.id);
       if (block.type !== 'tool_use' || (block.name !== 'Task' && block.name !== 'Agent')) continue;
       if (typeof block.id !== 'string') continue;
       scan.taskToolUseIds.add(block.id);
@@ -144,10 +171,14 @@ function takeLine(scan: FileScan, file: string, offset: number, length: number, 
       if (block.type !== 'tool_result') continue;
       answersToolCall = true;
       const toolUseId = block.tool_use_id;
+      if (typeof toolUseId === 'string' && scan.exitPlanCallIds.has(toolUseId) && block.is_error !== true) {
+        scan.planModeMarkers.push({ uuid, kind: 'left' });
+      }
       if (typeof toolUseId !== 'string' || !scan.taskToolUseIds.has(toolUseId)) continue;
       const match = AGENT_ID_PATTERN.exec(resultText(block.content));
       if (match) scan.agentIdByToolUse.set(toolUseId, match[1]);
     }
+    if (typeof entry.permissionMode === 'string') scan.planModeMarkers.push({ uuid, kind: 'prompt' });
     scan.prompts.push({ uuid: typeof entry.uuid === 'string' ? entry.uuid : undefined, entry: answersToolCall ? toolResultStub(entry) : entry });
     return;
   }
@@ -221,6 +252,18 @@ async function scanSubagent(subagentsDir: string, toolUseId: string, agentId: st
   return found;
 }
 
+/** Newest first: a prompt settles the mode, an approved plan ends plan mode, entering it is plan mode unless one of the others came after. */
+function inPlanModeAt(markers: PlanModeMarker[]): boolean {
+  let left = false;
+  for (let i = markers.length - 1; i >= 0; i--) {
+    const kind = markers[i].kind;
+    if (kind === 'prompt') return false;
+    if (kind === 'left') left = true;
+    else if (!left) return true;
+  }
+  return false;
+}
+
 /** Put the subagents' records in after the calls that ran them, and decide the active chain. */
 async function deriveIndex(scan: FileScan, subagentsDir: string, hasSubagents: boolean): Promise<SessionIndex> {
   const all: IndexedEntry[] = scan.entries.slice();
@@ -266,6 +309,7 @@ async function deriveIndex(scan: FileScan, subagentsDir: string, hasSubagents: b
     entries,
     promptChain: scan.prompts.filter(p => isActive(p.uuid)).map(p => p.entry),
     workflowChain: scan.workflow.entriesFor(isActive),
+    inPlanMode: inPlanModeAt(scan.planModeMarkers.filter(marker => isActive(marker.uuid))),
   };
 }
 

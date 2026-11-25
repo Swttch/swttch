@@ -3,6 +3,7 @@ import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { generateSessionId } from '../features/generateSessionId';
 import { ensureClaudeProcess, sendMessageToProcess, restartClaudeSessionProcess } from '../claude-process';
+import { forwardMessageToHolder } from '../forward-to-holder';
 import { trackEvent } from '../features/telemetry';
 import { isMessageUuid } from '../features/pending-message';
 import { requestSessionTitleAfterSend } from '../features/session-title-runtime';
@@ -62,6 +63,17 @@ export async function sendMessageHandler(
       // "which project is this?", and per-project settings depend on it.
       connections.subscribe(connectionId, resolvedSessionId, workingDir);
       const send = async () => {
+        // A session another backend runs (a tab of another IDE window started it) cannot be written to from here:
+        // hand the message to the backend that holds its CLI instead of refusing it (#711).
+        if (!connections.getProcess(resolvedSessionId)) {
+          const forwarded = await forwardMessageToHolder(resolvedSessionId, { text: content, attachments, messageUuid });
+          if (forwarded === 'forwarded') {
+            // This tab only watches the turn that follows (it reads the transcript as it grows): no CLI of this backend
+            // will ever say the turn is over, so the stream state the tab opened by sending must not be left running.
+            connections.sendTo(connectionId, MessageType.STREAM_END, {});
+            return;
+          }
+        }
         await ensureClaudeProcess(connections, connectionId, workingDir, resolvedSessionId, inputMode, bridge, model);
         sendMessageToProcess(connections, resolvedSessionId, content, attachments, messageUuid);
       };

@@ -417,6 +417,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   const {
     addUserMessage,
     appendSentMessage,
+    appendEchoMessage,
     restartTurnClock,
     addCommandEcho,
     clearMessages: chatStreamClearMessages,
@@ -693,6 +694,26 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     if (forkHandoff?.promptText) setInput(forkHandoff.promptText);
   }, [forkHandoff?.promptText, setInput]);
 
+  // Sessions whose CLI the backend of another IDE window holds: this screen does not run their turns. Read when a
+  // message is sent, so it is kept in a ref: a change of it draws nothing.
+  const heldElsewhereRef = useRef<ReadonlySet<string>>(new Set());
+  useEffect(() => {
+    let cancelled = false;
+    // What it is now (a screen that attached midway never saw the announcement), and every change after.
+    Promise.resolve(bridge.send(MessageType.GET_SESSION_ACTIVITY, {}))
+      .then((res: { status?: string; heldElsewhere?: string[] } | undefined) => {
+        if (!cancelled && res?.status === 'ok') heldElsewhereRef.current = new Set(res.heldElsewhere ?? []);
+      })
+      .catch(() => undefined);
+    const unsubscribe = bridge.subscribe(MessageType.SESSION_ACTIVITY_CHANGED, (message) => {
+      heldElsewhereRef.current = new Set((message.payload?.heldElsewhere as string[] | undefined) ?? []);
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [bridge]);
+
   const [sentWhileRunning, setSentWhileRunning] = useState<SentWhileRunning[]>([]);
   const isStreamingRef = useRef(chatStream.isStreaming);
   isStreamingRef.current = chatStream.isStreaming;
@@ -753,6 +774,11 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
       // put in now would stand above the answer to the message sent before it (#673).
       if (skipEcho) {
         // Drawn by the held list until the call has finished; entered into the chat then.
+      } else if (!isStreamingRef.current && !isNewSession && heldElsewhereRef.current.has(sessionId)) {
+        // The session's CLI belongs to the backend of another IDE window, which this screen only watches: the message
+        // is handed to that backend and the turn that answers it is read from the transcript. No turn is begun here
+        // (nothing here would ever end it), and the bubble stays until the transcript holds the message.
+        appendEchoMessage(content, messageUuid, context, attachments);
       } else if (inChatNow && isStreamingRef.current && !isNewSession) {
         // Written under a permission card and handed over with its answer: it is read before the turn goes on, so
         // it stands here, above whatever the turn writes next, without beginning a turn of its own.
@@ -801,7 +827,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
         console.error('[ChatStreamContext] Failed to send message to bridge:', error);
       });
     },
-    [addUserMessage, appendSentMessage, adoptAllowAllDraft, adoptPendingView, bridge, session, sessionModel]
+    [addUserMessage, appendSentMessage, appendEchoMessage, adoptAllowAllDraft, adoptPendingView, bridge, session, sessionModel]
   );
 
   /**

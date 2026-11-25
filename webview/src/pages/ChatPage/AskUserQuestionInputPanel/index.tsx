@@ -68,19 +68,15 @@ export const AskUserQuestionInputPanel = (props: Props) => {
   const handleSubmit = () => {
     const result = form.submitCurrent();
     if (result !== null) {
-      if (controlRequestId) {
-        // control_request가 수신된 경우: control_response로 응답
-        api.tools.respond(toolUse.id, result, {
-          controlRequestId,
-          updatedInput: {
-            questions: toolUse.input.questions,
-            answers: form.buildAnswersRecord(),
-          },
-        });
-      } else {
-        // control_request 미수신 (fallback): 기존 tool_result 방식
-        api.tools.respond(toolUse.id, result);
-      }
+      // control_request가 수신된 경우: control_response로 응답. 미수신이면(다른 창의 백엔드가 쥔 세션의 카드) 요청 번호 없이
+      // 보내되, 고른 답은 그대로 실어 보낸다: 쥔 백엔드가 도구 호출로 자기 요청을 찾아 그 답으로 응답한다.
+      api.tools.respond(toolUse.id, result, {
+        ...(controlRequestId && { controlRequestId }),
+        updatedInput: {
+          questions: toolUse.input.questions,
+          answers: form.buildAnswersRecord(),
+        },
+      });
       onDismiss();
     }
   };

@@ -290,6 +290,8 @@
     "card": {
       "title": "Claude 提出了一個計畫",
       "openPlan": "開啟計畫",
+      "collapsePlan": "摺疊",
+      "expandPlan": "展開",
       "revisePlaceholder": "需要變更什麼？（選填）",
       "back": "返回",
       "reviseSubmit": "修改",
@@ -1340,7 +1342,28 @@
     "codeBlock": "程式碼區塊"
   },
   "answerNotDelivered": {
-    "otherBackend": "此工作階段正在另一個視窗中執行，因此需要在那裡回答問題。你的回答未送出。",
+    "otherBackend": "此工作階段由另一個後端執行，因此需要在那裡回答問題。你的回答未送出。",
     "notRunning": "此工作階段中 Claude 未在執行，因此你的回答未送出。請傳送一則訊息以重新啟動。"
+  },
+  "takeOver": {
+    "message": "另一個後端正在執行此工作階段。",
+    "button": "接管",
+    "waiting": "正在等待這一輪結束…",
+    "cancelWait": "停止等待",
+    "failed": "無法接管此工作階段。",
+    "dialogTitle": "接管此工作階段？",
+    "dialogWhy": "每個 IDE 專案視窗有一個後端，在瀏覽器中開啟的每個 Swttch 也有一個後端。此工作階段是從另一個後端啟動的，所以 Claude 程序由那個後端持有。",
+    "dialogIdle": "另一個後端持有此工作階段。接管後，那個後端將無法再在此工作階段中傳送訊息。",
+    "dialogRunning": "另一個後端正在處理此工作階段。現在接管會中斷進行中的工作。",
+    "dialogAwaiting": "另一個後端正在等待權限請求或問題的回答。接管工作階段將取消該請求。",
+    "dialogDetail": "工作資料夾：{{folder}}\n後端程序：{{pid}}",
+    "dialogCancel": "取消",
+    "dialogConfirm": "接管",
+    "dialogAfterTurn": "結束後接管",
+    "dialogNow": "中斷並接管",
+    "dialogLoading": "正在確認另一個後端的狀態…"
+  },
+  "messageNotDelivered": {
+    "heldElsewhere": "此工作階段由另一個後端執行，該後端未接收你的訊息。請重新傳送，或接管此工作階段。"
   }
 }

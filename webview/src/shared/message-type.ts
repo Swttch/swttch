@@ -658,6 +658,22 @@ export enum MessageType {
    */
   GET_SESSION_ACTIVITY = 'GET_SESSION_ACTIVITY',
   /**
+   * Which backend holds this session's CLI and what it is doing: `{ holder: { activity, workingDir, ownerPid } | null }`
+   * (null when no other backend holds it). The take-over bar reads it to word its confirmation.
+   * inbound webview→backend
+   */
+  GET_SESSION_HOLDER = 'GET_SESSION_HOLDER',
+  /**
+   * Take a session's CLI over from the backend that holds it: that backend stops its CLI, and this one starts its own.
+   * `{ sessionId, mode: 'now' | 'afterTurn' }`: `now` interrupts a turn in flight first, `afterTurn` waits for it to end.
+   * Answered once the CLI here is running (or with the reason it could not be taken). inbound webview→backend
+   */
+  TAKE_OVER_SESSION = 'TAKE_OVER_SESSION',
+  /**
+   * Stop waiting in a TAKE_OVER_SESSION of mode `afterTurn`. `{ sessionId }`. inbound webview→backend
+   */
+  CANCEL_TAKE_OVER_SESSION = 'CANCEL_TAKE_OVER_SESSION',
+  /**
    * The user has now looked at this session, so a finished turn stops counting
    * as unread. Each host sends it under the condition it already uses for its
    * own unread badge: a browser tab becoming visible, a JetBrains editor tab

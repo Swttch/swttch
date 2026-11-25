@@ -290,6 +290,8 @@
     "card": {
       "title": "Claude proposed a plan",
       "openPlan": "Open plan",
+      "collapsePlan": "Collapse",
+      "expandPlan": "Expand",
       "revisePlaceholder": "What should change? (optional)",
       "back": "Back",
       "reviseSubmit": "Revise",
@@ -1364,7 +1366,28 @@
     "codeBlock": "code block"
   },
   "answerNotDelivered": {
-    "otherBackend": "This session is running in another window, so the question has to be answered there. Your answer was not sent.",
+    "otherBackend": "Another backend is running this session, so the question has to be answered there. Your answer was not sent.",
     "notRunning": "Claude is not running for this session, so your answer was not sent. Send a message to start it again."
+  },
+  "takeOver": {
+    "message": "Another backend is running this session.",
+    "button": "Take over",
+    "waiting": "Waiting for the turn to end…",
+    "cancelWait": "Stop waiting",
+    "failed": "Could not take this session over.",
+    "dialogTitle": "Take over this session?",
+    "dialogWhy": "There is one backend per IDE project window and one per Swttch opened in a browser. This session was started from a different one, so that backend holds its Claude process.",
+    "dialogIdle": "Another backend holds this session. If you take it over, that backend can no longer send messages in it.",
+    "dialogRunning": "Another backend is working on this session. Taking it over now interrupts the work in progress.",
+    "dialogAwaiting": "Another backend is waiting for an answer to a permission request or a question. Taking the session over cancels that request.",
+    "dialogDetail": "Working folder: {{folder}}\nBackend process: {{pid}}",
+    "dialogCancel": "Cancel",
+    "dialogConfirm": "Take over",
+    "dialogAfterTurn": "Take over when it ends",
+    "dialogNow": "Interrupt and take over",
+    "dialogLoading": "Checking what the other backend is doing…"
+  },
+  "messageNotDelivered": {
+    "heldElsewhere": "Another backend is running this session, and it did not take your message. Send it again, or take the session over."
   }
 }

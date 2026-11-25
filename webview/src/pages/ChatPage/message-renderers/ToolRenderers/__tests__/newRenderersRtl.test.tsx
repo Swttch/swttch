@@ -15,6 +15,7 @@ import {ToolUseBlockDto, ContentBlockType} from '@/dto';
 vi.mock('@/adapters', () => ({getAdapter: () => ({openFile: vi.fn()})}));
 vi.mock('@/contexts/SessionContext', () => ({
     useSessionContext: () => ({workingDirectory: '/repo'}),
+    useSessionContextOrNull: () => null,
 }));
 
 /**

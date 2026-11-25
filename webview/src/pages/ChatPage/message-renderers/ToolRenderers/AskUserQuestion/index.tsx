@@ -3,6 +3,9 @@ import { Container, LabelValue, RendererProps, ToolHeader, ToolWrapper } from ".
 import { useTranslation } from "@/i18n";
 import { useTranscriptViewMode } from "../../transcriptViewMode";
 import { isRepliedInChat } from "../../../AskUserQuestionInputPanel/repliedInChat";
+import { AskUserQuestionInputPanel } from "../../../AskUserQuestionInputPanel";
+import { usePendingQuestion } from "../../../AskUserQuestionInputPanel/PendingQuestionContext";
+import { TranscriptAwaitingInput } from "../../../transcript/TranscriptAwaitingInput";
 
 /** The CLI answers `User has answered your questions: "Q1"="A1", "Q2"="A2". ...`: each question with its answer. */
 function parseAnswers(output: string): Map<string, string> {
@@ -22,6 +25,7 @@ export function AskUserQuestionRenderer(props: RendererProps) {
 
     const isStreaming = props.message?.isStreaming === true;
     const viewMode = useTranscriptViewMode();
+    const waitingQuestion = usePendingQuestion();
 
     const rawQuestions = input?.questions;
     const questions = Array.isArray(rawQuestions) ? rawQuestions : [];
@@ -33,20 +37,25 @@ export function AskUserQuestionRenderer(props: RendererProps) {
     // while it waits. Once it is over it is a card of its own: a row for each question with its answer under it, or
     // "Skipped" when the question was turned down (measured on the desktop app's recording).
     if (viewMode !== null) {
-        if (!toolResult) return <div hidden data-testid="question-pending" />;
+        // While the question waits, the card that asks it stands here, where the call stands in the conversation.
+        if (!toolResult) {
+            return waitingQuestion !== null && waitingQuestion.toolUse.id === toolUse.id
+                ? <><AskUserQuestionInputPanel toolUse={waitingQuestion.toolUse} controlRequestId={waitingQuestion.controlRequestId} onDismiss={waitingQuestion.onDismiss} /><TranscriptAwaitingInput bare /></>
+                : <div hidden data-testid="question-pending" />;
+        }
         const answers = parseAnswers(output);
         const declined = /declined to run|doesn't want to proceed/i.test(output);
         const rows = hasValidQuestions ? (questions as Array<{ question: string; header?: string }>) : [];
         // A question that the person replied to in the chat, not in the card: a line of its own where the card was
         // (the desktop app's `Requested "header" Replied in chat ›`), measured on its recording.
         if (isRepliedInChat(output)) {
-            return <RepliedInChatRow questions={rows} message={props.message} />;
+            return <RepliedInChatRow questions={rows} />;
         }
         if (rows.length === 0) return output && !declined ? <div className="whitespace-pre-wrap text-[0.9rem] text-text-secondary">{output}</div> : null;
         return (
             <div
                 data-testid="question-answered"
-                className="mb-[2.1rem] flex w-full max-w-[33.4rem] flex-col overflow-hidden rounded-[0.8125rem] border border-text-primary/[0.07] text-[0.9rem] leading-[1.25rem]"
+                className="flex w-full max-w-[33.4rem] flex-col overflow-hidden rounded-[0.8125rem] border border-text-primary/[0.07] text-[0.9rem] leading-[1.25rem]"
             >
                 {rows.map((q, idx) => {
                     const answer = answers.get(q.question);

@@ -290,6 +290,8 @@
     "card": {
       "title": "Claude propuso un plan",
       "openPlan": "Abrir plan",
+      "collapsePlan": "Contraer",
+      "expandPlan": "Expandir",
       "revisePlaceholder": "¿Qué debería cambiar? (opcional)",
       "back": "Atrás",
       "reviseSubmit": "Revisar",
@@ -1369,7 +1371,28 @@
     "codeBlock": "bloque de código"
   },
   "answerNotDelivered": {
-    "otherBackend": "Esta sesión se está ejecutando en otra ventana, así que la pregunta debe responderse allí. Tu respuesta no se envió.",
+    "otherBackend": "Esta sesión la ejecuta otro backend, así que la pregunta debe responderse allí. Tu respuesta no se envió.",
     "notRunning": "Claude no se está ejecutando en esta sesión, así que tu respuesta no se envió. Envía un mensaje para iniciarlo de nuevo."
+  },
+  "takeOver": {
+    "message": "Otro backend está ejecutando esta sesión.",
+    "button": "Tomar el control",
+    "waiting": "Esperando a que termine el turno…",
+    "cancelWait": "Dejar de esperar",
+    "failed": "No se pudo tomar el control de esta sesión.",
+    "dialogTitle": "¿Tomar el control de esta sesión?",
+    "dialogWhy": "Hay un backend por cada ventana de proyecto del IDE y uno por cada Swttch abierto en un navegador. Esta sesión se inició desde otro, así que ese backend tiene su proceso de Claude.",
+    "dialogIdle": "Otro backend tiene esta sesión. Si tomas el control, ese backend ya no podrá enviar mensajes en ella.",
+    "dialogRunning": "Otro backend está trabajando en esta sesión. Si tomas el control ahora, se interrumpirá el trabajo en curso.",
+    "dialogAwaiting": "Otro backend está esperando la respuesta a una solicitud de permiso o a una pregunta. Tomar el control de la sesión cancela esa solicitud.",
+    "dialogDetail": "Carpeta de trabajo: {{folder}}\nProceso del backend: {{pid}}",
+    "dialogCancel": "Cancelar",
+    "dialogConfirm": "Tomar el control",
+    "dialogAfterTurn": "Tomar el control al terminar",
+    "dialogNow": "Interrumpir y tomar el control",
+    "dialogLoading": "Comprobando qué está haciendo el otro backend…"
+  },
+  "messageNotDelivered": {
+    "heldElsewhere": "Esta sesión la ejecuta otro backend y no aceptó tu mensaje. Envíalo de nuevo o toma el control de la sesión."
   }
 }

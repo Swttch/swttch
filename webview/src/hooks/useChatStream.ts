@@ -185,6 +185,14 @@ export interface UseChatStreamReturn {
   addUserMessage: (content: string, context?: Context[], attachments?: Attachment[]) => void;
   /** Put a message sent while a turn was running into the chat, without beginning a turn. */
   appendSentMessage: (content: string, context?: Context[], attachments?: Attachment[]) => void;
+  /**
+   * Put a message handed to the backend of another IDE window into the chat, without beginning a turn: the turn that
+   * answers it is that backend's, and this screen only reads it from the transcript. The bubble stays, through the
+   * transcript being read again, until the transcript holds the message under `uuid` (the id the CLI records it by).
+   */
+  appendEchoMessage: (content: string, uuid: string, context?: Context[], attachments?: Attachment[]) => void;
+  /** Take back the echoes the transcript does not hold yet: the message was not taken by the backend that holds the session. */
+  dropUnconfirmedEchoes: () => void;
   /** Count the running turn's time and written tokens from now: what follows an answered permission card is a new stretch of work. */
   restartTurnClock: () => void;
   /** Echo a command with no assistant turn — for control_request commands (#270). */
@@ -261,6 +269,15 @@ function storeFrom(result: WindowResult<LoadedMessageDto>): ChatStore {
   return { messages: result.messages, window: result.state };
 }
 
+/** The words of the content of a transcript line: a string, or the text blocks of a list. */
+function textOfRawContent(content: unknown): string {
+  if (typeof content === 'string') return content;
+  if (Array.isArray(content)) {
+    return content.map(block => (block && typeof block === 'object' && (block as { type?: string }).type === 'text' ? String((block as { text?: unknown }).text ?? '') : '')).join('');
+  }
+  return '';
+}
+
 export function useChatStream(options: UseChatStreamOptions): UseChatStreamReturn {
   const { bridge, onStreamStart, onStreamEnd, onError, onSystemMessage, onToolUseStart, onControlRequestResult, takeSentWhileRunning } = options;
 
@@ -305,6 +322,12 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
   } | null>(null);
   const [turnOutputTokens, setTurnOutputTokens] = useState(0);
   const [turnStartedAt, setTurnStartedAt] = useState<number | null>(null);
+  // A turn that runs here without this screen having started it or been told when it began (it went on from a question
+  // answered in the chat, or the screen was opened onto it) has no clock, and its line would say 0 seconds all the way.
+  // It counts from the moment it is seen to run.
+  useEffect(() => {
+    if (isStreaming && turnStartedAt === null) setTurnStartedAt(Date.now());
+  }, [isStreaming, turnStartedAt]);
 
   // Usage of the API message now streaming, built from its `message_start` and
   // `message_delta`. The `assistant` frame repeats only the `message_start`
@@ -748,6 +771,29 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     appendMessage(buildUserMessage(content, context, attachments), true);
   }, [appendMessage, buildUserMessage]);
 
+  // Messages this screen put in the chat for another backend's session that the transcript does not hold yet, by the
+  // id the CLI will record them under. The transcript is read again whenever it grows; without these the bubble went
+  // away at the first read and came back where the CLI took the message up, seconds later.
+  const unconfirmedEchoes = useRef(new Map<string, { message: LoadedMessageDto; text: string; sentAt: number }>());
+
+  const appendEchoMessage = useCallback((content: string, uuid: string, context?: Context[], attachments?: Attachment[]) => {
+    if (!content.trim() && (!attachments || attachments.length === 0)) return;
+    const message = buildUserMessage(content, context, attachments);
+    message.uuid = uuid;
+    unconfirmedEchoes.current.set(uuid, { message, text: content.trim(), sentAt: Date.now() });
+    appendMessage(message, true);
+  }, [appendMessage, buildUserMessage]);
+
+  const dropUnconfirmedEchoes = useCallback(() => {
+    const echoes = unconfirmedEchoes.current;
+    if (echoes.size === 0) return;
+    const gone = new Set(echoes.keys());
+    echoes.clear();
+    setMessages(prev => prev.filter(message => !message.uuid || !gone.has(message.uuid)));
+  }, [setMessages]);
+  const dropUnconfirmedEchoesRef = useRef(dropUnconfirmedEchoes);
+  dropUnconfirmedEchoesRef.current = dropUnconfirmedEchoes;
+
   // addUserMessage - 로컬 상태 조작만 (bridge.send 하지 않음)
   const addUserMessage = useCallback((content: string, context?: Context[], attachments?: Attachment[]) => {
     if (!content.trim() && (!attachments || attachments.length === 0)) return;
@@ -813,6 +859,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
 
   // Clear messages
   const clearMessages = useCallback(() => {
+    unconfirmedEchoes.current.clear();
     setStore(EMPTY_CHAT_STORE);
     setError(null);
     setAuthDiagnosis(null);
@@ -829,7 +876,8 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
         return made;
       });
 
-    // The newest page: everything the backend sent is the newest pages, with no gap.
+    // The newest page: everything the backend sent is the newest pages, with no gap. A session opened again holds no echo.
+    unconfirmedEchoes.current.clear();
     setStore(storeFrom(loadInitial(convertedMessages, hasOlder)));
     setError(null);
     setAuthDiagnosis(null);
@@ -861,6 +909,26 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
   const rawSignatures = useRef(new WeakMap<object, string>());
 
   const refreshMessages = useCallback((msgs: LoadedMessageDto[], hasOlder = false) => {
+    // A message the transcript holds now is no longer an echo; the ones it does not hold yet stay at the end.
+    // The CLI records a message under the id it was sent with: as a `user` line when it takes it up between turns, and
+    // as the `source_uuid` of a `queued_command` attachment when it absorbs it in the middle of a turn. The same words
+    // written just after the bubble was drawn count too, for a CLI that records it under another id.
+    const inTranscript = new Set<unknown>();
+    const written: Array<{ text: string; at: number }> = [];
+    for (const raw of msgs) {
+      inTranscript.add(raw.uuid);
+      const attachment = (raw as { attachment?: { type?: string; source_uuid?: string; prompt?: unknown } }).attachment;
+      if (attachment?.source_uuid) inTranscript.add(attachment.source_uuid);
+      const text = attachment?.type === 'queued_command' && typeof attachment.prompt === 'string'
+        ? attachment.prompt
+        : raw.type === LoadedMessageType.User ? textOfRawContent((raw.message as { content?: unknown } | undefined)?.content) : '';
+      if (text) written.push({ text: text.trim(), at: Date.parse(raw.timestamp ?? '') });
+    }
+    for (const [uuid, echo] of [...unconfirmedEchoes.current]) {
+      const sameWords = written.some(entry => entry.text === echo.text && entry.at >= echo.sentAt - 5000);
+      if (inTranscript.has(uuid) || sameWords) unconfirmedEchoes.current.delete(uuid);
+    }
+    const echoes = [...unconfirmedEchoes.current.values()].map(echo => echo.message);
     setStore(prev => {
       const held = new Map<string, LoadedMessageDto>();
       for (const message of prev.messages) if (message.uuid) held.set(message.uuid, message);
@@ -876,8 +944,8 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
       // before it, and what the window knows about them, stay as they are. Anything else starts over.
       const first = next[0]?.uuid;
       const at = first ? prev.messages.findIndex(message => message.uuid === first) : -1;
-      if (at === -1) return storeFrom(loadInitial(next, hasOlder));
-      return storeFrom({ messages: [...prev.messages.slice(0, at), ...next], state: windowOf(prev) });
+      if (at === -1) return storeFrom(loadInitial([...next, ...echoes], hasOlder));
+      return storeFrom({ messages: [...prev.messages.slice(0, at), ...next, ...echoes], state: windowOf(prev) });
     });
   }, []);
 
@@ -1742,13 +1810,23 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
                   defaultValue: errorMessage,
                 }),
               )
-            : new Error(
-              errorType
-                ? `Service error: ${errorType} - ${errorMessage}`
-                : `Service error: ${errorMessage}`
-            );
+            : payload?.cause === 'heldElsewhere'
+              // The backend of another window holds this session and did not take the message: a notice, in the
+              // user's language, not a failure of the session.
+              ? new Error(i18n.t('chat:messageNotDelivered.heldElsewhere', { defaultValue: errorMessage }))
+              : new Error(
+                errorType
+                  ? `Service error: ${errorType} - ${errorMessage}`
+                  : `Service error: ${errorMessage}`
+              );
       setError(err);
-      onErrorRef.current?.(err);
+      // A notice that something was not delivered is told and nothing more: the session is fine, and putting it in
+      // the Error state locked the composer, so the person could neither send the message again nor answer elsewhere.
+      if (errorType !== MessageType.ANSWER_NOT_DELIVERED && payload?.cause !== 'heldElsewhere') {
+        onErrorRef.current?.(err);
+      }
+      // The backend that holds the session did not take the message: the bubble put in for it says it was sent.
+      if (payload?.cause === 'heldElsewhere') dropUnconfirmedEchoesRef.current();
       endStreaming();
     });
 
@@ -1876,6 +1954,8 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     authDiagnosis,
     addUserMessage,
     appendSentMessage,
+    appendEchoMessage,
+    dropUnconfirmedEchoes,
     restartTurnClock,
     addCommandEcho,
     clearMessages,

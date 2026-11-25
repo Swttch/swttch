@@ -680,6 +680,31 @@ describe('ConnectionManager', () => {
       expect(cm.getSessionActivity()).toEqual({});
     });
 
+    it('tells every connection which sessions another window\'s backend holds, once per move (#711)', () => {
+      const announce = vi.spyOn(cm as unknown as { announceSessions: () => void }, 'announceSessions');
+      cm.setHeldElsewhere('held', true);
+      cm.setHeldElsewhere('held', true);
+      expect(cm.getSessionActivityPayload().heldElsewhere).toEqual(['held']);
+      cm.setHeldElsewhere('held', false);
+      cm.setHeldElsewhere('held', false);
+      expect(cm.getSessionActivityPayload().heldElsewhere).toEqual([]);
+      expect(announce).toHaveBeenCalledTimes(2);
+    });
+
+    // A tab that sent a message another window's backend holds opens a turn and ends it as soon as the message is
+    // handed over (#711). That report must not hide that the turn is still running over there.
+    it('keeps a turn another backend runs as running when a tab here reports its own turn done', () => {
+      cm.setExternalRunning('held', true);
+      cm.getOrCreateSession('held');
+      cm.reportSessionActivity('held', SessionActivity.Running);
+      cm.reportSessionActivity('held', SessionActivity.Idle); // the turn the tab opened ended: reads as done
+      expect(cm.getSessionActivity()).toEqual({ held: SessionActivity.Running });
+
+      // once the other program stops, the unread `done` shows
+      cm.setExternalRunning('held', false);
+      expect(cm.getSessionActivity()).toEqual({ held: SessionActivity.Done });
+    });
+
     it('tells every connection when the unread state of a session another program ran moves, once per move', () => {
       const announce = vi.spyOn(cm as unknown as { announceSessions: () => void }, 'announceSessions');
 

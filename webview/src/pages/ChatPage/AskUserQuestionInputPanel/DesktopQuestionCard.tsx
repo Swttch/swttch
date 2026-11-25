@@ -36,8 +36,8 @@ export function DesktopQuestionCard({ form, total, onSubmit, onCancel, onOtherKe
 
   const options = form.allOptionsFor(form.currentIndex);
   return (
-    <div className="w-full shrink-0 animate-[fadeIn_0.3s_ease-out] px-4 pb-2 pt-[0.375rem]" data-testid="desktop-question-card">
-      <div className="flex w-full max-w-[33.4rem] flex-col overflow-hidden rounded-[0.8125rem] border border-text-primary/[0.05]">
+    <div className="w-full shrink-0 animate-[fadeIn_0.3s_ease-out]" data-testid="desktop-question-card">
+      <div className="my-4 flex w-full max-w-[33.4rem] flex-col overflow-hidden rounded-[0.8125rem] border border-text-primary/[0.05]">
         {/* The band is as tall as the desktop app's for a question of one line (min-h), and grows for a longer one: the
             question is what the person answers by, so none of it is cut off (#707). */}
         <div className="flex min-h-[2.99rem] shrink-0 items-center justify-between bg-text-primary/[0.04] px-[1.2188rem] py-[0.75rem] text-[0.9rem] leading-[1.35rem] text-text-primary">

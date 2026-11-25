@@ -15,7 +15,7 @@ import {
   type ScheduledMessage,
 } from '@/shared';
 import { LimitReachedRenderer } from '../pages/ChatPage/message-renderers/LimitReachedRenderer';
-import { isLimitErrorMessage } from '../types';
+import { isLimitErrorMessage, SessionState } from '../types';
 import { i18n } from '../i18n';
 import { AutoResumeProvider, useAutoResumeContext } from '../contexts/AutoResumeContext';
 
@@ -404,6 +404,95 @@ describe('채팅 스트리밍 통합 테스트', () => {
     expect(screen.getByTestId('input')).toHaveValue('');
   });
 
+  // The session's CLI belongs to the backend of another IDE window: this screen only watches it, so a message sent
+  // here is handed over and the turn that answers it is read from the transcript (#711).
+  it('sendMessage: 다른 창의 백엔드가 쥔 세션이면 말풍선만 그리고 턴을 시작하지 않는다', async () => {
+    mockSession.currentSessionId = 'held-session';
+
+    render(
+      <TestWrapper>
+        <TestChatComponent />
+      </TestWrapper>
+    );
+    await act(async () => {
+      emitBridgeEvent(MessageType.SESSION_ACTIVITY_CHANGED, {
+        activity: { 'held-session': 'running' },
+        open: ['held-session'],
+        heldElsewhere: ['held-session'],
+      });
+    });
+
+    await act(async () => {
+      fireEvent.change(screen.getByTestId('input'), { target: { value: 'Hello' } });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('submit'));
+    });
+
+    // one message, the bubble: no assistant placeholder and no turn of its own
+    await waitFor(() => {
+      expect(screen.getByTestId('messages-count')).toHaveTextContent('1');
+    });
+    expect(screen.getByTestId('msg-user')).toHaveTextContent('Hello');
+    expect(screen.getByTestId('is-streaming')).toHaveTextContent('false');
+    expect(mockBridge.send).toHaveBeenCalledWith(MessageType.SEND_MESSAGE, expect.objectContaining({ content: 'Hello', sessionId: 'held-session' }));
+  });
+
+  it('sendMessage: 내 백엔드가 돌리는 세션이면 지금처럼 턴을 시작한다 (다른 창이 쥔 세션이 아닐 때)', async () => {
+    mockSession.currentSessionId = 'own-session';
+
+    render(
+      <TestWrapper>
+        <TestChatComponent />
+      </TestWrapper>
+    );
+    await act(async () => {
+      emitBridgeEvent(MessageType.SESSION_ACTIVITY_CHANGED, { activity: {}, open: ['own-session'], heldElsewhere: ['some-other-session'] });
+    });
+
+    await act(async () => {
+      fireEvent.change(screen.getByTestId('input'), { target: { value: 'Hello' } });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('submit'));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('messages-count')).toHaveTextContent('2');
+    });
+    expect(screen.getByTestId('is-streaming')).toHaveTextContent('true');
+  });
+
+  it('SERVICE_ERROR(heldElsewhere): 쥔 백엔드가 받지 않은 메시지의 말풍선을 걷어 낸다', async () => {
+    mockSession.currentSessionId = 'held-session';
+
+    render(
+      <TestWrapper>
+        <TestChatComponent />
+      </TestWrapper>
+    );
+    await act(async () => {
+      emitBridgeEvent(MessageType.SESSION_ACTIVITY_CHANGED, { activity: {}, open: [], heldElsewhere: ['held-session'] });
+    });
+    await act(async () => {
+      fireEvent.change(screen.getByTestId('input'), { target: { value: 'Hello' } });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('submit'));
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('messages-count')).toHaveTextContent('1');
+    });
+
+    await act(async () => {
+      emitBridgeEvent(MessageType.SERVICE_ERROR, { type: MessageType.SPAWN_ERROR, cause: 'heldElsewhere', reason: 'x' });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('messages-count')).toHaveTextContent('0');
+    });
+  });
+
   it('sendMessage: inputMode가 bridge.send payload에 포함된다', async () => {
     mockSession.currentSessionId = 'existing-session';
     // 사용자가 plan을 고른 상태 — 페이로드에는 이 모드가 실려야 한다
@@ -628,6 +717,75 @@ describe('채팅 스트리밍 통합 테스트', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('error')).toHaveTextContent('English sentence from a newer backend');
+    });
+  });
+
+  it('SERVICE_ERROR(heldElsewhere): 메시지를 못 받았다는 안내가 사용자 언어로 뜨고, 세션은 오류 상태가 되지 않는다 (#711)', async () => {
+    mockSession.currentSessionId = 'test-session';
+    mockSession.setSessionState.mockClear();
+
+    render(
+      <TestWrapper>
+        <TestChatComponent />
+      </TestWrapper>
+    );
+
+    await act(async () => {
+      emitBridgeEvent(MessageType.SERVICE_ERROR, {
+        type: MessageType.SPAWN_ERROR,
+        cause: 'heldElsewhere',
+        reason: 'English fallback, not shown when the cause is known',
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('error')).toHaveTextContent(i18n.t('chat:messageNotDelivered.heldElsewhere'));
+    });
+    expect(screen.getByTestId('error')).not.toHaveTextContent('Service error');
+    // An Error state locks the composer: the person could not send the message again.
+    expect(mockSession.setSessionState).not.toHaveBeenCalledWith(SessionState.Error);
+  });
+
+  it('SERVICE_ERROR(ANSWER_NOT_DELIVERED): 안내만 띄우고 세션을 오류 상태로 만들지 않는다 (#711)', async () => {
+    mockSession.currentSessionId = 'test-session';
+    mockSession.setSessionState.mockClear();
+
+    render(
+      <TestWrapper>
+        <TestChatComponent />
+      </TestWrapper>
+    );
+
+    await act(async () => {
+      emitBridgeEvent(MessageType.SERVICE_ERROR, {
+        type: MessageType.ANSWER_NOT_DELIVERED,
+        cause: 'otherBackend',
+        reason: 'x',
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('error')).toHaveTextContent(i18n.t('chat:answerNotDelivered.otherBackend'));
+    });
+    expect(mockSession.setSessionState).not.toHaveBeenCalledWith(SessionState.Error);
+  });
+
+  it('SERVICE_ERROR 그 밖의 오류는 여전히 세션을 오류 상태로 만든다', async () => {
+    mockSession.currentSessionId = 'test-session';
+    mockSession.setSessionState.mockClear();
+
+    render(
+      <TestWrapper>
+        <TestChatComponent />
+      </TestWrapper>
+    );
+
+    await act(async () => {
+      emitBridgeEvent(MessageType.SERVICE_ERROR, { type: 'ERROR_TYPE', reason: 'API error message' });
+    });
+
+    await waitFor(() => {
+      expect(mockSession.setSessionState).toHaveBeenCalledWith(SessionState.Error);
     });
   });
 

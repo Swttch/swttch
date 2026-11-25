@@ -290,6 +290,8 @@
     "card": {
       "title": "Claude a proposé un plan",
       "openPlan": "Ouvrir le plan",
+      "collapsePlan": "Réduire",
+      "expandPlan": "Développer",
       "revisePlaceholder": "Que faut-il modifier ? (facultatif)",
       "back": "Retour",
       "reviseSubmit": "Réviser",
@@ -1369,7 +1371,28 @@
     "codeBlock": "bloc de code"
   },
   "answerNotDelivered": {
-    "otherBackend": "Cette session s'exécute dans une autre fenêtre ; il faut donc répondre à la question là-bas. Votre réponse n'a pas été envoyée.",
+    "otherBackend": "Cette session est exécutée par un autre backend ; il faut donc répondre à la question là-bas. Votre réponse n'a pas été envoyée.",
     "notRunning": "Claude n'est pas en cours d'exécution pour cette session ; votre réponse n'a donc pas été envoyée. Envoyez un message pour le relancer."
+  },
+  "takeOver": {
+    "message": "Un autre backend exécute cette session.",
+    "button": "Reprendre",
+    "waiting": "En attente de la fin du tour…",
+    "cancelWait": "Ne plus attendre",
+    "failed": "Impossible de reprendre cette session.",
+    "dialogTitle": "Reprendre cette session ?",
+    "dialogWhy": "Il y a un backend par fenêtre de projet IDE et un par Swttch ouvert dans un navigateur. Cette session a été démarrée depuis un autre : c'est donc ce backend qui détient son processus Claude.",
+    "dialogIdle": "Un autre backend détient cette session. Si vous la reprenez, ce backend ne pourra plus y envoyer de messages.",
+    "dialogRunning": "Un autre backend travaille sur cette session. La reprendre maintenant interrompt le travail en cours.",
+    "dialogAwaiting": "Un autre backend attend la réponse à une demande d'autorisation ou à une question. Reprendre la session annule cette demande.",
+    "dialogDetail": "Dossier de travail : {{folder}}\nProcessus du backend : {{pid}}",
+    "dialogCancel": "Annuler",
+    "dialogConfirm": "Reprendre",
+    "dialogAfterTurn": "Reprendre à la fin",
+    "dialogNow": "Interrompre et reprendre",
+    "dialogLoading": "Vérification de ce que fait l'autre backend…"
+  },
+  "messageNotDelivered": {
+    "heldElsewhere": "Cette session est exécutée par un autre backend, qui n'a pas pris votre message. Renvoyez-le ou reprenez la session."
   }
 }

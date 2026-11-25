@@ -6,6 +6,11 @@ import { useSessionContext } from '@/contexts/SessionContext';
 import { InputModeValues, type InputMode } from '@/types/chatInput';
 import type { PendingPlanApproval } from '../../../hooks/usePendingPlanApproval';
 import { rectMetrics } from '@/utils/zoomRects';
+import { ActivityGlyph } from '../transcript/TranscriptActivity';
+import { Streamdown } from 'streamdown';
+import { math } from '@/utils/mathPlugin';
+import { code } from '@/utils/codePlugin';
+import { mermaid, MERMAID_CONTROLS, useMermaidOptions } from '@/utils/mermaidPlugin';
 
 interface Props {
   pending: PendingPlanApproval;
@@ -13,12 +18,56 @@ interface Props {
   onDeny: (controlRequestId: string, reason?: string) => void;
 }
 
+/**
+ * "Proposing plan …", the line that says a plan has been put forward and waits for its answer. It stands under the card
+ * that asks about it, and by itself where the card is not here (the answer is asked on another screen, or the program
+ * that asked has since gone), as the desktop app keeps it.
+ */
+export function PlanProposingLine({ title, plan, answerable = false, current = true }: { title: string; plan?: string; answerable?: boolean; current?: boolean }) {
+  const { t } = useTranslation('chat');
+  const [open, setOpen] = useState(false);
+  const mermaidOptions = useMermaidOptions();
+  // With the plan given, the line opens to it: that is for where no card shows it. Under the card the plan is already there.
+  const openable = plan !== undefined && plan !== '';
+  const className = 'flex w-full items-center gap-[0.5624rem] pt-1 pb-1 text-start leading-[0.9rem] text-[0.9375rem] text-[var(--tr-muted)]';
+  const content = (
+    <>
+      {/* The dots say that an answer is awaited, so they are drawn only where the card that takes it is. */}
+      {answerable && <ActivityGlyph />}
+      {/* The light runs while this is the turn that goes on: a plan that no answer came for, and that a later message has left behind, stands still. */}
+      <span className={`min-w-0 truncate ${current ? 'transcript-shimmer' : ''}`}>{t('acceptPlan.proposing', { title })}</span>
+      <ChevronRightIcon className={`-ms-[0.3376rem] h-[0.9rem] w-[0.9rem] shrink-0 transition-transform rtl:-scale-x-100 ${open ? 'rotate-90 rtl:-rotate-90' : ''}`} />
+    </>
+  );
+  return (
+    <div data-testid="plan-row-pending">
+      {openable ? (
+        <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)} className={`${className} hover:text-[var(--tr-hover)]`}>
+          {content}
+        </button>
+      ) : (
+        <div className={className}>{content}</div>
+      )}
+      {openable && open && (
+        <div className="markdown-content text-text-primary text-[1rem] leading-relaxed">
+          <Streamdown mode="static" controls={{ code: true, table: true, mermaid: MERMAID_CONTROLS }} plugins={{ math, code, mermaid }} mermaid={mermaidOptions}>
+            {plan}
+          </Streamdown>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** The line that names a plan: its first line without the marks of a heading. */
-function planTitle(plan: unknown): string {
+export function planTitle(plan: unknown): string {
   if (typeof plan !== 'string') return '';
   const line = plan.split('\n').map((text) => text.trim()).find((text) => text !== '') ?? '';
   return line.replace(/^#+\s*/, '');
 }
+
+/** The "Open plan" button is hidden while the plan is open from the start; it is meant to come back as a way to open the plan elsewhere (in a file, on a canvas). */
+const SHOW_OPEN_PLAN_BUTTON = false;
 
 const BUTTON = 'h-[1.9062rem] rounded-[0.5625rem] px-[0.5625rem] text-[1rem] transition-colors';
 const GRAY = `${BUTTON} bg-text-primary/[0.12] text-text-primary hover:bg-text-primary/[0.2]`;
@@ -33,7 +82,11 @@ export function DesktopPlanCard({ pending, onApprove, onDeny }: Props) {
   const { t } = useTranslation('chat');
   const { setInputMode, availableModes } = useSessionContext();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [planOpen, setPlanOpen] = useState(false);
+  // The plan is open from the start. The button that opens it is kept out of sight for now (see SHOW_OPEN_PLAN_BUTTON).
+  const [planOpen, setPlanOpen] = useState(true);
+  // Opened, the plan is held to the card's width and a height it scrolls in; expanded, it has neither limit.
+  const [expanded, setExpanded] = useState(false);
+  const mermaidOptions = useMermaidOptions();
   const [revising, setRevising] = useState(false);
   const [feedback, setFeedback] = useState('');
   const cardRef = useRef<HTMLDivElement>(null);
@@ -84,27 +137,45 @@ export function DesktopPlanCard({ pending, onApprove, onDeny }: Props) {
   ];
 
   return (
-    <div className="w-full shrink-0 animate-[fadeIn_0.3s_ease-out] px-4 pb-2 pt-[0.375rem]" data-testid="desktop-plan-card">
-      <div ref={cardRef} className="flex w-full max-w-[33.4rem] flex-col overflow-hidden rounded-[0.8125rem] border border-text-primary/[0.05]">
+    <div className="w-full shrink-0 animate-[fadeIn_0.3s_ease-out]" data-testid="desktop-plan-card">
+      <div ref={cardRef} className={`my-4 flex w-full ${planOpen && expanded ? '' : 'max-w-[33.4rem]'} flex-col overflow-hidden rounded-[0.8125rem] border border-text-primary/[0.05]`}>
         <div className="flex items-start justify-between gap-3 bg-text-primary/[0.04] px-[1.2188rem] pb-[0.84rem] pt-[0.84rem]">
           <div className="min-w-0">
             <div className="text-[0.9rem] leading-[1.25rem] text-text-primary">{t('acceptPlan.card.title')}</div>
             {title && <div className="mt-[0.2rem] truncate text-[0.8461rem] leading-[1.25rem] text-text-secondary">{title}</div>}
           </div>
           {plan && (
-            <button
-              type="button"
-              onClick={() => setPlanOpen((open) => !open)}
-              className="shrink-0 text-[0.8461rem] leading-[1.25rem] text-[rgb(94,150,230)] underline decoration-[rgb(94,150,230)]/50 underline-offset-2 hover:opacity-80"
-            >
-              {t('acceptPlan.card.openPlan')}
-            </button>
+            <div className="flex shrink-0 items-center gap-3">
+              {SHOW_OPEN_PLAN_BUTTON && <button
+                type="button"
+                onClick={() => setPlanOpen((open) => !open)}
+                className="text-[0.8461rem] leading-[1.25rem] text-[rgb(94,150,230)] underline decoration-[rgb(94,150,230)]/50 underline-offset-2 hover:opacity-80"
+              >
+                {t('acceptPlan.card.openPlan')}
+              </button>}
+              {planOpen && (
+                <button
+                  type="button"
+                  data-testid="plan-expand-toggle"
+                  aria-pressed={expanded}
+                  onClick={() => setExpanded((value) => !value)}
+                  className="text-[0.8461rem] leading-[1.25rem] text-[rgb(94,150,230)] underline decoration-[rgb(94,150,230)]/50 underline-offset-2 hover:opacity-80"
+                >
+                  {t(expanded ? 'acceptPlan.card.collapsePlan' : 'acceptPlan.card.expandPlan')}
+                </button>
+              )}
+            </div>
           )}
         </div>
         {planOpen && (
-          <pre className="max-h-[18rem] overflow-y-auto whitespace-pre-wrap break-words border-t border-text-primary/[0.06] px-[1.2188rem] py-[0.9rem] font-sans text-[0.8461rem] leading-[1.35] text-text-primary">
-            {plan}
-          </pre>
+          <div
+            data-testid="plan-body"
+            className={`markdown-content border-t border-text-primary/[0.06] px-[1.2188rem] py-[0.9rem] text-[0.8461rem] leading-[1.35] text-text-primary ${expanded ? '' : 'max-h-[18rem] overflow-y-auto'}`}
+          >
+            <Streamdown mode="static" controls={{ code: true, table: true, mermaid: MERMAID_CONTROLS }} plugins={{ math, code, mermaid }} mermaid={mermaidOptions}>
+              {plan}
+            </Streamdown>
+          </div>
         )}
         {revising ? (
           <div className="flex flex-col gap-[0.6rem] px-[1.0625rem] pb-[1rem] pt-[0.97rem]">
@@ -211,15 +282,7 @@ export function DesktopPlanCard({ pending, onApprove, onDeny }: Props) {
         </div>
         )}
       </div>
-      <div data-testid="plan-row-pending" className="flex items-center gap-[0.35rem] py-[0.625rem] ps-[0.2rem] text-[0.9656rem] text-text-secondary">
-        <span aria-hidden className="flex gap-[0.15rem] text-[rgb(217,92,76)]">
-          <span className="h-[0.25rem] w-[0.25rem] rounded-full bg-current" />
-          <span className="h-[0.25rem] w-[0.25rem] rounded-full bg-current" />
-          <span className="h-[0.25rem] w-[0.25rem] rounded-full bg-current" />
-        </span>
-        <span className="min-w-0 truncate">{t('acceptPlan.proposing', { title })}</span>
-        <ChevronRightIcon className="h-4 w-4 shrink-0" />
-      </div>
+      <PlanProposingLine title={title} answerable />
     </div>
   );
 }

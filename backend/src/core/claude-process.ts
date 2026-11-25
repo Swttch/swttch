@@ -725,6 +725,23 @@ export async function restartClaudeSessionProcess(
 }
 
 /**
+ * Let go of a session's CLI for good, so another backend can run the session: stop it the way a deliberate restart
+ * does (no failure is reported for the exit) and do not start another one.
+ *
+ * A restart ends with the replacement's own STREAM_START; here nothing replaces the CLI, so the screens that were
+ * showing a turn would stay on "running". They are told the stream ended.
+ *
+ * Returns false when this backend holds no CLI for the session.
+ */
+export async function releaseClaudeSession(connections: ConnectionManager, sessionId: string): Promise<boolean> {
+  const proc = connections.getSession(sessionId)?.process;
+  if (!proc) return false;
+  await restartClaudeSessionProcess(connections, sessionId, proc);
+  connections.broadcastToSession(sessionId, MessageType.STREAM_END);
+  return true;
+}
+
+/**
  * Spawn a `claude -p` process for the session unless one is already alive, in
  * which case the live one is reused and nothing else happens.
  *
@@ -855,12 +872,14 @@ export async function ensureClaudeProcess(
   if (conflict) {
     if (conflict.ownerAlive) {
       const reason =
-        `Session ${targetSessionId} is already active under another backend ` +
-        `(CLI PID ${conflict.entry.pid}, backend PID ${conflict.entry.owner.pid}). ` +
-        'Refusing to start a second writer on the same session.';
+        `Session ${targetSessionId} is running in another IDE window ` +
+        `(CLI PID ${conflict.entry.pid}, backend PID ${conflict.entry.owner.pid}) and that window did not take the message. ` +
+        'Send it from that window, or wait until the turn ends. Refusing to start a second writer on the same session.';
       console.error('[node-backend]', reason);
       connections.broadcastToSession(targetSessionId, MessageType.SERVICE_ERROR, {
         type: MessageType.SPAWN_ERROR,
+        // The screen words this as a notice and leaves the composer open: the person can send it again from this tab.
+        cause: 'heldElsewhere',
         reason,
         error: reason,
       });

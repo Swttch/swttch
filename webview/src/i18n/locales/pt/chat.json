@@ -290,6 +290,8 @@
     "card": {
       "title": "O Claude propôs um plano",
       "openPlan": "Abrir plano",
+      "collapsePlan": "Recolher",
+      "expandPlan": "Expandir",
       "revisePlaceholder": "O que deve mudar? (opcional)",
       "back": "Voltar",
       "reviseSubmit": "Revisar",
@@ -1368,7 +1370,28 @@
     "codeBlock": "bloco de código"
   },
   "answerNotDelivered": {
-    "otherBackend": "Esta sessão está em execução em outra janela, então a pergunta precisa ser respondida lá. Sua resposta não foi enviada.",
+    "otherBackend": "Esta sessão é executada por outro backend, então a pergunta precisa ser respondida lá. Sua resposta não foi enviada.",
     "notRunning": "O Claude não está em execução nesta sessão, então sua resposta não foi enviada. Envie uma mensagem para iniciá-lo novamente."
+  },
+  "takeOver": {
+    "message": "Outro backend está executando esta sessão.",
+    "button": "Assumir",
+    "waiting": "Aguardando o fim do turno…",
+    "cancelWait": "Parar de aguardar",
+    "failed": "Não foi possível assumir esta sessão.",
+    "dialogTitle": "Assumir esta sessão?",
+    "dialogWhy": "Há um backend por janela de projeto do IDE e um por Swttch aberto em um navegador. Esta sessão foi iniciada em outro, então esse backend mantém o processo do Claude.",
+    "dialogIdle": "Outro backend mantém esta sessão. Se você assumir, esse backend não poderá mais enviar mensagens nela.",
+    "dialogRunning": "Outro backend está trabalhando nesta sessão. Assumir agora interrompe o trabalho em andamento.",
+    "dialogAwaiting": "Outro backend está aguardando a resposta a um pedido de permissão ou a uma pergunta. Assumir a sessão cancela esse pedido.",
+    "dialogDetail": "Pasta de trabalho: {{folder}}\nProcesso do backend: {{pid}}",
+    "dialogCancel": "Cancelar",
+    "dialogConfirm": "Assumir",
+    "dialogAfterTurn": "Assumir ao terminar",
+    "dialogNow": "Interromper e assumir",
+    "dialogLoading": "Verificando o que o outro backend está fazendo…"
+  },
+  "messageNotDelivered": {
+    "heldElsewhere": "Esta sessão é executada por outro backend, que não aceitou a sua mensagem. Envie novamente ou assuma a sessão."
   }
 }

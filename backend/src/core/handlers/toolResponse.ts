@@ -5,6 +5,8 @@ import { sendToolResultToProcess, sendControlResponseToProcess } from '../claude
 import { MessageType, buildUserDeclinedContent } from '../../shared';
 import type { PermissionUpdate } from '../../shared';
 import { findLiveCliForSession } from '../cli-registry';
+import { buildControlResponse } from '../control-response';
+import { forwardToHolder } from '../forward-to-holder';
 import { takePreview, peekPreview } from '../features/diffPreview';
 import { holdApprovalIfBaseMoved } from '../features/reviewBase';
 
@@ -97,30 +99,15 @@ export async function toolResponseHandler(
 
   if (controlRequestId) {
     // control_response 프로토콜 (can_use_tool permission, ExitPlanMode, AskUserQuestion).
-    // A denial here is the user's DECISION, not a tool/server failure. This is the
-    // LIVE path for every permission prompt: the CLI turns our `deny` message into
-    // the resulting tool_result content (is_error:true). We stamp that message with
-    // the shared USER_DECLINED_PREFIX marker so the webview can render it as a
-    // neutral "Declined" note instead of a red error — and, since the marker lives
-    // in the persisted content, the distinction survives a reload.
-    const response = {
-      subtype: 'success' as const,
-      request_id: controlRequestId,
-      response: approved
-        ? {
-            behavior: 'allow',
-            updatedInput: payload?.updatedInput ?? {},
-            // Only when there is something to install: an empty array is a
-            // different statement from saying nothing, and the CLI has no
-            // reason to read one.
-            ...(payload?.updatedPermissions?.length
-              ? { updatedPermissions: payload.updatedPermissions }
-              : {}),
-          }
-        : { behavior: 'deny', message: buildUserDeclinedContent(payload?.reason) },
-    };
+    // This is the LIVE path for every permission prompt (see buildControlResponse for how a denial is worded).
+    const response = buildControlResponse(controlRequestId, {
+      approved,
+      updatedInput: payload?.updatedInput,
+      updatedPermissions: payload?.updatedPermissions,
+      reason: payload?.reason,
+    });
     const delivered = sendControlResponseToProcess(connections, sessionId, response);
-    if (!delivered) reportUndeliverableAnswer(connectionId, sessionId, connections);
+    if (!delivered) await handOverAnswerOrReport(connectionId, sessionId, connections, toolUseId, payload);
     // The session's activity is NOT set here, though it used to be. Answering a
     // prompt does put the session back to work, but the screen that answered
     // says so itself the moment its prompt comes down — and having two places
@@ -142,7 +129,7 @@ export async function toolResponseHandler(
       is_error: !approved,
     };
     const delivered = sendToolResultToProcess(connections, sessionId, toolResult);
-    if (!delivered) reportUndeliverableAnswer(connectionId, sessionId, connections);
+    if (!delivered) await handOverAnswerOrReport(connectionId, sessionId, connections, toolUseId, payload);
     console.error(
       '[node-backend]',
       `TOOL_RESPONSE ${delivered ? 'sent' : 'NOT delivered'} for tool ${toolUseId} (approved: ${approved})`,
@@ -150,6 +137,35 @@ export async function toolResponseHandler(
   }
 
   connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId });
+}
+
+/**
+ * This backend holds no CLI for the session, so the answer is handed to the backend that does; only when that is not
+ * possible is the person told where the answer has to be given.
+ *
+ * The card on this screen was rebuilt from the transcript, so all it knows is the tool call it belongs to
+ * (`toolUseId`); the CLI's own request number lives in the holding backend, which finds the open request by the tool
+ * call.
+ */
+async function handOverAnswerOrReport(
+  connectionId: string,
+  sessionId: string,
+  connections: ConnectionManager,
+  toolUseId: string,
+  payload: ToolResponsePayload | undefined,
+): Promise<void> {
+  if (toolUseId) {
+    const result = await forwardToHolder(sessionId, {
+      action: 'answer_tool',
+      toolUseId,
+      approved: payload?.approved ?? true,
+      ...(payload?.updatedInput ? { updatedInput: payload.updatedInput } : {}),
+      ...(payload?.updatedPermissions?.length ? { updatedPermissions: payload.updatedPermissions } : {}),
+      ...(payload?.reason ? { reason: payload.reason } : {}),
+    });
+    if (result === 'forwarded') return;
+  }
+  reportUndeliverableAnswer(connectionId, sessionId, connections);
 }
 
 /**
