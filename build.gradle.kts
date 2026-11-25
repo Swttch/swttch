@@ -188,6 +188,18 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.38.3 - Pick your chat fonts and scroll speed, and messages no longer get stuck between IDE windows</h3>
+            <ul>
+                <li>Add a setting to choose the chat and code font families (#733, reported by @Oubi256)</li>
+                <li>Add a scroll speed setting for the chat panel (#734, reported by @mkczuk)</li>
+                <li>Fix a message typed in another IDE window being refused for a session started by start_session, and add a take-over bar (#711, reported by @Wo-ogie)</li>
+                <li>Fix the Line Spacing slider only changing the chat in the Classic transcript view (#733, reported by @Oubi256)</li>
+                <li>Fix an opened session not showing the model and effort it ran at (#731, reported by @tianguanlong)</li>
+                <li>Fix the /compact and summary cards swapping places and the divider disappearing after reopening a session (#732, reported by @ShiningPluto)</li>
+                <li>Fix pasting outside the chat giving stale text after copying inside it (#728, reported by @ShiroeS45)</li>
+                <li>Fix transcript colors not following the IDE theme sync (#726, reported by @michael-meron)</li>
+                <li>Fix webview debug lines flooding idea.log (#725, reported by @EndiButler)</li>
+            </ul>
             <h3>0.38.2 - Now, a sub-agent can open in its own window or tab</h3>
             <ul>
                 <li>Add opening a sub-agent run in the side panel, the center window, a page or a new tab (#718, reported by @deniskrizanovic)</li>
