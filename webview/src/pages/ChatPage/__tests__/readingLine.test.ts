@@ -2,9 +2,12 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { readingLineSectionKey } from '../SendIndex/readingLine';
 import { readingLineInset, SEND_JUMP_SCROLL_MARGIN } from '../SendIndex/scrollToSend';
 import { TOP_BAR_HEIGHT } from '@/contexts/TopBarContext';
+import { ZOOM_RECTS_ATTRIBUTE } from '@/utils/zoomRects';
 
 afterEach(() => {
   document.body.innerHTML = '';
+  document.documentElement.style.zoom = '';
+  document.documentElement.removeAttribute(ZOOM_RECTS_ATTRIBUTE);
 });
 
 /** A transcript whose sends have their sentinels at the given distances from the top. */
@@ -52,5 +55,19 @@ describe('readingLineSectionKey', () => {
     transcript({ a: 500 });
 
     expect(readingLineSectionKey(TOP_BAR_HEIGHT)).toBeNull();
+  });
+
+  it.each([
+    [2, 'scaled'],
+    [3, 'scaled'],
+    [2, 'layout'],
+  ] as const)('names the send a jump has just landed on at zoom %s with %s rectangles (#747)', (zoom, rects) => {
+    document.documentElement.style.zoom = String(zoom);
+    document.documentElement.setAttribute(ZOOM_RECTS_ATTRIBUTE, rects);
+    const unit = rects === 'scaled' ? zoom : 1;
+    // A jump leaves the sentinel its scroll margin below the top edge, a layout length.
+    transcript({ a: -300, b: SEND_JUMP_SCROLL_MARGIN * unit });
+
+    expect(readingLineSectionKey(TOP_BAR_HEIGHT)).toBe('b');
   });
 });

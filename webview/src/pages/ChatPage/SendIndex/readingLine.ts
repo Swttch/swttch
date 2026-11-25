@@ -1,3 +1,4 @@
+import { rectMetrics } from '@/utils/zoomRects';
 import { readingLineInset } from './scrollToSend';
 
 /**
@@ -22,7 +23,8 @@ export function readingLineSectionKey(topInset: number): string | null {
   const sentinels = document.querySelectorAll<HTMLElement>('[data-send-sentinel]');
   if (sentinels.length === 0) return null;
 
-  const line = readingLineInset(topInset);
+  // The inset is a layout length, and under the UI zoom a rectangle is not in those pixels (see zoomRects; #747).
+  const line = rectMetrics().fromLayout(readingLineInset(topInset));
   let lo = 0;
   let hi = sentinels.length - 1;
   let found = -1;

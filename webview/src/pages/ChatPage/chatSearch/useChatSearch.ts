@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { hasCmdOrCtrl } from '@/hooks/useZoomControls';
+import { rectMetrics } from '@/utils/zoomRects';
 import type { SessionSearchHit } from '@/shared';
 import type { SessionSearchResult } from '@/api/modules/SessionsApi';
 import type { SectionFoldValue } from '../SectionFoldContext';
@@ -66,7 +67,8 @@ function scrollToMatch(match: ChatSearchMatch, scroller: HTMLElement | null): vo
     const box = scroller.getBoundingClientRect();
     const visible = rect.top >= box.top && rect.bottom <= box.bottom;
     if (visible && pass > 0) return;
-    scroller.scrollTop += rect.top - box.top - scroller.clientHeight / 2;
+    // Rectangles are not in the pixels `scrollTop` and `clientHeight` are in under the UI zoom (see zoomRects).
+    scroller.scrollTop += rectMetrics().toFixed(rect.top - box.top) - scroller.clientHeight / 2;
   }
 }
 

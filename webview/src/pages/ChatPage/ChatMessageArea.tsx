@@ -254,7 +254,8 @@ export function ChatMessageArea(props: Props) {
       {(isLoadingMore || hasMore) && (
         <div className="flex justify-center py-4">
           {isLoadingMore ? (
-            <span className="inline-flex items-center gap-2 text-xs text-text-tertiary">
+            // As tall as the button it stands in for: a row that changes height moves a reader who is at the top (#747).
+            <span className="inline-flex items-center gap-2 py-1.5 border border-transparent text-xs text-text-tertiary">
               <span className="w-3.5 h-3.5 border-2 border-border-default border-t-text-secondary rounded-full animate-spin" />
               {t('chatMessageArea.loadingEarlierMessages')}
             </span>

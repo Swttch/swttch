@@ -270,7 +270,8 @@ export function TranscriptArea(props: TranscriptAreaProps) {
       {(isLoadingMore || hasMore) && (
         <div className="flex justify-center py-[0.9rem]">
           {isLoadingMore ? (
-            <span className="inline-flex items-center gap-[0.45rem] text-[0.675rem] leading-[0.9rem] text-text-tertiary">
+            // As tall as the button it stands in for: a row that changes height moves a reader who is at the top (#747).
+            <span className="inline-flex items-center gap-[0.45rem] py-[0.3376rem] border border-transparent text-[0.675rem] leading-[0.9rem] text-text-tertiary">
               <span className="w-[0.7874rem] h-[0.7874rem] border-2 border-border-default border-t-text-secondary rounded-full animate-spin" />
               {t('chatMessageArea.loadingEarlierMessages')}
             </span>
