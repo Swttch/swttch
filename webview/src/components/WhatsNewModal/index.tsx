@@ -126,7 +126,8 @@ export function WhatsNewModal(props: Props) {
           aria-label={t('whatsNew.title')}
           tabIndex={-1}
           className="w-full max-w-2xl bg-surface-raised border border-border-default rounded-xl shadow-2xl overflow-hidden flex flex-col focus:outline-none"
-          style={{ maxHeight: '46rem' }}
+          // The vh is divided by the UI zoom, which scales viewport units too (see postcss-viewport-zoom.js).
+          style={{ maxHeight: 'min(46rem, calc(88vh / var(--ui-zoom, 1)))' }}
         >
           {/* Hero: the title centred over scattered glyphs, with the version and
               date beneath it. A centred masthead rather than one left-aligned

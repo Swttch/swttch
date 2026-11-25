@@ -31,7 +31,7 @@ export function DesktopSyncDetails({ onClose }: { onClose: () => void }) {
         <div
           role="dialog"
           aria-label={t('general.sessionManager.desktopSync.details.title')}
-          className="relative bg-surface-raised border border-border-default rounded-xl shadow-2xl w-full max-w-md p-6 flex flex-col gap-4"
+          className="relative bg-surface-raised border border-border-default rounded-xl shadow-2xl w-full max-w-md max-h-full overflow-y-auto p-6 flex flex-col gap-4"
         >
           <button
             type="button"
