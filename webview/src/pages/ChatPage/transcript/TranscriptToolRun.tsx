@@ -316,7 +316,9 @@ function ResultPictures({ call }: { call: ToolCall }) {
     <>
       {images.map((src, index) => (
         <button key={index} type="button" onClick={() => setViewing(index)} className="mt-[0.45rem] block max-w-full cursor-zoom-in">
-          <img src={src} alt="" className="block h-auto max-w-md rounded-[0.3376rem]" />
+          {/* Never wider than the column: on a phone 28rem is wider than the screen, and the image pushed the whole
+              transcript into scrolling sideways. */}
+          <img src={src} alt="" className="block h-auto max-w-[min(28rem,100%)] rounded-[0.3376rem]" />
         </button>
       ))}
       {viewing !== null && (

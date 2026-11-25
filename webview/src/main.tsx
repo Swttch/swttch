@@ -11,6 +11,7 @@ import './index.css';
 import {isMobile} from "@/config/environment.ts";
 import { MOBILE_BASE_ZOOM, setZoomVariable } from "@/utils/zoom";
 import { installZoomRects } from './utils/zoomRects';
+import { installVisualViewportFit } from './utils/visualViewportFit';
 
 // Before the first Tippy is placed: index.css cancels the UI zoom for poppers only where this Chromium reports
 // rectangles in screen pixels (see zoomRects).
@@ -52,6 +53,10 @@ if (isMobile()) {
       document.body.scrollTop = 0;
     });
   }
+
+  // iOS Safari draws the virtual keyboard over the page instead of shrinking it, so the
+  // chat frame is sized to the visible area above the keyboard instead (see visualViewportFit).
+  installVisualViewportFit();
 }
 
 createRoot(document.getElementById('root')!).render(

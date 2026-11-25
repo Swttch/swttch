@@ -249,8 +249,10 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
             </div>
           )}
 
+          {/* Overhangs the image's corner, except on a narrow screen (a phone, a slim IDE panel): there the image comes
+              close to the edge of the screen and half of an overhanging button was cut off, so it sits inside the corner. */}
           <button
-            className="absolute -top-3.5 -end-3.5 w-7 h-7 flex items-center justify-center rounded-full bg-surface-hover hover:bg-surface-tooltip/70 border border-border-default text-text-primary transition-colors"
+            className="absolute -top-3.5 -end-3.5 max-sm:top-2 max-sm:end-2 w-7 h-7 flex items-center justify-center rounded-full bg-surface-hover hover:bg-surface-tooltip/70 border border-border-default text-text-primary transition-colors"
             onClick={(e) => {
               // Without this the click also reaches the backdrop below and
               // onClose fires twice for one press.

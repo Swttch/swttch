@@ -645,6 +645,7 @@ function ChatPageContent() {
     {/* While the preview pane is a column, the chat is narrowed to what is left of the window. The
         transform makes the chat the frame its fixed header is placed in, so the header narrows with it. */}
     <div
+      data-app-frame
       className="flex flex-col w-full h-full bg-surface-base text-text-primary fixed start-0 top-0"
       style={
         paneColumn
