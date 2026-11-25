@@ -1342,10 +1342,28 @@
     "codeBlock": "代码块"
   },
   "answerNotDelivered": {
-    "otherBackend": "此会话正在另一个窗口中运行，因此需要在那里回答问题。你的回答未发送。",
+    "otherBackend": "此会话由另一个后端运行，因此需要在那里回答问题。你的回答未发送。",
     "notRunning": "此会话中 Claude 未在运行，因此你的回答未发送。请发送一条消息以重新启动。"
   },
+  "takeOver": {
+    "message": "另一个后端正在运行此会话。",
+    "button": "接管",
+    "waiting": "正在等待本轮结束…",
+    "cancelWait": "停止等待",
+    "failed": "无法接管此会话。",
+    "dialogTitle": "接管此会话？",
+    "dialogWhy": "每个 IDE 项目窗口有一个后端，在浏览器中打开的每个 Swttch 也有一个后端。此会话是从另一个后端启动的，所以 Claude 进程由那个后端持有。",
+    "dialogIdle": "另一个后端持有此会话。接管后，那个后端将无法再在此会话中发送消息。",
+    "dialogRunning": "另一个后端正在处理此会话。现在接管会中断正在进行的工作。",
+    "dialogAwaiting": "另一个后端正在等待权限请求或问题的回答。接管会话将取消该请求。",
+    "dialogDetail": "工作文件夹：{{folder}}\n后端进程：{{pid}}",
+    "dialogCancel": "取消",
+    "dialogConfirm": "接管",
+    "dialogAfterTurn": "结束后接管",
+    "dialogNow": "中断并接管",
+    "dialogLoading": "正在确认另一个后端的状态…"
+  },
   "messageNotDelivered": {
-    "heldElsewhere": "此会话正在另一个窗口中运行，该窗口未接收你的消息。请重新发送，或在该窗口中发送。"
+    "heldElsewhere": "此会话由另一个后端运行，该后端未接收你的消息。请重新发送，或接管此会话。"
   }
 }

@@ -67,7 +67,9 @@ describe('handleSessionControlRequest', () => {
     const session = { activity: 'awaiting', process: { stdin: { writable: true, write: () => true } } };
     vi.spyOn(cm, 'getSession').mockImplementation((() => session) as never);
     vi.spyOn(cm, 'getTurnStartedAt').mockReturnValue(null);
-    expect(handleSessionControlRequest(cm, body({ sessionId: 's1', action: 'activity' }))).toEqual({ status: 200, body: { ok: true, activity: 'awaiting', turnStartedAt: null } });
+    vi.spyOn(cm, 'getInputMode').mockReturnValue('default');
+    // the permission mode of its CLI is told too: a backend that takes the session over keeps it
+    expect(handleSessionControlRequest(cm, body({ sessionId: 's1', action: 'activity' }))).toEqual({ status: 200, body: { ok: true, activity: 'awaiting', turnStartedAt: null, inputMode: 'default' } });
     // the backend's own knowledge of a turn in flight, which a session no screen has open still has
     vi.spyOn(cm, 'getTurnStartedAt').mockReturnValue(1700000000000);
     expect(handleSessionControlRequest(cm, body({ sessionId: 's1', action: 'activity' })).body.turnStartedAt).toBe(1700000000000);

@@ -2,7 +2,7 @@ import { join } from 'path';
 import { stat } from 'fs/promises';
 import type { ConnectionManager } from '../../ws/connection-manager';
 import { MessageType, SessionActivity } from '../../shared';
-import { askHolderActivity } from '../forward-to-holder';
+import { askHolderActivity, isHeldByAnotherBackend } from '../forward-to-holder';
 import { getProjectSessionsPath } from './getProjectSessionsPath';
 import { findSessionTranscript } from './findSessionTranscript';
 import { userInputUnanswered } from './userInputUnanswered';
@@ -177,8 +177,9 @@ function startPolling(connectionId: string, screen: ScreenFollowing, connections
         if (entry.shown && !connections.getProcess(entry.sessionId)) {
           const holder = await askHolderActivity(entry.sessionId);
           if (screens.get(connectionId) !== screen || screen.tracked.get(entry.sessionId) !== entry) return;
-          // Another window's backend runs it (and answered): what a tab here does is handed to that backend.
-          connections.setHeldElsewhere(entry.sessionId, holder !== undefined);
+          // Another backend runs it, whether or not it answered: this tab only watches the session, and the way on
+          // (taking it over) must be there also for a holder that cannot be asked.
+          connections.setHeldElsewhere(entry.sessionId, isHeldByAnotherBackend(entry.sessionId));
           if (holder) {
             const working =
               (holder.turnStartedAt !== undefined && holder.turnStartedAt !== null) ||

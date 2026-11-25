@@ -46,6 +46,8 @@ import { useMcpServers, MCP_SERVERS_QUERY_KEY } from '@/hooks/useMcpServers';
 import { useQueryClient } from '@tanstack/react-query';
 import { MissingFolderBar } from './MissingFolderBar';
 import { ArchivedChatInputSlot } from './ArchivedSessionBar';
+import { HeldElsewhereInputSlot } from './HeldElsewhereBar';
+import { useSessionHeldElsewhere } from '@/hooks/useSessionHeldElsewhere';
 import { isArchivedMark } from '@/components/SessionList/archive';
 import { useWorkingDirGone } from '@/hooks/useWorkingDirGone';
 import { useChatStreamContext } from '../../contexts/ChatStreamContext';
@@ -159,6 +161,7 @@ function ChatPageContent() {
   // The archived bar takes the keyboard focus (on its new-session button) only when the session was archived while it
   // was open, however that came about, and not when an archived session is merely opened.
   const currentSessionArchived = isArchivedMark(currentSession?.sessionMark);
+  const heldElsewhere = useSessionHeldElsewhere(currentSessionId);
   // `lastSeenArchived`: whether the open session's row said archived the last time the row was in the list; null before
   // the row was ever seen. Opening a session loads the list a moment later, and a row that arrives archived is an
   // archived session being opened, not one archived while open. A moment without the row (the list is read anew)
@@ -796,7 +799,15 @@ function ChatPageContent() {
               </button>
           )}
           {composerReplaced && <ListeningNotice />}
-          {answerCard ? (
+          {currentSessionId && heldElsewhere ? (
+              /* Another backend runs this session's CLI: whatever card is up (a question, a permission), what is typed
+                 here would have to cross to that backend, and when it cannot be reached nothing crosses. The bar offers
+                 taking the session over, ahead of every card, so that no state leaves the person without it. A question
+                 card is in the conversation above and stays answerable there (the answer is handed to that backend). */
+              <HeldElsewhereInputSlot sessionId={currentSessionId}>
+                <ChatInput />
+              </HeldElsewhereInputSlot>
+          ) : answerCard ? (
               /* The card is part of the conversation above, after the last message, and the composer stays (#673). */
               <div>
                 <ChatInput

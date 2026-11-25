@@ -1342,10 +1342,28 @@
     "codeBlock": "코드 블록"
   },
   "answerNotDelivered": {
-    "otherBackend": "이 세션은 다른 창에서 실행 중이라 질문에는 그 창에서 답해야 해요. 답변은 전송되지 않았어요.",
+    "otherBackend": "이 세션은 다른 백엔드가 실행 중이라 질문에는 그쪽에서 답해야 해요. 답변은 전송되지 않았어요.",
     "notRunning": "이 세션에서는 Claude가 실행 중이 아니라서 답변이 전송되지 않았어요. 메시지를 보내 다시 시작하세요."
   },
+  "takeOver": {
+    "message": "다른 백엔드가 이 세션을 실행 중입니다.",
+    "button": "가져오기",
+    "waiting": "작업이 끝나기를 기다리는 중…",
+    "cancelWait": "기다리기 취소",
+    "failed": "이 세션을 가져오지 못했습니다.",
+    "dialogTitle": "이 세션을 가져올까요?",
+    "dialogWhy": "백엔드는 IDE 프로젝트 창마다 하나씩, 그리고 브라우저로 연 Swttch마다 하나씩 따로 실행됩니다. 이 세션은 다른 쪽에서 시작되어서, Claude 프로세스를 그쪽 백엔드가 쥐고 있습니다.",
+    "dialogIdle": "다른 백엔드가 이 세션을 쥐고 있습니다. 가져오면, 그 백엔드에서는 이 세션에 메시지를 보낼 수 없게 됩니다.",
+    "dialogRunning": "다른 백엔드에서 이 세션의 작업이 진행 중입니다. 지금 가져오면 진행 중인 작업이 중단됩니다.",
+    "dialogAwaiting": "다른 백엔드가 권한 허용이나 질문 답변을 기다리고 있습니다. 가져오면 그 요청은 취소됩니다.",
+    "dialogDetail": "작업 폴더: {{folder}}\n백엔드 프로세스: {{pid}}",
+    "dialogCancel": "취소",
+    "dialogConfirm": "가져오기",
+    "dialogAfterTurn": "끝나면 가져오기",
+    "dialogNow": "중단하고 가져오기",
+    "dialogLoading": "다른 백엔드가 하는 일을 확인하는 중…"
+  },
   "messageNotDelivered": {
-    "heldElsewhere": "이 세션은 다른 창에서 실행 중인데 그 창이 메시지를 받지 않았어요. 다시 보내거나 그 창에서 보내 주세요."
+    "heldElsewhere": "이 세션은 다른 백엔드가 실행 중인데 그 백엔드가 메시지를 받지 않았어요. 다시 보내거나 이 세션을 가져오세요."
   }
 }

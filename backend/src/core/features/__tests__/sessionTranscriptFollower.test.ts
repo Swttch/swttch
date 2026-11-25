@@ -8,7 +8,12 @@ vi.mock('../getProjectSessionsPath', () => ({ getProjectSessionsPath: async () =
 
 // What the backend that holds the session's CLI says of it. None by default: no other backend runs the session.
 let holderSays: { activity?: string; turnStartedAt?: number | null } | undefined;
-vi.mock('../../forward-to-holder', () => ({ askHolderActivity: async () => holderSays }));
+// What the CLI registry says: undefined follows `holderSays`, the way a holder that answers is also one the registry names.
+let registryHolds: boolean | undefined;
+vi.mock('../../forward-to-holder', () => ({
+  askHolderActivity: async () => holderSays,
+  isHeldByAnotherBackend: () => registryHolds ?? holderSays !== undefined,
+}));
 // Where the other project folders are searched: a folder of its own, never the real one.
 let configDir = '';
 vi.mock('../claudeConfigDir', () => ({ getClaudeConfigDir: () => configDir }));
@@ -52,6 +57,7 @@ describe('followSessionTranscript', () => {
     getProcess = vi.fn().mockReturnValue(null);
     setHeldElsewhere = vi.fn();
     holderSays = undefined;
+    registryHolds = undefined;
     configDir = mkdtempSync(join(tmpdir(), 'follow-config-'));
     responseAt = 0;
     readAt = 0;
@@ -140,6 +146,18 @@ describe('followSessionTranscript', () => {
       await vi.waitFor(() => expect(setExternalRunning).toHaveBeenCalledWith('child', true), { timeout: 1500 });
       await vi.waitFor(() => expect(setExternalRunning).toHaveBeenLastCalledWith('child', false), { timeout: 1500 });
       expect(setHeldElsewhere).toHaveBeenCalledWith('child', true);
+    });
+
+    // An older backend writes no address into the registry and a hung one does not answer: neither can be asked, and
+    // both still hold the session. The person is shown the way to take it over all the same.
+    it('says the session is held elsewhere when the registry names a backend that does not answer', async () => {
+      holderSays = undefined;
+      registryHolds = true;
+      await followSessionTranscript('conn', 'child', '/work', connections, FAST);
+      await wait(150);
+
+      expect(setHeldElsewhere).toHaveBeenCalledWith('child', true);
+      expect(setHeldElsewhere).not.toHaveBeenCalledWith('child', false);
     });
 
     it('says the session is not held elsewhere when no backend answers for it', async () => {

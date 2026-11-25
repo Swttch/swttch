@@ -725,6 +725,23 @@ export async function restartClaudeSessionProcess(
 }
 
 /**
+ * Let go of a session's CLI for good, so another backend can run the session: stop it the way a deliberate restart
+ * does (no failure is reported for the exit) and do not start another one.
+ *
+ * A restart ends with the replacement's own STREAM_START; here nothing replaces the CLI, so the screens that were
+ * showing a turn would stay on "running". They are told the stream ended.
+ *
+ * Returns false when this backend holds no CLI for the session.
+ */
+export async function releaseClaudeSession(connections: ConnectionManager, sessionId: string): Promise<boolean> {
+  const proc = connections.getSession(sessionId)?.process;
+  if (!proc) return false;
+  await restartClaudeSessionProcess(connections, sessionId, proc);
+  connections.broadcastToSession(sessionId, MessageType.STREAM_END);
+  return true;
+}
+
+/**
  * Spawn a `claude -p` process for the session unless one is already alive, in
  * which case the live one is reused and nothing else happens.
  *

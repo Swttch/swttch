@@ -26,27 +26,55 @@ const FORWARD_TIMEOUT_MS = 10_000;
  * (`/internal/session-control`, found through the CLI registry). `request` is that route's body without the session id.
  */
 export async function forwardToHolder(sessionId: string, request: { action: string } & Record<string, unknown>): Promise<ForwardResult> {
+  return (await callHolder(sessionId, request)).result;
+}
+
+/**
+ * {@link forwardToHolder} with the holding backend's answer kept, and a wait of the caller's choosing (a `release` can
+ * take longer than a message: it may wait for a turn to end).
+ */
+export async function callHolder(
+  sessionId: string,
+  request: { action: string } & Record<string, unknown>,
+  timeoutMs: number = FORWARD_TIMEOUT_MS,
+): Promise<{ result: ForwardResult; body?: Record<string, unknown> }> {
   const conflict = findLiveCliForSession(sessionId);
-  if (!conflict?.ownerAlive) return 'no_holder';
+  if (!conflict?.ownerAlive) return { result: 'no_holder' };
   const control = conflict.entry.control;
   // An older holding backend wrote no address into the registry: there is no way to reach it.
-  if (!control) return 'held_but_unreachable';
+  if (!control) return { result: 'held_but_unreachable' };
   try {
     const response = await fetch(`http://127.0.0.1:${control.port}/internal/session-control`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', [AUTH_HEADER]: control.token },
       body: JSON.stringify({ sessionId, ...request }),
-      signal: AbortSignal.timeout(FORWARD_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     if (!response.ok) {
       console.error('[node-backend]', `Holding backend refused the forwarded ${request.action} for ${sessionId}: ${response.status}`);
-      return 'held_but_unreachable';
+      return { result: 'held_but_unreachable' };
     }
-    return 'forwarded';
+    let body: Record<string, unknown> | undefined;
+    try {
+      const parsed = (await response.json()) as unknown;
+      if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) body = parsed as Record<string, unknown>;
+    } catch {
+      body = undefined;
+    }
+    return { result: 'forwarded', ...(body ? { body } : {}) };
   } catch (err) {
     console.error('[node-backend]', `Could not hand the ${request.action} for ${sessionId} to its holding backend:`, err);
-    return 'held_but_unreachable';
+    return { result: 'held_but_unreachable' };
   }
+}
+
+/**
+ * Whether another live backend runs this session's CLI, by what the CLI registry says. Not by whether that backend
+ * answers: one too old to be asked, or hung, is still the one that holds the session, and the person has to be told so.
+ */
+export function isHeldByAnotherBackend(sessionId: string): boolean {
+  const held = findLiveCliForSession(sessionId);
+  return !!held?.ownerAlive && held.entry.owner.pid !== process.pid;
 }
 
 /** A message typed in a tab whose backend does not hold the session's CLI. */
@@ -64,6 +92,8 @@ export interface HolderActivity {
   activity?: string;
   /** When the turn in flight began, null when there is none; absent when the holding backend is too old to say. */
   turnStartedAt?: number | null;
+  /** The permission mode its CLI runs under (null when it has none); absent when the holding backend is too old to say. */
+  inputMode?: string | null;
 }
 
 /**
@@ -82,10 +112,11 @@ export async function askHolderActivity(sessionId: string): Promise<HolderActivi
       signal: AbortSignal.timeout(FORWARD_TIMEOUT_MS),
     });
     if (!response.ok) return undefined;
-    const body = (await response.json()) as { activity?: unknown; turnStartedAt?: unknown };
+    const body = (await response.json()) as { activity?: unknown; turnStartedAt?: unknown; inputMode?: unknown };
     return {
       ...(typeof body.activity === 'string' ? { activity: body.activity } : {}),
       ...(typeof body.turnStartedAt === 'number' || body.turnStartedAt === null ? { turnStartedAt: body.turnStartedAt } : {}),
+      ...(typeof body.inputMode === 'string' || body.inputMode === null ? { inputMode: body.inputMode } : {}),
     };
   } catch {
     return undefined;

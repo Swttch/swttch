@@ -227,6 +227,7 @@ import {
   reportSessionActivityHandler,
   reportPanelVisibilityHandler,
 } from './sessionActivity';
+import { getSessionHolderHandler, takeOverSessionHandler, cancelTakeOverSessionHandler } from './takeOverSession';
 import { getMcpServerToolsHandler } from './getMcpServerToolsHandler';
 import {
   reconnectMcpServerHandler,
@@ -898,6 +899,15 @@ export async function handleMessage(
       break;
     case MessageType.GET_SESSION_ACTIVITY:
       getSessionActivityHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_SESSION_HOLDER:
+      await getSessionHolderHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.TAKE_OVER_SESSION:
+      await takeOverSessionHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.CANCEL_TAKE_OVER_SESSION:
+      cancelTakeOverSessionHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.MARK_SESSION_READ:
       markSessionReadHandler(connectionId, message, connections, bridge);

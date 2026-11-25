@@ -1362,10 +1362,28 @@
     "codeBlock": "Codeblock"
   },
   "answerNotDelivered": {
-    "otherBackend": "Diese Sitzung läuft in einem anderen Fenster, daher muss die Frage dort beantwortet werden. Deine Antwort wurde nicht gesendet.",
+    "otherBackend": "Diese Sitzung wird von einem anderen Backend ausgeführt, daher muss die Frage dort beantwortet werden. Deine Antwort wurde nicht gesendet.",
     "notRunning": "Für diese Sitzung läuft Claude nicht, daher wurde deine Antwort nicht gesendet. Sende eine Nachricht, um Claude neu zu starten."
   },
+  "takeOver": {
+    "message": "Ein anderes Backend führt diese Sitzung aus.",
+    "button": "Übernehmen",
+    "waiting": "Warte auf das Ende des Durchgangs…",
+    "cancelWait": "Nicht mehr warten",
+    "failed": "Die Sitzung konnte nicht übernommen werden.",
+    "dialogTitle": "Diese Sitzung übernehmen?",
+    "dialogWhy": "Es gibt ein Backend pro IDE-Projektfenster und eines pro im Browser geöffnetem Swttch. Diese Sitzung wurde in einem anderen gestartet, daher hält dieses Backend ihren Claude-Prozess.",
+    "dialogIdle": "Ein anderes Backend hält diese Sitzung. Wenn du sie übernimmst, kann dieses Backend keine Nachrichten mehr darin senden.",
+    "dialogRunning": "Ein anderes Backend arbeitet an dieser Sitzung. Wenn du sie jetzt übernimmst, wird die laufende Arbeit unterbrochen.",
+    "dialogAwaiting": "Ein anderes Backend wartet auf die Antwort auf eine Berechtigungsanfrage oder eine Frage. Wenn du die Sitzung übernimmst, wird diese Anfrage abgebrochen.",
+    "dialogDetail": "Arbeitsordner: {{folder}}\nBackend-Prozess: {{pid}}",
+    "dialogCancel": "Abbrechen",
+    "dialogConfirm": "Übernehmen",
+    "dialogAfterTurn": "Nach dem Ende übernehmen",
+    "dialogNow": "Unterbrechen und übernehmen",
+    "dialogLoading": "Prüfe, was das andere Backend gerade tut…"
+  },
   "messageNotDelivered": {
-    "heldElsewhere": "Diese Sitzung läuft in einem anderen Fenster, und dieses Fenster hat deine Nachricht nicht angenommen. Sende sie erneut oder sende sie aus jenem Fenster."
+    "heldElsewhere": "Diese Sitzung wird von einem anderen Backend ausgeführt, und dieses hat deine Nachricht nicht angenommen. Sende sie erneut oder übernimm die Sitzung."
   }
 }
