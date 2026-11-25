@@ -1,3 +1,5 @@
+// First, before any module can call it: plain-HTTP LAN pages have no crypto.randomUUID.
+import './utils/randomUUIDPolyfill';
 import 'reflect-metadata';
 import './i18n/config'; // initialize i18next before the first render
 import { initAuthToken } from './api/bridge/authToken';
