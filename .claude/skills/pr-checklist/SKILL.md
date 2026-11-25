@@ -107,6 +107,7 @@ ls .git/hooks/commit-msg 2>/dev/null || echo "훅 없음 — 새 클론이면 �
 
 ```bash
 bash ./scripts/build.sh wv-test
+bash ./scripts/build.sh be-test
 bash ./scripts/build.sh wv-lint
 bash ./scripts/build.sh be-lint
 bash ./scripts/build.sh full-build

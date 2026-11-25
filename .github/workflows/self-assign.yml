@@ -1,0 +1,90 @@
+name: Issue self-assignment
+
+# Anyone can take an open issue by commenting `/assign`, and give it back with `/unassign`.
+# Only people with write access can pick assignees on GitHub, but someone who has commented
+# on an issue can be assigned to it, so the command comment itself makes its author eligible.
+# An issue that already has an assignee counts as in progress and is never taken over here.
+# See "Working on Issues" in CONTRIBUTING.md.
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  issues: write
+
+jobs:
+  self-assign:
+    if: >-
+      !github.event.issue.pull_request &&
+      github.event.issue.state == 'open' &&
+      github.event.comment.user.type == 'User' &&
+      (startsWith(github.event.comment.body, '/assign') ||
+      startsWith(github.event.comment.body, '/unassign'))
+    runs-on: ubuntu-latest
+    # Commands on one issue run one at a time, so the first `/assign` wins.
+    concurrency:
+      group: self-assign-${{ github.event.issue.number }}
+      cancel-in-progress: false
+    steps:
+      - name: Apply the command
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+          COMMENTER: ${{ github.event.comment.user.login }}
+          # Written by anyone, so it only ever reaches the script as data.
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          set -euo pipefail
+
+          # The command is the whole first line: `/assigned` or a mention mid-sentence is not one.
+          first_line=${COMMENT_BODY%%$'\n'*}
+          command=$(printf '%s' "$first_line" | tr -d '\r' | sed 's/[[:space:]]*$//' | tr '[:upper:]' '[:lower:]')
+          case "$command" in
+            /assign | /unassign) ;;
+            *) exit 0 ;;
+          esac
+
+          react() {
+            gh api -X POST "repos/$REPO/issues/comments/$COMMENT_ID/reactions" -f content='+1' --silent
+          }
+          reply() {
+            gh api -X POST "repos/$REPO/issues/$ISSUE_NUMBER/comments" -f body="$1" --silent
+          }
+          has_commenter() {
+            printf '%s\n' "$1" | grep -Fxiq -- "$COMMENTER"
+          }
+
+          # Read now, not from the event: an earlier queued command may have changed it.
+          assignees=$(gh api "repos/$REPO/issues/$ISSUE_NUMBER" --jq '.assignees[].login')
+
+          if [ "$command" = /unassign ]; then
+            if has_commenter "$assignees"; then
+              gh api -X DELETE "repos/$REPO/issues/$ISSUE_NUMBER/assignees" -f "assignees[]=$COMMENTER" --silent
+              react
+            fi
+            exit 0
+          fi
+
+          if has_commenter "$assignees"; then
+            react
+            exit 0
+          fi
+
+          if [ -n "$assignees" ]; then
+            # Names go in backticks so the current assignees are not notified by every request.
+            names=$(printf '%s\n' "$assignees" | sed 's/.*/`&`/' | paste -sd ',' - | sed 's/,/, /g')
+            reply "@$COMMENTER This issue is already assigned to $names, so I did not change it. If you would like to take it over, please say so in a comment and the maintainer will take a look."
+            exit 0
+          fi
+
+          # GitHub drops an assignee it does not accept without reporting an error, so check the result.
+          assigned=$(gh api -X POST "repos/$REPO/issues/$ISSUE_NUMBER/assignees" -f "assignees[]=$COMMENTER" --jq '.assignees[].login')
+          if has_commenter "$assigned"; then
+            react
+          else
+            reply "@$COMMENTER GitHub did not accept the assignment. The maintainer will take a look."
+            exit 1
+          fi
