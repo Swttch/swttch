@@ -281,22 +281,21 @@ describe('AgentTranscriptModal', () => {
 
     const handle = screen.getByTitle('Drag to resize');
     // The height lives on the handle's own sibling wrapper (relative div),
-    // not the handle itself. It's calc(60vh + offset) — only the offset
+    // not the handle itself. It's calc(60vh / zoom + offset) — only the offset
     // moves when dragging, the 60vh term stays fixed.
     const wrapper = handle.parentElement as HTMLElement;
     const initialHeight = wrapper.style.height;
-    // jsdom normalizes calc() term order (px before vh) on the way back out
-    // of style.height — this is a jsdom serialization quirk, not what a real
-    // browser does, but it's what this test observes either way.
-    expect(initialHeight).toBe('calc(180px + 60vh)');
+    // The 60vh is divided by the UI zoom, which scales viewport units too.
+    // jsdom keeps a calc() holding var() exactly as written.
+    expect(initialHeight).toBe('calc(60vh / var(--ui-zoom, 1) + 180px)');
 
     fireEvent.pointerDown(handle, { clientY: 500 });
     fireEvent.pointerMove(window, { clientY: 510 }); // dragged down 10px, well under the max
-    expect(wrapper.style.height).toBe('calc(190px + 60vh)');
+    expect(wrapper.style.height).toBe('calc(60vh / var(--ui-zoom, 1) + 190px)');
 
     fireEvent.pointerUp(window);
     fireEvent.pointerMove(window, { clientY: 700 }); // no active drag — ignored
-    expect(wrapper.style.height).toBe('calc(190px + 60vh)');
+    expect(wrapper.style.height).toBe('calc(60vh / var(--ui-zoom, 1) + 190px)');
   });
 
   // What made a 100-agent workflow squeeze the transcript down to ~30px was
@@ -355,7 +354,7 @@ describe('AgentTranscriptModal', () => {
 
     fireEvent.pointerDown(handle, { clientY: 500 });
     fireEvent.pointerMove(window, { clientY: -5000 }); // drag far above the top
-    expect(wrapper.style.height).toBe('calc(-84px + 60vh)');
+    expect(wrapper.style.height).toBe('calc(60vh / var(--ui-zoom, 1) + -84px)');
   });
 });
 

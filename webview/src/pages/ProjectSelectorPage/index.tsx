@@ -342,10 +342,12 @@ export function ProjectSelectorPage() {
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-surface-base">
-      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 pt-6 min-h-0">
-        {/* Search on the left, the one action we have on the right */}
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1">
+      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-3 pt-6 min-h-0 sm:px-6">
+        {/* Search on the left, the sort toggle and the one action we have on the right. On a narrow screen
+            (a phone, whose UI zoom leaves about 314px) the three do not fit side by side, so the search takes its
+            own line and the other two wrap below it instead of running off the right edge. */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <div className="relative min-w-[10rem] flex-1">
             <svg
               aria-hidden="true"
               className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary"
@@ -366,13 +368,15 @@ export function ProjectSelectorPage() {
               className="w-full rounded bg-transparent py-2 ps-9 pe-3 text-sm text-text-primary outline-none placeholder:text-text-tertiary"
             />
           </div>
-          <ProjectSortToggle order={sortOrder} onChange={handleSortOrderChange} />
-          <button
-            onClick={handleOpenFolderDialog}
-            className="flex-shrink-0 rounded border border-border-default px-4 py-2 text-sm text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
-          >
-            {t('addProject')}
-          </button>
+          <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
+            <ProjectSortToggle order={sortOrder} onChange={handleSortOrderChange} />
+            <button
+              onClick={handleOpenFolderDialog}
+              className="flex-shrink-0 rounded border border-border-default px-4 py-2 text-sm text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+            >
+              {t('addProject')}
+            </button>
+          </div>
         </div>
 
         <div className="mt-3 border-t border-border-default" />

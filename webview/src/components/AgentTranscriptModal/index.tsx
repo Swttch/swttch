@@ -17,7 +17,9 @@ interface Props {
 // The modal's height is `calc(60vh + <offset>px)` — the 60vh keeps it
 // scaling with the window, and the offset is the only part the resize handle
 // drags. useVerticalResize only knows how to drag a plain px number, so it
-// manages the offset alone; the 60vh is spliced back in at render time.
+// manages the offset alone; the 60vh is spliced back in at render time,
+// divided by the UI zoom, which scales viewport units too (see
+// postcss-viewport-zoom.js, which does the same for the stylesheets).
 const DEFAULT_HEIGHT_OFFSET_PX = 180;
 const MIN_HEIGHT_OFFSET_PX = -84;
 // Must stay above DEFAULT_HEIGHT_OFFSET_PX so the drag handle can still grow
@@ -88,7 +90,7 @@ export function AgentTranscriptModal(props: Props) {
           if (e.target === e.currentTarget) onClose();
         }}
       >
-        <div className="relative w-full max-w-3xl" style={{ height: `calc(60vh + ${heightOffset}px)` }}>
+        <div className="relative w-full max-w-3xl" style={{ height: `calc(60vh / var(--ui-zoom, 1) + ${heightOffset}px)` }}>
           <div
             ref={dialogRef}
             tabIndex={-1}

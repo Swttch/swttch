@@ -651,7 +651,11 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
              buttons beside a project name, and at the narrower width the name
              was the thing that gave way. */
           className={`w-full max-w-2xl bg-surface-raised border border-border-default rounded-xl shadow-2xl overflow-hidden flex flex-col focus:outline-none ${formBusy ? 'pointer-events-none' : ''}`}
-          style={{ maxHeight: 'min(50rem, 88vh)', minHeight: 'min(32rem, 88vh)' }}
+          // The vh is divided by the UI zoom, which scales viewport units too (see postcss-viewport-zoom.js).
+          style={{
+            maxHeight: 'min(50rem, calc(88vh / var(--ui-zoom, 1)))',
+            minHeight: 'min(32rem, calc(88vh / var(--ui-zoom, 1)))',
+          }}
         >
           {isListView && (
             <>

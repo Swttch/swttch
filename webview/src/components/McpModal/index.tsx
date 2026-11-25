@@ -190,7 +190,10 @@ export function McpModal(props: Props) {
         <div ref={dialogRef}
              tabIndex={-1}
              className={`w-full max-w-lg bg-surface-raised border border-border-default rounded-xl shadow-2xl overflow-hidden flex flex-col focus:outline-none ${formBusy ? 'pointer-events-none' : ''}`}
-             style={{ maxHeight: '50rem', minHeight: '32rem' }}>
+             style={{
+               maxHeight: 'min(50rem, calc(88vh / var(--ui-zoom, 1)))',
+               minHeight: 'min(32rem, calc(88vh / var(--ui-zoom, 1)))',
+             }}>
           {/* Header */}
           {!ownHeaderView && (
             <div className="flex items-center justify-between px-4 pt-4 pb-2 flex-shrink-0">
