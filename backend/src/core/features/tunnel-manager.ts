@@ -35,6 +35,14 @@ let tunnelUrl: string | null = null;
 const TUNNEL_LOG_FILE = resolve(tmpdir(), 'cloudflared-tunnel.log');
 const TUNNEL_PID_FILE = resolve(tmpdir(), 'cloudflared-tunnel.pid');
 
+/**
+ * The first path a `which`/`where` lookup printed. Windows `where` ends lines with CRLF, so the
+ * line is trimmed after splitting; otherwise the first of several matches keeps a trailing '\r'.
+ */
+export function firstOutputLine(stdout: string): string {
+  return stdout.split(/\r?\n/).map((line) => line.trim()).find((line) => line.length > 0) ?? '';
+}
+
 function getLocalBinPath(): string {
   // A stable, writable, per-user location (NOT process.cwd(), which for an
   // IDE-spawned backend is unpredictable and may be read-only). This dir is
@@ -89,7 +97,7 @@ export async function installCloudflared(): Promise<string> {
       console.error('[node-backend]', 'Installing cloudflared via winget...');
       await execAsync('winget install --id Cloudflare.cloudflared --accept-source-agreements --accept-package-agreements', consoleSafeExecOptions({ env }));
       const { stdout } = await execAsync('where cloudflared', consoleSafeExecOptions({ env }));
-      return stdout.trim().split('\n')[0];
+      return firstOutputLine(stdout);
     } catch {
       // winget not available or install failed, fall through
     }
@@ -189,7 +197,9 @@ async function findCloudflared(): Promise<string | null> {
   const whichCmd = platform() === 'win32' ? 'where cloudflared' : 'which cloudflared';
   try {
     const { stdout } = await execAsync(whichCmd, consoleSafeExecOptions({ env: augmentedEnv() }));
-    const binPath = stdout.trim().split('\n')[0];
+    // `where` ends each line with CRLF. With more than one install it prints several lines, and a
+    // path cut at '\n' alone keeps its '\r', which spawn then reports as ENOENT.
+    const binPath = firstOutputLine(stdout);
     if (binPath) return binPath;
   } catch {
     // not in PATH
