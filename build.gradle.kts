@@ -19,6 +19,13 @@ plugins {
 group = "com.github.yhk1038"
 version = providers.gradleProperty("pluginVersion").get()
 
+// ─── pnpm launcher ─────────────────────────────────────────────────────────
+// On Windows, Java starts a bare command name only as an .exe. pnpm installed
+// with npm or corepack is a pnpm.cmd shim with no pnpm.exe, so go through cmd,
+// which finds both. macOS and Linux run pnpm directly, as before.
+val pnpm: List<String> =
+    if (System.getProperty("os.name").startsWith("Windows")) listOf("cmd", "/c", "pnpm") else listOf("pnpm")
+
 // ─── Build-time .env injection (mirrors scripts/build.sh) ────────────────────
 // The backend bundle (esbuild) bakes secrets from the root .env in at build
 // time. scripts/build.sh loads the .env and exports the keys when IT is the
@@ -317,7 +324,7 @@ tasks {
         // (the pinned packageManager field forces a specific version). Without
         // it, the install aborts under Gradle with ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY.
         environment("CI", "true")
-        commandLine("pnpm", "install", "--frozen-lockfile")
+        commandLine(pnpm + listOf("install", "--frozen-lockfile"))
         inputs.files(file("webview/package.json"), file("webview/pnpm-lock.yaml"))
         outputs.dir(file("webview/node_modules"))
     }
@@ -327,7 +334,7 @@ tasks {
         dependsOn("syncVersions")
         workingDir = file("backend")
         environment("CI", "true")
-        commandLine("pnpm", "install")
+        commandLine(pnpm + listOf("install"))
         inputs.files(fileTree("backend").include("package.json"))
         outputs.dir(file("backend/node_modules"))
     }
@@ -336,7 +343,7 @@ tasks {
         description = "Build the WebView frontend (Vite)"
         dependsOn("pnpmInstallWebview")
         workingDir = file("webview")
-        commandLine("pnpm", "run", "build")
+        commandLine(pnpm + listOf("run", "build"))
         inputs.dir(file("webview/src"))
         inputs.files(file("webview/package.json"), file("webview/vite.config.ts"))
         outputs.dir(file("webview/dist"))
@@ -362,7 +369,7 @@ tasks {
         val injectedEnv = loadBuildEnv(rootDir)
         injectedEnv.forEach { (k, v) -> environment(k, v) }
         environment("BUILD_INJECT_KEYS", injectedEnv.keys.joinToString(" "))
-        commandLine("pnpm", "run", "build")
+        commandLine(pnpm + listOf("run", "build"))
         inputs.dir(file("backend/src"))
         inputs.files(file("backend/esbuild.mjs"), file("backend/package.json"))
         // A .env change must invalidate the bundle, otherwise a key change is
