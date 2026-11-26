@@ -1056,9 +1056,11 @@ export enum MessageType {
   SET_PRIMARY_SELECTION = 'SET_PRIMARY_SELECTION',
   /**
    * The webview asks the host for what is on the system clipboard, carrying
-   * { workingDir }, when a paste arrived with nothing on its own clipboard (#278).
-   * The ACK carries { text, image }, each null when the clipboard holds none of
-   * it, and image is { mimeType, base64 }. Asked by the webview because on a
+   * { workingDir, textOnly? }, when a paste arrived with nothing on its own
+   * clipboard (#278) or to check one the browser performed (#715). The ACK carries
+   * { text, image }, each null when the clipboard holds none of it, and image is
+   * { mimeType, base64 }. With textOnly, sent for a plain text field (#752), only
+   * the text is answered and files are not handed to the chat. Asked by the webview because on a
    * Wayland desktop the embedded browser (a separate X11 process since IDE 2025.3)
    * is not handed the clipboard of the IDE window, while the IDE process can read
    * it. The browser bridge answers with nothing: a browser reads its own

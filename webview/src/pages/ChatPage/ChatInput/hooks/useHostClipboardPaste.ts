@@ -2,22 +2,14 @@ import { useCallback } from 'react';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { MessageType } from '@/shared';
 import { ImageAttachSource } from '../../../../types';
+import {
+  HOST_CLIPBOARD_TIMEOUT_MS,
+  HOST_PASTE_CHECK_TIMEOUT_MS,
+  afterNativePaste,
+  normalizeNewlines,
+} from '@/utils/hostPaste';
 import { HostClipboard, type HostClipboardResponse } from '../HostClipboard';
 import { insertTextAtCursor } from '../RichInput/insertTextAtCursor';
-
-/**
- * How long a paste waits for the host to read the clipboard. A read is instant when
- * it works, so this only ends the wait for a host that never answers, which would
- * otherwise leave the user's paste doing nothing for the bridge's thirty seconds.
- */
-const HOST_CLIPBOARD_TIMEOUT_MS = 5_000;
-
-/**
- * How long a paste of plain text waits for the host's word on files. The text is already
- * in the composer by then, so a slow host only means the chips come late, never that the
- * paste is lost.
- */
-const HOST_FILE_CHECK_TIMEOUT_MS = 1_500;
 
 /** What a paste that the browser is already finishing lets the host settle afterwards. */
 export type HostPasteOptions = {
@@ -63,16 +55,6 @@ function pasteText(text: string): void {
   endTypingRun();
   insertTextAtCursor(text);
   endTypingRun();
-}
-
-/** The two clipboards' readers may end lines differently; the words are what is compared. */
-function normalizeNewlines(text: string): string {
-  return text.replace(/\r\n?/g, '\n');
-}
-
-/** Wait until the browser has finished the paste it was in the middle of when the event fired. */
-function afterNativePaste(): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, 0));
 }
 
 /**
@@ -128,7 +110,7 @@ export function useHostClipboardPaste(options: {
         const response = await send<HostClipboardResponse>(
           MessageType.GET_CLIPBOARD,
           { workingDir: workingDirectory ?? undefined },
-          { timeout: checkingBrowserPaste ? HOST_FILE_CHECK_TIMEOUT_MS : HOST_CLIPBOARD_TIMEOUT_MS },
+          { timeout: checkingBrowserPaste ? HOST_PASTE_CHECK_TIMEOUT_MS : HOST_CLIPBOARD_TIMEOUT_MS },
         );
         host = HostClipboard.from(response);
       } catch {
