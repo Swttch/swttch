@@ -1,5 +1,5 @@
 import type { ChildProcess } from 'child_process';
-import { mkdirSync, writeFileSync } from 'fs';
+import { mkdirSync, rmSync, writeFileSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { ccgHomeDir } from '../config/ccg-home';
 import type { ConnectionManager } from '../ws/connection-manager';
@@ -601,6 +601,23 @@ function writeSessionMcpConfig(
   }
 }
 
+/**
+ * Removes a session's MCP config once the CLI it was written for is gone, so the folder does not
+ * grow by a file for every session ever opened. A backend that dies hard leaves its files
+ * behind; the next spawn of the same session writes over them.
+ */
+function removeSessionMcpConfig(inherited: NodeJS.ProcessEnv, sessionId: string): void {
+  try {
+    const file = sessionMcpConfigPath(inherited, sessionId);
+    if (file) rmSync(file, { force: true });
+  } catch (err) {
+    console.error('[node-backend]', 'Session MCP config remove failed:', err);
+  }
+}
+
+// Which spawn of a session was handed its MCP config last, so only that one removes the file.
+const sessionMcpOwners = new Map<string, symbol>();
+
 // result 이벤트 수신 여부 추적 (비정상 종료 시 에러 전파 판단용)
 const sessionsWithResult = new Set<string>();
 
@@ -964,6 +981,8 @@ export async function ensureClaudeProcess(
     ? null
     : await resolveInstalledSessionMcp(workingDir).catch(() => null);
   args.push(...buildSessionMcpArgs(process.env, targetSessionId, installedSessionMcp));
+  const mcpConfigOwner = Symbol(targetSessionId);
+  sessionMcpOwners.set(targetSessionId, mcpConfigOwner);
 
   console.error('[node-backend]', `Command: ${Claude.command} ${args.join(' ')}`);
 
@@ -1198,6 +1217,13 @@ export async function ensureClaudeProcess(
       // Clean CLI exit — drop its registry entry (hard backend deaths skip this;
       // that is exactly what the startup orphan sweep is for).
       unregisterCliProcess(proc.pid);
+      // Only the newest spawn of a session removes its MCP config. A restart does not wait
+      // for this handler when the old process has already exited, so it can run after the
+      // replacement was handed the same path.
+      if (sessionMcpOwners.get(targetSessionId) === mcpConfigOwner) {
+        sessionMcpOwners.delete(targetSessionId);
+        removeSessionMcpConfig(process.env, targetSessionId);
+      }
     } catch (err) {
       reportBackendError(err instanceof Error ? err : new Error(String(err)), {
         layer: 'claude_stream',
