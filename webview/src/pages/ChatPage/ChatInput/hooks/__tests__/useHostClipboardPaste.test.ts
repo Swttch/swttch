@@ -52,6 +52,8 @@ describe('useHostClipboardPaste', () => {
   });
 
   afterEach(() => {
+    // The selection object outlives a test, and so would a spy on it.
+    vi.restoreAllMocks();
     document.body.innerHTML = '';
   });
 
@@ -78,6 +80,15 @@ describe('useHostClipboardPaste', () => {
     expect(addImageAttachment).not.toHaveBeenCalled();
   });
 
+  it('keeps the line breaks of the host text that finishes an empty paste (#751)', async () => {
+    sendMock.mockResolvedValue({ text: 'first line\nsecond line', image: null });
+    const { paste } = renderPaste();
+
+    await paste(focusedEditor());
+
+    expect(insertText.mock.calls).toEqual([['insertHTML', false, 'first line\nsecond line']]);
+  });
+
   it('ends the browser\'s typing run first, so undo takes back the paste alone and not the typing before it', async () => {
     sendMock.mockResolvedValue({ text: 'copied elsewhere', image: null });
     const { paste } = renderPaste();
@@ -94,11 +105,25 @@ describe('useHostClipboardPaste', () => {
 
     await paste(editor);
 
-    expect(reset).toHaveBeenCalledTimes(1);
     expect(reset.mock.invocationCallOrder[0]).toBeLessThan(insertText.mock.invocationCallOrder[0]);
     // The caret stays exactly where it was.
     expect(selection.rangeCount).toBe(1);
     expect(selection.getRangeAt(0).startOffset).toBe(range.startOffset);
+  });
+
+  it('ends the run after the insert too, so undo after more typing takes back the typing alone', async () => {
+    sendMock.mockResolvedValue({ text: 'one line', image: null });
+    const { paste } = renderPaste();
+    const editor = focusedEditor();
+    const selection = document.getSelection();
+    if (!selection) throw new Error('jsdom has no selection');
+    selection.collapse(editor, 0);
+    const reset = vi.spyOn(selection, 'removeAllRanges');
+
+    await paste(editor);
+
+    expect(reset).toHaveBeenCalledTimes(2);
+    expect(reset.mock.invocationCallOrder[1]).toBeGreaterThan(insertText.mock.invocationCallOrder[0]);
   });
 
   it('attaches the host image, and leaves the text out as a paste that carries both does', async () => {
@@ -192,6 +217,18 @@ describe('useHostClipboardPaste', () => {
 
       expect(insertText).toHaveBeenNthCalledWith(1, 'undo');
       expect(insertText).toHaveBeenNthCalledWith(2, 'insertText', false, 'copied outside');
+    });
+
+    it('keeps the line breaks of the host text that replaces the stale one (#751)', async () => {
+      sendMock.mockResolvedValue({ text: 'first line\r\nsecond <line>', image: null });
+      const { paste } = renderPaste();
+
+      await paste(editorWithPastedText('copied in the chat'), { pastedText: 'copied in the chat' });
+
+      // A "\n" handed to insertText leaves no "\n" in the composer, so it must not go that way.
+      expect(insertText).toHaveBeenNthCalledWith(1, 'undo');
+      expect(insertText).toHaveBeenNthCalledWith(2, 'insertHTML', false, 'first line\nsecond &lt;line&gt;');
+      expect(insertText).toHaveBeenCalledTimes(2);
     });
 
     it('attaches the host image and takes the stale text back out when the host holds an image and no text', async () => {

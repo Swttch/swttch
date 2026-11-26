@@ -465,18 +465,14 @@ describe('applyEmacsTextKey in a contentEditable', () => {
     expect(root.textContent).toBe('first line');
   });
 
-  it('y inserts a multi-line kill with insertLineBreak, never a newline inside insertText', () => {
+  it('y inserts a multi-line kill in one command, never a newline inside insertText', () => {
     editable('xy', 1);
     killRing.recordKill({}, 'a\nb', 0, 'a\nb', '');
     stubExecCommand(true, root);
 
     applyEmacsTextKey(root, EmacsTextKey.Y, false);
 
-    expect(execCalls.map((c) => [c.command, c.value])).toEqual([
-      ['insertText', 'a'],
-      ['insertLineBreak', undefined],
-      ['insertText', 'b'],
-    ]);
+    expect(execCalls.map((c) => [c.command, c.value])).toEqual([['insertHTML', 'a\nb']]);
     expect(execCalls[0]?.selection).toEqual({ start: 1, end: 1 });
   });
 
@@ -486,10 +482,7 @@ describe('applyEmacsTextKey in a contentEditable', () => {
 
     applyEmacsTextKey(root, EmacsTextKey.O, false);
 
-    expect(execCalls.map((c) => [c.command, c.value])).toEqual([
-      ['insertText', ''],
-      ['insertLineBreak', undefined],
-    ]);
+    expect(execCalls.map((c) => [c.command, c.value])).toEqual([['insertHTML', '\n']]);
     expect(getSelectionRange(root)).toEqual({ start: 1, end: 1 });
   });
 

@@ -190,8 +190,8 @@ class ContentEditableText implements EditableText {
 
   replace({ start, end, text, caret }: TextReplacement): boolean {
     if (start === end && text === '') return true;
-    // Splits "\n" into insertLineBreak; a "\n" inside insertText is dropped
-    // by the plaintext-only composer.
+    // Keeps a "\n" a line break; one inside insertText is dropped by the
+    // plaintext-only composer.
     if (!replaceRangeWithText(this.root, start, end, text)) return false;
     if (caret !== start + text.length) setCaretOffset(this.root, caret);
     return true;

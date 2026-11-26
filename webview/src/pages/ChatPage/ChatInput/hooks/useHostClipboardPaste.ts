@@ -3,6 +3,7 @@ import { useBridgeContext } from '@/contexts/BridgeContext';
 import { MessageType } from '@/shared';
 import { ImageAttachSource } from '../../../../types';
 import { HostClipboard, type HostClipboardResponse } from '../HostClipboard';
+import { insertTextAtCursor } from '../RichInput/insertTextAtCursor';
 
 /**
  * How long a paste waits for the host to read the clipboard. A read is instant when
@@ -39,14 +40,15 @@ export type HostPasteOptions = {
 };
 
 /**
- * End the run of typing the browser is still counting as one edit, so the text that
- * follows becomes an undo step of its own.
+ * End the run of typing the browser is still counting as one edit, so what follows
+ * becomes an undo step of its own.
  *
- * Chrome folds every `insertText` into the typing that came just before it, and a
- * native paste is never folded into anything. Without this, Cmd/Ctrl+Z after a
- * paste into a half-typed prompt took back the paste AND the typing before it in one
- * step. Putting the selection back where it already is is what closes the run: the
- * browser treats a selection set from script like one made by the user.
+ * Chrome folds every `insertText` into the typing around it, and a native paste is
+ * never folded into anything. Without this, Cmd/Ctrl+Z after a paste into a
+ * half-typed prompt took back the paste AND the typing before it in one step, and
+ * after more typing it took back that typing AND the paste. Putting the selection
+ * back where it already is is what closes the run: the browser treats a selection
+ * set from script like one made by the user.
  */
 function endTypingRun(): void {
   const selection = document.getSelection();
@@ -54,6 +56,13 @@ function endTypingRun(): void {
   const range = selection.getRangeAt(0);
   selection.removeAllRanges();
   selection.addRange(range);
+}
+
+/** Put the host's text in at the caret as one undo step, apart from the typing on either side. */
+function pasteText(text: string): void {
+  endTypingRun();
+  insertTextAtCursor(text);
+  endTypingRun();
 }
 
 /** The two clipboards' readers may end lines differently; the words are what is compared. */
@@ -154,8 +163,7 @@ export function useHostClipboardPaste(options: {
           return;
         }
         if (!editor.contains(document.activeElement)) return;
-        endTypingRun();
-        document.execCommand('insertText', false, host.text as string);
+        pasteText(host.text as string);
         return;
       }
 
@@ -175,8 +183,7 @@ export function useHostClipboardPaste(options: {
       // The user may have clicked elsewhere while the host answered. Text typed
       // into whatever has the focus now would not be what they pasted into.
       if (!editor.contains(document.activeElement)) return;
-      endTypingRun();
-      document.execCommand('insertText', false, host.text);
+      pasteText(host.text);
     },
     [send, workingDirectory, addImageAttachment],
   );
