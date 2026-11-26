@@ -38,6 +38,7 @@ import { MessageType, SessionActivity, type WorkflowTask } from '../shared';
 import { ingestRateLimitWindows } from './handlers/getUsage';
 import { SESSION_MCP_AREAS, resolveInstalledSessionMcp, type InstalledSessionMcp } from './session-mcp';
 import { announceSessionsUpdated } from './features/sessionsUpdated';
+import { whenMcpContainersReclaimed } from './mcp-container-reclaimer';
 
 // Tracks files Claude edits so the IDE can be told to reload them once the
 // edit completes on disk. Shared across sessions — tool_use ids are unique.
@@ -619,8 +620,9 @@ const sessionMcpOwners = new Map<string, symbol>();
 
 /**
  * Removes the configs of the CLIs this backend still holds. For the process 'exit' hook: a
- * backend that shuts down leaves before those CLIs report 'close', so nothing else would.
- * Synchronous, because an 'exit' handler cannot await.
+ * CLI that outlasts the shutdown wait, or a backend that exits without one, never gets its
+ * 'close' handled here, so nothing else would. Synchronous, because an 'exit' handler
+ * cannot await.
  */
 export function removeOwnSessionMcpConfigs(): void {
   for (const sessionId of sessionMcpOwners.keys()) removeSessionMcpConfig(process.env, sessionId);
@@ -1245,8 +1247,10 @@ export async function ensureClaudeProcess(
       // 프로세스 참조만 해제 (세션 레코드는 유지 — 구독자가 아직 있을 수 있음)
       connections.setProcess(targetSessionId, null);
       // Clean CLI exit — drop its registry entry (hard backend deaths skip this;
-      // that is exactly what the startup orphan sweep is for).
-      unregisterCliProcess(proc.pid);
+      // that is exactly what the startup orphan sweep is for). Only after its MCP
+      // containers are reclaimed: the entry is how a later backend removes them
+      // if this one leaves before it gets that far.
+      void whenMcpContainersReclaimed(proc).then(() => unregisterCliProcess(proc.pid));
       // Only the newest spawn of a session removes its MCP config. A restart does not wait
       // for this handler when the old process has already exited, so it can run after the
       // replacement was handed the same path.

@@ -28,7 +28,8 @@
  * exactly. "The session ended" is not: a chat session outlives many CLI processes
  * (a dropped pipe, a `--resume`, a permission-mode restart all replace it), and
  * waiting for the session would let every intermediate process's container pile
- * up in the meantime.
+ * up in the meantime. A backend that is shutting down also reclaims without
+ * waiting for the exit (see `reclaimLiveMcpContainers`).
  *
  * ## How ownership is recorded
  *
@@ -159,20 +160,25 @@ export async function reclaimContainers(
     const appeared = await appearedSinceSnapshot(snapshot);
     if (appeared.length === 0) return [];
 
-    const reclaimed: string[] = [];
-    for (const id of appeared) {
-      try {
-        await docker(['rm', '-f', id]);
-        reclaimed.push(id);
-      } catch (err) {
-        // A container that is already gone is the outcome we wanted.
-        console.error('[node-backend]', `MCP container ${id.slice(0, 12)} not removed: ${message(err)}`);
-      }
-    }
+    // All at once: shutdown has a second or so for this before whoever started the backend
+    // kills it, and one removal never depends on another.
+    const outcomes = await Promise.all(
+      appeared.map(async (id) => {
+        try {
+          await docker(['rm', '-f', id]);
+          return id;
+        } catch (err) {
+          // A container that is already gone is the outcome we wanted.
+          console.error('[node-backend]', `MCP container ${id.slice(0, 12)} not removed: ${message(err)}`);
+          return null;
+        }
+      }),
+    );
+    const reclaimed = outcomes.filter((id): id is string => id !== null);
     if (reclaimed.length > 0) {
       console.error(
         '[node-backend]',
-        `Reclaimed ${reclaimed.length} MCP docker container(s) left by an exited CLI: ` +
+        `Reclaimed ${reclaimed.length} MCP docker container(s) of an ending CLI: ` +
           reclaimed.map((id) => id.slice(0, 12)).join(', '),
       );
     }
@@ -235,13 +241,58 @@ export async function withMcpContainerReclaim<T>(
 export function attachMcpContainerReclaim(proc: ChildProcess, cwd?: string): void {
   const snapshot = snapshotMcpContainers(cwd);
   void noteContainersForCrashRecovery(proc, snapshot);
+  const entry: LiveProcess = { snapshot };
+  live.set(proc, entry);
   proc.once('close', () => {
-    const running = snapshot
-      .then(reclaimContainers)
-      .catch((err) => console.error('[node-backend]', `MCP container reclaim failed: ${message(err)}`))
-      .finally(() => inFlight.delete(running));
-    inFlight.add(running);
+    live.delete(proc);
+    // After the one shutdown may have started ahead of this, or both remove the same container.
+    const turn = entry.ahead ? entry.ahead.then(() => snapshot) : snapshot;
+    reclaimOfProcess.set(proc, startReclaim(turn));
   });
+}
+
+/**
+ * Start reclaiming for every CLI that has not left yet. For shutdown only, once those
+ * CLIs have been signalled.
+ *
+ * A CLI takes about a second to leave and the plugin kills the backend 1.5 seconds
+ * after asking it to stop, so a reclaim that waits for the exit does not reliably fit.
+ * The reclaim attached to each `close` still runs, and picks up anything started since.
+ */
+export function reclaimLiveMcpContainers(): void {
+  for (const entry of live.values()) entry.ahead = startReclaim(entry.snapshot);
+}
+
+interface LiveProcess {
+  /** Taken as the process started. */
+  snapshot: Promise<ContainerSnapshot | null>;
+  /** The reclaim started for it before it closed, if there was one. */
+  ahead?: Promise<unknown>;
+}
+
+/** Spawned processes that have not closed. */
+const live = new Map<ChildProcess, LiveProcess>();
+
+function startReclaim(snapshot: Promise<ContainerSnapshot | null>): Promise<unknown> {
+  const running: Promise<unknown> = snapshot
+    .then(reclaimContainers)
+    .catch((err) => console.error('[node-backend]', `MCP container reclaim failed: ${message(err)}`))
+    .finally(() => inFlight.delete(running));
+  inFlight.add(running);
+  return running;
+}
+
+/** The reclaim each closed process started, for a caller that has to act after it. */
+const reclaimOfProcess = new WeakMap<ChildProcess, Promise<unknown>>();
+
+/**
+ * Settles once the reclaim [proc]'s close started is over, and at once when none was.
+ *
+ * Meaningful from a `close` listener attached after the reclaim's own, which is every
+ * listener a caller of `Claude.spawn` can attach.
+ */
+export async function whenMcpContainersReclaimed(proc: ChildProcess): Promise<void> {
+  await reclaimOfProcess.get(proc);
 }
 
 /**
@@ -318,11 +369,8 @@ export async function drainMcpContainerReclaims(timeoutMs = 4_000): Promise<void
 async function appearedSinceSnapshot(snapshot: ContainerSnapshot): Promise<string[]> {
   const now = await listContainerIds(snapshot.servers);
   const fresh = [...now].filter((id) => !snapshot.existing.has(id));
-  const matching: string[] = [];
-  for (const id of fresh) {
-    if (await matchesConfiguredCommand(id, snapshot.servers)) matching.push(id);
-  }
-  return matching;
+  const matches = await Promise.all(fresh.map((id) => matchesConfiguredCommand(id, snapshot.servers)));
+  return fresh.filter((_, i) => matches[i]);
 }
 
 /**
@@ -354,13 +402,13 @@ export async function removeContainersById(ids: string[]): Promise<string[]> {
 
 /** Container ids (running or not) for every configured image. */
 async function listContainerIds(servers: DockerMcpServer[]): Promise<Set<string>> {
-  const ids = new Set<string>();
-  const images = new Set(servers.map((s) => s.image));
-  for (const image of images) {
-    const { stdout } = await docker(['ps', '-aq', '--filter', `ancestor=${image}`]);
-    for (const id of stdout.split('\n').map((l) => l.trim()).filter(Boolean)) ids.add(id);
-  }
-  return ids;
+  const images = [...new Set(servers.map((s) => s.image))];
+  const listings = await Promise.all(
+    images.map((image) => docker(['ps', '-aq', '--filter', `ancestor=${image}`])),
+  );
+  return new Set(
+    listings.flatMap(({ stdout }) => stdout.split('\n').map((l) => l.trim()).filter(Boolean)),
+  );
 }
 
 /**

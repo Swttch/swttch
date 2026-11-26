@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { EventEmitter } from 'events';
 import { ConnectionManager } from '../connection-manager';
 import { ClientEnv } from '../../shared';
 import { MessageType } from '../../shared';
@@ -273,7 +274,7 @@ describe('ConnectionManager', () => {
     it('should kill all session processes and close all connections', () => {
       const ws = createMockWs();
       cm.addConnection(ws);
-      const mockProcess = { pid: 4242, kill: vi.fn() } as unknown as import('child_process').ChildProcess;
+      const mockProcess = { pid: 4242, kill: vi.fn(), once: vi.fn() } as unknown as import('child_process').ChildProcess;
       cm.setProcess('sess-1', mockProcess);
 
       cm.shutdownAll();
@@ -283,9 +284,142 @@ describe('ConnectionManager', () => {
     });
   });
 
+  describe('waiting for signalled CLIs to leave (graceful shutdown)', () => {
+    type FakeCli = import('child_process').ChildProcess & EventEmitter;
+
+    function createFakeCli(pid = 4242): FakeCli {
+      return Object.assign(new EventEmitter(), {
+        pid,
+        exitCode: null as number | null,
+        signalCode: null as NodeJS.Signals | null,
+        kill: vi.fn(),
+      }) as unknown as FakeCli;
+    }
+
+    function track(wait: Promise<void>): { done: boolean } {
+      const state = { done: false };
+      void wait.then(() => {
+        state.done = true;
+      });
+      return state;
+    }
+
+    beforeEach(() => {
+      vi.mocked(Claude.killTree).mockClear();
+    });
+
+    it('waits for the CLI that shutdownAll signalled until it reports close', async () => {
+      const proc = createFakeCli();
+      cm.setProcess('sess-1', proc);
+
+      cm.shutdownAll();
+      const state = track(cm.awaitSessionProcessExits(3_000));
+      await vi.advanceTimersByTimeAsync(0);
+      expect(state.done).toBe(false);
+
+      proc.emit('close', null);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(state.done).toBe(true);
+    });
+
+    it('still reaches a CLI that has not left with the exit sweep after shutdownAll', () => {
+      const proc = createFakeCli();
+      cm.setProcess('sess-1', proc);
+      cm.shutdownAll();
+      vi.mocked(Claude.killTree).mockClear();
+
+      const killed = cm.killAllSessionProcesses('SIGKILL');
+
+      expect(killed).toBe(1);
+      expect(Claude.killTree).toHaveBeenCalledWith(proc, 'SIGKILL');
+    });
+
+    it('does not signal again, or wait for, a CLI that has already closed', async () => {
+      const proc = createFakeCli();
+      cm.setProcess('sess-1', proc);
+      Object.assign(proc, { signalCode: 'SIGTERM' });
+      proc.emit('close', null);
+
+      cm.shutdownAll();
+      const state = track(cm.awaitSessionProcessExits(3_000));
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(state.done).toBe(true);
+      expect(Claude.killTree).not.toHaveBeenCalled();
+    });
+
+    it('waits for a CLI that exited but whose close has not fired yet', async () => {
+      const proc = createFakeCli();
+      cm.setProcess('sess-1', proc);
+      Object.assign(proc, { exitCode: 0 });
+
+      cm.shutdownAll();
+      const state = track(cm.awaitSessionProcessExits(3_000));
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(state.done).toBe(false);
+    });
+
+    it('waits for a CLI the abandoned-session cleanup signalled just before shutdown', async () => {
+      const proc = createFakeCli();
+      const connId = cm.addConnection(createMockWs());
+      cm.setKeepAlive(true);
+      cm.subscribe(connId, 'sess-1');
+      cm.setProcess('sess-1', proc);
+      cm.removeConnection(connId);
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(cm.getSession('sess-1')).toBeUndefined();
+
+      cm.shutdownAll();
+      const state = track(cm.awaitSessionProcessExits(3_000));
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(state.done).toBe(false);
+    });
+
+    it('waits for a CLI whose session let go of it before it closed', async () => {
+      const proc = createFakeCli();
+      cm.setProcess('sess-1', proc);
+      cm.setProcess('sess-1', null);
+
+      cm.shutdownAll();
+      const state = track(cm.awaitSessionProcessExits(3_000));
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(state.done).toBe(false);
+    });
+
+    it('gives up after the timeout when a CLI never closes', async () => {
+      cm.setProcess('sess-1', createFakeCli());
+      cm.shutdownAll();
+      const state = track(cm.awaitSessionProcessExits(3_000));
+
+      await vi.advanceTimersByTimeAsync(2_999);
+      expect(state.done).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(state.done).toBe(true);
+    });
+
+    it('hands the idle shutdown to the host instead of exiting on its own', () => {
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => undefined) as never);
+      exitSpy.mockClear();
+      const hostShutdown = vi.fn();
+      const proc = createFakeCli();
+      cm.setIdleShutdownHandler(hostShutdown);
+      cm.setProcess('sess-1', proc);
+
+      cm.setKeepAlive(false);
+      vi.advanceTimersByTime(60_001);
+
+      expect(hostShutdown).toHaveBeenCalledTimes(1);
+      expect(exitSpy).not.toHaveBeenCalled();
+      exitSpy.mockRestore();
+    });
+  });
+
   describe('session process management', () => {
     it('should set and get process for session', () => {
-      const proc = { kill: vi.fn() } as unknown as import('child_process').ChildProcess;
+      const proc = { kill: vi.fn(), once: vi.fn() } as unknown as import('child_process').ChildProcess;
       cm.getOrCreateSession('sess-1');
       cm.setProcess('sess-1', proc);
       expect(cm.getProcess('sess-1')).toBe(proc);
@@ -301,7 +435,7 @@ describe('ConnectionManager', () => {
     const killTree = Claude.killTree as unknown as ReturnType<typeof vi.fn>;
 
     function makeProcess() {
-      return { pid: 4242, kill: vi.fn() } as unknown as import('child_process').ChildProcess;
+      return { pid: 4242, kill: vi.fn(), once: vi.fn() } as unknown as import('child_process').ChildProcess;
     }
 
     beforeEach(() => {
@@ -435,7 +569,7 @@ describe('ConnectionManager', () => {
   // process actually runs under has to be remembered to notice a later change (#172).
   describe('session permission mode', () => {
     it('should set and get the mode the live process was spawned with', () => {
-      const proc = { kill: vi.fn() } as unknown as import('child_process').ChildProcess;
+      const proc = { kill: vi.fn(), once: vi.fn() } as unknown as import('child_process').ChildProcess;
       cm.setProcess('sess-1', proc);
       cm.setInputMode('sess-1', 'plan');
       expect(cm.getInputMode('sess-1')).toBe('plan');
@@ -446,7 +580,7 @@ describe('ConnectionManager', () => {
     });
 
     it('should clear the recorded mode when the process reference is cleared', () => {
-      const proc = { kill: vi.fn() } as unknown as import('child_process').ChildProcess;
+      const proc = { kill: vi.fn(), once: vi.fn() } as unknown as import('child_process').ChildProcess;
       cm.setProcess('sess-1', proc);
       cm.setInputMode('sess-1', 'plan');
 
@@ -569,7 +703,7 @@ describe('ConnectionManager', () => {
     });
 
     it('counts a session holding a live CLI with no client as orphaned', () => {
-      const proc = { pid: 4242, kill: vi.fn() } as unknown as import('child_process').ChildProcess;
+      const proc = { pid: 4242, kill: vi.fn(), once: vi.fn() } as unknown as import('child_process').ChildProcess;
       const connId = cm.addConnection(createMockWs());
       cm.subscribe(connId, 'sess-1');
       cm.setProcess('sess-1', proc);
@@ -1409,7 +1543,7 @@ describe('ConnectionManager — the session remembers its working directory', ()
 
     function session() {
       cm.getOrCreateSession('sess-t');
-      cm.setProcess('sess-t', { pid: 1 } as never);
+      cm.setProcess('sess-t', { pid: 1, once: vi.fn() } as never);
     }
     const emit = (type: string) => cm.broadcastToSession('sess-t', MessageType.CLI_EVENT, cliEvent(type));
 

@@ -215,6 +215,23 @@ export class ConnectionManager {
   private cleanupTimers = new Map<string, NodeJS.Timeout>();
   private idleShutdownTimer: NodeJS.Timeout | null = null;
   /**
+   * Every session CLI this manager was handed that has not reported `close` yet.
+   *
+   * Kept apart from the session registry on purpose. A session drops its process, or leaves
+   * the registry, as soon as the CLI is signalled (shutdownAll, the abandoned-session
+   * cleanup, a reclaim), while the CLI itself takes longer to leave. Shutdown has to wait
+   * for exactly those, and to sweep them if they do not go.
+   */
+  private unclosedProcesses = new Set<ChildProcess>();
+  /**
+   * What the idle timer runs. The server hands in its own shutdown, which waits for the
+   * CLIs it signals; on its own this manager can only signal them and exit.
+   */
+  private idleShutdownHandler: () => void = () => {
+    this.shutdownAll();
+    process.exit(0);
+  };
+  /**
    * Idle-shutdown gate ("keep backend running"). While true the backend never
    * schedules its zero-connection self-shutdown.
    *
@@ -1335,6 +1352,7 @@ export class ConnectionManager {
   setProcess(sessionId: string, proc: ChildProcess | null): void {
     const session = this.getOrCreateSession(sessionId);
     session.process = proc;
+    if (proc) this.trackUntilClosed(proc);
     // The recorded permission mode describes the LIVE process, so it dies with it.
     // Leaving a stale mode behind would make the next spawn look like a no-op change.
     if (!proc) {
@@ -1446,40 +1464,41 @@ export class ConnectionManager {
 
   // ─── Internal ───────────────────────────────────────────────────────────────
 
+  private trackUntilClosed(proc: ChildProcess): void {
+    if (this.unclosedProcesses.has(proc)) return;
+    this.unclosedProcesses.add(proc);
+    proc.once('close', () => this.unclosedProcesses.delete(proc));
+  }
+
   /**
-   * Kill-sweep over every live session CLI tree. shutdownAll uses it with
-   * SIGTERM (graceful path); the process 'exit' hook in server.ts uses it with
-   * SIGKILL as the last-resort orphan guard, so it must stay synchronous —
-   * 'exit' handlers cannot await.
-   */
-  /**
-   * Wait for the session CLIs that were just signalled to actually exit.
+   * Wait for the session CLIs that were signalled to actually leave.
    *
    * Their `close` handlers are what START the MCP container reclaim, so draining
    * the reclaims before any close has fired drains an empty set and the process
    * exits with the work never begun (#363). Bounded, because shutdown cannot hang
-   * on a CLI that refuses to die; whatever is missed is caught by the next
-   * backend's orphan sweep.
+   * on a CLI that refuses to die; whatever is missed is left to the exit sweep and
+   * to the next backend's orphan sweep.
    */
   async awaitSessionProcessExits(timeoutMs: number): Promise<void> {
-    const pending = [...this.sessionRegistry.values()]
-      .map((session) => session.process)
-      .filter((proc): proc is ChildProcess => Boolean(proc) && proc!.exitCode === null)
-      .map((proc) => new Promise<void>((resolve) => proc.once('close', () => resolve())));
+    const pending = [...this.unclosedProcesses].map(
+      (proc) => new Promise<void>((resolve) => proc.once('close', () => resolve())),
+    );
     if (pending.length === 0) return;
     const deadline = new Promise<void>((resolve) => setTimeout(resolve, timeoutMs).unref?.());
     await Promise.race([Promise.all(pending).then(() => undefined), deadline]);
   }
 
+  /**
+   * Kill-sweep over every session CLI tree that has not closed. shutdownAll uses it
+   * with SIGTERM (graceful path); the process 'exit' hook in server.ts uses it with
+   * SIGKILL as the last-resort orphan guard, so it must stay synchronous —
+   * 'exit' handlers cannot await.
+   */
   killAllSessionProcesses(signal: NodeJS.Signals): number {
-    let killed = 0;
-    for (const session of this.sessionRegistry.values()) {
-      if (session.process) {
-        Claude.killTree(session.process, signal);
-        killed++;
-      }
+    for (const proc of this.unclosedProcesses) {
+      Claude.killTree(proc, signal);
     }
-    return killed;
+    return this.unclosedProcesses.size;
   }
 
   shutdownAll(): void {
@@ -1538,6 +1557,10 @@ export class ConnectionManager {
     return this.keepAlive;
   }
 
+  setIdleShutdownHandler(handler: () => void): void {
+    this.idleShutdownHandler = handler;
+  }
+
   private scheduleIdleShutdown(): void {
     if (this.keepAlive) return;
     if (this.idleShutdownTimer !== null) return;
@@ -1554,8 +1577,7 @@ export class ConnectionManager {
       // The timer has fired — null it out so shutdownAll()'s cancelIdleShutdown()
       // no-ops instead of logging a misleading "timer cancelled" line.
       this.idleShutdownTimer = null;
-      this.shutdownAll();
-      process.exit(0);
+      this.idleShutdownHandler();
     }, IDLE_SHUTDOWN_GRACE_MS);
   }
 

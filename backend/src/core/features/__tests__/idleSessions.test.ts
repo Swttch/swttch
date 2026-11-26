@@ -30,7 +30,7 @@ describe('stopIdleSessions', () => {
     cm = new ConnectionManager();
     connId = cm.addConnection(createWs());
     cm.subscribe(connId, 'sess-1');
-    cm.setProcess('sess-1', { pid: 1 } as never);
+    cm.setProcess('sess-1', { pid: 1, once: vi.fn() } as never);
     cm.getOrCreateSession('sess-1').lastCliEventAt = T0;
     cm.getOrCreateSession('sess-1').cliTurnOpen = false;
     cm.setPanelVisibility(connId, false, T0);
@@ -115,7 +115,7 @@ describe('REPORT_PANEL_VISIBILITY handler', () => {
     const ws = createWs();
     const connId = cm.addConnection(ws);
     cm.subscribe(connId, 'sess-1');
-    cm.setProcess('sess-1', { pid: 1 } as never);
+    cm.setProcess('sess-1', { pid: 1, once: vi.fn() } as never);
 
     reportPanelVisibilityHandler(
       connId,
