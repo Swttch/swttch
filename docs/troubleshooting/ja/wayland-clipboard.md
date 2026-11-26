@@ -2,11 +2,13 @@
 
 🌐 [English](../en/wayland-clipboard.md) | [한국어](../ko/wayland-clipboard.md) | **日本語** | [中文](../zh/wayland-clipboard.md) | [Español](../es/wayland-clipboard.md) | [Deutsch](../de/wayland-clipboard.md) | [Français](../fr/wayland-clipboard.md)
 
-_最終更新: 2026-10-23_
+_最終更新: 2026-11-26_
 
 ## 症状
 
 プラグインのチャット入力欄への貼り付けが、何の反応もなく失敗します。
+
+セッション検索欄など、プラグインの他の入力欄も同じように失敗します。
 
 エラーメッセージも表示されません。
 
@@ -56,6 +58,8 @@ JCEF を使う他の JetBrains プラグインでも同じ症状が報告され�
 
 IDE のプロセス自体はこのクリップボードを読めるため、新しいバージョンのプラグインは、貼り付けが空のまま届くたびに IDE へクリップボードの読み取りを依頼します。これで設定なしでも貼り付けができます。 テキスト付きで届いた貼り付けも同じように確認されます。プラグイン内でコピーしたあとに外で別のものをコピーすると、IDE が新しい方のテキストを持っているので、それが貼り付けられます。
 
+新しいバージョンは、チャット入力欄だけでなく、セッション検索欄や設定画面の入力欄を含むプラグインのすべての入力欄で同じ確認を行います。マウスの中ボタンで貼り付ける場合は、クリップボードではなく、選択しているテキスト（Linux のプライマリ選択）と照合します。
+
 プラグイン内でコピーした文字も同じ X11 のクリップボードにしか残らず、エディターや他のプログラムに貼り付けられなかったため、新しいプラグインのバージョンではチャットでコピーした文字を IDE に渡し、IDE がシステムのクリップボードに載せます。
 
 以前のバージョンをお使いの場合や、貼り付けがそれでも失敗する場合は、以下の設定を使ってください。
@@ -100,6 +104,9 @@ JetBrains のネイティブ Wayland サポートが安定すれば不要にな�
 
 ### このリポジトリの Issue
 
+- [#754 — Middle-click paste in the chat input pastes the clipboard instead of the selection (regression from #728)](https://github.com/Swttch/swttch/issues/754)
+- [#752 — External paste does not work in the session search box on Wayland (#524/#728 fallback only covers the chat input)](https://github.com/Swttch/swttch/issues/752)
+- [#751 — Pasting external multi-line text drops line breaks from the sent message (regression from #728)](https://github.com/Swttch/swttch/issues/751)
 - [#581 — Copy from chat doesn't reach the system clipboard on Linux/Wayland (JCEF out-of-process), so it can't be pasted into the editor](https://github.com/Swttch/swttch/issues/581)
 - [#278 — Cannot paste external text into chat input on Fedora KDE (Wayland)](https://github.com/Swttch/swttch/issues/278)
 - [#262 — no paste function at linux fedora](https://github.com/Swttch/swttch/issues/262)

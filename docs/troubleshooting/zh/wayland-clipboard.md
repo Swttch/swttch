@@ -2,11 +2,13 @@
 
 🌐 [English](../en/wayland-clipboard.md) | [한국어](../ko/wayland-clipboard.md) | [日本語](../ja/wayland-clipboard.md) | **中文** | [Español](../es/wayland-clipboard.md) | [Deutsch](../de/wayland-clipboard.md) | [Français](../fr/wayland-clipboard.md)
 
-_最后更新：2026-10-23_
+_最后更新：2026-11-26_
 
 ## 症状
 
 向插件聊天输入框粘贴时毫无反应，静默失败。
+
+插件的其他输入框（例如会话搜索框）也以同样的方式失败。
 
 也不会出现任何错误提示。
 
@@ -56,6 +58,8 @@ IDE 窗口是 Wayland 窗口，所以这种交接不会发生，JCEF 看到的�
 
 IDE 进程本身可以读取这个剪贴板，所以新版插件每当粘贴到达时内容为空，就会请求 IDE 代为读取剪贴板，这样无需任何设置即可粘贴。 带有文本到达的粘贴也会用同样的方式检查：先在插件内复制、再在外部复制其他内容后，IDE 持有的是较新的文本，粘贴的就是它。
 
+新版插件不仅在聊天输入框，还会在插件的所有输入框（包括会话搜索框和设置页面的输入框）中做同样的检查。用鼠标中键粘贴时，会与您选中的文字（Linux 的主选区）核对，而不是与剪贴板核对。
+
 在插件内复制的文字同样只留在这个 X11 剪贴板里，无法粘贴到编辑器或其他程序，因此新版插件会把在聊天中复制的文字交给 IDE，由 IDE 放入系统剪贴板。
 
 如果您使用的是旧版本，或者粘贴仍然失败，请使用下面的设置。
@@ -100,6 +104,9 @@ IDE 进程本身可以读取这个剪贴板，所以新版插件每当粘贴到�
 
 ### 本仓库的 Issue
 
+- [#754 — Middle-click paste in the chat input pastes the clipboard instead of the selection (regression from #728)](https://github.com/Swttch/swttch/issues/754)
+- [#752 — External paste does not work in the session search box on Wayland (#524/#728 fallback only covers the chat input)](https://github.com/Swttch/swttch/issues/752)
+- [#751 — Pasting external multi-line text drops line breaks from the sent message (regression from #728)](https://github.com/Swttch/swttch/issues/751)
 - [#581 — Copy from chat doesn't reach the system clipboard on Linux/Wayland (JCEF out-of-process), so it can't be pasted into the editor](https://github.com/Swttch/swttch/issues/581)
 - [#278 — Cannot paste external text into chat input on Fedora KDE (Wayland)](https://github.com/Swttch/swttch/issues/278)
 - [#262 — no paste function at linux fedora](https://github.com/Swttch/swttch/issues/262)
