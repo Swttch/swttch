@@ -13,14 +13,19 @@ import { ChatFollowContext } from '../ChatFollowContext';
  * so they swap in a stub that hands it back.
  */
 let fire: ((isIntersecting: boolean) => void) | null = null;
+/** Several readings in one call, oldest first, as a browser queues them. */
+let deliver: ((readings: boolean[]) => void) | null = null;
 let disconnected = 0;
 /** The margin the pin observer was last built with. */
 let observedRootMargin: string | undefined;
+/** The element the pin observer was last given to watch. */
+let observed: Element | null = null;
 
 beforeEach(() => {
   fire = null;
   disconnected = 0;
   observedRootMargin = undefined;
+  observed = null;
   // The fold coalesces to one measurement per frame; drive that clock so the
   // spacer settles synchronously.
   vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -34,10 +39,13 @@ beforeEach(() => {
     readonly thresholds: readonly number[] = [];
     constructor(cb: IntersectionObserverCallback, options?: IntersectionObserverInit) {
       observedRootMargin = options?.rootMargin;
-      fire = (isIntersecting: boolean) =>
-        cb([{ isIntersecting } as IntersectionObserverEntry], this as IntersectionObserver);
+      deliver = (readings: boolean[]) =>
+        cb(readings.map(isIntersecting => ({ isIntersecting }) as IntersectionObserverEntry), this as IntersectionObserver);
+      fire = (isIntersecting: boolean) => deliver?.([isIntersecting]);
     }
-    observe(): void {}
+    observe(target: Element): void {
+      observed = target;
+    }
     unobserve(): void {}
     disconnect(): void {
       disconnected++;
@@ -120,9 +128,20 @@ const jumpLabel = /jump to this message/i;
 
 describe('StickySendHeader', () => {
   it('keeps the band behind the top bar out of the viewport it watches for the pin', () => {
+    const { container } = render(<StickySendHeader onClick={() => {}}>msg</StickySendHeader>);
+
+    // What is watched stands the bar's height above the send, so it leaves the viewport as the send reaches the bar.
+    const sentinel = container.querySelector('[data-send-sentinel]')!;
+    expect(observed?.parentElement).toBe(sentinel);
+    expect((observed as HTMLElement).style.top).toBe(`-${TOP_BAR_HEIGHT}px`);
+  });
+
+  it('draws that line with the page\'s own lengths, so it holds under the UI zoom (#747)', () => {
+    // A root margin is in the pixels of the viewport, which the page zoom does not scale: the pin came later than
+    // the line the fold counts from, and the bubble lost the difference in one step as it pinned.
     render(<StickySendHeader onClick={() => {}}>msg</StickySendHeader>);
 
-    expect(observedRootMargin).toBe(`-${TOP_BAR_HEIGHT}px 0px 0px 0px`);
+    expect(observedRootMargin).toBeUndefined();
   });
 
   it('watches the whole viewport for the pin when the top bar is hidden, since nothing sits behind it', () => {
@@ -132,7 +151,16 @@ describe('StickySendHeader', () => {
       </TopBarProvider>,
     );
 
-    expect(observedRootMargin).toBe('0px 0px 0px 0px');
+    expect((observed as HTMLElement).style.top).toBe('0px');
+  });
+
+  it('goes by the newest of the readings handed to it at once', () => {
+    // A page being drawn keeps the page busy long enough for two readings to arrive together, the older first.
+    render(<StickySendHeader onClick={() => {}}>msg</StickySendHeader>);
+
+    act(() => deliver?.([false, true]));
+
+    expect(screen.queryByRole('button', { name: jumpLabel })).toBeNull();
   });
 
   it('hides the jump button while the message sits at rest', () => {
