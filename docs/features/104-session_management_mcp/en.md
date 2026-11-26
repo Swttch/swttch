@@ -49,7 +49,7 @@ Press **Install**. A confirmation says that this installs `@swttch/session-manag
 
 ## What happens when Claude starts
 
-When the package is installed, the app adds one `--mcp-config` argument to the `claude` command it starts. The argument has one server per attached area, named `swttch_<area>`, so Claude sees tools named like `mcp__swttch_session_mgmt__list_sessions`. Each server is told which session is calling (so "this session" means the right one) and where the app keeps its data. Your own MCP servers keep loading as usual.
+When the package is installed, the app writes a small config file under its data folder (`~/.claude-code-gui/mcp/` unless `CCG_HOME` moves it) and adds one `--mcp-config` argument that points to it to the `claude` command it starts. The file is removed once that Claude process has ended. It has one server per attached area, named `swttch_<area>`, so Claude sees tools named like `mcp__swttch_session_mgmt__list_sessions`. Each server is told which session is calling (so "this session" means the right one) and where the app keeps its data. Your own MCP servers keep loading as usual.
 
 If the package is not installed, no argument is added at all.
 
