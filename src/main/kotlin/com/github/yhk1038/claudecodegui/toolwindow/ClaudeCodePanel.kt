@@ -234,6 +234,11 @@ class ClaudeCodePanel(
     @Volatile
     private var isPanelDisposed: Boolean = false
 
+    // What this panel registered with the backend, handed back on dispose. A split tab has a
+    // second panel under the same panelId, with registrations of its own (#753).
+    private var registeredRpcHandler: NodeProcessManager.RpcHandler? = null
+    private var registeredProgressListener: ((LoadingPhase) -> Unit)? = null
+
     // Which line the placeholder is currently showing. Tracked so translatePlaceholder()
     // can repaint whatever is up once the catalog finishes loading. Without it, a catalog
     // that arrives after realization started would rewind the label to the indexing line,
@@ -1009,16 +1014,20 @@ class ClaudeCodePanel(
         // start (heavy .zshrc shell-PATH capture, first-run extraction) reads as
         // progress, not a frozen screen. Registered BEFORE ensureStarted so the first
         // emitted phase is not missed. See issue #97.
-        backendService.addProgressListener(project.basePath ?: "", panelId) { phase ->
+        val progressListener: (LoadingPhase) -> Unit = { phase ->
             ApplicationManager.getApplication().invokeLater {
                 if (!isPanelDisposed && holder?.isLoaded != true) {
                     setLoadingPhase(phase)
                 }
             }
         }
+        registeredProgressListener = progressListener
+        backendService.addProgressListener(project.basePath ?: "", panelId, progressListener)
 
         // Register RPC handler for this panel.
-        backendService.ensureStarted(project.basePath ?: "", panelId, createRpcHandler())
+        val rpcHandler = createRpcHandler()
+        registeredRpcHandler = rpcHandler
+        backendService.ensureStarted(project.basePath ?: "", panelId, rpcHandler)
 
         // Load URL only if not already loaded.
         if (!acquired.isLoaded) {
@@ -3603,7 +3612,9 @@ class ClaudeCodePanel(
         scope.coroutineContext[kotlinx.coroutines.Job]?.cancel()
         val acquiredHolder = holder
         if (acquiredHolder != null) {
-            backendService.releasePanel(project.basePath ?: "", panelId)
+            registeredRpcHandler?.let {
+                backendService.releasePanel(project.basePath ?: "", panelId, it, registeredProgressListener)
+            }
             // Drop this panel's reference to its pooled browser holder. The
             // service disposes that holder only if no new panel re-acquires it
             // within the grace period (a real close, not a tab move). The tab

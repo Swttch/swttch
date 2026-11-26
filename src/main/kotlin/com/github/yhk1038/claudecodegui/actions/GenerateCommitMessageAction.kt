@@ -266,7 +266,7 @@ class GenerateCommitMessageAction : AnAction() {
                         projectDisposed = project.isDisposed,
                         lifetime = uiLifetime,
                         updateUi = updateUi,
-                        finalize = { backend.releasePanel(backendProjectRoot, transientPanelId) },
+                        finalize = { backend.releasePanel(backendProjectRoot, transientPanelId, NoopRpcHandler) },
                     )
                 }
             }

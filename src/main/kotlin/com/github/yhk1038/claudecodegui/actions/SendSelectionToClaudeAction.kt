@@ -184,7 +184,7 @@ class SendSelectionToClaudeAction : AnAction() {
             } catch (ex: Exception) {
                 logger.warn("Failed to send editor context to backend", ex)
             } finally {
-                backend.releasePanel(backendKey, transientPanelId)
+                backend.releasePanel(backendKey, transientPanelId, NoopRpcHandler)
             }
         }
     }
