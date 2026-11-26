@@ -6,6 +6,7 @@ import { FOLD_MAX_HEIGHT, FOLD_MIN_HEIGHT, PINNED_TOP_INSET } from '../useScroll
 import { useScrollFoldValue } from '../ScrollFoldContext';
 import { TopBarProvider, TOP_BAR_HEIGHT } from '@/contexts/TopBarContext';
 import { ChatFollowContext } from '../ChatFollowContext';
+import { SCROLL_UNANCHORED_ATTRIBUTE } from '../useScrollAnchor';
 
 /**
  * The global setup installs an IntersectionObserver stub that never fires (it
@@ -161,6 +162,17 @@ describe('StickySendHeader', () => {
     act(() => deliver?.([false, true]));
 
     expect(screen.queryByRole('button', { name: jumpLabel })).toBeNull();
+  });
+
+  it('is left out of what holds the reader in place only while it is pinned (#747)', () => {
+    const { container } = render(<StickySendHeader onClick={() => {}}>msg</StickySendHeader>);
+    const marked = () => container.querySelector(`[${SCROLL_UNANCHORED_ATTRIBUTE}]`);
+
+    act(() => fire?.(true));
+    expect(marked()).toBeNull();
+
+    act(() => fire?.(false));
+    expect(marked()?.textContent).toContain('msg');
   });
 
   it('hides the jump button while the message sits at rest', () => {

@@ -1,3 +1,5 @@
+import { rectMetrics } from './zoomRects';
+
 /**
  * Keeping a log that is cut from the front in place under the reader.
  *
@@ -143,7 +145,8 @@ export function heightAfter(root: Node, keptLength: number, totalLength: number)
   const keptBottom = charBottom(root, keptLength - 1);
   const lastBottom = charBottom(root, totalLength - 1);
   if (keptBottom === null || lastBottom === null) return null;
-  const height = lastBottom - keptBottom;
+  // In the pixels of the scroll position it is added to, which rectangles are not under the UI zoom (see zoomRects).
+  const height = rectMetrics().toFixed(lastBottom - keptBottom);
   return Number.isFinite(height) && height >= 0 ? height : null;
 }
 

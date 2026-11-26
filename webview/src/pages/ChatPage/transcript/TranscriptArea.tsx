@@ -2,7 +2,7 @@ import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState, type Mut
 import { withoutPeerSections } from './peerSections';
 import type { LoadedMessageDto } from '../../../types';
 import type { SessionSend } from '@/shared';
-import type { SendSection } from '../groupIntoSendSections';
+import { mountKeyOf, type SendSection } from '../groupIntoSendSections';
 import { reuseSections } from '../reuseSections';
 import { ProjectSelectorPage } from '@/pages/ProjectSelectorPage';
 import { useSessionContext } from '../../../contexts/SessionContext';
@@ -295,7 +295,7 @@ export function TranscriptArea(props: TranscriptAreaProps) {
               // for every word of a streaming reply and are not drawn again for it (#680).
               return (
                 <TranscriptSection
-                  key={section.key}
+                  key={mountKeyOf(section)}
                   section={section}
                   nextHead={sections[sectionIndex + 1]?.head ?? null}
                   showGap={gapSectionIndex === sectionIndex}

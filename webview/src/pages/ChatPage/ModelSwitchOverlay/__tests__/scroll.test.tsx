@@ -151,11 +151,42 @@ describe('ModelSwitchOverlay height cap against the room above the composer', ()
     expect(renderWithRoomAbove(900)).toBe(320);
   });
 
+  it('counts the room in layout pixels when the page is zoomed (#747)', () => {
+    // The rectangle says 400 screen pixels, which are 200 of the layout's at 200%: the cap is a CSS length.
+    document.documentElement.style.zoom = '2';
+    document.documentElement.setAttribute('data-zoom-rects', 'scaled');
+    try {
+      expect(renderWithRoomAbove(400)).toBe(147);
+    } finally {
+      document.documentElement.style.zoom = '';
+      document.documentElement.removeAttribute('data-zoom-rects');
+    }
+  });
+
+  // A banner above the chat (not signed in) pushes the chat down and stands where the panel's title would be.
+  it('leaves room for a banner that pushes the chat down', () => {
+    const chat = document.createElement('div');
+    chat.setAttribute('data-chat-scroll', '');
+    document.body.append(chat);
+    const orig = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = function () {
+      return { ...orig.call(this), top: this === chat ? 55 : 0, bottom: 300 } as DOMRect;
+    };
+    try {
+      render(<ModelSwitchOverlay onClose={vi.fn()} />);
+      // 300 above the panel's bottom edge, less the banner (55), the top bar (45) and the margin (8).
+      expect(parseFloat(panel().style.maxHeight)).toBe(192);
+    } finally {
+      Element.prototype.getBoundingClientRect = orig;
+      chat.remove();
+    }
+  });
+
   it('shrinks to the available room in a short window', () => {
     // The regression this guards: a fixed 320px panel in a short window slides
-    // under the top bar and hides its own header. 8px is the padding kept from
-    // the top of the window.
-    expect(renderWithRoomAbove(200)).toBe(192);
+    // under the top bar and hides its own header. The bar is 45px tall and 8px
+    // are kept between it and the panel.
+    expect(renderWithRoomAbove(200)).toBe(147);
   });
 
   it('never shrinks below a few usable rows', () => {

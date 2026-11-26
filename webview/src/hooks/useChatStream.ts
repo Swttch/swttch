@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useRef, useEffect } from 'react';
+import { useCallback, useMemo, useState, useRef, useEffect, startTransition } from 'react';
 import { Context, getTextContent, LoadedMessageDto, Attachment, isImageAttachment, FileAttachment, FolderAttachment, ContextType } from '../types';
 import type { TextBlockDto, ToolUseBlockDto, ThinkingBlockDto, ImageBlockDto, ImageSourceDto, AnyContentBlockDto } from '../dto/message/ContentBlockDto';
 import { ContentBlockType } from '../dto/message/ContentBlockDto';
@@ -949,6 +949,17 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     });
   }, []);
 
+  // A page the reader scrolls towards is drawn as a transition: React draws its messages a few milliseconds at a
+  // time and lets the screen scroll in between, where drawing fifty of them in one go stops it for a moment at every
+  // page (#747). Not while a reply is streaming: every word of it starts the drawing over, and the page would wait
+  // until React gave up and drew it in one go after all.
+  const isStreamingRef = useRef(isStreaming);
+  isStreamingRef.current = isStreaming;
+  const drawPage = useCallback((apply: () => void) => {
+    if (isStreamingRef.current) apply();
+    else startTransition(apply);
+  }, []);
+
   // The window operations below turn a page the backend sent into the next state of
   // the transcript. Each one reads the state it is applied to inside the updater, so
   // a stream delta that lands between the request and the page is never lost.
@@ -962,18 +973,18 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
    */
   const prependOlderMessages = useCallback((msgs: LoadedMessageDto[], hasOlder = false, beforeUuid?: string, reached = false) => {
     const page = msgs.map(raw => toInstance(LoadedMessageDto, raw));
-    setStore(prev => {
+    drawPage(() => setStore(prev => {
       const state = windowOf(prev);
       const fillsGap = state.gap !== null && beforeUuid !== undefined && beforeUuid === state.gap.beforeUuid;
       return storeFrom(fillsGap ? prependToLatest(prev.messages, state, page, reached) : prependOlder(prev.messages, state, page, hasOlder));
-    });
-  }, []);
+    }));
+  }, [drawPage]);
 
   /** A newer page: goes where the gap is, after the recycler. */
   const appendNewerMessages = useCallback((msgs: LoadedMessageDto[], reached = false) => {
     const page = msgs.map(raw => toInstance(LoadedMessageDto, raw));
-    setStore(prev => storeFrom(appendNewer(prev.messages, windowOf(prev), page, reached)));
-  }, []);
+    drawPage(() => setStore(prev => storeFrom(appendNewer(prev.messages, windowOf(prev), page, reached))));
+  }, [drawPage]);
 
   /** A page centred on an entry the reader is going to: takes the recycler's place, the newest pages stay. */
   const jumpToMessages = useCallback((msgs: LoadedMessageDto[], hasOlder: boolean, config: WindowConfig) => {

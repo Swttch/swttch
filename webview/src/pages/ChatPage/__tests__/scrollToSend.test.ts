@@ -24,6 +24,70 @@ describe('scrollToSend', () => {
     expect(sentinel.scrollIntoView).toHaveBeenCalledWith(SEND_SCROLL_OPTIONS);
   });
 
+  /** A send `top` pixels from the top of a chat 600 pixels tall. */
+  function sendAt(top: number): HTMLElement {
+    const sentinel = section('s1');
+    const chat = document.createElement('div');
+    chat.setAttribute('data-chat-scroll', '');
+    Object.defineProperty(chat, 'clientHeight', { value: 600 });
+    chat.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
+    document.body.append(chat);
+    chat.append(sentinel.parentElement!);
+    sentinel.getBoundingClientRect = () => ({ top }) as DOMRect;
+    sentinel.scrollIntoView = vi.fn();
+    return sentinel;
+  }
+  const atOnce = { ...SEND_SCROLL_OPTIONS, behavior: 'instant' };
+
+  it.each([-900, 1100])('glides a short way (%s)', (top) => {
+    const sentinel = sendAt(top);
+    scrollToSend('s1');
+    expect(sentinel.scrollIntoView).toHaveBeenCalledWith(SEND_SCROLL_OPTIONS);
+  });
+
+  // #747. A glide over pages that come and go while it is on its way is stopped by the first of them, short of the send.
+  it.each([-30000, 1300])('goes at once a long way (%s)', (top) => {
+    const sentinel = sendAt(top);
+    scrollToSend('s1');
+    expect(sentinel.scrollIntoView).toHaveBeenCalledWith(atOnce);
+  });
+
+  it('goes at once to a send that was just loaded for, however near it is', () => {
+    const sentinel = sendAt(100);
+    scrollToSend('s1', undefined, true);
+    expect(sentinel.scrollIntoView).toHaveBeenCalledWith(atOnce);
+  });
+
+  const frames = (n: number) =>
+    new Promise<void>((done) => {
+      const next = (left: number) => (left === 0 ? done() : requestAnimationFrame(() => next(left - 1)));
+      next(n);
+    });
+
+  it('puts a send it went to at once there again when something moves it right after', async () => {
+    const sentinel = sendAt(-30000);
+    scrollToSend('s1');
+    await frames(3);
+    expect(sentinel.scrollIntoView).toHaveBeenCalledTimes(1);
+
+    sentinel.getBoundingClientRect = () => ({ top: 130 }) as DOMRect;
+    await frames(3);
+
+    expect(sentinel.scrollIntoView).toHaveBeenCalledTimes(2);
+    expect(sentinel.scrollIntoView).toHaveBeenLastCalledWith(atOnce);
+  });
+
+  it.each(['wheel', 'touchstart', 'pointerdown', 'keydown'])('lets go as soon as the reader takes the page over (%s)', async (event) => {
+    const sentinel = sendAt(-30000);
+    scrollToSend('s1');
+
+    window.dispatchEvent(new Event(event));
+    sentinel.getBoundingClientRect = () => ({ top: 900 }) as DOMRect;
+    await frames(3);
+
+    expect(sentinel.scrollIntoView).toHaveBeenCalledTimes(1);
+  });
+
   // Issue #701: the chat follows a streaming reply by writing the scroll position every frame, which cancels
   // the browser's smooth scroll. Following stops first, or the reply pulls the view back under the jump.
   it('stops the chat following the reply before it jumps', () => {

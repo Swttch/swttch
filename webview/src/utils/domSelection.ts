@@ -1,3 +1,5 @@
+import { rectMetrics } from './zoomRects';
+
 /**
  * DOM Selection utilities for contentEditable plain-text offset mapping.
  *
@@ -193,8 +195,10 @@ function scrollCaretIntoView(root: HTMLElement, range: Range): void {
   // All-zero rects mean the environment does no layout — nothing to scroll to.
   if (rootRect.height === 0 && rootRect.width === 0) return;
 
-  const above = caretRect.top - rootRect.top;
-  const below = caretRect.bottom - rootRect.bottom;
+  // Rectangles are not in the pixels `scrollTop` is in under the UI zoom (see zoomRects).
+  const { toFixed } = rectMetrics();
+  const above = toFixed(caretRect.top - rootRect.top);
+  const below = toFixed(caretRect.bottom - rootRect.bottom);
   if (above < 0) {
     root.scrollTop += above;
   } else if (below > 0) {

@@ -237,7 +237,7 @@ export function SideQuestionWindow(props: Props) {
 
   const send = (question: string) => runControlRequestCommand(`/btw ${question}`, inputMode);
 
-  const bottomLine = env.viewport.height - footerHeight / env.scale - MINIMIZED_BOTTOM_GAP_PX;
+  const bottomLine = env.viewport.height - footerHeight - MINIMIZED_BOTTOM_GAP_PX;
   const target = isMinimized
     ? minimizedRect(env.viewport, bottomLine, env.rem)
     : isMaximized

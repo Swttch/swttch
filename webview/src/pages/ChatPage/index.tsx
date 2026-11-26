@@ -1,6 +1,6 @@
 import { useOptionalWorkflowState } from '@/contexts/WorkflowStateContext';
 import { withLiveTaskNotices } from './liveTaskNotices';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo, startTransition } from 'react';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import { DictationProvider } from './ChatInput/DictationProvider';
 import { ListeningNotice } from './ListeningNotice';
@@ -72,6 +72,9 @@ import { hideCliNotes } from './hideCliNotes';
 import { placeCompactCommand } from './placeCompactCommand';
 import { splitSectionsAtGap } from './windowGapSections';
 import { ENTRY_UUID_ATTRIBUTE, useScrollAnchor } from './useScrollAnchor';
+import { ReadBeforeCommit } from './ReadBeforeCommit';
+import { withoutSplitResults } from './withoutSplitResults';
+import { useManualScrollAnchoring } from './useManualScrollAnchoring';
 import { useChatWindowConfig } from '@/hooks/useChatWindowConfig';
 import { firstUuidOf, nextStep } from '@/utils/transcriptWindow';
 import { useTranslation } from '@/i18n';
@@ -85,6 +88,7 @@ import { ChatFollowContext } from './ChatFollowContext';
 import { carriedSend } from './SendIndex/carriedSend';
 import { useSessionSends } from '@/hooks/useSessionSends';
 import type { SessionSend } from '@/shared';
+import { rectMetrics } from '@/utils/zoomRects';
 
 /** Stable empty list, so a session with no index yet does not re-render everything each time. */
 const EMPTY_SENDS: SessionSend[] = [];
@@ -274,6 +278,9 @@ function ChatPageContent() {
     releaseFollow,
   } = useChatAutoScroll(currentSessionId, messages, isStreaming);
 
+  // For a browser that does not hold the reader's place by itself (WebKit before Safari 27), see the hook.
+  const { note: noteManualAnchor } = useManualScrollAnchoring(scrollContainerRef, autoFollowRef);
+
   // Page tracking refs. One request for a page is in flight at a time, whichever side of the
   // transcript it is for; `loadingPage` says which, so the right indicator is drawn.
   const isLoadingMoreRef = useRef(false);
@@ -346,9 +353,11 @@ function ChatPageContent() {
     const merged = mergeToolResults(mergeSplitThinkingMessages(hideCliNotes(placeCompactCommand(restoreQueuedMessages(messages)))), {
       keepTaskNotices: transcriptViewMode !== null,
     });
+    // Not the results whose calls are on a page still to come (see withoutSplitResults).
+    const shown = withoutSplitResults(merged, messages, windowGap, hasMoreOlder);
     // The notice of a task whose end this screen saw, until the CLI's own is read back (next-gen view only).
-    return transcriptViewMode !== null ? withLiveTaskNotices(merged, taskList ?? [], liveEndedIds) : merged;
-  }, [messages, transcriptViewMode, taskList, liveEndedIds]);
+    return transcriptViewMode !== null ? withLiveTaskNotices(shown, taskList ?? [], liveEndedIds) : shown;
+  }, [messages, windowGap, hasMoreOlder, transcriptViewMode, taskList, liveEndedIds]);
 
   // One split, read by both the transcript and the send index. See the
   // `sections` prop on ChatMessageArea for why it is not computed there.
@@ -388,16 +397,9 @@ function ChatPageContent() {
   // is owned by the request itself (see requestPage), so a mid-request streaming
   // delta can no longer release it early.
   //
-  // The place to hold is noted again right here, while this is being rendered and the screen is
-  // still the old one. The note taken at the last scroll event can be a frame old: a page that arrives
-  // between a scroll and its event would otherwise move the reader back by what was scrolled since.
-  // Only reads the screen, so rendering this twice does no harm.
-  if (
-    prevOldestUuidRef.current !== null &&
-    (prevOldestUuidRef.current !== oldestLoadedUuid || prevGapKeyRef.current !== windowGapKey)
-  ) {
-    captureScrollAnchor();
-  }
+  // The place to hold is noted again right before such a change is written to the screen (`ReadBeforeCommit` in
+  // the markup below). The note taken at the last scroll event can be a frame old, and a page is drawn over several
+  // frames in which the reader goes on scrolling: a note taken while rendering would move them back by that much.
 
   useLayoutEffect(() => {
     const el = scrollContainerRef.current;
@@ -419,7 +421,8 @@ function ChatPageContent() {
     prevGapKeyRef.current = windowGapKey;
     // The screen is now as the reader sees it: note the place for the next change.
     captureScrollAnchor();
-  }, [messages, oldestLoadedUuid, windowGapKey, currentSessionId, restoreScrollAnchor, captureScrollAnchor, prevScrollTopRef, lastScrollHeightRef]);
+    if (topMoved || gapMoved) noteManualAnchor();
+  }, [messages, oldestLoadedUuid, windowGapKey, currentSessionId, restoreScrollAnchor, captureScrollAnchor, noteManualAnchor, prevScrollTopRef, lastScrollHeightRef]);
 
   const scrollToBottom = useCallback(() => {
     // The newest pages are always held, so the way down never waits for the backend: the
@@ -447,6 +450,12 @@ function ChatPageContent() {
   const oldestLoadedUuidRef = useRef<string | null>(null);
   oldestLoadedUuidRef.current = oldestLoadedUuid;
 
+  // The guard is let go once the screen says nothing is loading, which is when the page asked for is on it. Let go
+  // earlier, the window would be judged on the screen without the page and would ask for it again.
+  useLayoutEffect(() => {
+    if (loadingPage === null) isLoadingMoreRef.current = false;
+  }, [loadingPage]);
+
   /**
    * Make one request for a page, or null when another is in flight (one at a time, whichever side
    * of the transcript it is for) or there is nothing to ask. The loading guard is closed by the
@@ -463,9 +472,10 @@ function ChatPageContent() {
     setLoadingPage(kind);
     // The screen as the reader has it, so that the page can be added without moving it.
     captureScrollAnchor();
+    // The page is drawn a piece at a time after it has arrived (see `startTransition` in useChatStream), so "no
+    // longer loading" is said the same way: it is written to the screen with the page, not ahead of it.
     return request(currentSessionId).finally(() => {
-      isLoadingMoreRef.current = false;
-      setLoadingPage(null);
+      startTransition(() => setLoadingPage(null));
     });
   }, [currentSessionId, captureScrollAnchor]);
 
@@ -530,7 +540,8 @@ function ChatPageContent() {
     const view = el.getBoundingClientRect();
     // One screen more on each side: the gap, when there is one, is then always at least a screen away
     // from what the reader sees, however fast they scroll, and the page that is shown is never the last.
-    const reach = el.clientHeight;
+    // In the unit the rectangles are in, which is not the layout's under the UI zoom (see zoomRects).
+    const reach = rectMetrics().fromLayout(el.clientHeight);
     // What is on the screen is the merged messages, and some of those were made out of others (a restored
     // queued message, say) and carry a uuid that none of the held entries has. Those say nothing about
     // where the reader is in what is held, so they are passed over.
@@ -703,6 +714,7 @@ function ChatPageContent() {
         reserved: every block there carries its own side padding.
       */}
       <SendIndex sections={sections} sessionSends={sessionSends} side={railAtStart ? 'start' : 'end'} />
+      <ReadBeforeCommit when={`${oldestLoadedUuid}|${windowGapKey}`} read={captureScrollAnchor} />
       <div
         ref={scrollContainerRef}
         data-chat-scroll

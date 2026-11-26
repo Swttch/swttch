@@ -59,3 +59,50 @@ describe('reuseSections', () => {
     expect(reuseSections([], next)).toEqual(next);
   });
 });
+
+/**
+ * #747. A section opening mid-reply is named after the first entry held, so every older page renames it, and a
+ * section drawn under a new name is drawn again from nothing: dozens of messages parsed again, for a pause on
+ * screen at each page. `mountKey` is the name React draws it under, and stays while it is the same stretch.
+ */
+describe('reuseSections: the name a section is drawn under', () => {
+  const drawnUnder = (sections: ReturnType<typeof groupIntoSendSections>) => sections.map((s) => s.mountKey ?? s.key);
+  const [s1, r1, r2, r3, s2, r4] = [send('s1'), reply('r1'), reply('r2'), reply('r3'), send('s2'), reply('r4')];
+
+  it('holds for a section opening mid-reply when entries are put in front of it', () => {
+    const first = reuseSections([], groupIntoSendSections([r2, r3, s2, r4]));
+    const older = reuseSections(first, groupIntoSendSections([r1, r2, r3, s2, r4]));
+    expect(older[0].key).toBe('r1');
+    expect(drawnUnder(older)).toEqual(['r2', 's2']);
+  });
+
+  it('holds when the send it answers arrives, and through the pages after that', () => {
+    const first = reuseSections([], groupIntoSendSections([r3, s2, r4]));
+    const second = reuseSections(first, groupIntoSendSections([r2, r3, s2, r4]));
+    const third = reuseSections(second, groupIntoSendSections([s1, r1, r2, r3, s2, r4]));
+    expect(third[0].key).toBe('s1');
+    expect(drawnUnder(third)).toEqual(['r3', 's2']);
+  });
+
+  it('holds when the entries at the top are let go of', () => {
+    const first = reuseSections([], groupIntoSendSections([s1, r1, r2, r3, s2, r4]));
+    const trimmed = reuseSections(first, groupIntoSendSections([r2, r3, s2, r4]));
+    expect(trimmed[0].head).toBeNull();
+    expect(drawnUnder(trimmed)).toEqual(['s1', 's2']);
+  });
+
+  it('keeps the section drawn once it is the same again, under the name it was given', () => {
+    const first = reuseSections([], groupIntoSendSections([r2, r3]));
+    const older = reuseSections(first, groupIntoSendSections([r1, r2, r3]));
+    expect(reuseSections(older, groupIntoSendSections([r1, r2, r3]))).toBe(older);
+  });
+
+  it('never draws two sections under one name', () => {
+    // The name a section was given can be the own name of another one that appears later.
+    const first = reuseSections([], groupIntoSendSections([r2]));
+    const older = reuseSections(first, groupIntoSendSections([r1, r2]));
+    const split = reuseSections(older, groupIntoSendSections([r1, send('r2')]));
+    expect(split.map((s) => s.key)).toEqual(['r1', 'r2']);
+    expect(new Set(drawnUnder(split)).size).toBe(2);
+  });
+});

@@ -70,4 +70,17 @@ describe('readingLineSectionKey', () => {
 
     expect(readingLineSectionKey(TOP_BAR_HEIGHT)).toBe('b');
   });
+
+  // A banner above the chat (not signed in, notifications) pushes the whole chat down the window. Counted from the
+  // top of the window, a jump then landed below the line and the rail named the send before.
+  it('measures the line from the top of the chat, wherever the chat begins', () => {
+    transcript({ a: -300, b: 55 + SEND_JUMP_SCROLL_MARGIN });
+    const chat = document.createElement('div');
+    chat.setAttribute('data-chat-scroll', '');
+    chat.getBoundingClientRect = () => ({ top: 55 }) as DOMRect;
+    chat.append(...Array.from(document.body.children));
+    document.body.append(chat);
+
+    expect(readingLineSectionKey(TOP_BAR_HEIGHT)).toBe('b');
+  });
 });

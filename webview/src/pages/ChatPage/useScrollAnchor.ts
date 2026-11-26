@@ -9,6 +9,12 @@ export function entryMarker(uuid: string | null | undefined): Record<string, str
   return typeof uuid === 'string' ? { [ENTRY_UUID_ATTRIBUTE]: uuid } : {};
 }
 
+/**
+ * Put on whatever stays on the screen while the rest scrolls (a send pinned to the top): where an entry inside it
+ * is drawn says nothing about where the reader is.
+ */
+export const SCROLL_UNANCHORED_ATTRIBUTE = 'data-scroll-unanchored';
+
 interface Anchor {
   uuid: string;
   /** How far below the top of the scroll container the entry's top edge was, as a rectangle reports it. */
@@ -57,6 +63,9 @@ export function useScrollAnchor(
     for (const node of nodes) {
       const rect = node.getBoundingClientRect();
       if (rect.bottom <= containerTop + 1) continue;
+      // An entry that draws nothing still has its marker, and where that stands says nothing about what is read.
+      if (rect.bottom <= rect.top) continue;
+      if (node.closest(`[${SCROLL_UNANCHORED_ATTRIBUTE}]`)) continue;
       const uuid = node.getAttribute(ENTRY_UUID_ATTRIBUTE);
       if (!uuid || !isAnchorable(uuid)) continue;
       anchors.push({ uuid, offset: rect.top - containerTop });

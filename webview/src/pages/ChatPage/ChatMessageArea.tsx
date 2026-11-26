@@ -1,6 +1,6 @@
 import { memo, useRef, type RefObject } from 'react';
 import { MessageBubble } from './MessageBubble';
-import type { SendSection } from './groupIntoSendSections';
+import { mountKeyOf, type SendSection } from './groupIntoSendSections';
 import type { SessionSend } from '@/shared';
 import { CarriedSendHeader } from './SendIndex/CarriedSendHeader';
 import { ProjectSelectorPage } from '@/pages/ProjectSelectorPage';
@@ -295,7 +295,7 @@ export function ChatMessageArea(props: Props) {
         const carried = section.head === null ? carriedSend : null;
         return (
           <ClassicSendSection
-            key={section.key}
+            key={mountKeyOf(section)}
             section={section}
             nextHead={sections[sectionIndex + 1]?.head ?? null}
             carriedUuid={carried ? carried.uuid : null}

@@ -2,9 +2,10 @@ import { ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { ChevronDoubleUpIcon } from '@heroicons/react/20/solid';
 import { useTranslation } from '@/i18n';
 import { useScrollFold, FOLD_MIN_HEIGHT } from './useScrollFold';
+import { SCROLL_UNANCHORED_ATTRIBUTE } from './useScrollAnchor';
 import { useTopBar } from '@/contexts/TopBarContext';
 import { ScrollFoldContext } from './ScrollFoldContext';
-import { SEND_JUMP_SCROLL_MARGIN, SEND_SCROLL_OPTIONS } from './SendIndex/scrollToSend';
+import { SEND_JUMP_SCROLL_MARGIN, scrollSendIntoView } from './SendIndex/scrollToSend';
 import { ChatFollowContext } from './ChatFollowContext';
 
 interface Props {
@@ -118,8 +119,8 @@ export function StickySendHeader(props: Props) {
     // A reply streaming in must not pull the view back under the jump.
     releaseFollow?.();
     // The options are shared with the send index, so a jump lands the same way
-    // whichever control started it — see SEND_SCROLL_OPTIONS.
-    sentinel.scrollIntoView(SEND_SCROLL_OPTIONS);
+    // whichever control started it — see scrollSendIntoView.
+    scrollSendIntoView(sentinel);
   };
 
   return (
@@ -152,6 +153,8 @@ export function StickySendHeader(props: Props) {
       </div>
       <div
         className="sticky top-0 z-[1] group"
+        // While pinned, where the send is drawn says nothing about where the reader is (see useScrollAnchor).
+        {...(pinned ? { [SCROLL_UNANCHORED_ATTRIBUTE]: '' } : {})}
         /*
           Content passing under the pinned message fades out instead of
           meeting a hard edge, the way Cursor's extension does it.

@@ -21,6 +21,8 @@ import {
 } from '@/types/models';
 import { ModelInfo } from '@/types/slashCommand';
 import { useTranslation } from '@/i18n';
+import { rectMetrics } from '@/utils/zoomRects';
+import { useTopBar } from '@/contexts/TopBarContext';
 
 export const SWITCH_MODEL_EVENT = 'switch-model';
 
@@ -235,21 +237,26 @@ export function ModelSwitchOverlay({ onClose, autoSelectQuery }: ModelSwitchOver
   // under the top bar and hides its own header. Measured once per open (and on
   // resize); `null` until measured, which is the first paint only.
   const [maxHeight, setMaxHeight] = useState<number | null>(null);
+  const { topBarHeight } = useTopBar();
   useEffect(() => {
     const measure = () => {
       const panel = panelRef.current;
       if (!panel) return;
       // The panel's bottom edge is pinned above the composer and does not move
-      // with its height, so the room above it is exactly that edge minus the
-      // margin we keep from the top of the window.
-      const room = panel.getBoundingClientRect().bottom - VIEWPORT_PADDING;
+      // with its height, so the room above it is that edge minus what stands
+      // above the chat and the margin kept under it.
+      // The cap is a CSS length, which a rectangle is not under the UI zoom (see zoomRects).
+      // A banner above the chat pushes the chat down by its own height; the top bar and the banner both stand
+      // between the top of the window and the room the panel has.
+      const chatTop = document.querySelector('[data-chat-scroll]')?.getBoundingClientRect().top ?? 0;
+      const room = rectMetrics().toFixed(panel.getBoundingClientRect().bottom - chatTop) - topBarHeight - VIEWPORT_PADDING;
       setMaxHeight(Math.max(MIN_PANEL_HEIGHT, Math.min(MAX_PANEL_HEIGHT, room)));
     };
     measure();
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
     // Re-measure when the row count changes the panel's own geometry.
-  }, [models.length]);
+  }, [models.length, topBarHeight]);
 
   // Once the list scrolls, the current model is off-screen whenever it sits
   // past the visible rows — the picker would open showing no ticked row and
