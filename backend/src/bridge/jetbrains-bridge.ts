@@ -565,6 +565,12 @@ export class JetBrainsBridge implements Bridge {
     await this.request(MessageType.SET_PRIMARY_SELECTION, params);
   }
 
+  async getPrimarySelection(params: { workingDir?: string }): Promise<string | null> {
+    const result = await this.request(MessageType.GET_PRIMARY_SELECTION, params);
+    const text = result['text'];
+    return typeof text === 'string' && text.length > 0 ? text : null;
+  }
+
   async getClipboard(params: { workingDir?: string }): Promise<HostClipboardContents> {
     const result = await this.request(MessageType.GET_CLIPBOARD, params);
     return parseClipboardResult(result);

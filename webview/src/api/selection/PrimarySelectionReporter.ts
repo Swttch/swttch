@@ -1,5 +1,8 @@
 import { selectedText } from './selectedText';
 
+/** `PointerEvent.button` for the middle button. */
+const MIDDLE_BUTTON = 1;
+
 /**
  * Reports the text the user has selected, so the host can put it into the Linux
  * PRIMARY selection: the buffer a middle click pastes from, which any program
@@ -18,6 +21,9 @@ import { selectedText } from './selectedText';
  *   up, and then the final text is reported once.
  * - Without a button the selection changes by keyboard (Shift+Arrow), once per
  *   key press, and each change is reported.
+ * - The middle button is a paste, not a selection: its release claims nothing, or
+ *   whatever is still selected in the page would take over the buffer while it is
+ *   being pasted (#754).
  * - An empty selection is never reported. Dropping a selection leaves the buffer
  *   alone in every other program, so reporting it would wipe text the user can
  *   still paste.
@@ -42,8 +48,9 @@ export class PrimarySelectionReporter {
     const onDown = () => {
       this.pointerHeld = true;
     };
-    const onUp = () => {
+    const onUp = (event: Event) => {
       this.pointerHeld = false;
+      if ((event as PointerEvent).button === MIDDLE_BUTTON) return;
       this.reportSelection({ alwaysClaim: true });
     };
     const onSelectionChange = () => {

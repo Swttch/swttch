@@ -104,6 +104,27 @@ describe('PrimarySelectionReporter with the mouse', () => {
   });
 });
 
+describe('PrimarySelectionReporter with the middle button', () => {
+  it('claims nothing on its release, which is a paste of the buffer and not a new selection', () => {
+    newReporter();
+    selectWord('beta');
+    document.dispatchEvent(new MouseEvent('pointerdown', { button: 1, bubbles: true }));
+    document.dispatchEvent(new MouseEvent('pointerup', { button: 1, bubbles: true }));
+
+    expect(report).not.toHaveBeenCalled();
+  });
+
+  it('reports the next selection made with the main button as before', () => {
+    newReporter();
+    document.dispatchEvent(new MouseEvent('pointerup', { button: 1, bubbles: true }));
+    pointer('pointerdown');
+    selectWord('gamma');
+    pointer('pointerup');
+
+    expect(report).toHaveBeenCalledWith('gamma');
+  });
+});
+
 describe('PrimarySelectionReporter with the keyboard', () => {
   it('reports each change of the selection, since no button is held', () => {
     newReporter();

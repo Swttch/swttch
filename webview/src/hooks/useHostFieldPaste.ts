@@ -12,6 +12,7 @@ import {
   normalizeNewlines,
 } from '@/utils/hostPaste';
 import { insertTextIntoField, type TextField } from '@/utils/insertTextIntoField';
+import { takeMiddleClickPaste } from '@/utils/middleClickPaste';
 import { typingTargetOf } from '@/utils/typingTarget';
 
 /** The input types that take typed text, and so a paste of text. */
@@ -32,6 +33,8 @@ const TEXT_INPUT_TYPES = new Set(['text', 'search', 'password', 'email', 'url', 
  * asked for text only: files on the clipboard are not handed to the chat, and an
  * image is not attached.
  *
+ * A middle-click paste is checked against the host's selection instead (#754).
+ *
  * The composer is a contenteditable, not a field, so it never comes through here.
  * Outside the IDE nothing listens: a browser reads its own clipboard.
  */
@@ -45,7 +48,8 @@ export function useHostFieldPaste(): void {
       if (event.defaultPrevented) return;
       const field = textFieldOf(event);
       if (!field) return;
-      void finishFromHost(field, event.clipboardData?.getData('text/plain') ?? '', workingDirectory);
+      const pasted = event.clipboardData?.getData('text/plain') ?? '';
+      void finishFromHost(field, pasted, takeMiddleClickPaste(), workingDirectory);
     };
     document.addEventListener('paste', onPaste);
     return () => document.removeEventListener('paste', onPaste);
@@ -65,7 +69,12 @@ function textFieldOf(event: Event): TextField | null {
  * Called while the paste event is being dispatched, so the field still holds what it
  * held before the browser's paste.
  */
-async function finishFromHost(field: TextField, pasted: string, workingDir: string | undefined): Promise<void> {
+async function finishFromHost(
+  field: TextField,
+  pasted: string,
+  fromSelection: boolean,
+  workingDir: string | undefined,
+): Promise<void> {
   const before = { value: field.value, start: field.selectionStart, end: field.selectionEnd };
   await afterNativePaste();
   const afterPaste = field.value;
@@ -73,9 +82,10 @@ async function finishFromHost(field: TextField, pasted: string, workingDir: stri
 
   let text: string | null;
   try {
+    // A middle click pastes what is selected, so the clipboard must not stand in for it (#754).
     const response = await getBridge().request<HostClipboardResponse>(
-      MessageType.GET_CLIPBOARD,
-      { workingDir, textOnly: true },
+      fromSelection ? MessageType.GET_PRIMARY_SELECTION : MessageType.GET_CLIPBOARD,
+      fromSelection ? { workingDir } : { workingDir, textOnly: true },
       // With nothing pasted yet, the user is waiting for the host to deliver the paste.
       { timeout: browserChangedNothing && pasted === '' ? HOST_CLIPBOARD_TIMEOUT_MS : HOST_PASTE_CHECK_TIMEOUT_MS },
     );

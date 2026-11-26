@@ -480,6 +480,27 @@ describe('JetBrainsBridge.setPrimarySelection', () => {
   });
 });
 
+describe('JetBrainsBridge.getPrimarySelection', () => {
+  it('sends a request naming the project, and goes to the IDE that serves it', () => {
+    const bridge = new JetBrainsBridge();
+    const wsA = createMockWs();
+    const wsB = createMockWs();
+    bridge.addRpcClient(wsA as never);
+    bridge.addRpcClient(wsB as never);
+    registerRoots(wsA, ['/projA']);
+    registerRoots(wsB, ['/projB']);
+
+    void bridge.getPrimarySelection({ workingDir: '/projB/src' }).catch(() => {});
+
+    expect(wsB.send).toHaveBeenCalledTimes(1);
+    expect(wsA.send).not.toHaveBeenCalled();
+    const sent = sentMessage(wsB);
+    expect(sent?.method).toBe(MessageType.GET_PRIMARY_SELECTION);
+    expect(sent?.params).toEqual({ workingDir: '/projB/src' });
+    expect(sent?.id).toBeTruthy();
+  });
+});
+
 describe('JetBrainsBridge.getClipboard', () => {
   it('sends a request naming the project, and goes to the IDE that serves it', () => {
     const bridge = new JetBrainsBridge();

@@ -8,6 +8,7 @@ import com.github.yhk1038.claudecodegui.bridge.NotificationOutcome
 import com.github.yhk1038.claudecodegui.bridge.OpenFileTargets
 import com.github.yhk1038.claudecodegui.bridge.RpcUserFacingException
 import com.github.yhk1038.claudecodegui.bridge.SystemClipboardReader
+import java.awt.Toolkit
 import com.github.yhk1038.claudecodegui.bridge.SystemClipboardWriter
 import com.github.yhk1038.claudecodegui.bridge.SystemSelectionWriter
 import com.github.yhk1038.claudecodegui.editor.ClaudeCodeVirtualFile
@@ -149,6 +150,7 @@ class ClaudeCodePanel(
     // Fills the Linux PRIMARY selection with what the webview reports as selected (#513).
     private val systemSelectionWriter = SystemSelectionWriter()
     private val systemClipboardReader = SystemClipboardReader()
+    private val systemSelectionReader = SystemClipboardReader { Toolkit.getDefaultToolkit().systemSelection }
     private val systemClipboardWriter = SystemClipboardWriter()
 
     // Browser is owned by ClaudeCodeBrowserService, NOT by this panel.
@@ -2968,6 +2970,16 @@ class ClaudeCodePanel(
                 }
                 return withTimeoutOrNull(CLIPBOARD_READ_TIMEOUT_MS) { result.await() }
                     ?: ClipboardContents.EMPTY.also { logger.warn("Clipboard read timed out") }
+            }
+
+            override suspend fun getPrimarySelection(): String? {
+                // On the EDT with a deadline, as for the clipboard above: the user clicked
+                // inside this window a moment ago, which is when Wayland lets it be read.
+                val result = CompletableDeferred<String?>()
+                ApplicationManager.getApplication().invokeLater {
+                    result.complete(systemSelectionReader.readTextOnly())
+                }
+                return withTimeoutOrNull(CLIPBOARD_READ_TIMEOUT_MS) { result.await() }
             }
 
             override suspend fun openDevTools() {

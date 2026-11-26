@@ -317,6 +317,9 @@ class NodeBackendService : Disposable {
             override suspend fun getClipboard(): ClipboardContents =
                 any()?.getClipboard() ?: run { warn("getClipboard"); ClipboardContents.EMPTY }
 
+            override suspend fun getPrimarySelection(): String? =
+                any()?.getPrimarySelection() ?: run { warn("getPrimarySelection"); null }
+
             override suspend fun openTerminal(workingDir: String) {
                 any()?.openTerminal(workingDir) ?: warn("openTerminal")
             }

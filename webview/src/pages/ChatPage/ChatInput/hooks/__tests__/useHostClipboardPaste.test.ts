@@ -70,6 +70,27 @@ describe('useHostClipboardPaste', () => {
     );
   });
 
+  it('asks for the selection, never the clipboard, for a middle-click paste (#754)', async () => {
+    sendMock.mockResolvedValue({ text: 'selected word' });
+    const { paste } = renderPaste('/proj');
+
+    await paste(focusedEditor(), { fromSelection: true });
+
+    expect(sendMock.mock.calls.map((call) => call[0])).toEqual([MessageType.GET_PRIMARY_SELECTION]);
+    expect(insertText).toHaveBeenCalledWith('insertText', false, 'selected word');
+  });
+
+  it('puts the host selection in place of an old one the browser pasted (#754)', async () => {
+    sendMock.mockResolvedValue({ text: 'selected now' });
+    const { paste } = renderPaste();
+    const editor = focusedEditor();
+    editor.textContent = 'selected earlier';
+
+    await paste(editor, { pastedText: 'selected earlier', textBefore: '', fromSelection: true });
+
+    expect(insertText.mock.calls).toEqual([['undo'], ['insertText', false, 'selected now']]);
+  });
+
   it('inserts the host text at the caret through the editing command', async () => {
     sendMock.mockResolvedValue({ text: 'copied elsewhere', image: null });
     const { paste, addImageAttachment } = renderPaste();

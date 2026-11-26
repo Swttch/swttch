@@ -213,4 +213,18 @@ class SystemClipboardReaderTest {
 
         assertEquals(emptyList<ClipboardFile>(), SystemClipboardReader { clipboard }.read().files)
     }
+
+    @Test
+    fun `reads the text alone, as a middle click asks of the selection`() {
+        val clipboard = clipboardWith(StringSelection("selected word"))
+
+        assertEquals("selected word", SystemClipboardReader { clipboard }.readTextOnly())
+    }
+
+    @Test
+    fun `has no text to read where the platform has no such buffer, or it holds none`() {
+        assertNull(SystemClipboardReader { null }.readTextOnly())
+        assertNull(SystemClipboardReader { throw HeadlessException() }.readTextOnly())
+        assertNull(SystemClipboardReader { clipboardWith(StringSelection("")) }.readTextOnly())
+    }
 }

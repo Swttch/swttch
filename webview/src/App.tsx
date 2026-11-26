@@ -22,6 +22,7 @@ import { useCaretBoundaryKeys } from './hooks/useCaretBoundaryKeys';
 import { useEmacsTextKeys } from './hooks/useEmacsTextKeys';
 import { useEditHistoryCommands } from './hooks/useEditHistoryCommands';
 import { useHostFieldPaste } from './hooks/useHostFieldPaste';
+import { watchMiddleClicks } from './utils/middleClickPaste';
 import { ZoomIndicator } from './components/ZoomIndicator';
 import { HelpModalHost } from './components/HelpModal';
 import { LinkMenu } from './components/LinkMenu';
@@ -53,6 +54,8 @@ function AppContent() {
   useEditHistoryCommands();
   // Pastes into plain text fields are finished from the IDE's clipboard (Wayland).
   useHostFieldPaste();
+  // A middle-click paste takes the selection, so those pastes are told apart.
+  useEffect(() => watchMiddleClicks(document), []);
   // Ctrl+Alt+I cycles the Transcript view of the session on screen, wherever the focus is.
   const viewOffer = useCycleTranscriptViewMode();
   // Tell the backend which panel is active so panel-scoped pushes route here.

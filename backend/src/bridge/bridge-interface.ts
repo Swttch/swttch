@@ -292,6 +292,21 @@ export interface Bridge {
   setPrimarySelection(params: { text: string; workingDir?: string }): Promise<void>;
 
   /**
+   * The text of the system's PRIMARY selection, which a middle click pastes: the
+   * reading counterpart of [setPrimarySelection], for the same reason as
+   * [getClipboard]. On a Wayland desktop the embedded browser can hold an old
+   * selection, or none, while the IDE process reads the real one (#754).
+   *
+   *   JetBrains:  the host reads the selection the IDE itself uses.
+   *   Standalone: a real browser pastes the selection correctly by itself, so
+   *               there is nothing to answer, and a standalone user loses nothing.
+   *
+   * Null where there is no such buffer or it holds no text. Rejects when the host
+   * cannot be asked.
+   */
+  getPrimarySelection(params: { workingDir?: string }): Promise<string | null>;
+
+  /**
    * What is on the system clipboard right now: its text, and an image if it holds
    * one. Each is null when the clipboard has none of it.
    *

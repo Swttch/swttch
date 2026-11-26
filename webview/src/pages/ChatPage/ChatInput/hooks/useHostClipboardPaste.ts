@@ -29,6 +29,12 @@ export type HostPasteOptions = {
   pastedText?: string;
   /** What the composer held just before the browser's own paste, for a paste that carried no plain text. */
   textBefore?: string;
+  /**
+   * The paste came from the middle mouse button, which pastes what is selected rather
+   * than what was copied (#754). The host is asked for its selection, and the clipboard
+   * never stands in for it.
+   */
+  fromSelection?: boolean;
 };
 
 /**
@@ -75,6 +81,8 @@ function pasteText(text: string): void {
  * - A paste that carried text, which the browser pastes itself (see [HostPasteOptions]).
  *   The host is asked beside it, and its answer wins when it differs: files, an image, or
  *   other text mean the browser's copy of the clipboard was stale (#715).
+ * - A middle-click paste of either kind, checked against and completed from the host's
+ *   selection instead, which holds text only (#754).
  *
  * Nothing is shown when the host has nothing or cannot be asked: the user pressed
  * paste, and a paste of nothing does nothing, as it did before.
@@ -108,7 +116,7 @@ export function useHostClipboardPaste(options: {
       let host = HostClipboard.NONE;
       try {
         const response = await send<HostClipboardResponse>(
-          MessageType.GET_CLIPBOARD,
+          pasteOptions?.fromSelection ? MessageType.GET_PRIMARY_SELECTION : MessageType.GET_CLIPBOARD,
           { workingDir: workingDirectory ?? undefined },
           { timeout: checkingBrowserPaste ? HOST_PASTE_CHECK_TIMEOUT_MS : HOST_CLIPBOARD_TIMEOUT_MS },
         );

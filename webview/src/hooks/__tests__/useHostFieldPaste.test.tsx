@@ -26,6 +26,7 @@ vi.mock('@/contexts/WorkingDirContext', async (importOriginal) => ({
   useWorkingDirOrNull: () => ({ workingDirectory: '/proj' }),
 }));
 
+import { watchMiddleClicks } from '@/utils/middleClickPaste';
 import { useHostFieldPaste } from '../useHostFieldPaste';
 
 type Field = HTMLInputElement | HTMLTextAreaElement;
@@ -108,6 +109,39 @@ describe('useHostFieldPaste', () => {
       { workingDir: '/proj', textOnly: true },
       { timeout: 1_500 },
     );
+  });
+
+  it('asks for the selection, not the clipboard, after a middle click (#754)', async () => {
+    requestMock.mockResolvedValue({ text: 'selected word' });
+    mount();
+    const stop = watchMiddleClicks(document);
+    const field = focusedField();
+    field.dispatchEvent(new MouseEvent('mousedown', { button: 1, bubbles: true }));
+
+    await paste(field, 'old selection');
+    stop();
+
+    expect(requestMock.mock.calls.map((call) => [call[0], call[1]])).toEqual([
+      [MessageType.GET_PRIMARY_SELECTION, { workingDir: '/proj' }],
+    ]);
+    expect(field.value).toBe('selected word');
+  });
+
+  it('goes back to the clipboard for the paste after that one', async () => {
+    requestMock.mockResolvedValue({ text: null });
+    mount();
+    const stop = watchMiddleClicks(document);
+    const field = focusedField();
+    field.dispatchEvent(new MouseEvent('mousedown', { button: 1, bubbles: true }));
+
+    await paste(field, 'a');
+    await paste(field, 'b');
+    stop();
+
+    expect(requestMock.mock.calls.map((call) => call[0])).toEqual([
+      MessageType.GET_PRIMARY_SELECTION,
+      MessageType.GET_CLIPBOARD,
+    ]);
   });
 
   it('puts the host text in when the browser had nothing to paste', async () => {

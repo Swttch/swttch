@@ -1068,6 +1068,13 @@ export enum MessageType {
    */
   GET_CLIPBOARD = 'GET_CLIPBOARD',
   /**
+   * The webview asks the host for the text of the Linux PRIMARY selection, carrying
+   * { workingDir }, after a middle-click paste: the reading counterpart of
+   * SET_PRIMARY_SELECTION (#754). The ACK carries { text }, null where there is no
+   * such buffer or it holds no text. inbound webview→backend, then Node↔Kotlin
+   */
+  GET_PRIMARY_SELECTION = 'GET_PRIMARY_SELECTION',
+  /**
    * The webview asks the host to put text on the system clipboard, carrying
    * { text, workingDir }, when the user copies something in the chat (a copy
    * button, Ctrl+C, cut or Copy in the context menu). Asked by the webview because
