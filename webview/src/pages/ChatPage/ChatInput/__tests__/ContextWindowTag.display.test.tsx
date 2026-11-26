@@ -106,5 +106,11 @@ describe('ContextWindowTag display (#328)', () => {
       await screen.findByRole('radiogroup');
       for (const choice of screen.getAllByRole('radio')) expect(choice).toHaveClass('whitespace-nowrap');
     });
+
+    it('wraps Korean between words only, and leaves other languages as they are', async () => {
+      const box = (await screen.findByRole('radiogroup')).closest('.shadow-lg');
+      expect(box).toHaveClass('[&:lang(ko)]:break-keep');
+      expect(box).not.toHaveClass('break-keep');
+    });
   });
 });
