@@ -82,7 +82,14 @@ describe('buildWin32CmdLine', () => {
     expect(buildWin32CmdLine('claude', ['C:\\dir\\'])).toBe('claude C:\\dir\\');
   });
 
-  it('leaves an argument with no space or quote alone, so plain flags stay byte-identical', () => {
+  // A path with no space can still carry a character cmd.exe acts on: `C:\Users\R&D\...` would
+  // end the command at the `&`. Inside quotes cmd.exe reads each of these as plain text.
+  it.each(['&', '|', '<', '>', '^', '(', ')'])('quotes an argument that carries %s', (character) => {
+    const path = `C:\\Users\\a${character}b\\mcp.json`;
+    expect(buildWin32CmdLine('claude', ['--mcp-config', path])).toBe(`claude --mcp-config "${path}"`);
+  });
+
+  it('leaves an argument with no space, quote or cmd.exe operator alone, so plain flags stay byte-identical', () => {
     expect(buildWin32CmdLine('claude', ['-p', 'hello', '--session-id', 'abc-123']))
       .toBe('claude -p hello --session-id abc-123');
   });

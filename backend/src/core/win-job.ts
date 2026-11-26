@@ -18,26 +18,25 @@ import { fileURLToPath } from 'url';
  */
 
 /**
- * Quote one argument for the `cmd /d /s /c` line, by the rules CommandLineToArgvW — what the
- * program on the other side actually uses to split its argv — applies.
+ * Quote one argument for the `cmd /d /s /c` line.
  *
- * The wrapper hands the whole line to cmd.exe as a single string, and cmd.exe splits it on
- * spaces before any program sees it. An argument containing a space was therefore split into
- * two (#755: a working directory under `C:\Program Files`, a user name with a space). Node
- * quotes such an argument the same way when it builds a command line, and that quoting is what
- * the receiving parser undoes.
+ * cmd.exe is handed the whole line as one string, and the program it starts splits that line
+ * back into arguments by the CommandLineToArgvW rules. Without quotes, a space splits one
+ * argument into two (a user folder with a space in the `--mcp-config` path, #755), and cmd.exe
+ * itself acts on an operator such as `&` or `|`.
  *
- * Rules, as Node's own `quote` implements them: an argument with neither a space nor a quote is
- * passed through untouched, so plain flags stay byte-identical; otherwise it is wrapped in
- * quotes, a backslash that precedes a quote is doubled, and a run of backslashes at the very end
- * is doubled so it cannot escape the closing quote.
+ * An argument with no space, quote or operator is passed through untouched, so plain flags stay
+ * byte-identical. Any other is wrapped in quotes: a quote inside it is escaped with a backslash,
+ * the backslashes before that quote are doubled, and a run of backslashes at the very end is
+ * doubled so it cannot escape the closing quote.
  *
- * JSON is deliberately NOT put on this line (see `buildSessionMcpArgs`): cmd.exe strips the
- * JSON's quotes, and there is no form of quoting that survives, because cmd.exe has no
- * backslash escaping — `\"` arrives as a literal backslash-quote pair.
+ * Two things quotes do not cover. cmd.exe expands `%NAME%` even inside them, and it does not
+ * read `\"` as an escaped quote, so an operator in an argument that also holds a quote can still
+ * reach it. No chat argument holds a quote, which is one reason the session MCP config is passed
+ * as a file path rather than as JSON (see `buildSessionMcpArgs`).
  */
 export function quoteWin32Arg(value: string): string {
-  if (value.length > 0 && !/[\s"]/.test(value)) return value;
+  if (value.length > 0 && !/[\s"&|<>^()]/.test(value)) return value;
   return '"' + value.replace(/(\\*)"/g, (_, slashes: string) => slashes + slashes + '\\"')
     .replace(/(\\+)$/, (_, slashes: string) => slashes + slashes) + '"';
 }
