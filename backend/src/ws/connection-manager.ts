@@ -248,7 +248,8 @@ export class ConnectionManager {
   // Secondary index for O(1) panelId → connection resolution, in sync with the panelId stored
   // on each ClientRecord. A panelId is NOT unique to one connection: splitting an editor tab shows
   // the same panel in a second JCEF browser with its own /ws socket (#48), so each entry lists
-  // every live connection of the panel. Panel-scoped pushes go to the last one in the list.
+  // every live connection of the panel. Panel-scoped pushes go to the last one in the list,
+  // which is the view that connected or reported focus most recently.
   private panelIdIndex = new Map<string, string[]>();
   // Editor context awaiting a webview connection. Replayed to the first
   // connection that arrives within PENDING_EDITOR_CONTEXT_TTL_MS, then cleared.
@@ -375,8 +376,16 @@ export class ConnectionManager {
    * Record the panelId whose webview just gained focus (PANEL_FOCUSED) as the new
    * top of the focus stack. Prunes dead panels and de-dupes this id first, so the
    * stack stays live and ordered most-recent-last without unbounded growth.
+   *
+   * [connectionId] is the view that reported. A panel shown by two views gets its
+   * panel-scoped pushes on the one focused last, so a key pressed in one split acts
+   * there and not in the other.
    */
-  setLastFocusedPanelId(panelId: string): void {
+  setLastFocusedPanelId(panelId: string, connectionId?: string): void {
+    const views = this.panelIdIndex.get(panelId);
+    if (connectionId && views?.includes(connectionId)) {
+      this.panelIdIndex.set(panelId, [...views.filter((id) => id !== connectionId), connectionId]);
+    }
     this.lastFocusedPanelIdStack = this.lastFocusedPanelIdStack.filter(
       (id) => id !== panelId && this.panelIdIndex.has(id),
     );

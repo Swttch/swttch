@@ -15,7 +15,7 @@ function createMockConnections() {
 const mockBridge = {} as Bridge;
 
 describe('panelFocusedHandler', () => {
-  it('stores the reported panelId as the last-focused panel', () => {
+  it('stores the reported panelId and the view that reported it as last focused', () => {
     const connections = createMockConnections();
     const message: IPCMessage = {
       type: MessageType.PANEL_FOCUSED,
@@ -26,7 +26,7 @@ describe('panelFocusedHandler', () => {
     panelFocusedHandler('conn-1', message, connections, mockBridge);
 
     expect(connections.setLastFocusedPanelId).toHaveBeenCalledTimes(1);
-    expect(connections.setLastFocusedPanelId).toHaveBeenCalledWith('panel-1');
+    expect(connections.setLastFocusedPanelId).toHaveBeenCalledWith('panel-1', 'conn-1');
   });
 
   it('ignores the message when panelId is missing', () => {

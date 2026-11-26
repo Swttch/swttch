@@ -1417,6 +1417,35 @@ describe('ConnectionManager', () => {
       expect(cm.getRevealTarget()).toEqual({ kind: 'jcef', panelId: 'panel-1' });
     });
 
+    it('sends to the view that was focused last, not to the one that connected last', () => {
+      const { older, newer } = twoViews();
+
+      cm.setLastFocusedPanelId('panel-1', older);
+      expect(cm.getConnectionIdByPanelId('panel-1')).toBe(older);
+
+      cm.setLastFocusedPanelId('panel-1', newer);
+      expect(cm.getConnectionIdByPanelId('panel-1')).toBe(newer);
+    });
+
+    it('falls back to the other view after the focused one closes', () => {
+      const { older, newer } = twoViews();
+      cm.setLastFocusedPanelId('panel-1', older);
+
+      cm.removeConnection(older);
+
+      expect(cm.getConnectionIdByPanelId('panel-1')).toBe(newer);
+    });
+
+    it('ignores a focus report from a connection that does not show the panel', () => {
+      const { newer } = twoViews();
+      const elsewhere = cm.addConnection(createMockWs(), ClientEnv.JETBRAINS, 'panel-2');
+
+      cm.setLastFocusedPanelId('panel-1', elsewhere);
+
+      expect(cm.getConnectionIdByPanelId('panel-1')).toBe(newer);
+      expect(cm.getConnectionIdByPanelId('panel-2')).toBe(elsewhere);
+    });
+
     it('delivers a native drop to the view that is left', () => {
       const { olderWs, newer } = twoViews();
       cm.removeConnection(newer);
