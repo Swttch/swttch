@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { EventEmitter } from 'events';
-import { existsSync, mkdtempSync, rmSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { PassThrough } from 'stream';
 import type { ChildProcess } from 'child_process';
 import { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
-import { ensureClaudeProcess } from '../claude-process';
+import { ensureClaudeProcess, removeOwnSessionMcpConfigs, sweepStaleSessionMcpConfigs } from '../claude-process';
 import { Claude } from '../claude';
 
 vi.mock('../cli-auto-update', () => ({ triggerCliAutoUpdate: vi.fn() }));
@@ -66,6 +66,38 @@ it('keeps the config while the CLI runs and removes it when the CLI exits', asyn
   cli.emit('close', 0);
 
   expect(existsSync(file)).toBe(false);
+});
+
+// A backend that shuts down leaves before its CLIs report 'close', so it has to remove the
+// files itself on the way out. Only its own: another backend shares the folder.
+it('removes the configs of its own running CLIs when the backend exits, and no one else\'s', async () => {
+  spawnInTurn(fakeCli());
+  const own = join(home, 'mcp', 'sess-exit.json');
+  const others = join(home, 'mcp', 'sess-of-another-backend.json');
+
+  await start(new ConnectionManager(true), 'sess-exit');
+  writeFileSync(others, '{}');
+  removeOwnSessionMcpConfigs();
+
+  expect(existsSync(own)).toBe(false);
+  expect(existsSync(others)).toBe(true);
+});
+
+// Windows ends a backend without running any of its code, so its files stay until swept.
+it('sweeps configs older than a week and keeps the rest', () => {
+  const dir = join(home, 'mcp');
+  mkdirSync(dir, { recursive: true });
+  const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
+  for (const name of ['old.json', 'recent.json', 'not-a-config.txt']) writeFileSync(join(dir, name), '{}');
+  for (const name of ['old.json', 'not-a-config.txt']) utimesSync(join(dir, name), eightDaysAgo, eightDaysAgo);
+
+  sweepStaleSessionMcpConfigs();
+
+  expect(readdirSync(dir).sort()).toEqual(['not-a-config.txt', 'recent.json']);
+});
+
+it('sweeps nothing and does not fail when no config was ever written', () => {
+  expect(() => sweepStaleSessionMcpConfigs()).not.toThrow();
 });
 
 // A restart does not wait for 'close' when the old process has already exited, so the old CLI's

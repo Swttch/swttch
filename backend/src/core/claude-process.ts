@@ -1,5 +1,5 @@
 import type { ChildProcess } from 'child_process';
-import { mkdirSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { ccgHomeDir } from '../config/ccg-home';
 import type { ConnectionManager } from '../ws/connection-manager';
@@ -603,8 +603,7 @@ function writeSessionMcpConfig(
 
 /**
  * Removes a session's MCP config once the CLI it was written for is gone, so the folder does not
- * grow by a file for every session ever opened. A backend that dies hard leaves its files
- * behind; the next spawn of the same session writes over them.
+ * grow by a file for every session ever opened.
  */
 function removeSessionMcpConfig(inherited: NodeJS.ProcessEnv, sessionId: string): void {
   try {
@@ -617,6 +616,37 @@ function removeSessionMcpConfig(inherited: NodeJS.ProcessEnv, sessionId: string)
 
 // Which spawn of a session was handed its MCP config last, so only that one removes the file.
 const sessionMcpOwners = new Map<string, symbol>();
+
+/**
+ * Removes the configs of the CLIs this backend still holds. For the process 'exit' hook: a
+ * backend that shuts down leaves before those CLIs report 'close', so nothing else would.
+ * Synchronous, because an 'exit' handler cannot await.
+ */
+export function removeOwnSessionMcpConfigs(): void {
+  for (const sessionId of sessionMcpOwners.keys()) removeSessionMcpConfig(process.env, sessionId);
+  sessionMcpOwners.clear();
+}
+
+const STALE_SESSION_MCP_CONFIG_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * Removes configs no backend came back for. Windows ends a backend without running any of its
+ * code (the plugin's `destroy()` is TerminateProcess there), as a hard kill does everywhere.
+ * Judged by age alone: every spawn rewrites the file and the CLI reads it as it starts.
+ */
+export function sweepStaleSessionMcpConfigs(): void {
+  const dir = resolve(ccgHomeDir(), 'mcp');
+  try {
+    if (!existsSync(dir)) return;
+    for (const name of readdirSync(dir)) {
+      if (!name.endsWith('.json')) continue;
+      const file = resolve(dir, name);
+      if (Date.now() - statSync(file).mtimeMs > STALE_SESSION_MCP_CONFIG_MS) rmSync(file, { force: true });
+    }
+  } catch (err) {
+    console.error('[node-backend]', 'Session MCP config sweep failed:', err);
+  }
+}
 
 // result 이벤트 수신 여부 추적 (비정상 종료 시 에러 전파 판단용)
 const sessionsWithResult = new Set<string>();
