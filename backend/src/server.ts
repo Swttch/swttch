@@ -45,7 +45,7 @@ import { startHostLivenessWatchdog } from './core/host-liveness';
 import { createLifecycleJournal } from './logging/lifecycle-journal';
 import { ClientEnv, MessageType, parseEditHistoryCommand, parseEmacsTextKeyPress } from './shared';
 import type { NativeDropEntry } from './core/types';
-import { drainMcpContainerReclaims } from './core/mcp-container-reclaimer';
+import { drainMcpContainerReclaims, reclaimLiveMcpContainers } from './core/mcp-container-reclaimer';
 import { removeOwnSessionMcpConfigs, sweepStaleSessionMcpConfigs } from './core/claude-process';
 
 /**
@@ -766,12 +766,15 @@ async function main() {
     stopSettingsWatcher();
     connections.shutdownAll();
     close();
+    // Not left to each CLI's exit: the plugin allows 1.5 seconds before it kills us.
+    reclaimLiveMcpContainers();
 
     // Let the signalled CLIs actually exit, then let the reclaims their deaths
     // triggered finish, before this process exits out from under them. The order
-    // matters: a reclaim only starts from a CLI's `close`, so draining first
-    // drains nothing and the containers the last live session held are stranded
-    // (#363, observed when the IDE went away and took the backend with it).
+    // matters: the reclaim that sees everything a CLI started begins at its `close`,
+    // so draining first would exit before it had run and strand the containers the
+    // last live session held (#363, observed when the IDE went away and took the
+    // backend with it).
     //
     // Both waits are bounded — shutdown must not hang on a CLI that will not die,
     // and anything missed here is still caught by the next backend's orphan sweep.
