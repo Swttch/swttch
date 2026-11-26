@@ -45,6 +45,35 @@ describe('buildWin32CmdLine', () => {
   it('returns the bare command when there are no args', () => {
     expect(buildWin32CmdLine('claude', [])).toBe('claude');
   });
+
+  // The wrapper hands this whole line to `cmd /d /s /c`, which splits it on spaces before the
+  // program sees it. An argument with a space — a working directory under "C:\Program Files", a
+  // user name with a space — was split into two arguments before it ever arrived (#755). Node
+  // quotes such an argument the same way when it builds a command line, and that is what cmd.exe
+  // and the program's own parser both undo.
+  it('quotes an argument that contains a space, so cmd.exe cannot split it', () => {
+    expect(buildWin32CmdLine('claude', ['--cwd', 'C:\\Program Files\\app']))
+      .toBe('claude --cwd "C:\\Program Files\\app"');
+  });
+
+  it('escapes a quote inside an argument instead of ending the argument there', () => {
+    expect(buildWin32CmdLine('claude', ['--title', 'say "hi"']))
+      .toBe('claude --title "say \\"hi\\""');
+  });
+
+  it('doubles a trailing backslash once the argument is quoted, so it cannot escape the closing quote', () => {
+    expect(buildWin32CmdLine('claude', ['C:\\Program Files\\']))
+      .toBe('claude "C:\\Program Files\\\\"');
+  });
+
+  it('leaves a trailing backslash alone when the argument needs no quotes', () => {
+    expect(buildWin32CmdLine('claude', ['C:\\dir\\'])).toBe('claude C:\\dir\\');
+  });
+
+  it('leaves an argument with no space or quote alone, so plain flags stay byte-identical', () => {
+    expect(buildWin32CmdLine('claude', ['-p', 'hello', '--session-id', 'abc-123']))
+      .toBe('claude -p hello --session-id abc-123');
+  });
 });
 
 // The PowerShell check keeps its answer in module state, so each test loads the module

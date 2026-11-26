@@ -1,4 +1,7 @@
 import type { ChildProcess } from 'child_process';
+import { mkdirSync, writeFileSync } from 'fs';
+import { join } from 'path';
+import { ccgHomeDir } from '../config/ccg-home';
 import type { ConnectionManager } from '../ws/connection-manager';
 import type { Bridge } from '../bridge/bridge-interface';
 import { Claude } from './claude';
@@ -509,6 +512,17 @@ export function buildEntrypointEnv(
  * Optional: `SWTTCH_SESSION_MCP_NODE` (the node to run it with, default `node`) and
  * `SWTTCH_SESSION_MCP_AREAS` (comma-separated area names, default all). Area names that are not
  * plain identifiers are dropped.
+ *
+ * The config reaches the CLI as a FILE PATH, never as inline JSON. On win32 the chat CLI is
+ * started through cmd.exe (the Job Object wrapper, or the `shell: true` fallback), which hands
+ * the command line over as one string and strips the JSON's double quotes — the CLI then reads
+ * `{mcpServers:{...}}` as a relative path and exits with `MCP config file not found` (#755).
+ * Quoting the JSON does not help either, because cmd.exe has no backslash escaping and `\"`
+ * reaches the CLI as a literal backslash-quote pair. A path needs no quoting at all, so the
+ * same argument works on every platform.
+ *
+ * The file is rewritten on each spawn: the setting is the user's, and a change must apply to
+ * the next CLI without restarting this backend.
  */
 /**
  * The other way in: the user installed `@swttch/session-manager-mcp` from Settings > About >
@@ -545,7 +559,28 @@ export function buildSessionMcpArgs(
       env,
     };
   }
-  return ['--mcp-config', JSON.stringify({ mcpServers })];
+  return ['--mcp-config', writeSessionMcpConfig(inherited, sessionId, { mcpServers })];
+}
+
+/**
+ * Writes this session's MCP config and returns the path handed to `--mcp-config`.
+ *
+ * Under `CCG_HOME/mcp/<sessionId>.json` — the folder that already holds every other file this
+ * backend keeps for the user, so a host that moves `CCG_HOME` moves this with it. A file per
+ * session, because two sessions of the same backend write different `SWTTCH_SESSION_ID`s and
+ * two IDEs of the same user write different configs; one shared file would let them overwrite
+ * each other while a CLI was starting.
+ */
+function writeSessionMcpConfig(
+  inherited: NodeJS.ProcessEnv,
+  sessionId: string,
+  config: Record<string, unknown>,
+): string {
+  const dir = join(ccgHomeDir(inherited), 'mcp');
+  const file = join(dir, `${sessionId}.json`);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(file, JSON.stringify(config), 'utf8');
+  return file;
 }
 
 // result 이벤트 수신 여부 추적 (비정상 종료 시 에러 전파 판단용)

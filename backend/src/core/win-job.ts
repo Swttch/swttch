@@ -18,13 +18,36 @@ import { fileURLToPath } from 'url';
  */
 
 /**
- * The exact `cmd /d /s /c "<...>"` payload. Mirrors Node's own win32 shell:true
- * construction: command + args joined by spaces with NO per-arg re-quoting, wrapped
- * as a single verbatim string by the wrapper. Reproducing that byte-for-byte keeps
- * the CLI's argv identical to the pre-job spawn (chat args are simple tokens).
+ * Quote one argument for the `cmd /d /s /c` line, by the rules CommandLineToArgvW — what the
+ * program on the other side actually uses to split its argv — applies.
+ *
+ * The wrapper hands the whole line to cmd.exe as a single string, and cmd.exe splits it on
+ * spaces before any program sees it. An argument containing a space was therefore split into
+ * two (#755: a working directory under `C:\Program Files`, a user name with a space). Node
+ * quotes such an argument the same way when it builds a command line, and that quoting is what
+ * the receiving parser undoes.
+ *
+ * Rules, as Node's own `quote` implements them: an argument with neither a space nor a quote is
+ * passed through untouched, so plain flags stay byte-identical; otherwise it is wrapped in
+ * quotes, a backslash that precedes a quote is doubled, and a run of backslashes at the very end
+ * is doubled so it cannot escape the closing quote.
+ *
+ * JSON is deliberately NOT put on this line (see `buildSessionMcpArgs`): cmd.exe strips the
+ * JSON's quotes, and there is no form of quoting that survives, because cmd.exe has no
+ * backslash escaping — `\"` arrives as a literal backslash-quote pair.
+ */
+export function quoteWin32Arg(value: string): string {
+  if (value.length > 0 && !/[\s"]/.test(value)) return value;
+  return '"' + value.replace(/(\\*)"/g, (_, slashes: string) => slashes + slashes + '\\"')
+    .replace(/(\\+)$/, (_, slashes: string) => slashes + slashes) + '"';
+}
+
+/**
+ * The exact `cmd /d /s /c "<...>"` payload: every argument quoted for cmd.exe, joined by
+ * spaces, wrapped as a single verbatim string by the wrapper.
  */
 export function buildWin32CmdLine(command: string, args: string[]): string {
-  return [command, ...args].join(' ');
+  return [command, ...args].map(quoteWin32Arg).join(' ');
 }
 
 /** Absolute path to the shipped wrapper, resolved next to the running bundle. */
