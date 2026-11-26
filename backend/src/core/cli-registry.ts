@@ -49,12 +49,24 @@ export interface CliRegistryEntry {
    */
   mcpContainers?: string[];
   /**
+   * What this CLI could have started: the `docker run` MCP servers it was spawned with and the
+   * containers that existed before it. Another CLI's reclaim reads it so that it leaves alone
+   * anything this one may be using. Absent when there is no such server.
+   */
+  mcpWatch?: CliMcpWatch;
+  /**
    * How to reach the backend that holds this CLI: its port and the token its /internal/* routes
    * ask for. Lets another program on this machine (the session-management MCP) act on the
    * session through that backend. Absent while the backend has no server listening. The file is
    * written readable by the user only, since the token is a secret.
    */
   control?: { port: number; token: string };
+}
+
+export interface CliMcpWatch {
+  servers: Array<{ image: string; command: string }>;
+  /** Null when docker could not list them, which rules nothing out. */
+  existing: string[] | null;
 }
 
 function registryDir(): string {
@@ -104,7 +116,7 @@ function processArgs(pid: number): string | null {
   }
 }
 
-function pidAlive(pid: number): boolean {
+export function pidAlive(pid: number): boolean {
   try {
     process.kill(pid, 0);
     return true;
@@ -230,6 +242,18 @@ export function recordCliContainers(pid: number | undefined, ids: string[]): voi
   }
 }
 
+/** Write what a registered CLI could have started onto its entry. A no-op without an entry. */
+export function recordCliMcpWatch(pid: number | undefined, mcpWatch: CliMcpWatch): void {
+  if (!pid) return;
+  const file = join(registryDir(), `${pid}.json`);
+  try {
+    const entry = JSON.parse(readFileSync(file, 'utf-8')) as CliRegistryEntry;
+    writeFileSync(file, JSON.stringify({ ...entry, mcpWatch }, null, 2) + '\n');
+  } catch {
+    // No entry (unregistered CLI) or a racing removal — nothing to attach to.
+  }
+}
+
 export function unregisterCliProcess(pid: number | undefined): void {
   if (!pid) return;
   try {
@@ -239,7 +263,11 @@ export function unregisterCliProcess(pid: number | undefined): void {
   }
 }
 
-function readEntries(): CliRegistryEntry[] {
+/**
+ * Every readable entry, from this backend and any other. An unreadable one is dropped, unless
+ * [keepUnreadable]: a caller that only looks must not delete a file another backend is writing.
+ */
+export function readCliEntries({ keepUnreadable = false } = {}): CliRegistryEntry[] {
   let files: string[];
   try {
     files = readdirSync(registryDir()).filter((f) => f.endsWith('.json'));
@@ -253,10 +281,10 @@ function readEntries(): CliRegistryEntry[] {
       if (Number.isInteger(parsed.pid) && parsed.pid > 1 && typeof parsed.sessionId === 'string' && parsed.owner) {
         entries.push(parsed);
       } else {
-        rmSync(join(registryDir(), file), { force: true });
+        if (!keepUnreadable) rmSync(join(registryDir(), file), { force: true });
       }
     } catch {
-      rmSync(join(registryDir(), file), { force: true }); // Corrupt entry — drop it
+      if (!keepUnreadable) rmSync(join(registryDir(), file), { force: true }); // Corrupt entry — drop it
     }
   }
   return entries;
@@ -312,7 +340,7 @@ export interface CliConflict {
  * Cleans up dead entries it encounters along the way.
  */
 export function findLiveCliForSession(sessionId: string): CliConflict | null {
-  for (const entry of readEntries()) {
+  for (const entry of readCliEntries()) {
     if (entry.sessionId !== sessionId) continue;
     const state = cliState(entry);
     if (state === 'dead') {
@@ -368,7 +396,7 @@ export async function sweepOrphanCliProcesses(): Promise<{
   let killed = 0;
   let skipped = 0;
   const mcpContainers: string[] = [];
-  for (const entry of readEntries()) {
+  for (const entry of readCliEntries()) {
     const state = cliState(entry);
     if (state === 'dead') {
       // The CLI is gone, so whatever it started is unreachable — collect it even

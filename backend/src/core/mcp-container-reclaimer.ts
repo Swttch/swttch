@@ -39,6 +39,19 @@
  * still has to match a configured server's image AND its exact `run` arguments to
  * be touched.
  *
+ * ## Whose a container is
+ *
+ * The window alone does not say. A CLI that started later has its containers inside an
+ * earlier CLI's window too, and removing "everything new" took the running chats'
+ * containers with it. Every chat CLI writes what it could have started onto its registry
+ * entry, which every backend on this machine reads, and a container another running chat
+ * could have started is removed only when the reclaiming chat saw it appear as it started
+ * and that other chat did not. Otherwise it stays: the last chat that could have started it
+ * removes it as it leaves. Leaving one behind costs memory until then; removing one in use
+ * breaks somebody's tools.
+ *
+ * A `claude` we did not register (one in a terminal) takes no part in this.
+ *
  * Nothing here runs unless the user actually has a `command: "docker"` MCP server
  * configured, so the common case pays nothing at all — not even a `docker` lookup.
  */
@@ -47,7 +60,13 @@ import { promisify } from 'util';
 import { augmentedEnv } from './augmented-path';
 import { consoleSafeExecOptions } from './console-safe';
 import { collectMcpServerConfigs } from './features/mcp-config-files';
-import { recordCliContainers } from './cli-registry';
+import {
+  pidAlive,
+  readCliEntries,
+  recordCliContainers,
+  recordCliMcpWatch,
+  type CliRegistryEntry,
+} from './cli-registry';
 import type { McpServerConfig } from '../shared';
 
 const execFileAsync = promisify(execFile);
@@ -69,8 +88,25 @@ export interface DockerMcpServer {
 /** What was seen before a spawn, carried until the process exits. */
 export interface ContainerSnapshot {
   servers: DockerMcpServer[];
-  /** Container ids that already existed, and are therefore never ours. */
-  existing: Set<string>;
+  /**
+   * Container ids that already existed, and are therefore never ours. Null when docker
+   * could not list them: nothing is reclaimed then, as any container may have predated us.
+   */
+  existing: Set<string> | null;
+  /** When the snapshot was asked for, in epoch milliseconds. */
+  takenAt: number;
+}
+
+/** A container that appeared since a snapshot and matches one of its servers. */
+interface Container {
+  id: string;
+  description: ContainerDescription;
+}
+
+/** What a container was started as. */
+interface ContainerDescription {
+  image: string;
+  command: string;
 }
 
 /**
@@ -136,34 +172,37 @@ export async function snapshotContainers(
   servers: DockerMcpServer[],
 ): Promise<ContainerSnapshot | null> {
   if (servers.length === 0) return null;
+  const takenAt = Date.now();
   try {
     const existing = await listContainerIds(servers);
-    return { servers, existing };
+    return { servers, existing, takenAt };
   } catch (err) {
     console.error('[node-backend]', `MCP container snapshot skipped: ${message(err)}`);
-    return null;
+    return { servers, existing: null, takenAt };
   }
 }
 
 /**
- * Remove the containers that appeared during the window and match one of the
- * configured servers. Returns the ids removed, for the log and for tests.
+ * Remove the containers that appeared during the window, match one of the configured
+ * servers, and are not another running chat's. Returns the ids removed, for the log and for
+ * tests. [owner] is the pid of the process the snapshot was taken for, when there is one.
  *
  * Never throws, for the same reason as the snapshot: this runs inside a process
  * `close` handler that still has a stream to end and errors to report.
  */
 export async function reclaimContainers(
   snapshot: ContainerSnapshot | null,
+  owner?: number,
 ): Promise<string[]> {
   if (!snapshot) return [];
   try {
-    const appeared = await appearedSinceSnapshot(snapshot);
+    const appeared = removableBy(await appearedSinceSnapshot(snapshot), owner, snapshot.takenAt);
     if (appeared.length === 0) return [];
 
     // All at once: shutdown has a second or so for this before whoever started the backend
     // kills it, and one removal never depends on another.
     const outcomes = await Promise.all(
-      appeared.map(async (id) => {
+      appeared.map(async ({ id }) => {
         try {
           await docker(['rm', '-f', id]);
           return id;
@@ -247,7 +286,8 @@ export function attachMcpContainerReclaim(proc: ChildProcess, cwd?: string): voi
     live.delete(proc);
     // After the one shutdown may have started ahead of this, or both remove the same container.
     const turn = entry.ahead ? entry.ahead.then(() => snapshot) : snapshot;
-    reclaimOfProcess.set(proc, startReclaim(turn));
+    reclaimOfProcess.set(proc, startReclaim(turn, proc.pid));
+    if (proc.pid) departing.delete(proc.pid);
   });
 }
 
@@ -260,7 +300,27 @@ export function attachMcpContainerReclaim(proc: ChildProcess, cwd?: string): voi
  * The reclaim attached to each `close` still runs, and picks up anything started since.
  */
 export function reclaimLiveMcpContainers(): void {
-  for (const entry of live.values()) entry.ahead = startReclaim(entry.snapshot);
+  // All of them first: a chat that is being ended must not keep another's containers.
+  for (const proc of live.keys()) if (proc.pid) departing.add(proc.pid);
+  for (const [proc, entry] of live) entry.ahead = startReclaim(entry.snapshot, proc.pid);
+}
+
+/** Pids of the processes a shutting-down backend is ending, until they have closed. */
+const departing = new Set<number>();
+
+/**
+ * Write onto [proc]'s registry entry what it could have started, once its snapshot is in.
+ * Call after the process is registered.
+ */
+export function recordMcpWatch(proc: ChildProcess): void {
+  void live
+    .get(proc)
+    ?.snapshot.then((snapshot) => {
+      if (!snapshot) return;
+      const { servers, existing } = snapshot;
+      recordCliMcpWatch(proc.pid, { servers, existing: existing && [...existing] });
+    })
+    .catch((err) => console.error('[node-backend]', `MCP container watch not recorded: ${message(err)}`));
 }
 
 interface LiveProcess {
@@ -273,9 +333,12 @@ interface LiveProcess {
 /** Spawned processes that have not closed. */
 const live = new Map<ChildProcess, LiveProcess>();
 
-function startReclaim(snapshot: Promise<ContainerSnapshot | null>): Promise<unknown> {
+function startReclaim(
+  snapshot: Promise<ContainerSnapshot | null>,
+  owner: number | undefined,
+): Promise<unknown> {
   const running: Promise<unknown> = snapshot
-    .then(reclaimContainers)
+    .then((taken) => reclaimContainers(taken, owner))
     .catch((err) => console.error('[node-backend]', `MCP container reclaim failed: ${message(err)}`))
     .finally(() => inFlight.delete(running));
   inFlight.add(running);
@@ -329,7 +392,7 @@ async function noteContainersForCrashRecovery(
     if (proc.exitCode !== null || proc.signalCode !== null) return;
     try {
       const appeared = await appearedSinceSnapshot(snapshot);
-      recordCliContainers(proc.pid, appeared);
+      recordCliContainers(proc.pid, appeared.map(({ id }) => id));
     } catch (err) {
       console.error('[node-backend]', `MCP container note skipped: ${message(err)}`);
       return;
@@ -366,15 +429,47 @@ export async function drainMcpContainerReclaims(timeoutMs = 4_000): Promise<void
  * configures rather than something the user launched from the same image by
  * hand. Neither alone is identity, which is why nothing acts on one of them.
  */
-async function appearedSinceSnapshot(snapshot: ContainerSnapshot): Promise<string[]> {
-  const now = await listContainerIds(snapshot.servers);
-  const fresh = [...now].filter((id) => !snapshot.existing.has(id));
-  const matches = await Promise.all(fresh.map((id) => matchesConfiguredCommand(id, snapshot.servers)));
-  return fresh.filter((_, i) => matches[i]);
+async function appearedSinceSnapshot(snapshot: ContainerSnapshot): Promise<Container[]> {
+  const { existing, servers } = snapshot;
+  if (!existing) return [];
+  const now = await listContainerIds(servers);
+  const fresh = await describeContainers([...now].filter((id) => !existing.has(id)));
+  return fresh.filter(({ description }) => matchesServer(description, servers));
 }
 
 /**
- * Remove containers recorded against CLIs that are now gone (the startup sweep).
+ * Of [found], the containers that may be removed on behalf of [owner] (see "Whose a
+ * container is" above).
+ *
+ * [owner] is a chat when it has a registry entry. Anything else is a short command whose
+ * snapshot was taken at [takenAt]. With neither, nothing a running chat could have started
+ * is removed.
+ */
+function removableBy(found: Container[], owner?: number, takenAt?: number): Container[] {
+  if (found.length === 0) return found;
+  const entries = readCliEntries({ keepUnreadable: true });
+  const own = entries.find((entry) => entry.pid === owner);
+  const others = entries.filter(
+    (entry) => entry.pid !== owner && entry.mcpWatch && !departing.has(entry.pid) && pidAlive(entry.pid),
+  );
+  const saw = (entry: CliRegistryEntry, id: string) => entry.mcpContainers?.includes(id) ?? false;
+
+  return found.filter(({ id, description }) => {
+    const claimants = others.filter(
+      ({ mcpWatch }) =>
+        mcpWatch && !mcpWatch.existing?.includes(id) && matchesServer(description, mcpWatch.servers),
+    );
+    if (claimants.length === 0) return true;
+    if (claimants.some((claimant) => saw(claimant, id))) return false;
+    if (own) return saw(own, id);
+    // A short command: what appeared while it ran is its own, unless a chat started meanwhile.
+    return takenAt !== undefined && claimants.every((claimant) => Date.parse(claimant.startedAt) < takenAt);
+  });
+}
+
+/**
+ * Remove containers recorded against CLIs that are now gone (the startup sweep), except
+ * those a running chat of another backend could have started.
  *
  * Removal is by id alone because each id was only recorded after it matched a
  * configured server inside its CLI's own window; Docker ids are not reused, so
@@ -382,7 +477,8 @@ async function appearedSinceSnapshot(snapshot: ContainerSnapshot): Promise<strin
  */
 export async function removeContainersById(ids: string[]): Promise<string[]> {
   const removed: string[] = [];
-  for (const id of ids) {
+  // One docker cannot describe is already gone, or cannot be shown to be nobody's.
+  for (const { id } of removableBy(await describeContainers(ids))) {
     try {
       await docker(['rm', '-f', id]);
       removed.push(id);
@@ -412,6 +508,30 @@ async function listContainerIds(servers: DockerMcpServer[]): Promise<Set<string>
 }
 
 /**
+ * What each of [ids] was started as. One that went away between being listed and being
+ * inspected is left out — a short-lived server exiting on its own is exactly that, and it
+ * is no reason to abandon the other candidates. Letting it throw once aborted the whole
+ * reclaim for a CLI, so one vanished container stranded every other one (observed once in
+ * real use, `docker inspect ... No such object`).
+ */
+async function describeContainers(ids: string[]): Promise<Container[]> {
+  const found = await Promise.all(
+    ids.map(async (id) => {
+      try {
+        const { stdout } = await docker([
+          'inspect', id, '--format', '{{.Config.Image}}\t{{join .Config.Cmd " "}}',
+        ]);
+        const [image, command = ''] = stdout.trim().split('\t');
+        return { id, description: { image, command: command.trim() } };
+      } catch {
+        return null;
+      }
+    }),
+  );
+  return found.filter((container): container is Container => container !== null);
+}
+
+/**
  * Whether a container was started with the image AND the command one of the
  * configured servers specifies.
  *
@@ -419,22 +539,11 @@ async function listContainerIds(servers: DockerMcpServer[]): Promise<Set<string>
  * MCP image by hand would look identical, and the point of this check is that
  * their container is not ours to remove.
  */
-async function matchesConfiguredCommand(id: string, servers: DockerMcpServer[]): Promise<boolean> {
-  let stdout: string;
-  try {
-    ({ stdout } = await docker([
-      'inspect', id, '--format', '{{.Config.Image}}\t{{join .Config.Cmd " "}}',
-    ]));
-  } catch {
-    // The container went away between listing it and inspecting it — a short-lived
-    // server exiting on its own is exactly that. Not a match, and specifically not
-    // a reason to abandon the other candidates: letting this throw aborted the whole
-    // reclaim for that CLI, so one vanished container stranded every other one.
-    // Observed once in real use (`docker inspect ... No such object`).
-    return false;
-  }
-  const [image, command = ''] = stdout.trim().split('\t');
-  return servers.some((s) => s.image === image && s.command === command.trim());
+function matchesServer(
+  { image, command }: ContainerDescription,
+  servers: ContainerDescription[],
+): boolean {
+  return servers.some((server) => server.image === image && server.command === command);
 }
 
 function docker(args: string[]): Promise<{ stdout: string; stderr: string }> {
