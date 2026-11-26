@@ -92,7 +92,7 @@ describe('ContextWindowTag display (#328)', () => {
 
     it('lets the box grow with the display switch, up to the window width', async () => {
       const box = (await screen.findByRole('radiogroup')).closest('.shadow-lg');
-      expect(box).toHaveClass('w-max', 'max-w-[calc(100vw/var(--ui-zoom,1)-1rem)]');
+      expect(box).toHaveClass('w-max', 'max-w-[calc(100vw-1rem)]');
       expect(box).not.toHaveClass('max-w-[260px]');
     });
 

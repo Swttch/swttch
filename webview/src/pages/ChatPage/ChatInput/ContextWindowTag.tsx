@@ -42,11 +42,11 @@ function Donut({ percent }: { percent: number }) {
 }
 
 // The box is as wide as its widest part, so the display switch never sticks out of it whatever
-// the language or font size (#736). Only the window's own width stops it growing; the width is
-// divided by the UI zoom because the zoom scales a viewport unit too. Korean wraps between words
-// only; Japanese and Chinese keep the default, as their sentences have no spaces to wrap at.
+// the language or font size (#736). Only the window's own width stops it growing (the UI zoom is
+// taken out of `vw` by postcss-viewport-zoom.js). Korean wraps between words only; Japanese and
+// Chinese keep the default, as their sentences have no spaces to wrap at.
 const TOOLTIP_CLASS =
-  'bg-surface-overlay border border-border-default rounded-md px-3 py-2 text-xs text-text-primary shadow-lg w-max max-w-[calc(100vw/var(--ui-zoom,1)-1rem)] [&:lang(ko)]:break-keep';
+  'bg-surface-overlay border border-border-default rounded-md px-3 py-2 text-xs text-text-primary shadow-lg w-max max-w-[calc(100vw-1rem)] [&:lang(ko)]:break-keep';
 
 // The sentences do not widen the box past 260px (minus its padding and border): they wrap there,
 // and fill the box when the switch below has made it wider.
