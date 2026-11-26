@@ -44,6 +44,15 @@ vi.mock('./profile', () => ({
   ConsentStatus: { PENDING: 'pending', ACCEPTED: 'accepted', DENIED: 'denied' },
 }));
 
+// getVersion도 hoisted mock이다. 테스트마다 doUnmock과 doMock을 반복하면 직전 테스트의 unmock과
+// 다음 테스트의 mock이 다음 import에서 함께 처리되는데, Vitest는 둘을 병렬로 resolve해서 순서를
+// 보장하지 않는다. unmock이 늦게 끝나면 mock이 지워져 실제 모듈이 로드되고, pluginVer에 실제
+// 버전이 찍힌다(윈도우에서 산발 실패).
+vi.mock('../handlers/getVersion', () => ({
+  getPluginVersion: () => '0.0.0-test',
+  getCliVersion: async () => '1.0.0',
+}));
+
 // 동의 상태별 전송 게이팅 검증. profile/settings/version을 주입한 뒤 telemetry 모듈을
 // 동적 import하여(모듈 로드 시 API key를 const로 고정하므로) fetch 호출 여부를 본다.
 // trackEvent/trackError는 fire-and-forget(void)이라 flushTelemetry()로 결정적으로 기다린다.
@@ -65,13 +74,6 @@ const pending: TestProfile = {
   uuid: 'test-uuid',
   telemetryConsent: { status: 'pending', decidedAt: null },
 };
-
-function mockCommonDeps() {
-  vi.doMock('../handlers/getVersion', () => ({
-    getPluginVersion: () => '0.0.0-test',
-    getCliVersion: async () => '1.0.0',
-  }));
-}
 
 /** 직전 테스트가 로드한 telemetry 모듈. resetModules 전에 비워내기 위해 붙잡아 둔다. */
 let loadedTelemetry: typeof import('./telemetry') | null = null;
@@ -96,7 +98,6 @@ async function loadTelemetry(
   envHolder.apiKey = apiKey;
   // profile은 hoisted mock이라 붙였다 떼지 않는다 — 값만 갈아끼운다(상단 mock 주석 참고).
   profileHolder.current = profile;
-  mockCommonDeps();
   const fetchMock = vi.fn(fetchImpl ?? (async () => ({ ok: true, status: 200, body: '' })));
   proxiedRequest.mockImplementation(fetchMock as never);
   const mod = await import('./telemetry');
@@ -112,7 +113,7 @@ async function loadTelemetry(
 
 /**
  * 그 테스트가 띄운 전송을 비운 뒤에 mock/stub을 걷는다. 각 describe의 afterEach는 이
- * 함수 하나만 부른다 — 드레인과 unmock의 **순서**가 이 테스트의 결정성을 좌우하기 때문이다.
+ * 함수 하나만 부른다 — 드레인과 걷기의 **순서**가 이 테스트의 결정성을 좌우하기 때문이다.
  *
  * vitest는 describe의 afterEach를 파일 최상위 afterEach보다 **먼저** 실행한다(실측). 그래서
  * 드레인을 파일 최상위에 두고 언스텁을 describe에 두면 순서가 뒤집힌다 — 아직 살아 있는
@@ -120,7 +121,7 @@ async function loadTelemetry(
  * "PENDING인데 1번 호출됨"으로 산발 실패하던 경로가 이것이다(#192 방어가 이 순서 때문에
  * 무력화됨). 드레인을 언스텁과 같은 훅 안에 두고 앞에 세워 순서를 고정한다.
  */
-async function drainThenUnmock() {
+async function drainThenReset() {
   if (loadedTelemetry) await loadedTelemetry.flushTelemetry();
   vi.unstubAllGlobals();
   // 전송이 전역 fetch가 아니라 proxiedRequest로 나가므로 `unstubAllGlobals`가 걷어주지
@@ -131,11 +132,10 @@ async function drainThenUnmock() {
   // 터지는 것까지 막기 위해서다.
   proxiedRequest.mockReset();
   proxiedRequest.mockResolvedValue({ ok: true, status: 200, body: '' });
-  vi.doUnmock('../handlers/getVersion');
 }
 
 describe('telemetry consent gating', () => {
-  afterEach(drainThenUnmock);
+  afterEach(drainThenReset);
 
   it('ACCEPTED + API key면 전송한다', async () => {
     const { trackEvent, fetchMock, flushTelemetry } = await loadTelemetry(accepted, 'test-key');
@@ -222,7 +222,7 @@ describe('telemetry consent gating', () => {
 });
 
 describe('trackActivity (활동 단일 진입점)', () => {
-  afterEach(drainThenUnmock);
+  afterEach(drainThenReset);
 
   it("event_name='activity:<메시지 타입>' 형태로 전송한다", async () => {
     const { trackActivity, fetchMock, flushTelemetry } = await loadTelemetry(accepted, 'test-key');

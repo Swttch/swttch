@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ merged: vi.fn(), installation: vi.fn(), reset: vi.fn(), exists: vi.fn(), read: vi.fn() }));
@@ -9,6 +10,8 @@ vi.mock('node:fs', () => ({ existsSync: mocks.exists }));
 vi.mock('node:fs/promises', () => ({ readFile: mocks.read }));
 
 const root = '/g/node_modules';
+// Joined the way the resolver joins it, so the separators are the ones of the OS the test runs on.
+const installedEntry = join(root, '@swttch/session-manager-mcp', 'src/cli.js');
 beforeEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
@@ -39,7 +42,7 @@ describe('resolveInstalledSessionMcp', () => {
     mocks.merged.mockResolvedValue({ settings: {} });
     const { resolveInstalledSessionMcp } = await load();
     expect(await resolveInstalledSessionMcp('/p')).toEqual({
-      entry: '/g/node_modules/@swttch/session-manager-mcp/src/cli.js',
+      entry: installedEntry,
       areas: ['session_mgmt', 'session'],
     });
   });
@@ -64,7 +67,7 @@ describe('resolveInstalledSessionMcp', () => {
     mocks.merged.mockResolvedValue({ settings: { sessionMcp: { enabled: true, areas: ['pr', 'session_mgmt'] } } });
     const { resolveInstalledSessionMcp } = await load();
     expect(await resolveInstalledSessionMcp('/p')).toEqual({
-      entry: '/g/node_modules/@swttch/session-manager-mcp/src/cli.js',
+      entry: installedEntry,
       areas: ['session_mgmt', 'pr'],
     });
   });
@@ -146,7 +149,7 @@ describe('a package installed in a terminal while the backend is running', () =>
     expect(await resolveInstalledSessionMcp('/p')).toBeNull();
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(await resolveInstalledSessionMcp('/p')).toEqual({
-      entry: '/g/node_modules/@swttch/session-manager-mcp/src/cli.js',
+      entry: installedEntry,
       areas: ['session_mgmt', 'session'],
     });
   });
