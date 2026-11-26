@@ -255,6 +255,36 @@ describe('spawnWin32JobCli', () => {
     expect(spawnMock).toHaveBeenCalledTimes(1);
     expect(spawnMock).toHaveBeenCalledWith('claude', ['-p', 'hello'], expect.objectContaining({ shell: true }));
   });
+
+  // With `shell: true` Node joins the command and the arguments with spaces and quotes nothing,
+  // then hands the line to `cmd /d /s /c`. Both fallbacks therefore need the quoting the wrapper
+  // path gets, or a user folder with a space splits the config path there too (#755).
+  const spaced = ['--mcp-config', 'C:\\Users\\Li Mu\\.claude-code-gui\\mcp\\s.json'];
+  const quoted = ['--mcp-config', '"C:\\Users\\Li Mu\\.claude-code-gui\\mcp\\s.json"'];
+
+  it('quotes the arguments of the fallback taken when PowerShell is blocked', async () => {
+    const { checkPowerShell, spawnWin32JobCli } = await loadWinJob();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    spawnMock.mockImplementationOnce(() => {
+      throw Object.assign(new Error('spawn UNKNOWN'), { code: 'UNKNOWN' });
+    });
+    await checkPowerShell();
+    spawnMock.mockClear();
+
+    spawnWin32JobCli('claude', spaced, 'session-1', options);
+
+    expect(spawnMock).toHaveBeenCalledWith('claude', quoted, expect.objectContaining({ shell: true }));
+  });
+
+  it('quotes the arguments of the fallback taken when the wrapper is missing', async () => {
+    const { spawnWin32JobCli } = await loadWinJob();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(existsSync).mockReturnValue(false);
+
+    spawnWin32JobCli('claude', spaced, 'session-1', options);
+
+    expect(spawnMock).toHaveBeenCalledWith('claude', quoted, expect.objectContaining({ shell: true }));
+  });
 });
 
 describe('toMsysPath', () => {

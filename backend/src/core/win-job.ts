@@ -167,12 +167,16 @@ export function spawnWin32JobCli(
 ): ChildProcess {
   const cmdline = buildWin32CmdLine(command, args);
   const wrapper = jobWrapperPath();
+  // Node joins these with spaces and quotes nothing, so the arguments are quoted here and the
+  // line cmd.exe receives is the same one the wrapper would have run.
+  const spawnWithoutJob = () =>
+    cpSpawn(command, args.map(quoteWin32Arg), { ...consoleSafeExecOptions(options), shell: true });
   if (!existsSync(wrapper)) {
     console.error('[node-backend]', `Job wrapper not found at ${wrapper} — spawning without a job (orphan guard degraded)`);
-    return cpSpawn(command, args, { ...consoleSafeExecOptions(options), shell: true });
+    return spawnWithoutJob();
   }
   if (!powerShellUsable) {
-    return cpSpawn(command, args, { ...consoleSafeExecOptions(options), shell: true });
+    return spawnWithoutJob();
   }
   return cpSpawn(
     'powershell.exe',
