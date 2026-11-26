@@ -7,11 +7,10 @@ import { buildSessionMcpArgs } from '../claude-process';
 /**
  * The config reaches the CLI as a file path, never as inline JSON.
  *
- * On win32 the chat CLI is started through cmd.exe, which takes the command line as one string
- * and strips the JSON's double quotes (`{mcpServers:{...}}`), and quoting the JSON does not help
- * because cmd.exe has no backslash escaping. The CLI then reads that as a relative path and
- * exits with `MCP config file not found` — every message failed (#755). A path carries no quotes
- * for cmd.exe to strip, so it is the one form that survives every platform's spawn path.
+ * On win32 the chat CLI is started through cmd.exe with the whole command line as one string.
+ * The JSON's unescaped double quotes were consumed when that line was split back into arguments,
+ * so the CLI read `{mcpServers:{...}}` as a relative path and exited with `MCP config file not
+ * found`: every message failed (#755). A path holds no quotes of its own to lose.
  */
 
 // An isolated CCG_HOME per suite: the config file is written for real, and a test must never
@@ -45,7 +44,7 @@ describe('buildSessionMcpArgs', () => {
     const args = buildSessionMcpArgs(env(), 'sess-1');
     expect(args[0]).toBe('--mcp-config');
     expect(args).toHaveLength(2);
-    // The defect: JSON on the command line is what cmd.exe tears apart.
+    // The defect: JSON on the command line lost its quotes on the way to the CLI.
     expect(args[1]).not.toContain('{');
     expect(args[1]).not.toContain('"');
     expect(args[1].endsWith('.json')).toBe(true);
@@ -113,8 +112,7 @@ describe('buildSessionMcpArgs', () => {
   // default folder.
   it('follows CCG_HOME', () => {
     const [, file] = buildSessionMcpArgs(env(), 'sess-home');
-    expect(file.startsWith(home)).toBe(true);
-    expect(file).toContain('mcp');
+    expect(file).toBe(join(home, 'mcp', 'sess-home.json'));
   });
 
   it('hands over an absolute path when CCG_HOME is relative, since the CLI starts in the project folder', () => {

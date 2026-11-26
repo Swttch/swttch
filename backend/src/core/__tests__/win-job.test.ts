@@ -58,14 +58,13 @@ describe('buildWin32CmdLine', () => {
     expect(buildWin32CmdLine('wsl claude', ['-p'])).toBe('wsl claude -p');
   });
 
-  // The wrapper hands this whole line to `cmd /d /s /c`, which splits it on spaces before the
-  // program sees it. An argument with a space — a working directory under "C:\Program Files", a
-  // user name with a space — was split into two arguments before it ever arrived (#755). Node
-  // quotes such an argument the same way when it builds a command line, and that is what cmd.exe
-  // and the program's own parser both undo.
-  it('quotes an argument that contains a space, so cmd.exe cannot split it', () => {
-    expect(buildWin32CmdLine('claude', ['--cwd', 'C:\\Program Files\\app']))
-      .toBe('claude --cwd "C:\\Program Files\\app"');
+  // The wrapper hands this whole line to `cmd /d /s /c`, and the program splits it back into
+  // arguments on spaces. An argument with a space, such as the `--mcp-config` path under a user
+  // folder with a space in its name, would arrive as two (#755). The working directory is not
+  // on this line: it is passed to the spawn as `cwd`.
+  it('quotes an argument that contains a space, so it arrives as one', () => {
+    expect(buildWin32CmdLine('claude', ['--mcp-config', 'C:\\Users\\Li Mu\\mcp.json']))
+      .toBe('claude --mcp-config "C:\\Users\\Li Mu\\mcp.json"');
   });
 
   it('escapes a quote inside an argument instead of ending the argument there', () => {

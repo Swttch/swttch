@@ -514,12 +514,12 @@ export function buildEntrypointEnv(
  * plain identifiers are dropped.
  *
  * The config reaches the CLI as a FILE PATH, never as inline JSON. On win32 the chat CLI is
- * started through cmd.exe (the Job Object wrapper, or the `shell: true` fallback), which hands
- * the command line over as one string and strips the JSON's double quotes — the CLI then reads
- * `{mcpServers:{...}}` as a relative path and exits with `MCP config file not found` (#755).
- * Quoting the JSON does not help either, because cmd.exe has no backslash escaping and `\"`
- * reaches the CLI as a literal backslash-quote pair. A path needs no quoting at all, so the
- * same argument works on every platform.
+ * started through cmd.exe (the Job Object wrapper, or the `shell: true` fallback) with the whole
+ * command line as one string. The JSON's unescaped double quotes were consumed when that line
+ * was split back into arguments, so the CLI read `{mcpServers:{...}}` as a relative path and
+ * exited with `MCP config file not found` (#755). Inline JSON would have to be escaped for both
+ * cmd.exe and the program's own parser; a path only needs the quotes any argument with a space
+ * gets, and the same argument works on every platform.
  *
  * The file is rewritten on each spawn: the setting is the user's, and a change must apply to
  * the next CLI without restarting this backend.
