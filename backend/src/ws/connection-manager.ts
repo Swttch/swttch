@@ -245,10 +245,11 @@ export class ConnectionManager {
    * clamp).
    */
   private keepAlive: boolean;
-  // Secondary index for O(1) panelId → connectionId resolution. Panel ↔ connection
-  // is 1:1 (one JCEF browser per IDE panel, one /ws socket per browser), so this
-  // map is always in sync with the panelId stored on each ClientRecord.
-  private panelIdIndex = new Map<string, string>();
+  // Secondary index for O(1) panelId → connection resolution, in sync with the panelId stored
+  // on each ClientRecord. A panelId is NOT unique to one connection: splitting an editor tab shows
+  // the same panel in a second JCEF browser with its own /ws socket (#48), so each entry lists
+  // every live connection of the panel. Panel-scoped pushes go to the last one in the list.
+  private panelIdIndex = new Map<string, string[]>();
   // Editor context awaiting a webview connection. Replayed to the first
   // connection that arrives within PENDING_EDITOR_CONTEXT_TTL_MS, then cleared.
   private pendingEditorContext: PendingEditorContext | null = null;
@@ -286,7 +287,9 @@ export class ConnectionManager {
     const connectionId = `conn-${++this.nextId}-${Date.now()}`;
     this.connectionMap.set(connectionId, ws);
     this.clientMap.set(connectionId, { subscribedSessionId: null, env, panelId, nativeDropStash: null, origin, hiddenSince: null });
-    if (panelId) this.panelIdIndex.set(panelId, connectionId);
+    if (panelId) {
+      this.panelIdIndex.set(panelId, [...(this.panelIdIndex.get(panelId) ?? []), connectionId]);
+    }
     this.cancelIdleShutdown('new connection received');
     console.error(
       '[node-backend]',
@@ -402,7 +405,7 @@ export class ConnectionManager {
   getRevealTarget(): { kind: 'jcef'; panelId: string } | { kind: 'browser' } | { kind: 'none' } {
     const panelId = this.getLastFocusedPanelId();
     if (!panelId) return { kind: 'none' };
-    const connectionId = this.panelIdIndex.get(panelId);
+    const connectionId = this.getConnectionIdByPanelId(panelId);
     const env = connectionId ? this.clientMap.get(connectionId)?.env : undefined;
     if (env === ClientEnv.JETBRAINS) return { kind: 'jcef', panelId };
     if (env === ClientEnv.BROWSER) return { kind: 'browser' };
@@ -420,7 +423,7 @@ export class ConnectionManager {
   routeToFocusedOrBroadcast(type: string, payload: Record<string, unknown> = {}): void {
     const panelId = this.getLastFocusedPanelId();
     if (panelId) {
-      const connectionId = this.panelIdIndex.get(panelId);
+      const connectionId = this.getConnectionIdByPanelId(panelId);
       if (connectionId && this.connectionMap.has(connectionId)) {
         this.sendTo(connectionId, type, payload);
         return;
@@ -430,7 +433,7 @@ export class ConnectionManager {
   }
 
   setNativeDropStash(panelId: string, entries: NativeDropEntry[]): boolean {
-    const connectionId = this.panelIdIndex.get(panelId);
+    const connectionId = this.getConnectionIdByPanelId(panelId);
     if (!connectionId) return false;
     const record = this.clientMap.get(connectionId);
     if (!record) return false;
@@ -461,7 +464,7 @@ export class ConnectionManager {
    * the page's flush replays what CEF left behind.
    */
   deliverNativeDrop(panelId: string, entries: NativeDropEntry[]): boolean {
-    const connectionId = this.panelIdIndex.get(panelId);
+    const connectionId = this.getConnectionIdByPanelId(panelId);
     if (!connectionId) return false;
     const record = this.clientMap.get(connectionId);
     if (!record) return false;
@@ -471,12 +474,12 @@ export class ConnectionManager {
   }
 
   /**
-   * Resolve a panelId (assigned by Kotlin on JCEF browser creation) back to its
-   * webview connection. Panel ↔ connection is 1:1 since each panel hosts one
-   * JCEF browser that opens one /ws socket.
+   * Resolve a panelId (assigned by Kotlin on JCEF browser creation) back to a
+   * webview connection. A split editor tab has several, see [panelIdIndex].
    */
   getConnectionIdByPanelId(panelId: string): string | null {
-    return this.panelIdIndex.get(panelId) ?? null;
+    const connectionIds = this.panelIdIndex.get(panelId);
+    return connectionIds?.[connectionIds.length - 1] ?? null;
   }
 
   /**
@@ -511,7 +514,7 @@ export class ConnectionManager {
   ): { connectionId: string; needsSessionSwitch: boolean } | null {
     const session = this.sessionRegistry.get(sessionId);
     const reservationConn = reservationPanelId
-      ? (this.panelIdIndex.get(reservationPanelId) ?? null)
+      ? this.getConnectionIdByPanelId(reservationPanelId)
       : null;
 
     // 1. Already subscribed to this session (no switch needed).
@@ -535,7 +538,7 @@ export class ConnectionManager {
     // 3. Fall back to the most-recently-focused live tab → switch it.
     const focusedPanelId = this.getLastFocusedPanelId();
     if (focusedPanelId) {
-      const connId = this.panelIdIndex.get(focusedPanelId);
+      const connId = this.getConnectionIdByPanelId(focusedPanelId);
       if (connId && this.connectionMap.has(connId)) {
         return { connectionId: connId, needsSessionSwitch: true };
       }
@@ -606,8 +609,12 @@ export class ConnectionManager {
     this.unsubscribe(connectionId);
     const record = this.clientMap.get(connectionId);
     if (record?.panelId) {
-      this.panelIdIndex.delete(record.panelId);
-      // The panel's connection is gone; prune it (and any other now-stale ids)
+      // Only this connection leaves the index: the panel stays reachable while another of
+      // its views is still open (#753).
+      const remaining = (this.panelIdIndex.get(record.panelId) ?? []).filter((id) => id !== connectionId);
+      if (remaining.length > 0) this.panelIdIndex.set(record.panelId, remaining);
+      else this.panelIdIndex.delete(record.panelId);
+      // If that was the panel's last connection, prune it (and any other now-stale ids)
       // from the focus stack so the top surfaces the next live panel — this is
       // exactly what makes "focus the panel focused before the dead one" work.
       this.pruneDeadFocus();

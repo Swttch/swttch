@@ -1380,6 +1380,63 @@ describe('ConnectionManager', () => {
     });
   });
 
+  // #753: splitting a chat editor tab shows the same panel in a second JCEF browser, which opens its
+  // own socket with the same panelId. Closing either view must leave the other one reachable.
+  describe('one panel shown by two views', () => {
+    function twoViews() {
+      const olderWs = createMockWs();
+      const older = cm.addConnection(olderWs, ClientEnv.JETBRAINS, 'panel-1');
+      const newerWs = createMockWs();
+      const newer = cm.addConnection(newerWs, ClientEnv.JETBRAINS, 'panel-1');
+      return { older, olderWs, newer, newerWs };
+    }
+
+    it('keeps the older view reachable after the newer one closes', () => {
+      const { older, newer } = twoViews();
+
+      cm.removeConnection(newer);
+
+      expect(cm.getConnectionIdByPanelId('panel-1')).toBe(older);
+    });
+
+    it('keeps the newer view reachable after the older one closes', () => {
+      const { older, newer } = twoViews();
+
+      cm.removeConnection(older);
+
+      expect(cm.getConnectionIdByPanelId('panel-1')).toBe(newer);
+    });
+
+    it('keeps the panel focused while one of its views is still open', () => {
+      const { newer } = twoViews();
+      cm.setLastFocusedPanelId('panel-1');
+
+      cm.removeConnection(newer);
+
+      expect(cm.getLastFocusedPanelId()).toBe('panel-1');
+      expect(cm.getRevealTarget()).toEqual({ kind: 'jcef', panelId: 'panel-1' });
+    });
+
+    it('delivers a native drop to the view that is left', () => {
+      const { olderWs, newer } = twoViews();
+      cm.removeConnection(newer);
+
+      expect(cm.deliverNativeDrop('panel-1', [{ path: '/tmp/a.txt', type: 'file' }])).toBe(true);
+      expect(olderWs.send).toHaveBeenCalledTimes(1);
+    });
+
+    it('forgets the panel once its last view closes', () => {
+      const { older, newer } = twoViews();
+      cm.setLastFocusedPanelId('panel-1');
+
+      cm.removeConnection(newer);
+      cm.removeConnection(older);
+
+      expect(cm.getConnectionIdByPanelId('panel-1')).toBeNull();
+      expect(cm.getLastFocusedPanelId()).toBeNull();
+    });
+  });
+
   describe('pickScheduledDeliveryTarget', () => {
     it('1: delivers through a live tab already subscribed to the session (no switch)', () => {
       const conn = cm.addConnection(createMockWs(), ClientEnv.JETBRAINS, 'panel-1');
