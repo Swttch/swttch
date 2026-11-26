@@ -43,11 +43,15 @@ export function quoteWin32Arg(value: string): string {
 }
 
 /**
- * The exact `cmd /d /s /c "<...>"` payload: every argument quoted for cmd.exe, joined by
- * spaces, wrapped as a single verbatim string by the wrapper.
+ * The exact `cmd /d /s /c "<...>"` payload: the command, then every argument quoted for
+ * cmd.exe, joined by spaces, wrapped as a single verbatim string by the wrapper.
+ *
+ * The command is not quoted. It is the user's `cliPath` setting, run as typed: it may already
+ * carry the user's own quotes, or an argument of its own (`wsl claude`), and quoting it again
+ * would stop either from starting.
  */
 export function buildWin32CmdLine(command: string, args: string[]): string {
-  return [command, ...args].map(quoteWin32Arg).join(' ');
+  return [command, ...args.map(quoteWin32Arg)].join(' ');
 }
 
 /** Absolute path to the shipped wrapper, resolved next to the running bundle. */

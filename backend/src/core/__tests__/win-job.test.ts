@@ -46,6 +46,18 @@ describe('buildWin32CmdLine', () => {
     expect(buildWin32CmdLine('claude', [])).toBe('claude');
   });
 
+  // The command is the user's `cliPath` setting, run as typed. Someone with a space in the path
+  // has had to type the quotes themselves, and someone else may have typed a launcher with its
+  // own argument. Quoting it again would stop both from starting.
+  it('leaves a command the user quoted themselves exactly as typed', () => {
+    expect(buildWin32CmdLine('"C:\\Program Files\\claude\\claude.cmd"', ['-p']))
+      .toBe('"C:\\Program Files\\claude\\claude.cmd" -p');
+  });
+
+  it('leaves a command that carries its own argument exactly as typed', () => {
+    expect(buildWin32CmdLine('wsl claude', ['-p'])).toBe('wsl claude -p');
+  });
+
   // The wrapper hands this whole line to `cmd /d /s /c`, which splits it on spaces before the
   // program sees it. An argument with a space — a working directory under "C:\Program Files", a
   // user name with a space — was split into two arguments before it ever arrived (#755). Node
