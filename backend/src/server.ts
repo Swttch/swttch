@@ -730,7 +730,25 @@ async function main() {
   });
   settingsWatcher.startGlobalWatchers();
 
-  async function shutdown(signal: string) {
+  // One teardown, however many reasons arrive for it: a terminal closing delivers SIGHUP
+  // and then reads as a dead parent, and Ctrl+C gets pressed twice. A second run would
+  // find the log already closing and exit before the first had flushed it.
+  let shuttingDown = false;
+
+  function shutdown(signal: string): void {
+    if (shuttingDown) {
+      console.error('[node-backend]', `${signal} received, already shutting down`);
+      return;
+    }
+    shuttingDown = true;
+    // A teardown that throws still ends the process: the guard above would turn every
+    // later signal away.
+    void teardown(signal)
+      .catch((err) => console.error('[node-backend]', 'Shutdown failed part way:', err))
+      .finally(() => process.exit(0));
+  }
+
+  async function teardown(signal: string) {
     // Written before any teardown runs. Whatever the reason turns out to be, the line
     // that names it has to survive the exit that follows, and it carries the evidence the
     // verdict was made on rather than the verdict alone: knowing a backend stopped for
@@ -763,8 +781,6 @@ async function main() {
     // 로그 스트림 flush 대기 (최대 5초)
     const timeoutPromise = new Promise<void>((resolve) => setTimeout(resolve, 5000));
     await Promise.race([getLogger().close(), timeoutPromise]);
-
-    process.exit(0);
   }
 
   process.on('SIGTERM', () => shutdown('SIGTERM'));
@@ -774,6 +790,8 @@ async function main() {
   // backend (pre-fix they died with us for free). Without
   // this handler the process-group isolation itself would mint a new orphan class.
   process.on('SIGHUP', () => shutdown('SIGHUP'));
+  // The zero-connection timeout takes the same path, so it waits for the CLIs too.
+  connections.setIdleShutdownHandler(() => shutdown('idle-timeout'));
 
   // Parent-death watchdog: when the process that spawned this backend dies, the
   // backend exits — in every mode, regardless of any browser/tunnel client.

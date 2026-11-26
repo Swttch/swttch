@@ -39,7 +39,7 @@ describe('start_session through /internal/session-control', () => {
     // What running the CLI leaves behind: a process of this session that takes what is written to it.
     ensure.mockImplementation(async (connections, _connectionId, workingDir, sessionId) => {
       connections.getOrCreateSession(sessionId, workingDir);
-      connections.setProcess(sessionId, { stdin: { writable: true, write: (text: string) => { written.push(text); return true; } } } as never);
+      connections.setProcess(sessionId, { stdin: { writable: true, write: (text: string) => { written.push(text); return true; } }, once: () => {} } as never);
     });
   });
 
@@ -78,7 +78,7 @@ describe('start_session through /internal/session-control', () => {
 
   it('refuses to run a session this backend already holds a process for, so a repeated request does not start it twice', async () => {
     cm.getOrCreateSession('child', '/work');
-    cm.setProcess('child', { stdin: { writable: true, write: () => true } } as never);
+    cm.setProcess('child', { stdin: { writable: true, write: () => true }, once: () => {} } as never);
     expect((await handleSessionControl(cm, body(START), { bridge })).status).toBe(409);
     expect(ensure).not.toHaveBeenCalled();
   });

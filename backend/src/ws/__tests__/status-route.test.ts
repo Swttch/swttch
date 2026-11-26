@@ -56,7 +56,7 @@ describe('handleStatusRequest', () => {
     // snapshot answered `streaming: 1`, so everything downstream — the status
     // card, anyone reading the endpoint during triage — believed a session was
     // in flight. The turn nobody can see is now named for what it is.
-    const proc = { pid: 4242, kill: vi.fn() } as unknown as import('child_process').ChildProcess;
+    const proc = { pid: 4242, kill: vi.fn(), once: vi.fn() } as unknown as import('child_process').ChildProcess;
     const connId = cm.addConnection(createMockWs(), ClientEnv.BROWSER, null, 'http://localhost:63412');
     cm.subscribe(connId, 'sess-1');
     cm.setProcess('sess-1', proc);

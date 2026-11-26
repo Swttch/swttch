@@ -54,7 +54,7 @@ describe('queueMessageHandler', () => {
 
     // A CLI process is already attached to the session (the ordinary case: the
     // turn this follow-up is queued behind is already running).
-    const fakeProc = { stdin: { writable: true, write: vi.fn() } } as any;
+    const fakeProc = { stdin: { writable: true, write: vi.fn() }, once: vi.fn() } as any;
     connections.subscribe(connId, 'sess-1', '/fixture');
     connections.setProcess('sess-1', fakeProc);
 

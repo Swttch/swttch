@@ -241,7 +241,21 @@ export function attachMcpContainerReclaim(proc: ChildProcess, cwd?: string): voi
       .catch((err) => console.error('[node-backend]', `MCP container reclaim failed: ${message(err)}`))
       .finally(() => inFlight.delete(running));
     inFlight.add(running);
+    reclaimOfProcess.set(proc, running);
   });
+}
+
+/** The reclaim each closed process started, for a caller that has to act after it. */
+const reclaimOfProcess = new WeakMap<ChildProcess, Promise<unknown>>();
+
+/**
+ * Settles once the reclaim [proc]'s close started is over, and at once when none was.
+ *
+ * Meaningful from a `close` listener attached after the reclaim's own, which is every
+ * listener a caller of `Claude.spawn` can attach.
+ */
+export async function whenMcpContainersReclaimed(proc: ChildProcess): Promise<void> {
+  await reclaimOfProcess.get(proc);
 }
 
 /**
