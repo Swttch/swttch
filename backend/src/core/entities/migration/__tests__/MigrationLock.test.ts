@@ -1,8 +1,24 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { MigrationLock, MigrationLockTimeoutError, MigrationLockTiming } from '../MigrationLock';
+
+// The error codes the next calls of `open` are refused with, one per call. Empty means
+// every call reaches the real file system.
+const openRefusals = vi.hoisted(() => ({ codes: [] as string[] }));
+
+vi.mock('fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('fs/promises')>();
+  return {
+    ...actual,
+    open: async (...args: Parameters<typeof actual.open>) => {
+      const code = openRefusals.codes.shift();
+      if (code) throw Object.assign(new Error(code), { code });
+      return actual.open(...args);
+    },
+  };
+});
 
 // Short times, so the waiting that is the point of a lock does not slow the suite.
 const QUICK = new MigrationLockTiming(20, 400, 10, 2_000);
@@ -17,7 +33,26 @@ describe('MigrationLock', () => {
   });
 
   afterEach(() => {
+    openRefusals.codes = [];
     rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('takes the lock after Windows refused to create the file for a moment', async () => {
+    // What Windows answers while a lock that was just removed is still being deleted.
+    openRefusals.codes = ['EPERM', 'EPERM'];
+
+    const lock = await MigrationLock.acquire(lockPath, QUICK);
+
+    expect(openRefusals.codes).toEqual([]);
+    expect(readFileSync(lockPath, 'utf-8')).toBe(String(process.pid));
+    await lock.release();
+  });
+
+  it('reports a refusal that does not pass, without waiting for the lock timeout', async () => {
+    openRefusals.codes = Array.from({ length: 20 }, () => 'EPERM');
+
+    await expect(MigrationLock.acquire(lockPath, QUICK)).rejects.toMatchObject({ code: 'EPERM' });
+    expect(existsSync(lockPath)).toBe(false);
   });
 
   it('is a file holding the id of the process that took it', async () => {

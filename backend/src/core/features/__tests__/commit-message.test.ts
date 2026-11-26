@@ -11,6 +11,11 @@ import {
   generateCommitMessage,
 } from '../commit-message';
 
+// A file name git reads as a pattern that also matches its sibling, unless pathspecs are taken literally.
+// Windows cannot create a name with `*` in it, so a bracket pattern stands in there.
+const PATTERN_NAME = process.platform === 'win32' ? 'literal[ab].txt' : 'literal*.txt';
+const SIBLING_NAME = process.platform === 'win32' ? 'literala.txt' : 'literal-other.txt';
+
 function createGitRepository(): string {
   const root = createEmptyGitRepository();
   writeFileSync(join(root, 'tracked.txt'), 'First\n');
@@ -51,13 +56,13 @@ describe('collectCommitMessageContext', () => {
   it('treats a selected filename containing a wildcard literally', async () => {
     const root = createGitRepository();
     try {
-      writeFileSync(join(root, 'literal*.txt'), 'Selected literal filename\n');
-      writeFileSync(join(root, 'literal-other.txt'), 'Unchecked sibling\n');
+      writeFileSync(join(root, PATTERN_NAME), 'Selected literal filename\n');
+      writeFileSync(join(root, SIBLING_NAME), 'Unchecked sibling\n');
 
-      const context = await collectCommitMessageContext(root, ['literal*.txt']);
+      const context = await collectCommitMessageContext(root, [PATTERN_NAME]);
 
-      expect(context.diff).toContain('+++ b/literal*.txt');
-      expect(context.diff).not.toContain('literal-other.txt');
+      expect(context.diff).toContain(`+++ b/${PATTERN_NAME}`);
+      expect(context.diff).not.toContain(SIBLING_NAME);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -66,17 +71,17 @@ describe('collectCommitMessageContext', () => {
   it('treats a tracked wildcard filename literally against HEAD', async () => {
     const root = createEmptyGitRepository();
     try {
-      writeFileSync(join(root, 'literal*.txt'), 'Selected base\n');
-      writeFileSync(join(root, 'literal-other.txt'), 'Unchecked base\n');
+      writeFileSync(join(root, PATTERN_NAME), 'Selected base\n');
+      writeFileSync(join(root, SIBLING_NAME), 'Unchecked base\n');
       execFileSync('git', ['add', '.'], { cwd: root });
       execFileSync('git', ['commit', '-m', 'feat: initial files'], { cwd: root });
-      writeFileSync(join(root, 'literal*.txt'), 'Selected base\nUpdated\n');
-      writeFileSync(join(root, 'literal-other.txt'), 'Unchecked base\nUpdated\n');
+      writeFileSync(join(root, PATTERN_NAME), 'Selected base\nUpdated\n');
+      writeFileSync(join(root, SIBLING_NAME), 'Unchecked base\nUpdated\n');
 
-      const context = await collectCommitMessageContext(root, ['literal*.txt']);
+      const context = await collectCommitMessageContext(root, [PATTERN_NAME]);
 
-      expect(context.diff).toContain('literal*.txt');
-      expect(context.diff).not.toContain('literal-other.txt');
+      expect(context.diff).toContain(PATTERN_NAME);
+      expect(context.diff).not.toContain(SIBLING_NAME);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -85,16 +90,16 @@ describe('collectCommitMessageContext', () => {
   it('treats a staged and unstaged tracked wildcard filename literally without HEAD', async () => {
     const root = createEmptyGitRepository();
     try {
-      writeFileSync(join(root, 'literal*.txt'), 'Selected staged\n');
-      writeFileSync(join(root, 'literal-other.txt'), 'Unchecked staged\n');
+      writeFileSync(join(root, PATTERN_NAME), 'Selected staged\n');
+      writeFileSync(join(root, SIBLING_NAME), 'Unchecked staged\n');
       execFileSync('git', ['add', '.'], { cwd: root });
-      writeFileSync(join(root, 'literal*.txt'), 'Selected staged\nUpdated\n');
-      writeFileSync(join(root, 'literal-other.txt'), 'Unchecked staged\nUpdated\n');
+      writeFileSync(join(root, PATTERN_NAME), 'Selected staged\nUpdated\n');
+      writeFileSync(join(root, SIBLING_NAME), 'Unchecked staged\nUpdated\n');
 
-      const context = await collectCommitMessageContext(root, ['literal*.txt']);
+      const context = await collectCommitMessageContext(root, [PATTERN_NAME]);
 
-      expect(context.diff).toContain('literal*.txt');
-      expect(context.diff).not.toContain('literal-other.txt');
+      expect(context.diff).toContain(PATTERN_NAME);
+      expect(context.diff).not.toContain(SIBLING_NAME);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

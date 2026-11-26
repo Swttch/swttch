@@ -179,7 +179,9 @@ describe('loadCliConfig', () => {
       const args = vi.mocked(Claude.spawnAuthed).mock.calls[0][0];
       const at = args.indexOf('--settings');
       expect(at).toBeGreaterThanOrEqual(0);
-      expect(JSON.parse(args[at + 1])).toEqual({ disableAllHooks: true });
+      // What the CLI ends up reading: on Windows the argument carries `\"`, which turns back into `"` on the way.
+      const received = process.platform === 'win32' ? args[at + 1].replace(/\\"/g, '"') : args[at + 1];
+      expect(JSON.parse(received)).toEqual({ disableAllHooks: true });
     });
 
     it('escapes the quotes of the settings JSON on Windows, where cmd.exe strips unescaped ones', () => {

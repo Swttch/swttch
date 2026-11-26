@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../features/readSessionTail', () => ({
@@ -16,6 +17,8 @@ import { MessageType } from '../../../shared';
 
 const readTail = vi.mocked(readSessionTail);
 const bridge = {} as Bridge;
+// Joined the way the handler joins it, so the separators are the ones of the OS the test runs on.
+const RECORD = join('/sessions/w', 's.jsonl');
 
 function conns() {
   return { sendTo: vi.fn(), subscribe: vi.fn() } as unknown as ConnectionManager & { sendTo: ReturnType<typeof vi.fn>; subscribe: ReturnType<typeof vi.fn> };
@@ -36,7 +39,7 @@ describe('getSessionTailHandler', () => {
   it('answers with the newest entries exactly as the record holds them', async () => {
     const c = conns();
     await getSessionTailHandler('conn', msg({ workingDir: '/w', sessionId: 's' }), c, bridge);
-    expect(readTail).toHaveBeenCalledWith('/sessions/w/s.jsonl', SESSION_TAIL_DEFAULT_LIMIT);
+    expect(readTail).toHaveBeenCalledWith(RECORD, SESSION_TAIL_DEFAULT_LIMIT);
     const [, type, body] = c.sendTo.mock.calls[0];
     expect(type).toBe(MessageType.ACK);
     expect(body).toMatchObject({ requestId: 'req-1', status: 'ok' });
@@ -52,11 +55,11 @@ describe('getSessionTailHandler', () => {
   it('cuts how many it sends to the number asked, and to a ceiling', async () => {
     const c = conns();
     await getSessionTailHandler('conn', msg({ workingDir: '/w', sessionId: 's', limit: 12 }), c, bridge);
-    expect(readTail).toHaveBeenLastCalledWith('/sessions/w/s.jsonl', 12);
+    expect(readTail).toHaveBeenLastCalledWith(RECORD, 12);
     await getSessionTailHandler('conn', msg({ workingDir: '/w', sessionId: 's', limit: 100000 }), c, bridge);
-    expect(readTail).toHaveBeenLastCalledWith('/sessions/w/s.jsonl', SESSION_TAIL_MAX_LIMIT);
+    expect(readTail).toHaveBeenLastCalledWith(RECORD, SESSION_TAIL_MAX_LIMIT);
     await getSessionTailHandler('conn', msg({ workingDir: '/w', sessionId: 's', limit: -3 }), c, bridge);
-    expect(readTail).toHaveBeenLastCalledWith('/sessions/w/s.jsonl', SESSION_TAIL_DEFAULT_LIMIT);
+    expect(readTail).toHaveBeenLastCalledWith(RECORD, SESSION_TAIL_DEFAULT_LIMIT);
   });
 
   it('says what is missing, and reads nothing, when the folder or the session is not named', async () => {

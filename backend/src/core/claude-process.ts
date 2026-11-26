@@ -1,4 +1,7 @@
 import type { ChildProcess } from 'child_process';
+import { existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from 'fs';
+import { dirname, resolve } from 'path';
+import { ccgHomeDir } from '../config/ccg-home';
 import type { ConnectionManager } from '../ws/connection-manager';
 import type { Bridge } from '../bridge/bridge-interface';
 import { Claude } from './claude';
@@ -21,7 +24,7 @@ import { readMergedClaudeSettings } from './features/claude-settings';
 import { readLastRecordedSend } from './features/lastRecordedSend';
 import { readLastRecordedEffort } from './features/lastRecordedEffort';
 import { cliTakesEffortFlag } from './features/cli-flag-support';
-import { findLiveCliForSession, killRegisteredCli, registerCliProcess, unregisterCliProcess } from './cli-registry';
+import { findLiveCliForSession, isValidSessionId, killRegisteredCli, registerCliProcess, unregisterCliProcess } from './cli-registry';
 import { settleControlResponse } from './control-response-waiter';
 import { isDebugEnabled, logDebug } from '../logging/log-level';
 import { readRegistry } from './features/account-store';
@@ -509,6 +512,17 @@ export function buildEntrypointEnv(
  * Optional: `SWTTCH_SESSION_MCP_NODE` (the node to run it with, default `node`) and
  * `SWTTCH_SESSION_MCP_AREAS` (comma-separated area names, default all). Area names that are not
  * plain identifiers are dropped.
+ *
+ * The config reaches the CLI as a FILE PATH, never as inline JSON. On win32 the chat CLI is
+ * started through cmd.exe (the Job Object wrapper, or the `shell: true` fallback) with the whole
+ * command line as one string. The JSON's unescaped double quotes were consumed when that line
+ * was split back into arguments, so the CLI read `{mcpServers:{...}}` as a relative path and
+ * exited with `MCP config file not found` (#755). Inline JSON would have to be escaped for both
+ * cmd.exe and the program's own parser; a path only needs the quotes any argument with a space
+ * gets, and the same argument works on every platform.
+ *
+ * The file is rewritten on each spawn: the setting is the user's, and a change must apply to
+ * the next CLI without restarting this backend.
  */
 /**
  * The other way in: the user installed `@swttch/session-manager-mcp` from Settings > About >
@@ -545,7 +559,93 @@ export function buildSessionMcpArgs(
       env,
     };
   }
-  return ['--mcp-config', JSON.stringify({ mcpServers })];
+  const configPath = writeSessionMcpConfig(inherited, sessionId, { mcpServers });
+  return configPath ? ['--mcp-config', configPath] : [];
+}
+
+/**
+ * Where a session's MCP config lives: `CCG_HOME/mcp/<sessionId>.json`, in the folder that
+ * already holds every other file this backend keeps for the user, so a host that moves
+ * `CCG_HOME` moves this with it. Absolute, because the CLI that reads it starts in the project
+ * folder. Null for a session id that is not a plain token: it arrives from the webview and
+ * becomes a file name.
+ */
+function sessionMcpConfigPath(inherited: NodeJS.ProcessEnv, sessionId: string): string | null {
+  if (!isValidSessionId(sessionId)) return null;
+  return resolve(ccgHomeDir(inherited), 'mcp', `${sessionId}.json`);
+}
+
+/**
+ * Writes this session's MCP config and returns the path handed to `--mcp-config`, or null when
+ * it could not be written. The session tools are optional, so that failure costs the user those
+ * tools for this CLI and never the chat itself.
+ *
+ * A file per session, because two sessions of the same backend write different
+ * `SWTTCH_SESSION_ID`s and two IDEs of the same user write different configs; one shared file
+ * would let them overwrite each other while a CLI was starting.
+ */
+function writeSessionMcpConfig(
+  inherited: NodeJS.ProcessEnv,
+  sessionId: string,
+  config: Record<string, unknown>,
+): string | null {
+  try {
+    const file = sessionMcpConfigPath(inherited, sessionId);
+    if (!file) throw new Error(`Not a usable session id: ${sessionId}`);
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, JSON.stringify(config), 'utf8');
+    return file;
+  } catch (err) {
+    console.error('[node-backend]', 'Starting without the session MCP, its config was not written:', err);
+    return null;
+  }
+}
+
+/**
+ * Removes a session's MCP config once the CLI it was written for is gone, so the folder does not
+ * grow by a file for every session ever opened.
+ */
+function removeSessionMcpConfig(inherited: NodeJS.ProcessEnv, sessionId: string): void {
+  try {
+    const file = sessionMcpConfigPath(inherited, sessionId);
+    if (file) rmSync(file, { force: true });
+  } catch (err) {
+    console.error('[node-backend]', 'Session MCP config remove failed:', err);
+  }
+}
+
+// Which spawn of a session was handed its MCP config last, so only that one removes the file.
+const sessionMcpOwners = new Map<string, symbol>();
+
+/**
+ * Removes the configs of the CLIs this backend still holds. For the process 'exit' hook: a
+ * backend that shuts down leaves before those CLIs report 'close', so nothing else would.
+ * Synchronous, because an 'exit' handler cannot await.
+ */
+export function removeOwnSessionMcpConfigs(): void {
+  for (const sessionId of sessionMcpOwners.keys()) removeSessionMcpConfig(process.env, sessionId);
+  sessionMcpOwners.clear();
+}
+
+const STALE_SESSION_MCP_CONFIG_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * Removes configs no backend came back for. Windows ends a backend without running any of its
+ * code (the plugin's `destroy()` is TerminateProcess there), as a hard kill does everywhere.
+ * Judged by age alone: every spawn rewrites the file and the CLI reads it as it starts.
+ */
+export function sweepStaleSessionMcpConfigs(): void {
+  const dir = resolve(ccgHomeDir(), 'mcp');
+  try {
+    if (!existsSync(dir)) return;
+    for (const name of readdirSync(dir)) {
+      if (!name.endsWith('.json')) continue;
+      const file = resolve(dir, name);
+      if (Date.now() - statSync(file).mtimeMs > STALE_SESSION_MCP_CONFIG_MS) rmSync(file, { force: true });
+    }
+  } catch (err) {
+    console.error('[node-backend]', 'Session MCP config sweep failed:', err);
+  }
 }
 
 // result 이벤트 수신 여부 추적 (비정상 종료 시 에러 전파 판단용)
@@ -911,6 +1011,8 @@ export async function ensureClaudeProcess(
     ? null
     : await resolveInstalledSessionMcp(workingDir).catch(() => null);
   args.push(...buildSessionMcpArgs(process.env, targetSessionId, installedSessionMcp));
+  const mcpConfigOwner = Symbol(targetSessionId);
+  sessionMcpOwners.set(targetSessionId, mcpConfigOwner);
 
   console.error('[node-backend]', `Command: ${Claude.command} ${args.join(' ')}`);
 
@@ -1145,6 +1247,13 @@ export async function ensureClaudeProcess(
       // Clean CLI exit — drop its registry entry (hard backend deaths skip this;
       // that is exactly what the startup orphan sweep is for).
       unregisterCliProcess(proc.pid);
+      // Only the newest spawn of a session removes its MCP config. A restart does not wait
+      // for this handler when the old process has already exited, so it can run after the
+      // replacement was handed the same path.
+      if (sessionMcpOwners.get(targetSessionId) === mcpConfigOwner) {
+        sessionMcpOwners.delete(targetSessionId);
+        removeSessionMcpConfig(process.env, targetSessionId);
+      }
     } catch (err) {
       reportBackendError(err instanceof Error ? err : new Error(String(err)), {
         layer: 'claude_stream',

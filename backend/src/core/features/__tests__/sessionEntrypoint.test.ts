@@ -84,10 +84,13 @@ describe('updateTranscriptEntrypoint', () => {
     const file = join(dir, 'a.jsonl');
     await writeFile(file, line('sdk-cli') + '\n');
     await chmod(file, 0o600);
+    // Windows has no owner/group/other bits (chmod only toggles read-only), so a writable file reads back as 0o666 there.
+    const mode = process.platform === 'win32' ? 0o666 : 0o600;
+    expect((await stat(file)).mode & 0o777).toBe(mode);
 
     await updateTranscriptEntrypoint(file, 'swttch-jetbrains');
 
-    expect((await stat(file)).mode & 0o777).toBe(0o600);
+    expect((await stat(file)).mode & 0o777).toBe(mode);
     expect(await readdir(dir)).toEqual(['a.jsonl']);
   });
 

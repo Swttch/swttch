@@ -45,6 +45,53 @@ describe('buildWin32CmdLine', () => {
   it('returns the bare command when there are no args', () => {
     expect(buildWin32CmdLine('claude', [])).toBe('claude');
   });
+
+  // The command is the user's `cliPath` setting, run as typed. Someone with a space in the path
+  // has had to type the quotes themselves, and someone else may have typed a launcher with its
+  // own argument. Quoting it again would stop both from starting.
+  it('leaves a command the user quoted themselves exactly as typed', () => {
+    expect(buildWin32CmdLine('"C:\\Program Files\\claude\\claude.cmd"', ['-p']))
+      .toBe('"C:\\Program Files\\claude\\claude.cmd" -p');
+  });
+
+  it('leaves a command that carries its own argument exactly as typed', () => {
+    expect(buildWin32CmdLine('wsl claude', ['-p'])).toBe('wsl claude -p');
+  });
+
+  // The wrapper hands this whole line to `cmd /d /s /c`, and the program splits it back into
+  // arguments on spaces. An argument with a space, such as the `--mcp-config` path under a user
+  // folder with a space in its name, would arrive as two (#755). The working directory is not
+  // on this line: it is passed to the spawn as `cwd`.
+  it('quotes an argument that contains a space, so it arrives as one', () => {
+    expect(buildWin32CmdLine('claude', ['--mcp-config', 'C:\\Users\\Li Mu\\mcp.json']))
+      .toBe('claude --mcp-config "C:\\Users\\Li Mu\\mcp.json"');
+  });
+
+  it('escapes a quote inside an argument instead of ending the argument there', () => {
+    expect(buildWin32CmdLine('claude', ['--title', 'say "hi"']))
+      .toBe('claude --title "say \\"hi\\""');
+  });
+
+  it('doubles a trailing backslash once the argument is quoted, so it cannot escape the closing quote', () => {
+    expect(buildWin32CmdLine('claude', ['C:\\Program Files\\']))
+      .toBe('claude "C:\\Program Files\\\\"');
+  });
+
+  it('leaves a trailing backslash alone when the argument needs no quotes', () => {
+    expect(buildWin32CmdLine('claude', ['C:\\dir\\'])).toBe('claude C:\\dir\\');
+  });
+
+  // A path with no space can still carry a character cmd.exe acts on: `C:\Users\R&D\...` would
+  // end the command at the `&`. Inside quotes cmd.exe reads each of these as plain text.
+  it.each(['&', '|', '<', '>', '^', '(', ')'])('quotes an argument that carries %s', (character) => {
+    const path = `C:\\Users\\a${character}b\\mcp.json`;
+    expect(buildWin32CmdLine('claude', ['--mcp-config', path])).toBe(`claude --mcp-config "${path}"`);
+  });
+
+  it('leaves an argument with no space, quote or cmd.exe operator alone, so plain flags stay byte-identical', () => {
+    expect(buildWin32CmdLine('claude', ['-p', 'hello', '--session-id', 'abc-123']))
+      .toBe('claude -p hello --session-id abc-123');
+  });
 });
 
 // The PowerShell check keeps its answer in module state, so each test loads the module
@@ -206,6 +253,36 @@ describe('spawnWin32JobCli', () => {
     // Straight to the CLI: no second PowerShell launch to find out again.
     expect(spawnMock).toHaveBeenCalledTimes(1);
     expect(spawnMock).toHaveBeenCalledWith('claude', ['-p', 'hello'], expect.objectContaining({ shell: true }));
+  });
+
+  // With `shell: true` Node joins the command and the arguments with spaces and quotes nothing,
+  // then hands the line to `cmd /d /s /c`. Both fallbacks therefore need the quoting the wrapper
+  // path gets, or a user folder with a space splits the config path there too (#755).
+  const spaced = ['--mcp-config', 'C:\\Users\\Li Mu\\.claude-code-gui\\mcp\\s.json'];
+  const quoted = ['--mcp-config', '"C:\\Users\\Li Mu\\.claude-code-gui\\mcp\\s.json"'];
+
+  it('quotes the arguments of the fallback taken when PowerShell is blocked', async () => {
+    const { checkPowerShell, spawnWin32JobCli } = await loadWinJob();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    spawnMock.mockImplementationOnce(() => {
+      throw Object.assign(new Error('spawn UNKNOWN'), { code: 'UNKNOWN' });
+    });
+    await checkPowerShell();
+    spawnMock.mockClear();
+
+    spawnWin32JobCli('claude', spaced, 'session-1', options);
+
+    expect(spawnMock).toHaveBeenCalledWith('claude', quoted, expect.objectContaining({ shell: true }));
+  });
+
+  it('quotes the arguments of the fallback taken when the wrapper is missing', async () => {
+    const { spawnWin32JobCli } = await loadWinJob();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(existsSync).mockReturnValue(false);
+
+    spawnWin32JobCli('claude', spaced, 'session-1', options);
+
+    expect(spawnMock).toHaveBeenCalledWith('claude', quoted, expect.objectContaining({ shell: true }));
   });
 });
 

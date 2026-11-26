@@ -18,13 +18,39 @@ import { fileURLToPath } from 'url';
  */
 
 /**
- * The exact `cmd /d /s /c "<...>"` payload. Mirrors Node's own win32 shell:true
- * construction: command + args joined by spaces with NO per-arg re-quoting, wrapped
- * as a single verbatim string by the wrapper. Reproducing that byte-for-byte keeps
- * the CLI's argv identical to the pre-job spawn (chat args are simple tokens).
+ * Quote one argument for the `cmd /d /s /c` line.
+ *
+ * cmd.exe is handed the whole line as one string, and the program it starts splits that line
+ * back into arguments by the CommandLineToArgvW rules. Without quotes, a space splits one
+ * argument into two (a user folder with a space in the `--mcp-config` path, #755), and cmd.exe
+ * itself acts on an operator such as `&` or `|`.
+ *
+ * An argument with no space, quote or operator is passed through untouched, so plain flags stay
+ * byte-identical. Any other is wrapped in quotes: a quote inside it is escaped with a backslash,
+ * the backslashes before that quote are doubled, and a run of backslashes at the very end is
+ * doubled so it cannot escape the closing quote.
+ *
+ * Two things quotes do not cover. cmd.exe expands `%NAME%` even inside them, and it does not
+ * read `\"` as an escaped quote, so an operator in an argument that also holds a quote can still
+ * reach it. No chat argument holds a quote, which is one reason the session MCP config is passed
+ * as a file path rather than as JSON (see `buildSessionMcpArgs`).
+ */
+export function quoteWin32Arg(value: string): string {
+  if (value.length > 0 && !/[\s"&|<>^()]/.test(value)) return value;
+  return '"' + value.replace(/(\\*)"/g, (_, slashes: string) => slashes + slashes + '\\"')
+    .replace(/(\\+)$/, (_, slashes: string) => slashes + slashes) + '"';
+}
+
+/**
+ * The exact `cmd /d /s /c "<...>"` payload: the command, then every argument quoted for
+ * cmd.exe, joined by spaces, wrapped as a single verbatim string by the wrapper.
+ *
+ * The command is not quoted. It is the user's `cliPath` setting, run as typed: it may already
+ * carry the user's own quotes, or an argument of its own (`wsl claude`), and quoting it again
+ * would stop either from starting.
  */
 export function buildWin32CmdLine(command: string, args: string[]): string {
-  return [command, ...args].join(' ');
+  return [command, ...args.map(quoteWin32Arg)].join(' ');
 }
 
 /** Absolute path to the shipped wrapper, resolved next to the running bundle. */
@@ -141,12 +167,16 @@ export function spawnWin32JobCli(
 ): ChildProcess {
   const cmdline = buildWin32CmdLine(command, args);
   const wrapper = jobWrapperPath();
+  // Node joins these with spaces and quotes nothing, so the arguments are quoted here and the
+  // line cmd.exe receives is the same one the wrapper would have run.
+  const spawnWithoutJob = () =>
+    cpSpawn(command, args.map(quoteWin32Arg), { ...consoleSafeExecOptions(options), shell: true });
   if (!existsSync(wrapper)) {
     console.error('[node-backend]', `Job wrapper not found at ${wrapper} — spawning without a job (orphan guard degraded)`);
-    return cpSpawn(command, args, { ...consoleSafeExecOptions(options), shell: true });
+    return spawnWithoutJob();
   }
   if (!powerShellUsable) {
-    return cpSpawn(command, args, { ...consoleSafeExecOptions(options), shell: true });
+    return spawnWithoutJob();
   }
   return cpSpawn(
     'powershell.exe',

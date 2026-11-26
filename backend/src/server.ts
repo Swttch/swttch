@@ -46,6 +46,7 @@ import { createLifecycleJournal } from './logging/lifecycle-journal';
 import { ClientEnv, MessageType, parseEditHistoryCommand, parseEmacsTextKeyPress } from './shared';
 import type { NativeDropEntry } from './core/types';
 import { drainMcpContainerReclaims } from './core/mcp-container-reclaimer';
+import { removeOwnSessionMcpConfigs, sweepStaleSessionMcpConfigs } from './core/claude-process';
 
 /**
  * JetBrains 모드: JETBRAINS_MODE=true 환경변수로 감지
@@ -320,6 +321,8 @@ async function main() {
   // from the registry entries the sweep just retired (#363).
   const { mcpContainers } = await sweepOrphanCliProcesses();
   await removeContainersById(mcpContainers);
+  // The same backend never removed its session MCP config files either.
+  sweepStaleSessionMcpConfigs();
 
   const bridges: BridgeMap = {
     [ClientEnv.BROWSER]: new BrowserBridge(),
@@ -368,6 +371,7 @@ async function main() {
     if (killed > 0) {
       console.error('[node-backend]', `Exit sweep: SIGKILLed ${killed} CLI process tree(s)`);
     }
+    removeOwnSessionMcpConfigs();
   });
 
   // Stash native drop paths on drag-enter; the webview will flush them on its drop event.
