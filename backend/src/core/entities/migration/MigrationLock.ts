@@ -93,9 +93,16 @@ export class MigrationLock {
     this.heartbeat.unref();
   }
 
+  /**
+   * Make the lock file, or answer false because someone else has it.
+   *
+   * While a lock that was just removed is still open somewhere (a waiting process
+   * reading it), Windows answers `EPERM` instead of making the new file, so a
+   * refusal is tried again. One that does not pass is a real one and is thrown.
+   */
   private static async tryCreate(lockPath: string): Promise<boolean> {
     try {
-      const handle = await open(lockPath, 'wx');
+      const handle = await retryTransient(() => open(lockPath, 'wx'));
       await handle.writeFile(String(process.pid));
       await handle.close();
       return true;
