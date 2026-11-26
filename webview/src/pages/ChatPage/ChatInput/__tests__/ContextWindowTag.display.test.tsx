@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { ContextWindowTag } from '../ContextWindowTag';
 import { ContextBadgeDisplay } from '@/shared';
 
@@ -75,5 +76,41 @@ describe('ContextWindowTag display (#328)', () => {
     usage = { totalTokens: 0, contextWindow: 0, maxOutputTokens: 0 };
     render(<ContextWindowTag />);
     expect(badgeText()).toBe('0%');
+  });
+
+  // jsdom lays nothing out, so this pins the classes the sizing hangs on: the box follows its
+  // widest part, the sentences do not widen it, and a choice never breaks inside its word.
+  describe.each([
+    ['known', 1_000_000],
+    ['still unknown', 0],
+  ])('the tooltip with the window size %s (#736)', (_state, contextWindow) => {
+    beforeEach(async () => {
+      usage = { totalTokens: 81_000, contextWindow, maxOutputTokens: 0 };
+      render(<ContextWindowTag />);
+      await userEvent.hover(screen.getByRole('button'));
+    });
+
+    it('lets the box grow with the display switch, up to the window width', async () => {
+      const box = (await screen.findByRole('radiogroup')).closest('.shadow-lg');
+      expect(box).toHaveClass('w-max', 'max-w-[calc(100vw-1rem)]');
+      expect(box).not.toHaveClass('max-w-[260px]');
+    });
+
+    it('keeps the sentences from widening the box, and lets them fill it', async () => {
+      const box = (await screen.findByRole('radiogroup')).closest('.shadow-lg');
+      const sentences = box?.querySelector('p')?.parentElement;
+      expect(sentences).toHaveClass('w-max', 'max-w-[calc(260px-1.5rem-2px)]', 'min-w-full');
+    });
+
+    it('never breaks a choice inside its word', async () => {
+      await screen.findByRole('radiogroup');
+      for (const choice of screen.getAllByRole('radio')) expect(choice).toHaveClass('whitespace-nowrap');
+    });
+
+    it('wraps Korean between words only, and leaves other languages as they are', async () => {
+      const box = (await screen.findByRole('radiogroup')).closest('.shadow-lg');
+      expect(box).toHaveClass('[&:lang(ko)]:break-keep');
+      expect(box).not.toHaveClass('break-keep');
+    });
   });
 });

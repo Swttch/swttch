@@ -41,8 +41,16 @@ function Donut({ percent }: { percent: number }) {
   );
 }
 
+// The box is as wide as its widest part, so the display switch never sticks out of it whatever
+// the language or font size (#736). Only the window's own width stops it growing (the UI zoom is
+// taken out of `vw` by postcss-viewport-zoom.js). Korean wraps between words only; Japanese and
+// Chinese keep the default, as their sentences have no spaces to wrap at.
 const TOOLTIP_CLASS =
-  'bg-surface-overlay border border-border-default rounded-md px-3 py-2 text-xs text-text-primary shadow-lg max-w-[260px]';
+  'bg-surface-overlay border border-border-default rounded-md px-3 py-2 text-xs text-text-primary shadow-lg w-max max-w-[calc(100vw-1rem)] [&:lang(ko)]:break-keep';
+
+// The sentences do not widen the box past 260px (minus its padding and border): they wrap there,
+// and fill the box when the switch below has made it wider.
+const TOOLTIP_TEXT_CLASS = 'w-max max-w-[calc(260px-1.5rem-2px)] min-w-full';
 
 const DISPLAY_CHOICES: { value: ContextBadgeDisplay; labelKey: string }[] = [
   { value: ContextBadgeDisplay.PERCENT, labelKey: 'chatInput.contextWindow.displayPercent' },
@@ -58,9 +66,10 @@ const DISPLAY_CHOICES: { value: ContextBadgeDisplay; labelKey: string }[] = [
 function DisplayChoice({ current, onChange }: { current: ContextBadgeDisplay; onChange: (v: ContextBadgeDisplay) => void }) {
   const { t } = useTranslation('chat');
   return (
-    <div className="mt-2 pt-2 border-t border-border-default flex items-center justify-between gap-3">
+    // Wraps only when the box has reached the window's width and the row still does not fit.
+    <div className="mt-2 pt-2 border-t border-border-default flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
       <span className="text-text-secondary text-[0.7692rem] shrink-0">{t('chatInput.contextWindow.displayLabel')}</span>
-      <div role="radiogroup" aria-label={t('chatInput.contextWindow.displayLabel')} className="flex gap-0.5 ml-auto">
+      <div role="radiogroup" aria-label={t('chatInput.contextWindow.displayLabel')} className="flex flex-wrap justify-end gap-0.5 ml-auto">
         {DISPLAY_CHOICES.map(({ value, labelKey }) => (
           <button
             key={value}
@@ -68,7 +77,7 @@ function DisplayChoice({ current, onChange }: { current: ContextBadgeDisplay; on
             role="radio"
             aria-checked={current === value}
             onClick={() => onChange(value)}
-            className={`px-1.5 py-[1px] rounded text-[0.7692rem] transition-colors ${
+            className={`px-1.5 py-[1px] rounded text-[0.7692rem] whitespace-nowrap transition-colors ${
               current === value ? 'bg-surface-hover text-text-primary' : 'text-text-secondary hover:bg-surface-hover'
             }`}
           >
@@ -117,7 +126,9 @@ export function ContextWindowTag(props: Props) {
         appendTo={() => document.body}
         render={(attrs) => (
           <div className={TOOLTIP_CLASS} {...attrs}>
-            <p>{t('chatInput.contextWindow.pending', { used: formatTokenCount(totalTokens) })}</p>
+            <div className={TOOLTIP_TEXT_CLASS}>
+              <p>{t('chatInput.contextWindow.pending', { used: formatTokenCount(totalTokens) })}</p>
+            </div>
             {choice}
           </div>
         )}
@@ -154,21 +165,23 @@ export function ContextWindowTag(props: Props) {
       appendTo={() => document.body}
       render={(attrs) => (
         <div className={TOOLTIP_CLASS} {...attrs}>
-          <p className="text-[0.9231rem]">
-            {t('chatInput.contextWindow.title', {
-              used: formatTokenCount(totalTokens),
-              total: formatTokenCount(contextWindow),
-              percent: precisePercent.toFixed(1),
-            })}
-          </p>
-          {maxOutputTokens > 0 && (
-            <p className="text-text-secondary mt-1 text-[0.7692rem]">
-              {t('chatInput.contextWindow.remaining', { percent: Math.max(remainingUntilCompact, 0) })}
+          <div className={TOOLTIP_TEXT_CLASS}>
+            <p className="text-[0.9231rem]">
+              {t('chatInput.contextWindow.title', {
+                used: formatTokenCount(totalTokens),
+                total: formatTokenCount(contextWindow),
+                percent: precisePercent.toFixed(1),
+              })}
             </p>
-          )}
-          {isClickable && (
-            <p className="text-text-secondary mt-1 text-[0.7692rem]">{t('chatInput.contextWindow.clickToCompact')}</p>
-          )}
+            {maxOutputTokens > 0 && (
+              <p className="text-text-secondary mt-1 text-[0.7692rem]">
+                {t('chatInput.contextWindow.remaining', { percent: Math.max(remainingUntilCompact, 0) })}
+              </p>
+            )}
+            {isClickable && (
+              <p className="text-text-secondary mt-1 text-[0.7692rem]">{t('chatInput.contextWindow.clickToCompact')}</p>
+            )}
+          </div>
           {choice}
         </div>
       )}
