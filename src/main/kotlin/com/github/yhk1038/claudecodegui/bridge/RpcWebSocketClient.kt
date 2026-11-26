@@ -543,6 +543,12 @@ class RpcWebSocketClient(
                 parseClipboardText(params)?.let { rpcHandler.setClipboard(it, parseClipboardHtml(params)) }
                 buildJsonObject {}
             }
+            "GET_PRIMARY_SELECTION" -> {
+                val text = rpcHandler.getPrimarySelection()
+                buildJsonObject {
+                    if (text != null) put("text", text) else put("text", JsonNull)
+                }
+            }
             "GET_CLIPBOARD" -> {
                 val contents = rpcHandler.getClipboard()
                 buildJsonObject {

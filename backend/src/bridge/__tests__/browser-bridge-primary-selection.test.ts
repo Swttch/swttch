@@ -20,3 +20,9 @@ describe('BrowserBridge.setPrimarySelection', () => {
     expect(spawn).not.toHaveBeenCalled();
   });
 });
+
+describe('BrowserBridge.getPrimarySelection', () => {
+  it('has nothing to answer, since a real browser pastes the selection itself', async () => {
+    await expect(new BrowserBridge().getPrimarySelection({ workingDir: '/proj' })).resolves.toBeNull();
+  });
+});

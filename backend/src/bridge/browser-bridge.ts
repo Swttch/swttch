@@ -622,6 +622,15 @@ if ($dialog.ShowDialog() -eq 'OK') {
     // separates this no-op from a feature that was merely left out here.
   }
 
+  async getPrimarySelection(_params: { workingDir?: string }): Promise<string | null> {
+    // Nothing to read on the webview's behalf: a real browser pastes the
+    // selection itself on a middle click. The IDE needs this call only because its
+    // embedded browser can hold an old selection on a Wayland desktop (#754).
+    //
+    // Not a gap: a standalone user loses nothing without it.
+    return null;
+  }
+
   async getClipboard(_params: { workingDir?: string }): Promise<HostClipboardContents> {
     // Nothing to read on the webview's behalf: a real browser reads its own
     // clipboard, and the paste event it fires carries what the user copied. The

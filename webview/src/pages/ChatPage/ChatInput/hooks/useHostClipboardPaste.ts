@@ -2,21 +2,14 @@ import { useCallback } from 'react';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { MessageType } from '@/shared';
 import { ImageAttachSource } from '../../../../types';
+import {
+  HOST_CLIPBOARD_TIMEOUT_MS,
+  HOST_PASTE_CHECK_TIMEOUT_MS,
+  afterNativePaste,
+  normalizeNewlines,
+} from '@/utils/hostPaste';
 import { HostClipboard, type HostClipboardResponse } from '../HostClipboard';
-
-/**
- * How long a paste waits for the host to read the clipboard. A read is instant when
- * it works, so this only ends the wait for a host that never answers, which would
- * otherwise leave the user's paste doing nothing for the bridge's thirty seconds.
- */
-const HOST_CLIPBOARD_TIMEOUT_MS = 5_000;
-
-/**
- * How long a paste of plain text waits for the host's word on files. The text is already
- * in the composer by then, so a slow host only means the chips come late, never that the
- * paste is lost.
- */
-const HOST_FILE_CHECK_TIMEOUT_MS = 1_500;
+import { insertTextAtCursor } from '../RichInput/insertTextAtCursor';
 
 /** What a paste that the browser is already finishing lets the host settle afterwards. */
 export type HostPasteOptions = {
@@ -36,17 +29,24 @@ export type HostPasteOptions = {
   pastedText?: string;
   /** What the composer held just before the browser's own paste, for a paste that carried no plain text. */
   textBefore?: string;
+  /**
+   * The paste came from the middle mouse button, which pastes what is selected rather
+   * than what was copied (#754). The host is asked for its selection, and the clipboard
+   * never stands in for it.
+   */
+  fromSelection?: boolean;
 };
 
 /**
- * End the run of typing the browser is still counting as one edit, so the text that
- * follows becomes an undo step of its own.
+ * End the run of typing the browser is still counting as one edit, so what follows
+ * becomes an undo step of its own.
  *
- * Chrome folds every `insertText` into the typing that came just before it, and a
- * native paste is never folded into anything. Without this, Cmd/Ctrl+Z after a
- * paste into a half-typed prompt took back the paste AND the typing before it in one
- * step. Putting the selection back where it already is is what closes the run: the
- * browser treats a selection set from script like one made by the user.
+ * Chrome folds every `insertText` into the typing around it, and a native paste is
+ * never folded into anything. Without this, Cmd/Ctrl+Z after a paste into a
+ * half-typed prompt took back the paste AND the typing before it in one step, and
+ * after more typing it took back that typing AND the paste. Putting the selection
+ * back where it already is is what closes the run: the browser treats a selection
+ * set from script like one made by the user.
  */
 function endTypingRun(): void {
   const selection = document.getSelection();
@@ -56,14 +56,11 @@ function endTypingRun(): void {
   selection.addRange(range);
 }
 
-/** The two clipboards' readers may end lines differently; the words are what is compared. */
-function normalizeNewlines(text: string): string {
-  return text.replace(/\r\n?/g, '\n');
-}
-
-/** Wait until the browser has finished the paste it was in the middle of when the event fired. */
-function afterNativePaste(): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, 0));
+/** Put the host's text in at the caret as one undo step, apart from the typing on either side. */
+function pasteText(text: string): void {
+  endTypingRun();
+  insertTextAtCursor(text);
+  endTypingRun();
 }
 
 /**
@@ -84,6 +81,8 @@ function afterNativePaste(): Promise<void> {
  * - A paste that carried text, which the browser pastes itself (see [HostPasteOptions]).
  *   The host is asked beside it, and its answer wins when it differs: files, an image, or
  *   other text mean the browser's copy of the clipboard was stale (#715).
+ * - A middle-click paste of either kind, checked against and completed from the host's
+ *   selection instead, which holds text only (#754).
  *
  * Nothing is shown when the host has nothing or cannot be asked: the user pressed
  * paste, and a paste of nothing does nothing, as it did before.
@@ -117,9 +116,9 @@ export function useHostClipboardPaste(options: {
       let host = HostClipboard.NONE;
       try {
         const response = await send<HostClipboardResponse>(
-          MessageType.GET_CLIPBOARD,
+          pasteOptions?.fromSelection ? MessageType.GET_PRIMARY_SELECTION : MessageType.GET_CLIPBOARD,
           { workingDir: workingDirectory ?? undefined },
-          { timeout: checkingBrowserPaste ? HOST_FILE_CHECK_TIMEOUT_MS : HOST_CLIPBOARD_TIMEOUT_MS },
+          { timeout: checkingBrowserPaste ? HOST_PASTE_CHECK_TIMEOUT_MS : HOST_CLIPBOARD_TIMEOUT_MS },
         );
         host = HostClipboard.from(response);
       } catch {
@@ -154,8 +153,7 @@ export function useHostClipboardPaste(options: {
           return;
         }
         if (!editor.contains(document.activeElement)) return;
-        endTypingRun();
-        document.execCommand('insertText', false, host.text as string);
+        pasteText(host.text as string);
         return;
       }
 
@@ -175,8 +173,7 @@ export function useHostClipboardPaste(options: {
       // The user may have clicked elsewhere while the host answered. Text typed
       // into whatever has the focus now would not be what they pasted into.
       if (!editor.contains(document.activeElement)) return;
-      endTypingRun();
-      document.execCommand('insertText', false, host.text);
+      pasteText(host.text);
     },
     [send, workingDirectory, addImageAttachment],
   );

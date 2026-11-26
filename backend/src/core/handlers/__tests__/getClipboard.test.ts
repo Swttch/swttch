@@ -66,6 +66,19 @@ describe('getClipboardHandler', () => {
     });
   });
 
+  it('answers a text-only request with the text alone, and hands no files to the chat', async () => {
+    const files = [{ path: '/home/a/report.xlsx', type: 'file' }];
+    const image = { mimeType: 'image/png', base64: 'iVBORw0KGgo=' };
+    const bridge = createMockBridge(vi.fn().mockResolvedValue({ text: '/home/a/report.xlsx', image, files }));
+    const connections = createMockConnections();
+
+    await getClipboardHandler('conn-1', message({ workingDir: '/proj', textOnly: true }), connections, bridge);
+
+    expect(connections.sendTo.mock.calls).toEqual([
+      ['conn-1', MessageType.ACK, { requestId: 'req-9', text: '/home/a/report.xlsx', image: null }],
+    ]);
+  });
+
   it('asks without a project when the webview names none, and when it names an empty one', async () => {
     const bridge = createMockBridge(vi.fn().mockResolvedValue({ text: null, image: null, files: [] }));
 

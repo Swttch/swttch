@@ -42,6 +42,7 @@ const NATIVE_ENTRIES_FRESH_MS = 1500;
 import { useHostClipboardPaste } from './hooks/useHostClipboardPaste';
 import { clipboardCarriesFile, clipboardCarriesFileForHost } from './clipboardCarriesFile';
 import { clipboardIsEmpty } from './clipboardIsEmpty';
+import { takeMiddleClickPaste } from '@/utils/middleClickPaste';
 import { AttachmentPreview } from './AttachmentPreview';
 import { ContextWindowTag } from './ContextWindowTag';
 import { IdeSelectionTag } from './IdeSelectionTag';
@@ -1264,6 +1265,17 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
   // nothing on formatting and restores undo. The resulting `input` event feeds
   // handleRichChange, which keeps `value` in sync and runs both detectors.
   const handleRichPaste = useCallback((e: ReactClipboardEvent<HTMLDivElement>) => {
+    // A middle click pastes what is selected, not what was copied (#754). The browser's
+    // paste goes ahead, and only the host's selection may correct or complete it.
+    if (isJetBrains() && takeMiddleClickPaste()) {
+      void pasteFromHost(e.currentTarget, {
+        pastedText: e.clipboardData.getData('text/plain'),
+        textBefore: e.currentTarget.textContent ?? '',
+        fromSelection: true,
+      });
+      return;
+    }
+
     // Files copied in a file manager (a spreadsheet, a document, a folder) give the page
     // no path to attach. In the IDE the host reads the paths off the system clipboard
     // and sends them the way a drop does, so the paste is cancelled and the host asked.

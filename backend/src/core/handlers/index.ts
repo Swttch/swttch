@@ -96,6 +96,7 @@ import { createSessionHandler } from './createSession';
 import { newTabHandler } from './newTab';
 import { openTabHandler } from './openTab';
 import { setTabNameHandler } from './setTabName';
+import { getPrimarySelectionHandler } from './getPrimarySelection';
 import { setPrimarySelectionHandler } from './setPrimarySelection';
 import { getClipboardHandler } from './getClipboard';
 import { setClipboardHandler } from './setClipboard';
@@ -500,6 +501,9 @@ export async function handleMessage(
       break;
     case MessageType.SET_PRIMARY_SELECTION:
       await setPrimarySelectionHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_PRIMARY_SELECTION:
+      await getPrimarySelectionHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_CLIPBOARD:
       await getClipboardHandler(connectionId, message, connections, bridge);

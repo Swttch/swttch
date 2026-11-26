@@ -72,6 +72,19 @@ class SystemClipboardReader(
     }
 
     /**
+     * The text alone, or null when there is none or it cannot be read. What a middle
+     * click asks of the system selection (#754), where nothing but text is pasted.
+     */
+    fun readTextOnly(): String? {
+        val source = try {
+            clipboard()
+        } catch (_: HeadlessException) {
+            null
+        } ?: return null
+        return readText(source)
+    }
+
+    /**
      * The files and folders copied in a file manager (Explorer's CF_HDROP on Windows, the
      * file list the AWT builds elsewhere). A page cannot see their paths, which is why the
      * host reads them: they are the same OS paths a drop hands over.

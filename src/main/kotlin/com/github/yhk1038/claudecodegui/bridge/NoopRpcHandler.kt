@@ -38,6 +38,7 @@ object NoopRpcHandler : NodeProcessManager.RpcHandler {
     override suspend fun setPrimarySelection(text: String) {}
     override suspend fun setClipboard(text: String, html: String?) {}
     override suspend fun getClipboard(): ClipboardContents = ClipboardContents.EMPTY
+    override suspend fun getPrimarySelection(): String? = null
     override suspend fun openTerminal(workingDir: String) {}
     override suspend fun reviewBaseChanged(
         toolUseId: String,

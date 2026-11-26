@@ -349,6 +349,13 @@ class NodeProcessManager(
          * [ClipboardContents.EMPTY], which costs the user one paste.
          */
         suspend fun getClipboard(): ClipboardContents
+
+        /**
+         * The text of the system selection (the Linux PRIMARY selection), which a
+         * middle click pastes: the reading counterpart of [setPrimarySelection]
+         * (#754). Null where the platform has no such buffer or it holds no text.
+         */
+        suspend fun getPrimarySelection(): String?
         suspend fun openTerminal(workingDir: String)
 
         /**

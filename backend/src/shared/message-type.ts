@@ -1056,15 +1056,24 @@ export enum MessageType {
   SET_PRIMARY_SELECTION = 'SET_PRIMARY_SELECTION',
   /**
    * The webview asks the host for what is on the system clipboard, carrying
-   * { workingDir }, when a paste arrived with nothing on its own clipboard (#278).
-   * The ACK carries { text, image }, each null when the clipboard holds none of
-   * it, and image is { mimeType, base64 }. Asked by the webview because on a
+   * { workingDir, textOnly? }, when a paste arrived with nothing on its own
+   * clipboard (#278) or to check one the browser performed (#715). The ACK carries
+   * { text, image }, each null when the clipboard holds none of it, and image is
+   * { mimeType, base64 }. With textOnly, sent for a plain text field (#752), only
+   * the text is answered and files are not handed to the chat. Asked by the webview because on a
    * Wayland desktop the embedded browser (a separate X11 process since IDE 2025.3)
    * is not handed the clipboard of the IDE window, while the IDE process can read
    * it. The browser bridge answers with nothing: a browser reads its own
    * clipboard. inbound webview→backend, then Node↔Kotlin
    */
   GET_CLIPBOARD = 'GET_CLIPBOARD',
+  /**
+   * The webview asks the host for the text of the Linux PRIMARY selection, carrying
+   * { workingDir }, after a middle-click paste: the reading counterpart of
+   * SET_PRIMARY_SELECTION (#754). The ACK carries { text }, null where there is no
+   * such buffer or it holds no text. inbound webview→backend, then Node↔Kotlin
+   */
+  GET_PRIMARY_SELECTION = 'GET_PRIMARY_SELECTION',
   /**
    * The webview asks the host to put text on the system clipboard, carrying
    * { text, workingDir }, when the user copies something in the chat (a copy

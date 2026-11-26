@@ -2,11 +2,13 @@
 
 🌐 [English](../en/wayland-clipboard.md) | [한국어](../ko/wayland-clipboard.md) | [日本語](../ja/wayland-clipboard.md) | [中文](../zh/wayland-clipboard.md) | [Español](../es/wayland-clipboard.md) | **Deutsch** | [Français](../fr/wayland-clipboard.md)
 
-_Zuletzt aktualisiert: 2026-10-23_
+_Zuletzt aktualisiert: 2026-11-26_
 
 ## Symptome
 
 Das Einfügen in das Chat-Eingabefeld des Plugins schlägt fehl, ohne dass etwas passiert.
+
+Die anderen Textfelder des Plugins, etwa die Sitzungssuche, schlagen auf dieselbe Weise fehl.
 
 Es erscheint auch keine Fehlermeldung.
 
@@ -56,6 +58,8 @@ Dasselbe Symptom wird auch in anderen JetBrains-Plugins gemeldet, die JCEF verwe
 
 Der IDE-Prozess selbst kann diese Zwischenablage lesen, deshalb fragen neuere Plugin-Versionen die IDE danach, sooft ein Einfügen leer ankommt, und das Einfügen funktioniert dann ohne jede Einstellung. Ein Einfügen, das mit Text ankommt, wird genauso geprüft: Wenn Sie erst im Plugin und dann woanders außerhalb etwas kopieren, hält die IDE den neueren Text, und genau dieser wird eingefügt.
 
+Neuere Versionen führen dieselbe Prüfung in jedem Textfeld des Plugins durch, nicht nur in der Chat-Eingabe, also auch in der Sitzungssuche und in den Feldern der Einstellungen. Ein Einfügen mit der mittleren Maustaste wird mit dem Text abgeglichen, den Sie markiert haben (der primären Auswahl unter Linux), niemals mit der Zwischenablage.
+
 Auch Text, der innerhalb des Plugins kopiert wurde, blieb nur in dieser X11-Zwischenablage und gelangte nicht in den Editor oder andere Programme, deshalb übergeben neuere Plugin-Versionen den im Chat kopierten Text an die IDE, die ihn in die System-Zwischenablage legt.
 
 Wenn Sie eine ältere Version verwenden oder das Einfügen trotzdem fehlschlägt, verwenden Sie die Einstellung unten.
@@ -100,6 +104,9 @@ Dafür zu stimmen hilft, die Priorität anzuheben.
 
 ### Issues in diesem Repository
 
+- [#754 — Middle-click paste in the chat input pastes the clipboard instead of the selection (regression from #728)](https://github.com/Swttch/swttch/issues/754)
+- [#752 — External paste does not work in the session search box on Wayland (#524/#728 fallback only covers the chat input)](https://github.com/Swttch/swttch/issues/752)
+- [#751 — Pasting external multi-line text drops line breaks from the sent message (regression from #728)](https://github.com/Swttch/swttch/issues/751)
 - [#581 — Copy from chat doesn't reach the system clipboard on Linux/Wayland (JCEF out-of-process), so it can't be pasted into the editor](https://github.com/Swttch/swttch/issues/581)
 - [#278 — Cannot paste external text into chat input on Fedora KDE (Wayland)](https://github.com/Swttch/swttch/issues/278)
 - [#262 — no paste function at linux fedora](https://github.com/Swttch/swttch/issues/262)
