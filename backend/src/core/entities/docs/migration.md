@@ -1,7 +1,7 @@
 # Migration
 
 Status: Implemented
-Last verified: 2026-10-04 on branch `feat/prompt-library-reorder` (PR #519, not yet merged). Checked against the bundled backend and the dev (`tsx`) backend booted on a throwaway home with old data planted, and on a copy of real old data (about 0.5 s, 30 projects). Checked in a browser through the dev webview, on Linux, Windows 11 and WSL. The re-reading of unread folders is checked with the bundled backend at its three moments (window active again, the prompts opened, the backend restarted). Not yet checked in a real IDE.
+Last verified: 2026-10-04 on branch `feat/prompt-library-reorder` (PR #519, not yet merged). Checked against the bundled backend and the dev (`tsx`) backend booted on a throwaway home with old data planted, and on a copy of real old data (about 0.5 s, 30 projects). Checked in a browser through the dev webview, on Linux, Windows 11 and WSL. The re-reading of unread folders is checked with the bundled backend at its three moments (window active again, the prompts opened, the backend restarted). Not yet checked in a real IDE. The creation of the lock file was checked again on 2026-11-26 on branch `fix/770-win32-mcp-config-json` (PR #756, not yet merged): on Windows 11 its test file failed 17 of 40 runs with `EPERM` before the retry and 0 of 100 after it, and the whole backend suite passed four times (4543 passed, 38 skipped).
 
 A migration moves the user's data from the shape an older version wrote to the shape this version reads. The migration system runs them when the backend starts.
 
@@ -23,7 +23,7 @@ A migration moves the user's data from the shape an older version wrote to the s
 
 ### Several processes at once
 
-The IDE, `ccg` and a dev server share the data directory and all find the same migrations due after an update. `MigrationLock` is a lock file made with the exclusive flag (`entities/.migrations.lock`). The holder touches it every two seconds. A lock not touched for 30 seconds, or whose process no longer exists, is taken over. The run looks at the records again once it has the lock, so what another process finished is not done twice. A process that cannot get the lock within five minutes fails the run with `(lock)` and tries again at its next start, or when the user asks.
+The IDE, `ccg` and a dev server share the data directory and all find the same migrations due after an update. `MigrationLock` is a lock file made with the exclusive flag (`entities/.migrations.lock`). Windows answers `EPERM`, and not `EEXIST`, while a lock that was just removed is still open in another process, so creating the file is retried (`retryTransient`) and a refusal that stays is thrown. The holder touches it every two seconds. A lock not touched for 30 seconds, or whose process no longer exists, is taken over. The run looks at the records again once it has the lock, so what another process finished is not done twice. A process that cannot get the lock within five minutes fails the run with `(lock)` and tries again at its next start, or when the user asks.
 
 ### What the user sees
 
