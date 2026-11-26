@@ -1,6 +1,6 @@
 import type { ChildProcess } from 'child_process';
 import { mkdirSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { dirname, resolve } from 'path';
 import { ccgHomeDir } from '../config/ccg-home';
 import type { ConnectionManager } from '../ws/connection-manager';
 import type { Bridge } from '../bridge/bridge-interface';
@@ -24,7 +24,7 @@ import { readMergedClaudeSettings } from './features/claude-settings';
 import { readLastRecordedSend } from './features/lastRecordedSend';
 import { readLastRecordedEffort } from './features/lastRecordedEffort';
 import { cliTakesEffortFlag } from './features/cli-flag-support';
-import { findLiveCliForSession, killRegisteredCli, registerCliProcess, unregisterCliProcess } from './cli-registry';
+import { findLiveCliForSession, isValidSessionId, killRegisteredCli, registerCliProcess, unregisterCliProcess } from './cli-registry';
 import { settleControlResponse } from './control-response-waiter';
 import { isDebugEnabled, logDebug } from '../logging/log-level';
 import { readRegistry } from './features/account-store';
@@ -559,28 +559,46 @@ export function buildSessionMcpArgs(
       env,
     };
   }
-  return ['--mcp-config', writeSessionMcpConfig(inherited, sessionId, { mcpServers })];
+  const configPath = writeSessionMcpConfig(inherited, sessionId, { mcpServers });
+  return configPath ? ['--mcp-config', configPath] : [];
 }
 
 /**
- * Writes this session's MCP config and returns the path handed to `--mcp-config`.
+ * Where a session's MCP config lives: `CCG_HOME/mcp/<sessionId>.json`, in the folder that
+ * already holds every other file this backend keeps for the user, so a host that moves
+ * `CCG_HOME` moves this with it. Absolute, because the CLI that reads it starts in the project
+ * folder. Null for a session id that is not a plain token: it arrives from the webview and
+ * becomes a file name.
+ */
+function sessionMcpConfigPath(inherited: NodeJS.ProcessEnv, sessionId: string): string | null {
+  if (!isValidSessionId(sessionId)) return null;
+  return resolve(ccgHomeDir(inherited), 'mcp', `${sessionId}.json`);
+}
+
+/**
+ * Writes this session's MCP config and returns the path handed to `--mcp-config`, or null when
+ * it could not be written. The session tools are optional, so that failure costs the user those
+ * tools for this CLI and never the chat itself.
  *
- * Under `CCG_HOME/mcp/<sessionId>.json` — the folder that already holds every other file this
- * backend keeps for the user, so a host that moves `CCG_HOME` moves this with it. A file per
- * session, because two sessions of the same backend write different `SWTTCH_SESSION_ID`s and
- * two IDEs of the same user write different configs; one shared file would let them overwrite
- * each other while a CLI was starting.
+ * A file per session, because two sessions of the same backend write different
+ * `SWTTCH_SESSION_ID`s and two IDEs of the same user write different configs; one shared file
+ * would let them overwrite each other while a CLI was starting.
  */
 function writeSessionMcpConfig(
   inherited: NodeJS.ProcessEnv,
   sessionId: string,
   config: Record<string, unknown>,
-): string {
-  const dir = join(ccgHomeDir(inherited), 'mcp');
-  const file = join(dir, `${sessionId}.json`);
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(file, JSON.stringify(config), 'utf8');
-  return file;
+): string | null {
+  try {
+    const file = sessionMcpConfigPath(inherited, sessionId);
+    if (!file) throw new Error(`Not a usable session id: ${sessionId}`);
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, JSON.stringify(config), 'utf8');
+    return file;
+  } catch (err) {
+    console.error('[node-backend]', 'Starting without the session MCP, its config was not written:', err);
+    return null;
+  }
 }
 
 // result 이벤트 수신 여부 추적 (비정상 종료 시 에러 전파 판단용)

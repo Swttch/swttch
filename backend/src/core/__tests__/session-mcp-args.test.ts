@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { mkdtempSync, rmSync, readFileSync, existsSync } from 'fs';
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
+import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync } from 'fs';
 import { tmpdir } from 'os';
-import { join } from 'path';
+import { isAbsolute, join, relative } from 'path';
 import { buildSessionMcpArgs } from '../claude-process';
 
 /**
@@ -115,6 +115,33 @@ describe('buildSessionMcpArgs', () => {
     const [, file] = buildSessionMcpArgs(env(), 'sess-home');
     expect(file.startsWith(home)).toBe(true);
     expect(file).toContain('mcp');
+  });
+
+  it('hands over an absolute path when CCG_HOME is relative, since the CLI starts in the project folder', () => {
+    const [, file] = buildSessionMcpArgs(env({ CCG_HOME: relative(process.cwd(), home) }), 'sess-relative');
+    expect(isAbsolute(file)).toBe(true);
+    expect(existsSync(file)).toBe(true);
+  });
+
+  // The session tools are optional. A data folder that cannot be written to (here: a file stands
+  // where the folder should be) must cost the user those tools, never the chat itself.
+  it('starts without the server, and says why, when the config cannot be written', () => {
+    const blocked = join(home, 'not-a-folder');
+    writeFileSync(blocked, '');
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    expect(buildSessionMcpArgs(env({ CCG_HOME: blocked }), 'sess-blocked')).toEqual([]);
+    expect(logged).toHaveBeenCalledWith('[node-backend]', expect.stringContaining('session MCP'), expect.anything());
+    logged.mockRestore();
+  });
+
+  // The id arrives from the webview and becomes a file name.
+  it('writes no file for a session id that could name a path outside the folder', () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    expect(buildSessionMcpArgs(env(), '../escaped')).toEqual([]);
+    expect(existsSync(join(home, 'escaped.json'))).toBe(false);
+    logged.mockRestore();
   });
 
   describe('an installed @swttch/session-manager-mcp', () => {
