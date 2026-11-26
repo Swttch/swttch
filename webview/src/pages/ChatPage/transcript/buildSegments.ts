@@ -212,6 +212,8 @@ function isEmptyBlock(block: AnyContentBlockDto, message: LoadedMessageDto): boo
 export function buildSegments(body: LoadedMessageDto[]): Segment[] {
   const segments: Segment[] = [];
   let run: ToolCall[] | null = null;
+  /** How many segments of text and thinking each entry has made so far. */
+  const blockRuns = new Map<string, number>();
 
   // Entries that are not part of the conversation (hook output, notices, a tool result that could not be
   // folded into its call) and turn up in the middle of a run. They must not split it, or one run of calls
@@ -295,7 +297,11 @@ export function buildSegments(body: LoadedMessageDto[]): Segment[] {
     const flushBlocks = (endsEntry: boolean) => {
       if (pending.length === 0) return;
       closeRun();
-      segments.push({ kind: 'blocks', key: `${rowKey}-blocks-${segments.length}`, message, blocks: pending, endsEntry });
+      // Counted within the entry, not within the reply: entries are put in front of a reply by an older page, and a
+      // key that moved with them would draw every block of text on screen again (#747).
+      const nth = blockRuns.get(rowKey) ?? 0;
+      blockRuns.set(rowKey, nth + 1);
+      segments.push({ kind: 'blocks', key: `${rowKey}-blocks-${nth}`, message, blocks: pending, endsEntry });
       pending = [];
     };
 

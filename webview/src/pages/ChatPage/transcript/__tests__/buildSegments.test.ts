@@ -26,6 +26,16 @@ describe('buildSegments', () => {
     expect(keysOf('entry-text').every((key) => key.startsWith('placeholder-1'))).toBe(true);
   });
 
+  // #747. An older page is put in front of a reply; a key counting the segments before it would change for every
+  // block of text already on screen, and each would be parsed and drawn again.
+  it('keeps the keys of what is drawn when entries are put in front of it', () => {
+    const held = [assistant('c', [text('third'), tool('3')]), assistant('d', [text('fourth')])];
+    const before = buildSegments(held).map((s) => s.key);
+    const after = buildSegments([assistant('a', [text('first')]), assistant('b', [text('second')]), ...held]).map((s) => s.key);
+    expect(after.slice(2)).toEqual(before);
+    expect(new Set(after).size).toBe(after.length);
+  });
+
   it('gathers calls from consecutive entries into one run', () => {
     const body = [assistant('a', [tool('1')]), assistant('b', [tool('2')]), assistant('c', [tool('3', 'Read')])];
     const segments = buildSegments(body);

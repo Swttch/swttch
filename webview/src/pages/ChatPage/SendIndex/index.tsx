@@ -243,7 +243,28 @@ export function buildEntries(
 
   // What the index holds before the anchor comes first, minus anything the transcript already has.
   const loadedKeys = new Set(loaded.map(entry => entry.key));
-  return [...older.filter(entry => !loadedKeys.has(entry.key)), ...loaded];
+  const entries = older.filter(entry => !loadedKeys.has(entry.key));
+
+  /*
+    The loaded run is not always one stretch: after a jump back it holds the pages around the send jumped to and
+    the newest ones, with a gap between. The sends of the index that stand in a gap are put back, in front of the
+    loaded send that follows them, or the rail loses their ticks and a tick leads to another send (#747). Nothing
+    the index holds after the last loaded send it knows is added: the newest pages are always loaded, so what the
+    index has beyond them is not in this transcript.
+  */
+  const position = new Map(sessionSends.map((send, at) => [send.uuid, at]));
+  let next = boundary;
+  for (const entry of loaded) {
+    const at = position.get(entry.key);
+    if (at !== undefined) {
+      for (const send of sessionSends.slice(next, at)) {
+        if (!loadedKeys.has(send.uuid)) entries.push({ key: send.uuid, text: composeSendText(send.preview), loaded: false });
+      }
+      next = Math.max(next, at + 1);
+    }
+    entries.push(entry);
+  }
+  return entries;
 }
 
 /**
@@ -398,7 +419,7 @@ export function SendIndex(props: Props) {
 
   useEffect(() => {
     if (!pendingJump) return;
-    if (scrollToSend(pendingJump, releaseFollow)) setPendingJump(null);
+    if (scrollToSend(pendingJump, releaseFollow, true)) setPendingJump(null);
   }, [pendingJump, sections, releaseFollow]);
 
   /*

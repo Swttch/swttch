@@ -221,6 +221,24 @@ describe('heightAfter', () => {
     pre.remove();
   });
 
+  // The height is added to a scroll position, which is in layout pixels whatever the rectangles are in (#747).
+  it('is in layout pixels when the page is zoomed', () => {
+    withFakeLayout();
+    const pre = document.createElement('pre');
+    pre.textContent = 'one\ntwo\nthree\n';
+    document.body.append(pre);
+    document.documentElement.style.zoom = '1.25';
+    document.documentElement.setAttribute('data-zoom-rects', 'scaled');
+
+    try {
+      expect(heightAfter(pre, 'one\n'.length, pre.textContent.length)).toBe((2 * LINE_PX) / 1.25);
+    } finally {
+      document.documentElement.style.zoom = '';
+      document.documentElement.removeAttribute('data-zoom-rects');
+      pre.remove();
+    }
+  });
+
   it('is null without layout', () => {
     const pre = document.createElement('pre');
     pre.textContent = 'one\ntwo\n';

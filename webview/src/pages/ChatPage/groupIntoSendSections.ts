@@ -10,10 +10,20 @@ import { isUserSend } from './paging';
  * Such a section renders as a plain run of messages with no sticky header.
  */
 export interface SendSection {
-  /** uuid of `head`, or of the first message when there is no head. Used as the React key. */
+  /**
+   * uuid of `head`, or of the first message when there is no head. What the send index, the fold of a reply and a
+   * jump name the section by.
+   */
   key: string;
+  /** The name React draws the section under, when it is not `key` (see `reuseSections`). */
+  mountKey?: string;
   head: LoadedMessageDto | null;
   body: LoadedMessageDto[];
+}
+
+/** The name React draws a section under. */
+export function mountKeyOf(section: SendSection): string {
+  return section.mountKey ?? section.key;
 }
 
 /**

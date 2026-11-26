@@ -2,6 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SessionSearchHit } from '@/shared';
 import { useChatSearch } from '../useChatSearch';
+import { ZOOM_RECTS_ATTRIBUTE } from '@/utils/zoomRects';
 
 const fold = { isCollapsed: () => false, toggle: () => {} };
 
@@ -212,5 +213,36 @@ describe('useChatSearch: what is not loaded', () => {
     } finally {
       Range.prototype.getBoundingClientRect = original;
     }
+  });
+});
+
+describe('useChatSearch: bringing a match into view under the UI zoom (#747)', () => {
+  afterEach(() => {
+    document.documentElement.style.zoom = '';
+    document.documentElement.removeAttribute(ZOOM_RECTS_ATTRIBUTE);
+  });
+
+  it.each([
+    [1.25, 'scaled'],
+    [2, 'scaled'],
+    [2.5, 'scaled'],
+    [2, 'layout'],
+  ] as const)('puts a far match in the middle at zoom %s with %s rectangles', async (zoom, rects) => {
+    document.documentElement.style.zoom = String(zoom);
+    document.documentElement.setAttribute(ZOOM_RECTS_ATTRIBUTE, rects);
+    // `scrollTop` and `clientHeight` (600) are layout pixels; rectangles are `unit` times that.
+    const unit = rects === 'scaled' ? zoom : 1;
+    const matchAt = 6000;
+    const { root, search, scrollTop } = setup({ html: '<p>needle</p>' });
+    const scroller = root.parentElement!;
+    scroller.getBoundingClientRect = () => ({ top: 0, bottom: 600 * unit, height: 600 * unit }) as DOMRect;
+    Range.prototype.getBoundingClientRect = () => {
+      const top = (matchAt - scroller.scrollTop) * unit;
+      return { top, bottom: top + 20 * unit, width: 40 * unit, height: 20 * unit } as DOMRect;
+    };
+
+    await search('needle');
+
+    expect(scrollTop()).toBeCloseTo(matchAt - 300);
   });
 });

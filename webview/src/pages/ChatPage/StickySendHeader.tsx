@@ -2,9 +2,10 @@ import { ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { ChevronDoubleUpIcon } from '@heroicons/react/20/solid';
 import { useTranslation } from '@/i18n';
 import { useScrollFold, FOLD_MIN_HEIGHT } from './useScrollFold';
+import { SCROLL_UNANCHORED_ATTRIBUTE } from './useScrollAnchor';
 import { useTopBar } from '@/contexts/TopBarContext';
 import { ScrollFoldContext } from './ScrollFoldContext';
-import { SEND_JUMP_SCROLL_MARGIN, SEND_SCROLL_OPTIONS } from './SendIndex/scrollToSend';
+import { SEND_JUMP_SCROLL_MARGIN, scrollSendIntoView } from './SendIndex/scrollToSend';
 import { ChatFollowContext } from './ChatFollowContext';
 
 interface Props {
@@ -24,19 +25,25 @@ interface Props {
  *
  * "Pinned" is read off a zero-height sentinel placed immediately above the
  * header rather than from scroll position. While the section sits at rest the
- * sentinel is in view; once the section scrolls up far enough for the header to
- * stick, the sentinel has left the viewport. That is exactly the state we want,
- * it comes straight from the intersection callback, and it needs no scroll
- * handler — this list can hold thousands of entries, and one listener per
- * section firing on every frame is the kind of cost we do not add.
+ * sentinel is below the top bar; once the section scrolls up far enough for the
+ * header to stick, it has passed the bar. That is exactly the state we want, it
+ * comes straight from the intersection callback, and it needs no scroll handler
+ * — this list can hold thousands of entries, and one listener per section firing
+ * on every frame is the kind of cost we do not add.
  *
- * `rootMargin` cancels the scroll container's top padding: that band of the
- * viewport is behind the fixed top bar, so without it the sentinel counts as
- * visible while hidden underneath and the button flickers on at the wrong
- * moment. The bar's height is where that band ends (zero once the bar is hidden,
- * and then there is no band), and the fold reads the same number to decide how
- * far the send has already travelled past it — two numbers drifting apart would
- * leave a send counted as pinned and as not yet arrived at the same time.
+ * The band at the top of the scroll container is behind the fixed top bar, so a
+ * sentinel level with the container's top edge is hidden underneath, not
+ * visible. What the observer watches is therefore a mark the bar's height above
+ * the sentinel (zero once the bar is hidden, and then there is no band): it
+ * leaves the viewport as the sentinel reaches the bar. The fold reads the same
+ * number to decide how far the send has already travelled past it — two numbers
+ * drifting apart would leave a send counted as pinned and as not yet arrived at
+ * the same time.
+ *
+ * The mark stands in for an observer `rootMargin`, which is in the pixels of the
+ * viewport. The UI zoom does not scale those, so the pin came later than the line
+ * the fold counts from, and the bubble lost the difference in one step as it
+ * pinned (#747). A CSS offset is scaled with everything else.
  */
 export function StickySendHeader(props: Props) {
   const { children, onClick } = props;
@@ -44,6 +51,7 @@ export function StickySendHeader(props: Props) {
   const { topBarHeight } = useTopBar();
   const releaseFollow = useContext(ChatFollowContext);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const pinMarkRef = useRef<HTMLDivElement>(null);
   const [pinned, setPinned] = useState(false);
   const [scrollRoot, setScrollRoot] = useState<HTMLElement | null>(null);
   /*
@@ -61,19 +69,20 @@ export function StickySendHeader(props: Props) {
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-    // The same element the observer defaults to, held onto so the fold can
-    // measure against its top edge.
+    const mark = pinMarkRef.current;
+    if (!sentinel || !mark) return;
+    // ChatPage's message container, held onto so the fold can measure against
+    // its top edge.
     setScrollRoot(sentinel.closest<HTMLElement>('[data-chat-scroll]'));
-    // Default root: the nearest scrollable ancestor, which is ChatPage's
-    // message container.
+    // The mark is clipped away by that container as it passes its top edge.
+    // A busy page gets several readings in one call, oldest first: the last one is where the mark is now.
     const observer = new IntersectionObserver(
-      ([entry]) => setPinned(!entry.isIntersecting),
-      { rootMargin: `${-topBarHeight}px 0px 0px 0px`, threshold: 0 },
+      entries => setPinned(!entries[entries.length - 1].isIntersecting),
+      { threshold: 0 },
     );
-    observer.observe(sentinel);
+    observer.observe(mark);
     return () => observer.disconnect();
-  }, [topBarHeight]);
+  }, []);
 
   const bubbleRef = useRef<HTMLDivElement>(null);
   const { height: foldHeight, restingHeight, wrapLoss } = useScrollFold(scrollRoot, pinned, bubbleRef, sentinelRef, topBarHeight);
@@ -110,8 +119,8 @@ export function StickySendHeader(props: Props) {
     // A reply streaming in must not pull the view back under the jump.
     releaseFollow?.();
     // The options are shared with the send index, so a jump lands the same way
-    // whichever control started it — see SEND_SCROLL_OPTIONS.
-    sentinel.scrollIntoView(SEND_SCROLL_OPTIONS);
+    // whichever control started it — see scrollSendIntoView.
+    scrollSendIntoView(sentinel);
   };
 
   return (
@@ -131,11 +140,21 @@ export function StickySendHeader(props: Props) {
         ref={sentinelRef}
         data-send-sentinel
         aria-hidden
-        className="h-0"
+        className="relative h-0"
         style={{ scrollMarginTop: SEND_JUMP_SCROLL_MARGIN }}
-      />
+      >
+        {/*
+          What the pin observer watches — see above. A pixel tall: the first send
+          of a conversation rests exactly on the line, and a zoomed layout can put
+          it a fraction of a pixel past it, which a mark with no height reads as
+          gone.
+        */}
+        <div ref={pinMarkRef} className="absolute inset-x-0 h-px" style={{ top: -topBarHeight }} />
+      </div>
       <div
         className="sticky top-0 z-[1] group"
+        // While pinned, where the send is drawn says nothing about where the reader is (see useScrollAnchor).
+        {...(pinned ? { [SCROLL_UNANCHORED_ATTRIBUTE]: '' } : {})}
         /*
           Content passing under the pinned message fades out instead of
           meeting a hard edge, the way Cursor's extension does it.

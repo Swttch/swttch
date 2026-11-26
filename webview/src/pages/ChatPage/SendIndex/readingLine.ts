@@ -1,3 +1,4 @@
+import { rectMetrics } from '@/utils/zoomRects';
 import { readingLineInset } from './scrollToSend';
 
 /**
@@ -22,7 +23,10 @@ export function readingLineSectionKey(topInset: number): string | null {
   const sentinels = document.querySelectorAll<HTMLElement>('[data-send-sentinel]');
   if (sentinels.length === 0) return null;
 
-  const line = readingLineInset(topInset);
+  // The line is measured from the top of the chat, which is not the top of the window when a banner stands above it.
+  // The inset is a layout length, and under the UI zoom a rectangle is not in those pixels (see zoomRects; #747).
+  const chatTop = sentinels[0].closest('[data-chat-scroll]')?.getBoundingClientRect().top ?? 0;
+  const line = chatTop + rectMetrics().fromLayout(readingLineInset(topInset));
   let lo = 0;
   let hi = sentinels.length - 1;
   let found = -1;

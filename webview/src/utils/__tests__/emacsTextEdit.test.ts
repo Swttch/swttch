@@ -529,6 +529,33 @@ describe('applyEmacsTextKey in a contentEditable', () => {
     expect(execCalls).toEqual([]);
   });
 
+  it('l centres by layout pixels when the page is zoomed (#747)', () => {
+    editable('hello', 2);
+    root.style.overflowY = 'auto';
+    layout(root, { clientHeight: 200, scrollHeight: 1000 });
+    // The scroller and the caret of the case above, as rectangles report them at 200%.
+    root.getBoundingClientRect = () => ({ top: 200, bottom: 600, left: 0, right: 400, width: 400, height: 400, x: 0, y: 200, toJSON: () => ({}) });
+    const caretRect = { top: 600, bottom: 640, left: 0, right: 2, width: 2, height: 40, x: 0, y: 600, toJSON: () => ({}) };
+    const originalRects = Object.getOwnPropertyDescriptor(Range.prototype, 'getClientRects');
+    Object.defineProperty(Range.prototype, 'getClientRects', { configurable: true, writable: true, value: () => [caretRect] });
+    document.documentElement.style.zoom = '2';
+    document.documentElement.setAttribute('data-zoom-rects', 'scaled');
+    stubExecCommand(true, root);
+
+    try {
+      applyEmacsTextKey(root, EmacsTextKey.L, false);
+      expect(root.scrollTop).toBe(110);
+    } finally {
+      document.documentElement.style.zoom = '';
+      document.documentElement.removeAttribute('data-zoom-rects');
+      if (originalRects) {
+        Object.defineProperty(Range.prototype, 'getClientRects', originalRects);
+      } else {
+        delete (Range.prototype as { getClientRects?: Range['getClientRects'] }).getClientRects;
+      }
+    }
+  });
+
   it.each(EDIT_KEYS)('Shift+Ctrl+%s does nothing', (key) => {
     editable('ab\ncd', 2);
     stubExecCommand(true, root);

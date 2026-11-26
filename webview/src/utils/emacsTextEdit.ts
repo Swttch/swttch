@@ -23,6 +23,7 @@ import {
 } from '@/utils/emacsTextRange';
 import { killRing } from '@/utils/killRing';
 import { replaceRangeWithText } from '@/pages/ChatPage/ChatInput/RichInput/replaceRangeWithText';
+import { rectMetrics } from './zoomRects';
 
 type FormField = HTMLInputElement | HTMLTextAreaElement;
 
@@ -288,6 +289,8 @@ function centerCaret(target: HTMLElement): void {
   const scrollerRect = scroller.getBoundingClientRect();
   // All-zero rects mean the environment does no layout: nothing to centre on.
   if (scrollerRect.width === 0 && scrollerRect.height === 0) return;
-  const caretTop = caretRect.top - scrollerRect.top - scroller.clientTop;
-  scroller.scrollTop += centeringScrollDelta(caretTop, caretRect.height, scroller.clientHeight);
+  // `clientTop`, `clientHeight` and `scrollTop` are layout pixels, which rectangles are not under the UI zoom.
+  const { toFixed } = rectMetrics();
+  const caretTop = toFixed(caretRect.top - scrollerRect.top) - scroller.clientTop;
+  scroller.scrollTop += centeringScrollDelta(caretTop, toFixed(caretRect.height), scroller.clientHeight);
 }

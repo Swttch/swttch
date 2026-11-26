@@ -391,6 +391,32 @@ describe('SideQuestionWindow', () => {
       }
     });
 
+    it('rests above the chat input under the interface zoom (#747)', () => {
+      const footer = document.createElement('div');
+      footer.id = CHAT_FOOTER_ID;
+      // 100 of the layout's pixels, drawn at 200%: the rectangle says 200.
+      footer.getBoundingClientRect = () => ({ height: 200 }) as DOMRect;
+      document.body.appendChild(footer);
+      document.documentElement.style.zoom = '2';
+      document.documentElement.setAttribute('data-zoom-rects', 'scaled');
+      vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} unobserve() {} });
+      const probe = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+        const width = (this as HTMLElement).style?.width === '100px' ? 200 : 0;
+        return { width, height: 0, left: 0, top: 0, right: width, bottom: 0, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+      });
+      try {
+        setup({ isMinimized: true });
+        const r = frameRect();
+        expect(r.top + r.height).toBe(viewport.height / 2 - 100 - 8);
+      } finally {
+        probe.mockRestore();
+        footer.remove();
+        document.documentElement.style.zoom = '';
+        document.documentElement.removeAttribute('data-zoom-rects');
+        vi.unstubAllGlobals();
+      }
+    });
+
     it('is only the button: no title bar, no handles, none of the window buttons', () => {
       setup({ isMinimized: true, exchanges: [exchange()] });
       expect(screen.getByRole('button', { name: 'Open' })).toBeInTheDocument();

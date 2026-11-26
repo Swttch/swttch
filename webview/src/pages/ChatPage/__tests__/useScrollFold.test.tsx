@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useScrollFold, FOLD_MAX_HEIGHT, FOLD_MIN_HEIGHT, PINNED_TOP_INSET } from '../useScrollFold';
+import { ZOOM_RECTS_ATTRIBUTE } from '@/utils/zoomRects';
 
 /**
  * The hook reads where the send's sentinel is against the top edge, so that is
@@ -332,5 +333,59 @@ describe('useScrollFold', () => {
 
     unmount();
     expect(remove).toHaveBeenCalledWith('scroll', expect.any(Function));
+  });
+});
+
+describe('useScrollFold under the UI zoom (#747)', () => {
+  afterEach(() => {
+    document.documentElement.style.zoom = '';
+    document.documentElement.removeAttribute(ZOOM_RECTS_ATTRIBUTE);
+  });
+
+  /**
+   * The same transcript as `harness`, drawn under a page zoom: `scrollTop`, the top inset and the heights the fold
+   * hands to CSS are layout pixels, while rectangles are in screen pixels on a recent Chromium ('scaled') and in
+   * layout pixels on an older one.
+   */
+  function zoomed(zoom: number, rects: 'scaled' | 'layout', restingHeight = 250) {
+    document.documentElement.style.zoom = String(zoom);
+    document.documentElement.setAttribute(ZOOM_RECTS_ATTRIBUTE, rects);
+    const unit = rects === 'scaled' ? zoom : 1;
+    const h = harness(1000, restingHeight);
+    // The bubble holds the box the fold changes, and a footer under it.
+    const box = document.createElement('div');
+    box.setAttribute('data-message-box', '');
+    h.bubbleRef.current.append(box);
+    box.getBoundingClientRect = () => ({ height: restingHeight * unit }) as DOMRect;
+    h.bubbleRef.current.getBoundingClientRect = () => ({ height: (restingHeight + 20) * unit }) as DOMRect;
+    const sentinelAt = PINNED_TOP_INSET + 1000;
+    h.sentinelRef.current.getBoundingClientRect = () => ({ top: (sentinelAt - h.root.scrollTop) * unit }) as DOMRect;
+    return h;
+  }
+
+  it.each([
+    [1.25, 'scaled'],
+    [2, 'scaled'],
+    [1.25, 'layout'],
+  ] as const)('folds in layout pixels at zoom %s with %s rectangles', (zoom, rects) => {
+    const h = zoomed(zoom, rects);
+    const { result } = renderHook(() => useScrollFold(h.root, true, h.bubbleRef, h.sentinelRef).height);
+
+    // Nothing travelled: the bubble is its own height, not that times the zoom.
+    expect(result.current).toBeCloseTo(250);
+
+    h.scrollBy(100);
+    expect(result.current).toBeCloseTo(150);
+  });
+
+  it('counts what the wrapper loses in layout pixels', () => {
+    const h = zoomed(2, 'scaled');
+    // The wrapper is read unfolded first and folded after: 20px around the box, then 5px.
+    let reads = 0;
+    h.bubbleRef.current.getBoundingClientRect = () => ({ height: (250 + (reads++ === 0 ? 20 : 5)) * 2 }) as DOMRect;
+
+    const { result } = renderHook(() => useScrollFold(h.root, true, h.bubbleRef, h.sentinelRef));
+
+    expect(result.current.wrapLoss).toBeCloseTo(15);
   });
 });

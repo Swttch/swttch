@@ -1,6 +1,6 @@
 import { memo, useRef, type RefObject } from 'react';
 import { MessageBubble } from './MessageBubble';
-import type { SendSection } from './groupIntoSendSections';
+import { mountKeyOf, type SendSection } from './groupIntoSendSections';
 import type { SessionSend } from '@/shared';
 import { CarriedSendHeader } from './SendIndex/CarriedSendHeader';
 import { ProjectSelectorPage } from '@/pages/ProjectSelectorPage';
@@ -254,7 +254,8 @@ export function ChatMessageArea(props: Props) {
       {(isLoadingMore || hasMore) && (
         <div className="flex justify-center py-4">
           {isLoadingMore ? (
-            <span className="inline-flex items-center gap-2 text-xs text-text-tertiary">
+            // As tall as the button it stands in for: a row that changes height moves a reader who is at the top (#747).
+            <span className="inline-flex items-center gap-2 py-1.5 border border-transparent text-xs text-text-tertiary">
               <span className="w-3.5 h-3.5 border-2 border-border-default border-t-text-secondary rounded-full animate-spin" />
               {t('chatMessageArea.loadingEarlierMessages')}
             </span>
@@ -294,7 +295,7 @@ export function ChatMessageArea(props: Props) {
         const carried = section.head === null ? carriedSend : null;
         return (
           <ClassicSendSection
-            key={section.key}
+            key={mountKeyOf(section)}
             section={section}
             nextHead={sections[sectionIndex + 1]?.head ?? null}
             carriedUuid={carried ? carried.uuid : null}

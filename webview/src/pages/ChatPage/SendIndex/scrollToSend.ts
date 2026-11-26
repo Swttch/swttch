@@ -1,3 +1,5 @@
+import { rectMetrics } from '@/utils/zoomRects';
+
 /**
  * Breathing room a jump leaves above the send it lands on, measured from the
  * inner edge of the scroll container's top padding.
@@ -59,6 +61,70 @@ export const SEND_SCROLL_OPTIONS: ScrollIntoViewOptions = {
   block: 'start',
 };
 
+/** How many screens away a send may be for the jump to glide to it. */
+const GLIDE_SCREENS = 2;
+
+/**
+ * Move the chat to a send, given its sentinel.
+ *
+ * A short way is glided. A long one is gone at once, and so is the way to a send that has just been loaded for
+ * (`arriving`): while a glide is on its way, the pages it passes are loaded and let go of, the reader's place is
+ * held through each of those by writing the scroll position, and the first such write ends the glide. The jump
+ * then stopped wherever it had got to, and the send it was going to was let go of (#747).
+ */
+export function scrollSendIntoView(sentinel: HTMLElement, arriving = false): void {
+  const scroller = sentinel.closest<HTMLElement>('[data-chat-scroll]');
+  let atOnce = arriving;
+  if (!atOnce && scroller) {
+    const distance = Math.abs(sentinel.getBoundingClientRect().top - scroller.getBoundingClientRect().top);
+    atOnce = distance > rectMetrics().fromLayout(scroller.clientHeight * GLIDE_SCREENS);
+  }
+  if (!atOnce) {
+    letGo?.();
+    sentinel.scrollIntoView(SEND_SCROLL_OPTIONS);
+    return;
+  }
+  holdOn(sentinel);
+}
+
+/** How long a send that was gone to at once is held where it was put. */
+const HOLD_MS = 800;
+/** What the reader does to take the page over again. */
+const READER_EVENTS = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const;
+
+/** Lets go of the send being held, when there is one. */
+let letGo: (() => void) | null = null;
+
+/**
+ * Put the chat on a send and hold it there while what came near for the first time settles: a code block holds a
+ * stand-in height until it is drawn, and pages loaded around the send arrive over the next moments, and either moves
+ * the send from where it was put. The reader touching the page ends it at once.
+ */
+function holdOn(sentinel: HTMLElement): void {
+  letGo?.();
+  let frame = 0;
+  let top = 0;
+  const land = () => {
+    sentinel.scrollIntoView({ ...SEND_SCROLL_OPTIONS, behavior: 'instant' });
+    top = sentinel.getBoundingClientRect().top;
+  };
+  const stop = () => {
+    cancelAnimationFrame(frame);
+    for (const event of READER_EVENTS) window.removeEventListener(event, stop, true);
+    if (letGo === stop) letGo = null;
+  };
+  const until = performance.now() + HOLD_MS;
+  const watch = () => {
+    if (!sentinel.isConnected || performance.now() > until) return stop();
+    if (Math.abs(sentinel.getBoundingClientRect().top - top) > 1) land();
+    frame = requestAnimationFrame(watch);
+  };
+  land();
+  for (const event of READER_EVENTS) window.addEventListener(event, stop, true);
+  frame = requestAnimationFrame(watch);
+  letGo = stop;
+}
+
 /**
  * Scroll the transcript to the send that opens the given section.
  *
@@ -74,12 +140,12 @@ export const SEND_SCROLL_OPTIONS: ScrollIntoViewOptions = {
  * `releaseFollow` stops the chat following the bottom before the jump starts
  * (see `ChatFollowContext`); it is left alone when there is nothing to jump to.
  */
-export function scrollToSend(sectionKey: string, releaseFollow?: (() => void) | null): boolean {
+export function scrollToSend(sectionKey: string, releaseFollow?: (() => void) | null, arriving = false): boolean {
   const sentinel = document.querySelector<HTMLElement>(
     `[data-send-section="${CSS.escape(sectionKey)}"] [data-send-sentinel]`,
   );
   if (!sentinel) return false;
   releaseFollow?.();
-  sentinel.scrollIntoView(SEND_SCROLL_OPTIONS);
+  scrollSendIntoView(sentinel, arriving);
   return true;
 }

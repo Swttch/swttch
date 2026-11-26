@@ -1140,3 +1140,13 @@ body {
 .volume-slider:focus-visible::-moz-range-thumb {
   box-shadow: 0 0 0 3px var(--accent-primary-subtle);
 }
+
+/* A browser without scroll anchoring (WebKit before Safari 27, so every browser on iOS before it) paints one frame
+   with everything below moved when a code block above the reader trades its stand-in height for its real one: the
+   change is told to the page only after that frame. Code blocks are drawn at their real height there (#747). The
+   stand-in is set inline by streamdown, hence `!important`. */
+@supports not (overflow-anchor: auto) {
+  [data-streamdown="code-block"] {
+    content-visibility: visible !important;
+  }
+}

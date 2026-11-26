@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { rectMetrics } from '@/utils/zoomRects';
 
 /**
  * The strip at the bottom of the chat — the composer, or whichever panel has
@@ -11,7 +12,7 @@ import { useEffect, useState } from 'react';
 export const CHAT_FOOTER_ID = 'chat-footer';
 
 /**
- * How tall that strip is right now, in pixels, or 0 when there is none.
+ * How tall that strip is right now, in layout pixels (a CSS length), or 0 when there is none.
  *
  * Measured rather than assumed because it is not one height: the composer is a
  * line, an approval prompt with three options and a text box is many, and the
@@ -27,14 +28,17 @@ export function useChatFooterHeight(): number {
       return;
     }
 
+    // A rectangle is not in CSS pixels under the UI zoom (see zoomRects).
+    const measure = () => rectMetrics().toFixed(footer.getBoundingClientRect().height);
+
     // Follows the element rather than sampling it once: the panel that occupies
     // this strip changes as the turn goes on, and a stale height would leave the
     // review either overlapping it or floating above nothing.
     const observer = new ResizeObserver(() => {
-      setHeight(footer.getBoundingClientRect().height);
+      setHeight(measure());
     });
     observer.observe(footer);
-    setHeight(footer.getBoundingClientRect().height);
+    setHeight(measure());
 
     return () => observer.disconnect();
   }, []);

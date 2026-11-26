@@ -464,6 +464,25 @@ describe('caret scrolling on programmatic moves', () => {
     document.body.removeChild(root);
   });
 
+  it('scrolls by layout pixels when the page is zoomed (#747)', () => {
+    const root = makeDiv('hello world');
+    document.body.appendChild(root);
+    // 50 screen pixels above the box are 40 of the layout's at 125%.
+    stubLayout(root, { top: 100, bottom: 300 }, 50);
+    root.scrollTop = 500;
+    document.documentElement.style.zoom = '1.25';
+    document.documentElement.setAttribute('data-zoom-rects', 'scaled');
+
+    try {
+      setCaretOffset(root, 3);
+      expect(root.scrollTop).toBe(460);
+    } finally {
+      document.documentElement.style.zoom = '';
+      document.documentElement.removeAttribute('data-zoom-rects');
+      document.body.removeChild(root);
+    }
+  });
+
   it('follows the end of a selection, not its start', () => {
     // The caret rests at the end of a selection, so that is what must be
     // brought into view — scrolling to the start would strand it.

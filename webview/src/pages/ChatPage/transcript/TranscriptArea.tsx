@@ -2,7 +2,7 @@ import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState, type Mut
 import { withoutPeerSections } from './peerSections';
 import type { LoadedMessageDto } from '../../../types';
 import type { SessionSend } from '@/shared';
-import type { SendSection } from '../groupIntoSendSections';
+import { mountKeyOf, type SendSection } from '../groupIntoSendSections';
 import { reuseSections } from '../reuseSections';
 import { ProjectSelectorPage } from '@/pages/ProjectSelectorPage';
 import { useSessionContext } from '../../../contexts/SessionContext';
@@ -270,7 +270,8 @@ export function TranscriptArea(props: TranscriptAreaProps) {
       {(isLoadingMore || hasMore) && (
         <div className="flex justify-center py-[0.9rem]">
           {isLoadingMore ? (
-            <span className="inline-flex items-center gap-[0.45rem] text-[0.675rem] leading-[0.9rem] text-text-tertiary">
+            // As tall as the button it stands in for: a row that changes height moves a reader who is at the top (#747).
+            <span className="inline-flex items-center gap-[0.45rem] py-[0.3376rem] border border-transparent text-[0.675rem] leading-[0.9rem] text-text-tertiary">
               <span className="w-[0.7874rem] h-[0.7874rem] border-2 border-border-default border-t-text-secondary rounded-full animate-spin" />
               {t('chatMessageArea.loadingEarlierMessages')}
             </span>
@@ -294,7 +295,7 @@ export function TranscriptArea(props: TranscriptAreaProps) {
               // for every word of a streaming reply and are not drawn again for it (#680).
               return (
                 <TranscriptSection
-                  key={section.key}
+                  key={mountKeyOf(section)}
                   section={section}
                   nextHead={sections[sectionIndex + 1]?.head ?? null}
                   showGap={gapSectionIndex === sectionIndex}

@@ -1,5 +1,6 @@
 import { RefObject, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { TOP_BAR_HEIGHT } from '@/contexts/TopBarContext';
+import { rectMetrics } from '@/utils/zoomRects';
 
 /** The tallest a bubble gets before `MessageBox` caps it. */
 export const FOLD_MAX_HEIGHT = 280;
@@ -116,6 +117,10 @@ export function useScrollFold(
     const root = scrollRoot;
     if (!root) return;
 
+    // Everything here ends up as a CSS length (the box's height, the spacer's), which the page zoom scales once
+    // more, so what is read off a rectangle is turned into layout pixels first (see zoomRects; #747).
+    const toLayout = (length: number) => rectMetrics().toFixed(length);
+
     // The height this bubble wants when nothing is folding it.
     //
     // Reading it straight off the element is not enough: a send can re-pin
@@ -131,7 +136,7 @@ export function useScrollFold(
       const box = bubble.querySelector<HTMLElement>('[data-message-box]') ?? bubble;
       const held = box.style.height;
       box.style.height = '';
-      start = box.getBoundingClientRect().height;
+      start = toLayout(box.getBoundingClientRect().height);
       box.style.height = held;
     }
 
@@ -167,7 +172,7 @@ export function useScrollFold(
     const sentinel = sentinelRef.current;
     const pinnedAt = root.scrollTop;
     const travelled = sentinel
-      ? () => Math.max(root.getBoundingClientRect().top + topInset - sentinel.getBoundingClientRect().top, 0)
+      ? () => Math.max(toLayout(root.getBoundingClientRect().top - sentinel.getBoundingClientRect().top) + topInset, 0)
       : () => root.scrollTop - pinnedAt;
 
     let frame = 0;
@@ -239,7 +244,9 @@ export function useScrollFold(
     const bubble = bubbleRef.current;
     if (!bubble) return;
     const box = bubble.querySelector<HTMLElement>('[data-message-box]') ?? bubble;
-    const wrap = Math.max(bubble.getBoundingClientRect().height - box.getBoundingClientRect().height, 0);
+    const wrap = rectMetrics().toFixed(
+      Math.max(bubble.getBoundingClientRect().height - box.getBoundingClientRect().height, 0),
+    );
     if (!folded) {
       unfoldedWrapRef.current = wrap;
       return;

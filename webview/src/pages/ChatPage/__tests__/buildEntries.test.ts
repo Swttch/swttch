@@ -30,6 +30,25 @@ describe('buildEntries', () => {
     expect(entries.map(e => e.key)).toEqual(['c']);
   });
 
+  // #747. After a jump back the transcript holds two stretches: the pages around the send jumped to, and the newest
+  // ones. The sends between them were dropped from the rail, so it lost ticks and a tick led somewhere else.
+  it('keeps the sends of the index that stand between two loaded stretches', () => {
+    const index = ['a', 'b', 'c', 'd', 'e', 'f'].map(send);
+    const entries = buildEntries(index, [section('a'), section('b'), section('f')]);
+    expect(entries.map(e => e.key)).toEqual(['a', 'b', 'c', 'd', 'e', 'f']);
+    expect(entries.map(e => e.loaded)).toEqual([true, true, false, false, false, true]);
+  });
+
+  it('keeps a send the index does not know where it stands among the loaded ones', () => {
+    const entries = buildEntries([send('a'), send('c'), send('d')], [section('a'), section('queued-local'), section('d')]);
+    expect(entries.map(e => e.key)).toEqual(['a', 'queued-local', 'c', 'd']);
+  });
+
+  it('does not add what the index holds after the last loaded send it knows', () => {
+    const entries = buildEntries([send('a'), send('b'), send('gone')], [section('a'), section('b')]);
+    expect(entries.map(e => e.key)).toEqual(['a', 'b']);
+  });
+
   it('leaves out a loaded section that opens with something the CLI wrote, as the index does (#657)', () => {
     const entries = buildEntries(
       [send('b')],
