@@ -45,6 +45,7 @@ const snapshot = {
     { image: 'img/two', command: 'serve' },
   ],
   existing: new Set<string>(),
+  takenAt: 0,
 };
 
 afterEach(() => {

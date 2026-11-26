@@ -38,7 +38,7 @@ import { MessageType, SessionActivity, type WorkflowTask } from '../shared';
 import { ingestRateLimitWindows } from './handlers/getUsage';
 import { SESSION_MCP_AREAS, resolveInstalledSessionMcp, type InstalledSessionMcp } from './session-mcp';
 import { announceSessionsUpdated } from './features/sessionsUpdated';
-import { whenMcpContainersReclaimed } from './mcp-container-reclaimer';
+import { recordMcpWatch, whenMcpContainersReclaimed } from './mcp-container-reclaimer';
 
 // Tracks files Claude edits so the IDE can be told to reload them once the
 // edit completes on disk. Shared across sessions — tool_use ids are unique.
@@ -1125,6 +1125,8 @@ export async function ensureClaudeProcess(
   // process as an orphan (startup sweep) or as a conflicting writer (resume guard)
   // if we die hard before the 'close' handler unregisters it.
   registerCliProcess(proc, targetSessionId, workingDir);
+  // Other chats read this to leave this one's MCP containers alone.
+  recordMcpWatch(proc);
 
   // 모든 구독자에게 스트림 시작 알림
   connections.broadcastToSession(targetSessionId, MessageType.STREAM_START);
