@@ -241,10 +241,13 @@ export async function withMcpContainerReclaim<T>(
 export function attachMcpContainerReclaim(proc: ChildProcess, cwd?: string): void {
   const snapshot = snapshotMcpContainers(cwd);
   void noteContainersForCrashRecovery(proc, snapshot);
-  live.set(proc, snapshot);
+  const entry: LiveProcess = { snapshot };
+  live.set(proc, entry);
   proc.once('close', () => {
     live.delete(proc);
-    reclaimOfProcess.set(proc, startReclaim(snapshot));
+    // After the one shutdown may have started ahead of this, or both remove the same container.
+    const turn = entry.ahead ? entry.ahead.then(() => snapshot) : snapshot;
+    reclaimOfProcess.set(proc, startReclaim(turn));
   });
 }
 
@@ -257,11 +260,18 @@ export function attachMcpContainerReclaim(proc: ChildProcess, cwd?: string): voi
  * The reclaim attached to each `close` still runs, and picks up anything started since.
  */
 export function reclaimLiveMcpContainers(): void {
-  for (const snapshot of live.values()) void startReclaim(snapshot);
+  for (const entry of live.values()) entry.ahead = startReclaim(entry.snapshot);
 }
 
-/** Spawned processes that have not closed, with the snapshot taken as each started. */
-const live = new Map<ChildProcess, Promise<ContainerSnapshot | null>>();
+interface LiveProcess {
+  /** Taken as the process started. */
+  snapshot: Promise<ContainerSnapshot | null>;
+  /** The reclaim started for it before it closed, if there was one. */
+  ahead?: Promise<unknown>;
+}
+
+/** Spawned processes that have not closed. */
+const live = new Map<ChildProcess, LiveProcess>();
 
 function startReclaim(snapshot: Promise<ContainerSnapshot | null>): Promise<unknown> {
   const running: Promise<unknown> = snapshot

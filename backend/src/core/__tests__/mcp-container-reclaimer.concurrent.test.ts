@@ -6,6 +6,7 @@ import {
   drainMcpContainerReclaims,
   reclaimContainers,
   reclaimLiveMcpContainers,
+  whenMcpContainersReclaimed,
 } from '../mcp-container-reclaimer';
 
 vi.mock('../features/mcp-config-files', () => ({
@@ -89,6 +90,45 @@ it('reclaims for a CLI that has not left yet when asked to, and drain waits for 
   reclaimLiveMcpContainers();
   await tick();
   expect(daemon.calls).toEqual([]);
+});
+
+// Two reclaims of one CLI would remove the same container twice, and the second would report
+// failure, and settle, while the first was still removing it.
+it('holds the reclaim of a close until the one started ahead of it is over', async () => {
+  const proc = Object.assign(new EventEmitter(), {
+    pid: 999_997,
+    exitCode: null,
+    signalCode: null,
+  }) as unknown as ChildProcess & EventEmitter;
+  attachMcpContainerReclaim(proc);
+  await tick();
+  pending('ps')[0].answer(null, '');
+  await tick();
+  daemon.calls.length = 0;
+
+  reclaimLiveMcpContainers();
+  await tick();
+  pending('ps')[0].answer(null, 'aaa\n');
+  await tick();
+  pending('inspect')[0].answer(null, 'img/one\tserve\n');
+  await tick();
+
+  proc.emit('close', 0);
+  let settled = false;
+  void whenMcpContainersReclaimed(proc).then(() => {
+    settled = true;
+  });
+  await tick();
+  expect(pending('ps')).toHaveLength(1);
+  expect(settled).toBe(false);
+
+  pending('rm')[0].answer(null);
+  await tick();
+  expect(pending('ps')).toHaveLength(2);
+  pending('ps')[1].answer(null, '');
+  await tick();
+  expect(settled).toBe(true);
+  expect(pending('rm')).toHaveLength(1);
 });
 
 // Shutdown gives the whole reclaim a second or so before whoever started the backend kills it, so
