@@ -134,7 +134,7 @@ class ClaudeCodePanel(
     private val project: Project,
     private val tabId: String = "default",
     private val initialPath: String? = null
-) : JPanel(BorderLayout()), Disposable {
+) : ShrinkablePanel(BorderLayout()), Disposable {
 
     private val logger = Logger.getInstance(ClaudeCodePanel::class.java)
 
