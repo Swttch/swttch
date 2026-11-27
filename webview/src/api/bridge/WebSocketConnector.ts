@@ -12,7 +12,7 @@ import {
   persistValidatedToken,
   isRemoteBlocked,
 } from './authToken';
-import { resolvePanelId } from './resolvePanelId';
+import { resolvePanelId, resolveViewId } from './resolvePanelId';
 import { MessageType } from '@/shared';
 
 /**
@@ -179,7 +179,10 @@ export class WebSocketConnector implements Connector {
     // ClaudeCodePanel); in the browser resolvePanelId mints a stable per-tab id.
     const panelId = resolvePanelId();
     const panelParam = panelId ? `&panelId=${encodeURIComponent(panelId)}` : '';
-    const wsUrl = `${protocol}//${window.location.host}/ws?env=${env}${panelParam}`;
+    // viewId tells apart the two views of a split tab, which share one panelId.
+    const viewId = resolveViewId();
+    const viewParam = viewId ? `&viewId=${encodeURIComponent(viewId)}` : '';
+    const wsUrl = `${protocol}//${window.location.host}/ws?env=${env}${panelParam}${viewParam}`;
     console.log('[WebSocketConnector] Connecting to:', wsUrl);
 
     // Carry the per-launch auth token as the `ccg-auth` subprotocol so the
@@ -191,7 +194,7 @@ export class WebSocketConnector implements Connector {
       this.transport === 'long-poll'
         ? (new LongPollSocket(
             `${window.location.protocol}//${window.location.host}`,
-            `env=${env}${panelParam}`,
+            `env=${env}${panelParam}${viewParam}`,
             getAuthToken(),
           ) as unknown as WebSocket)
         : new WebSocket(wsUrl, authSubprotocols());

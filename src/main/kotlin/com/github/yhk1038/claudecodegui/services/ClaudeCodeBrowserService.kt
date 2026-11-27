@@ -143,6 +143,12 @@ class ClaudeCodeBrowserService(private val project: Project) : Disposable {
          */
         val isOsr: Boolean,
     ) {
+        /**
+         * Names this browser among the views of one tab: a split tab shows the tab in two of
+         * them. Carried on the page URL, and on the commands the IDE sends to this view (#753).
+         */
+        val viewId: String = java.util.UUID.randomUUID().toString()
+
         /** Callback for WebView title changes (set by ClaudeCodePanel, consumed by handlers). */
         var onTitleChanged: ((String) -> Unit)? = null
 

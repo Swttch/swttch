@@ -7,7 +7,7 @@ vi.mock('../../../config/environment', () => ({
   isJetBrains: isJetBrainsMock,
 }));
 
-import { resolvePanelId, _resetPanelIdCache } from '../resolvePanelId';
+import { resolvePanelId, resolveViewId, _resetPanelIdCache } from '../resolvePanelId';
 
 // crypto.randomUUID() is typed as a UUID template-literal, so mock values must
 // be UUID-shaped (five dash-separated segments) to type-check.
@@ -111,5 +111,31 @@ describe('resolvePanelId', () => {
       expect(tab2).toBe(GEN_UUID_2);
       expect(tab1).not.toBe(tab2);
     });
+  });
+});
+
+describe('resolveViewId', () => {
+  it('returns the view the IDE named, and keeps it after navigation takes it off the URL', () => {
+    isJetBrainsMock.mockReturnValue(true);
+    setSearch('/sessions/new?panelId=jcef-uuid&viewId=view-1');
+    expect(resolveViewId()).toBe('view-1');
+
+    setSearch('/sessions/abc?workingDir=/repo');
+
+    expect(resolveViewId()).toBe('view-1');
+  });
+
+  it('is null when the IDE named no view', () => {
+    isJetBrainsMock.mockReturnValue(true);
+    setSearch('/sessions/new?panelId=jcef-uuid');
+
+    expect(resolveViewId()).toBeNull();
+  });
+
+  it('is null in a browser, even for a tab opened from an IDE address', () => {
+    isJetBrainsMock.mockReturnValue(false);
+    setSearch('/sessions/new?viewId=copied-from-opener');
+
+    expect(resolveViewId()).toBeNull();
   });
 });

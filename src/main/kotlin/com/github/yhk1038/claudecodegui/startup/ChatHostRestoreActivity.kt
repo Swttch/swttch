@@ -109,7 +109,7 @@ class ChatHostRestoreActivity : ProjectActivity {
             val mode = HostModeCache.firstPushSignal.await(HOST_MODE_AWAIT_TIMEOUT_MS)
             logger.info("Resolved hostMode before restore: $mode")
         } finally {
-            backend.releasePanel(backendKey, transientPanelId)
+            backend.releasePanel(backendKey, transientPanelId, NoopRpcHandler)
         }
     }
 

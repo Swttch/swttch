@@ -39,6 +39,34 @@ class BuildWebViewUrlTest {
     }
 
     @Nested
+    inner class ViewParam {
+        @Test
+        fun `names the view right after the panel it belongs to`() {
+            val url = buildWebViewUrl(
+                port = 1234,
+                pathSegment = "/sessions/new",
+                workingDir = null,
+                panelId = "p1",
+                isBright = false,
+                viewId = "v 2",
+            )
+            assertTrue(url.contains("panelId=p1&viewId=v+2&theme=dark"), "expected the view after the panel in: $url")
+        }
+
+        @Test
+        fun `leaves the view out when there is none`() {
+            val url = buildWebViewUrl(
+                port = 1234,
+                pathSegment = "/sessions/new",
+                workingDir = null,
+                panelId = "p1",
+                isBright = false,
+            )
+            assertFalse(url.contains("viewId"), "expected no view in: $url")
+        }
+    }
+
+    @Nested
     inner class UrlStructure {
         @Test
         fun `builds full url with host port and path`() {

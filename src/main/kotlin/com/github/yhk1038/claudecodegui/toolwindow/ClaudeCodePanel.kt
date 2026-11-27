@@ -82,6 +82,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
@@ -233,6 +234,11 @@ class ClaudeCodePanel(
 
     @Volatile
     private var isPanelDisposed: Boolean = false
+
+    // What this panel registered with the backend, handed back on dispose. A split tab has a
+    // second panel under the same panelId, with registrations of its own (#753).
+    private var registeredRpcHandler: NodeProcessManager.RpcHandler? = null
+    private var registeredProgressListener: ((LoadingPhase) -> Unit)? = null
 
     // Which line the placeholder is currently showing. Tracked so translatePlaceholder()
     // can repaint whatever is up once the catalog finishes loading. Without it, a catalog
@@ -1009,16 +1015,20 @@ class ClaudeCodePanel(
         // start (heavy .zshrc shell-PATH capture, first-run extraction) reads as
         // progress, not a frozen screen. Registered BEFORE ensureStarted so the first
         // emitted phase is not missed. See issue #97.
-        backendService.addProgressListener(project.basePath ?: "", panelId) { phase ->
+        val progressListener: (LoadingPhase) -> Unit = { phase ->
             ApplicationManager.getApplication().invokeLater {
                 if (!isPanelDisposed && holder?.isLoaded != true) {
                     setLoadingPhase(phase)
                 }
             }
         }
+        registeredProgressListener = progressListener
+        backendService.addProgressListener(project.basePath ?: "", panelId, progressListener)
 
         // Register RPC handler for this panel.
-        backendService.ensureStarted(project.basePath ?: "", panelId, createRpcHandler())
+        val rpcHandler = createRpcHandler()
+        registeredRpcHandler = rpcHandler
+        backendService.ensureStarted(project.basePath ?: "", panelId, rpcHandler)
 
         // Load URL only if not already loaded.
         if (!acquired.isLoaded) {
@@ -1268,17 +1278,19 @@ class ClaudeCodePanel(
         // tab can't jump to about:blank#blocked.
         // CefDragHandler only has onDragEnter (no onDrop hook), and the page-level
         // dataTransfer can't carry absolute file paths for security reasons. So:
-        //   1. On drag-enter, stash the OS paths on the backend (NATIVE_DROP),
+        //   1. On drag-enter, stash what CEF names the files on the backend (NATIVE_DROP),
         //   2. Return false so CEF forwards the drag as HTML5 events,
         //   3. The webview's drop handler issues NATIVE_DROP_FLUSH, which makes
         //      the backend replay the stashed paths back as NATIVE_DROP_ENTRIES.
-        // Net effect: attach happens on drop (not on hover) AND uses the real
-        // OS paths Kotlin received from CEF.
-        JcefHandlers.onFileDrag(b) { paths ->
-            logger.debug("[NativeDrop] CefDragHandler.onDragEnter stashing ${paths.size} file(s)")
-            val files = paths.map { path ->
+        // Net effect: attach happens on drop (not on hover) AND uses real OS
+        // paths. CEF can give only a file's name (macOS); the backend then looks
+        // up the full path before it replays the entry.
+        JcefHandlers.onFileDrag(b) { names ->
+            logger.debug("[NativeDrop] CefDragHandler.onDragEnter stashing ${names.size} file(s)")
+            val files = names.map { name ->
+                val path = cefDraggedPath(name)
                 val file = File(path)
-                DroppedFile(file.absolutePath, file.isDirectory)
+                DroppedFile(path, file.isAbsolute && file.isDirectory)
             }
             dispatchNativeDrop(files)
         }
@@ -2103,6 +2115,15 @@ class ClaudeCodePanel(
     }
 
     /**
+     * Address a command to this panel's own view. A split tab has a second view under the
+     * same panelId, and a key or a drop belongs to the one it happened in (#753).
+     */
+    private fun JsonObjectBuilder.putViewAddress() {
+        put("panelId", JsonPrimitive(panelId))
+        holder?.let { put("viewId", JsonPrimitive(it.viewId)) }
+    }
+
+    /**
      * Hand dropped paths to the backend.
      *
      * [alreadyDropped] separates the two moments this is called from. CEF tells
@@ -2116,7 +2137,7 @@ class ClaudeCodePanel(
         logger.debug("[NativeDrop] dispatchNativeDrop panelId=$panelId, alreadyDropped=$alreadyDropped, ${files.size} files: ${files.map { it.path }}")
         if (files.isEmpty()) return
         val params = buildJsonObject {
-            put("panelId", JsonPrimitive(panelId))
+            putViewAddress()
             putJsonArray("entries") {
                 files.forEach { file ->
                     add(buildJsonObject {
@@ -2135,7 +2156,7 @@ class ClaudeCodePanel(
      * the chat can say so instead of leaving the drop with no chip and no message.
      */
     private fun notifyNativeDropFailed() {
-        val params = buildJsonObject { put("panelId", JsonPrimitive(panelId)) }
+        val params = buildJsonObject { putViewAddress() }
         backendService.sendNotification(project.basePath ?: "", "NATIVE_DROP_FAILED", params)
     }
 
@@ -2153,7 +2174,7 @@ class ClaudeCodePanel(
     private fun sendEmacsTextKey(letter: String, shift: Boolean) {
         try {
             val params = buildJsonObject {
-                put("panelId", JsonPrimitive(panelId))
+                putViewAddress()
                 put("key", JsonPrimitive(letter))
                 put("shift", JsonPrimitive(shift))
             }
@@ -2174,7 +2195,7 @@ class ClaudeCodePanel(
      */
     private fun sendCycleTranscriptView() {
         try {
-            val params = buildJsonObject { put("panelId", JsonPrimitive(panelId)) }
+            val params = buildJsonObject { putViewAddress() }
             backendService.sendNotification(project.basePath ?: "", "CYCLE_TRANSCRIPT_VIEW", params)
         } catch (e: Exception) {
             logger.warn("CYCLE_TRANSCRIPT_VIEW not sent (panelId=$panelId)", e)
@@ -2193,7 +2214,7 @@ class ClaudeCodePanel(
     private fun sendEditHistoryCommand(command: EditHistoryCommand) {
         try {
             val params = buildJsonObject {
-                put("panelId", JsonPrimitive(panelId))
+                putViewAddress()
                 put("command", JsonPrimitive(command.wire))
             }
             backendService.sendNotification(project.basePath ?: "", "EDIT_HISTORY_COMMAND_REQUESTED", params)
@@ -2262,6 +2283,7 @@ class ClaudeCodePanel(
             pathSegment = shownPath ?: initialPath ?: "/sessions/new",
             workingDir = project.basePath,
             panelId = panelId,
+            viewId = holder?.viewId,
             isBright = com.intellij.ui.JBColor.isBright(),
             // Deliver the single-use pairing code to the webview out-of-band via the load
             // URL. The webview reads it once, strips it from the address bar, and redeems
@@ -3603,7 +3625,9 @@ class ClaudeCodePanel(
         scope.coroutineContext[kotlinx.coroutines.Job]?.cancel()
         val acquiredHolder = holder
         if (acquiredHolder != null) {
-            backendService.releasePanel(project.basePath ?: "", panelId)
+            registeredRpcHandler?.let {
+                backendService.releasePanel(project.basePath ?: "", panelId, it, registeredProgressListener)
+            }
             // Drop this panel's reference to its pooled browser holder. The
             // service disposes that holder only if no new panel re-acquires it
             // within the grace period (a real close, not a tab move). The tab
@@ -3641,6 +3665,9 @@ class ClaudeCodePanel(
  *   - `workingDir` — IDE project base path (omitted when null)
  *   - `panelId`    — forwarded to /ws so the backend can route panel-scoped
  *                    notifications (NATIVE_DROP, etc.) back to this exact webview
+ *   - `viewId`     — which view of that panel this is (omitted when null). A split
+ *                    editor tab shows one panelId in two browsers; forwarded to /ws
+ *                    so a key or a drop reaches the one it happened in (#753)
  *   - `theme`      — `light` | `dark`, derived from the IDE LAF ([isBright]).
  *                    Consumed by the FOUC guard in webview/index.html to paint
  *                    the right surface color before CSS/React load.
@@ -3663,6 +3690,7 @@ internal fun buildWebViewUrl(
     isBright: Boolean,
     pairCode: String? = null,
     forwardFallback: com.github.yhk1038.claudecodegui.remotedev.ForwardFallback? = null,
+    viewId: String? = null,
 ): String {
     // A path that already names a working directory keeps it, and a path that
     // already carries a query is continued with `&`.
@@ -3686,7 +3714,8 @@ internal fun buildWebViewUrl(
         "pair=${java.net.URLEncoder.encode(it, "UTF-8")}"
     }
     val forwardingParam = forwardFallback?.let { "forwarding=${it.wire}" }
-    val query = listOfNotNull(workingDirParam, panelParam, themeParam, pairParam, forwardingParam).joinToString("&")
+    val viewParam = viewId?.let { "viewId=${java.net.URLEncoder.encode(it, "UTF-8")}" }
+    val query = listOfNotNull(workingDirParam, panelParam, viewParam, themeParam, pairParam, forwardingParam).joinToString("&")
     val separator = if (pathSegment.contains('?')) "&" else "?"
     return "http://localhost:$port$pathSegment$separator$query"
 }
@@ -3694,7 +3723,7 @@ internal fun buildWebViewUrl(
 /**
  * The address to return to when the page is loaded again: its path, plus the two query
  * parameters that say which folder it works in (`workingDir`, `rootUp`). Everything else in
- * the query (`panelId`, `theme`, `pair`, `forwarding`) belongs to one load and is rebuilt by
+ * the query (`panelId`, `viewId`, `theme`, `pair`, `forwarding`) belongs to one load and is rebuilt by
  * [buildWebViewUrl], so it is left out. Values stay percent-encoded as the page had them.
  */
 internal fun pathToReturnTo(uri: java.net.URI): String {

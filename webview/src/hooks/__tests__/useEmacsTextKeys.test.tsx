@@ -4,8 +4,8 @@ import { MessageType } from '@/shared';
 import { useEmacsTextKeys } from '../useEmacsTextKeys';
 import { killRing } from '@/utils/killRing';
 
-const platform = vi.hoisted(() => ({ mac: true }));
-vi.mock('@/config/environment', () => ({ isMac: () => platform.mac }));
+const platform = vi.hoisted(() => ({ mac: true, ide: false }));
+vi.mock('@/config/environment', () => ({ isMac: () => platform.mac, isJetBrains: () => platform.ide }));
 
 type BridgeHandler = (msg: { type: string; payload: Record<string, string | number | boolean | null> }) => void;
 
@@ -316,6 +316,74 @@ describe('useEmacsTextKeys', () => {
       expect(event.defaultPrevented).toBe(false);
       expect(field.selectionStart).toBe(5);
       unmount = () => {};
+    });
+  });
+
+  /*
+   * An IDE whose chat renders natively (2024.2) hands the same press to the page as well, so one
+   * Ctrl+F moved the caret two characters (#753). In the IDE the key has one road, the bridge.
+   */
+  describe('in the IDE, where the page can see the press too', () => {
+    beforeEach(() => {
+      platform.ide = true;
+    });
+
+    afterEach(() => {
+      platform.ide = false;
+    });
+
+    function press(target: EventTarget, init: KeyboardEventInit): KeyboardEvent {
+      const event = new KeyboardEvent('keydown', {
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+        ...init,
+      });
+      target.dispatchEvent(event);
+      return event;
+    }
+
+    it('stops the page\'s own answer to the key and moves only once, for the bridge', () => {
+      field.setSelectionRange(5, 5);
+
+      const event = press(field, { key: 'f', code: 'KeyF' });
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(field.selectionStart).toBe(5);
+
+      deliver({ key: 'f' });
+      expect(field.selectionStart).toBe(6);
+    });
+
+    it('does the same under a non-Latin layout', () => {
+      field.setSelectionRange(5, 5);
+
+      const event = press(field, { key: String.fromCharCode(0x3160), code: 'KeyB' });
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(field.selectionStart).toBe(5);
+    });
+
+    it('leaves a Ctrl+letter that is not one of these keys alone', () => {
+      expect(press(field, { key: 'c', code: 'KeyC' }).defaultPrevented).toBe(false);
+      // The letter the layout types decides, not the physical key (Dvorak types u on KeyF).
+      expect(press(field, { key: 'u', code: 'KeyF' }).defaultPrevented).toBe(false);
+    });
+
+    it('leaves the keydown alone with Command or Option held, or while composing', () => {
+      expect(press(field, { key: 'f', code: 'KeyF', metaKey: true }).defaultPrevented).toBe(false);
+      expect(press(field, { key: 'f', code: 'KeyF', altKey: true }).defaultPrevented).toBe(false);
+      expect(press(field, { key: 'f', code: 'KeyF', isComposing: true }).defaultPrevented).toBe(false);
+    });
+
+    it('leaves the keydown alone when focus is not on an editable', () => {
+      const button = document.createElement('button');
+      document.body.appendChild(button);
+      button.focus();
+
+      expect(press(button, { key: 'f', code: 'KeyF' }).defaultPrevented).toBe(false);
+      button.remove();
     });
   });
 

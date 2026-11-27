@@ -363,11 +363,12 @@ export function startWebSocketServer(
       // `request` is a real upgrade request for /ws, but a SYNTHETIC one with only `url` and
       // `headers.origin` for a long-poll client (see POST /lp/open below). Reading any other
       // field of it here means updating that call too.
-      // Parse client environment + optional panelId from query: /ws?env=jetbrains&panelId=...
+      // Parse client environment + optional panelId/viewId from query: /ws?env=jetbrains&panelId=...&viewId=...
       const params = new URL(request.url ?? '/ws', 'http://localhost').searchParams;
       const envParam = params.get('env');
       const clientEnv = envParam === ClientEnv.JETBRAINS ? ClientEnv.JETBRAINS : ClientEnv.BROWSER;
       const panelId = params.get('panelId');
+      const viewId = params.get('viewId');
 
       // Origin was already validated during the upgrade; keep it on the record
       // so connection types (panel / tunnel / browser) can be told apart in
@@ -377,6 +378,7 @@ export function startWebSocketServer(
         clientEnv,
         panelId,
         request.headers.origin ?? null,
+        viewId,
       );
       console.error('[node-backend]', `Client connected: ${connectionId}`);
 
@@ -520,7 +522,7 @@ export function startWebSocketServer(
           const params = new URL(req.url ?? '/', 'http://localhost').searchParams;
 
           if (req.method === 'POST' && urlPath === '/lp/open') {
-            // Rebuild the /ws query (env, panelId) so the shared connection
+            // Rebuild the /ws query (env, panelId, viewId) so the shared connection
             // handler reads this client exactly as it reads a WebSocket one.
             //
             // COUPLING: the request below is NOT a real upgrade request. It carries

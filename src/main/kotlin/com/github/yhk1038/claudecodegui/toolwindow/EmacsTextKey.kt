@@ -16,8 +16,8 @@ import javax.swing.KeyStroke
  * The IDE reads it from the AWT key event, not from CEF. A shortcut action
  * registered on the browser component ([EmacsTextKeyShortcutGuard]) is
  * performed by the IDE's key dispatcher before the keymap is consulted, and
- * performing it consumes the event, so CEF never sees these keys at all. The
- * AWT event that action receives is the reliable one: its `keyCode` is the
+ * performing it consumes the event, so under off-screen rendering CEF never sees
+ * these keys at all. The AWT event that action receives is the reliable one: its `keyCode` is the
  * real letter (`VK_A`..`VK_Z`) and `isShiftDown` is the real Shift state,
  * neither of which the CEF event carries under OSR.
  *

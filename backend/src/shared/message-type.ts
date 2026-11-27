@@ -764,11 +764,11 @@ export enum MessageType {
   // -- Native drag & drop --
   /** Flush buffered native-drop entries for the active drag. */
   NATIVE_DROP_FLUSH = 'NATIVE_DROP_FLUSH',
-  /** CEF saw a file drag ENTER the panel, carrying { panelId, entries }. Buffered rather than attached, because the pointer is still holding the file and may leave again; the page's flush is what releases it. Kotlin→Node */
+  /** CEF saw a file drag ENTER the panel, carrying { panelId, viewId, entries } (viewId names which view of a split tab). Buffered rather than attached, because the pointer is still holding the file and may leave again; the page's flush is what releases it. Kotlin→Node */
   NATIVE_DROP = 'NATIVE_DROP',
-  /** A file drop already LANDED, at the Swing or IDE layer rather than in the page, carrying { panelId, entries }. Attached immediately: on Windows the page never receives a drop event, so there is no flush coming to release a buffer. Kotlin→Node */
+  /** A file drop already LANDED, at the Swing or IDE layer rather than in the page, carrying { panelId, viewId, entries }. Attached immediately: on Windows the page never receives a drop event, so there is no flush coming to release a buffer. Kotlin→Node */
   NATIVE_DROP_DELIVER = 'NATIVE_DROP_DELIVER',
-  /** A drop landed at the Swing layer carrying data the IDE could not turn into files, carrying { panelId }. Kotlin→Node. The backend relays it with no payload to that panel's webview (outbound backend→webview), which tells the person instead of leaving the drop silent. */
+  /** A drop landed at the Swing layer carrying data the IDE could not turn into files, carrying { panelId, viewId }. Kotlin→Node. The backend relays it with no payload to that panel's webview (outbound backend→webview), which tells the person instead of leaving the drop silent. */
   NATIVE_DROP_FAILED = 'NATIVE_DROP_FAILED',
 
   // -- Panel focus routing --
@@ -1003,8 +1003,8 @@ export enum MessageType {
    * gives every native text field: Ctrl+A/B/D/E/F/H/K/L/N/O/P/T/V/Y) in this
    * tab's webview. Carries { key, shift }: the lowercase letter (see
    * EmacsTextKey) and whether Shift was held, both read by the IDE from its
-   * own key event; Kotlin also sends { panelId } so the backend can route it
-   * to that panel only. It exists because JCEF off-screen rendering on macOS
+   * own key event; Kotlin also sends { panelId, viewId } so the backend can
+   * route it to that view only. It exists because JCEF off-screen rendering on macOS
    * reports every Ctrl+letter to the page as Ctrl+A, so a DOM keydown cannot
    * tell B from F and only the IDE side can say which letter was pressed. The
    * webview performs the caret move or the edit itself.
@@ -1015,7 +1015,7 @@ export enum MessageType {
    * the IDE's Undo or Redo keystroke (Cmd+Z / Cmd+Shift+Z on macOS; Ctrl+Z /
    * Ctrl+Shift+Z and Ctrl+Y elsewhere) while this tab's webview had focus.
    * Carries { command }: 'undo' or 'redo' (see EditHistoryCommand); Kotlin also
-   * sends { panelId } so the backend can route it to that panel only. It
+   * sends { panelId, viewId } so the backend can route it to that view only. It
    * exists because the IDE's keymap runs its own Undo/Redo action before the
    * page sees the keystroke whenever the IDE has an undoable change, so a file
    * move elsewhere in the IDE was undone instead of the text in the prompt
@@ -1027,8 +1027,8 @@ export enum MessageType {
    * Node↔Kotlin notification, then outbound backend→webview. The user pressed
    * Ctrl+Alt+I, the keystroke that cycles the chat's Transcript view (Normal,
    * Thinking, Verbose, classic), while this tab's webview had focus. Carries
-   * nothing but the { panelId } Kotlin sends so the backend can route it to
-   * that panel only. It exists because the IDE's keymap binds Ctrl+Alt+I to its
+   * nothing but the { panelId, viewId } Kotlin sends so the backend can route
+   * it to that view only. It exists because the IDE's keymap binds Ctrl+Alt+I to its
    * own action ("Auto-Indent Lines" in an editor) and JCEF off-screen
    * rendering reports every Ctrl+letter to the page as Ctrl+A, so a DOM keydown
    * never says Ctrl+Alt+I was pressed. The IDE claims the keystroke for the

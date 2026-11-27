@@ -1380,6 +1380,154 @@ describe('ConnectionManager', () => {
     });
   });
 
+  // #753: splitting a chat editor tab shows the same panel in a second JCEF browser, which opens its
+  // own socket with the same panelId. Closing either view must leave the other one reachable.
+  describe('one panel shown by two views', () => {
+    function twoViews() {
+      const olderWs = createMockWs();
+      const older = cm.addConnection(olderWs, ClientEnv.JETBRAINS, 'panel-1');
+      const newerWs = createMockWs();
+      const newer = cm.addConnection(newerWs, ClientEnv.JETBRAINS, 'panel-1');
+      return { older, olderWs, newer, newerWs };
+    }
+
+    it('keeps the older view reachable after the newer one closes', () => {
+      const { older, newer } = twoViews();
+
+      cm.removeConnection(newer);
+
+      expect(cm.getConnectionIdByPanelId('panel-1')).toBe(older);
+    });
+
+    it('keeps the newer view reachable after the older one closes', () => {
+      const { older, newer } = twoViews();
+
+      cm.removeConnection(older);
+
+      expect(cm.getConnectionIdByPanelId('panel-1')).toBe(newer);
+    });
+
+    it('keeps the panel focused while one of its views is still open', () => {
+      const { newer } = twoViews();
+      cm.setLastFocusedPanelId('panel-1');
+
+      cm.removeConnection(newer);
+
+      expect(cm.getLastFocusedPanelId()).toBe('panel-1');
+      expect(cm.getRevealTarget()).toEqual({ kind: 'jcef', panelId: 'panel-1' });
+    });
+
+    it('sends to the view that was focused last, not to the one that connected last', () => {
+      const { older, newer } = twoViews();
+
+      cm.setLastFocusedPanelId('panel-1', older);
+      expect(cm.getConnectionIdByPanelId('panel-1')).toBe(older);
+
+      cm.setLastFocusedPanelId('panel-1', newer);
+      expect(cm.getConnectionIdByPanelId('panel-1')).toBe(newer);
+    });
+
+    it('falls back to the other view after the focused one closes', () => {
+      const { older, newer } = twoViews();
+      cm.setLastFocusedPanelId('panel-1', older);
+
+      cm.removeConnection(older);
+
+      expect(cm.getConnectionIdByPanelId('panel-1')).toBe(newer);
+    });
+
+    it('ignores a focus report from a connection that does not show the panel', () => {
+      const { newer } = twoViews();
+      const elsewhere = cm.addConnection(createMockWs(), ClientEnv.JETBRAINS, 'panel-2');
+
+      cm.setLastFocusedPanelId('panel-1', elsewhere);
+
+      expect(cm.getConnectionIdByPanelId('panel-1')).toBe(newer);
+      expect(cm.getConnectionIdByPanelId('panel-2')).toBe(elsewhere);
+    });
+
+    it('delivers a native drop to the view that is left', () => {
+      const { olderWs, newer } = twoViews();
+      cm.removeConnection(newer);
+
+      expect(cm.deliverNativeDrop('panel-1', [{ path: '/tmp/a.txt', type: 'file' }])).toBe(true);
+      expect(olderWs.send).toHaveBeenCalledTimes(1);
+    });
+
+    it('forgets the panel once its last view closes', () => {
+      const { older, newer } = twoViews();
+      cm.setLastFocusedPanelId('panel-1');
+
+      cm.removeConnection(newer);
+      cm.removeConnection(older);
+
+      expect(cm.getConnectionIdByPanelId('panel-1')).toBeNull();
+      expect(cm.getLastFocusedPanelId()).toBeNull();
+    });
+  });
+
+  // #753: a key or a file drop belongs to one view of a split tab, whichever was focused last, so the
+  // IDE names the view and each view says which one it is when it connects.
+  describe('a command that names its view', () => {
+    const entries = [{ path: '/tmp/a.txt', type: 'file' as const }];
+
+    function view(viewId: string | null) {
+      const ws = createMockWs();
+      const id = cm.addConnection(ws, ClientEnv.JETBRAINS, 'panel-1', null, viewId);
+      return { id, ws };
+    }
+
+    it('goes to that view even when the other one was focused last', () => {
+      const left = view('view-left');
+      const right = view('view-right');
+      cm.setLastFocusedPanelId('panel-1', left.id);
+
+      expect(cm.getConnectionIdByPanelId('panel-1', 'view-right')).toBe(right.id);
+    });
+
+    it('drops a file on that view, not on the focused one', () => {
+      const left = view('view-left');
+      const right = view('view-right');
+      cm.setLastFocusedPanelId('panel-1', left.id);
+
+      expect(cm.deliverNativeDrop('panel-1', entries, 'view-right')).toBe(true);
+
+      expect(right.ws.send).toHaveBeenCalledTimes(1);
+      expect(left.ws.send).not.toHaveBeenCalled();
+    });
+
+    it('holds a dragged file for that view to flush', () => {
+      const left = view('view-left');
+      const right = view('view-right');
+      cm.setLastFocusedPanelId('panel-1', left.id);
+
+      expect(cm.setNativeDropStash('panel-1', entries, 'view-right')).toBe(true);
+
+      expect(cm.takeNativeDropStash(right.id)).toEqual(entries);
+      expect(cm.takeNativeDropStash(left.id)).toBeNull();
+    });
+
+    it('goes to the newest connection of that view after it reconnects', () => {
+      view('view-left');
+      const again = view('view-left');
+
+      expect(cm.getConnectionIdByPanelId('panel-1', 'view-left')).toBe(again.id);
+    });
+
+    it('is not handed to another view when the named one is not connected', () => {
+      view('view-left');
+
+      expect(cm.getConnectionIdByPanelId('panel-1', 'view-right')).toBeNull();
+      expect(cm.deliverNativeDrop('panel-1', entries, 'view-right')).toBe(false);
+    });
+
+    it('may go to a connection that never said which view it is', () => {
+      const unnamed = view(null);
+
+      expect(cm.getConnectionIdByPanelId('panel-1', 'view-left')).toBe(unnamed.id);
+    });
+  });
+
   describe('pickScheduledDeliveryTarget', () => {
     it('1: delivers through a live tab already subscribed to the session (no switch)', () => {
       const conn = cm.addConnection(createMockWs(), ClientEnv.JETBRAINS, 'panel-1');

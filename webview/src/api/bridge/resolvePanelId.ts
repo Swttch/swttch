@@ -35,7 +35,8 @@ let resolvedPanelId: string | null = null;
  *     opened, ahead of any in-app navigation), and kept from then on.
  *   - Browser: `window.open` COPIES both the opener's URL and its sessionStorage
  *     into a new tab, so NEITHER can distinguish tabs — every tab would inherit
- *     the opener's id and collide in the backend's 1:1 panelId→connection index.
+ *     the opener's id, and the backend's panelId index would take two separate
+ *     tabs for two views of one panel.
  *     A module-level in-memory id is unique per JS context instead, so each
  *     browser tab gets its own no matter how it was opened.
  */
@@ -52,7 +53,23 @@ export function resolvePanelId(): string {
   return resolvedPanelId;
 }
 
-/** @internal test-only: reset the resolved panelId (simulates a new tab). */
+/** The view named on the URL this page load opened with; undefined until it is first asked for. */
+let resolvedViewId: string | null | undefined;
+
+/**
+ * Which view of its panel this page is, as the IDE named it (`?viewId=`), or null in a
+ * browser. A split editor tab shows one panelId in two views, and the IDE aims a key or a
+ * file drop at one of them. Decided once, for the same reason as [resolvePanelId].
+ */
+export function resolveViewId(): string | null {
+  if (resolvedViewId === undefined) {
+    resolvedViewId = isJetBrains() ? new URLSearchParams(window.location.search).get('viewId') || null : null;
+  }
+  return resolvedViewId;
+}
+
+/** @internal test-only: reset the resolved panelId and viewId (simulates a new tab). */
 export function _resetPanelIdCache(): void {
   resolvedPanelId = null;
+  resolvedViewId = undefined;
 }

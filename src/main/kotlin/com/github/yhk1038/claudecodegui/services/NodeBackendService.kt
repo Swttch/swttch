@@ -179,7 +179,7 @@ class NodeBackendService : Disposable {
         private var lastPort: Int = 0
 
         // panelId -> handler. The Claude Code editor tabs open under this root.
-        val handlers = ConcurrentHashMap<String, NodeProcessManager.RpcHandler>()
+        val handlers = PanelRegistry<NodeProcessManager.RpcHandler>()
 
         /**
          * Whether the current backend generation ever came up far enough for the IDE's own
@@ -199,18 +199,18 @@ class NodeBackendService : Disposable {
 
         // panelId -> loading-progress listener. Panels register here so they can
         // reflect the backend's start sub-phases in their placeholder label (#97).
-        private val progressListeners = ConcurrentHashMap<String, (LoadingPhase) -> Unit>()
+        private val progressListeners = PanelRegistry<(LoadingPhase) -> Unit>()
 
         fun addProgressListener(panelId: String, listener: (LoadingPhase) -> Unit) {
-            progressListeners[panelId] = listener
+            progressListeners.register(panelId, listener)
         }
 
-        fun removeProgressListener(panelId: String) {
-            progressListeners.remove(panelId)
+        fun removeProgressListener(panelId: String, listener: (LoadingPhase) -> Unit) {
+            progressListeners.release(panelId, listener)
         }
 
         private fun emitProgress(phase: LoadingPhase) {
-            progressListeners.values.forEach { it(phase) }
+            progressListeners.all().forEach { it(phase) }
         }
 
         /**
@@ -219,7 +219,7 @@ class NodeBackendService : Disposable {
          * equivalent — same project). Only [getIdeRoot] is pinned to [basePath].
          */
         private inner class Router : NodeProcessManager.RpcHandler {
-            private fun any(): NodeProcessManager.RpcHandler? = handlers.values.firstOrNull()
+            private fun any(): NodeProcessManager.RpcHandler? = handlers.any()
             private fun warn(op: String): Nothing? {
                 logger.warn("No panel handler for $op (basePath=$basePath)"); return null
             }
@@ -702,7 +702,7 @@ class NodeBackendService : Disposable {
             return
         }
         val inst = backends.getOrPut(projectBasePath) { BackendInstance(projectBasePath) }
-        inst.handlers[panelId] = rpcHandler
+        inst.handlers.register(panelId, rpcHandler)
         inst.start() // no-op if already running
     }
 
@@ -925,14 +925,22 @@ class NodeBackendService : Disposable {
     }
 
     /**
-     * Remove a panel's handler from its root's backend. The Node.js process is
+     * Take a panel's registrations back from its root's backend. The Node.js process is
      * left running — it self-exits via its idle shutdown timer when all WebSocket
      * connections close.
+     *
+     * [rpcHandler] and [progressListener] are what this panel registered: a split tab has
+     * another panel under the same [panelId], whose registrations stay (#753).
      */
-    fun releasePanel(projectBasePath: String, panelId: String) {
+    fun releasePanel(
+        projectBasePath: String,
+        panelId: String,
+        rpcHandler: NodeProcessManager.RpcHandler,
+        progressListener: ((LoadingPhase) -> Unit)? = null,
+    ) {
         val inst = backends[projectBasePath] ?: return
-        inst.handlers.remove(panelId)
-        inst.removeProgressListener(panelId)
+        inst.handlers.release(panelId, rpcHandler)
+        progressListener?.let { inst.removeProgressListener(panelId, it) }
         logger.info("Panel released: $projectBasePath::$panelId (remaining handlers: ${inst.handlers.size})")
     }
 
