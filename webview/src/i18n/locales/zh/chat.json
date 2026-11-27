@@ -145,6 +145,10 @@
       "steerMessage": "调整当前任务...",
       "followUp": "{{send}} 发送，{{queue}} 加入队列稍后发送"
     },
+    "history": {
+      "guard": "再按一次向上键浏览历史记录",
+      "guardKeepsDraft": "再按一次向上键浏览历史记录（草稿会保留）"
+    },
     "renameSuggestion": {
       "hint": "(按 Tab 补全)"
     },

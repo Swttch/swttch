@@ -24,17 +24,29 @@ interface UseInputHistoryArgs {
   sends: SendIndexEntry[];
 }
 
+/** What a step of the walk did. */
+export type HistoryStep =
+  /** The text to put in the composer: a send's, or the draft's. */
+  | { text: string }
+  /** The first press out of the draft only says what the next one does. */
+  | 'guard'
+  /** The send is still being read from the backend; the next press finds it. */
+  | 'reading'
+  /** There is nowhere to step to, and the key falls through. */
+  | null;
+
 interface UseInputHistoryReturn {
-  /**
-   * The send before the one shown. `null` when there is none (the key then falls through), `undefined` when it is
-   * still being read from the backend.
-   */
-  navigateUp: (currentValue: string) => string | null | undefined;
-  /** The send after the one shown, or the draft that was being written when the walk began. */
-  navigateDown: () => string | null | undefined;
+  /** One send back. From the draft, the first press arms the guard and the second one goes. */
+  navigateUp: (currentValue: string) => HistoryStep;
+  /** One send forward, or back to the draft that was being written when the walk began. */
+  navigateDown: () => HistoryStep;
   /** Leave the history and forget the saved draft. */
   resetHistory: () => void;
   isNavigating: boolean;
+  /** The next Up leaves the draft: the composer says so. */
+  isGuarded: boolean;
+  /** Anything but that next Up stands the guard down. */
+  disarmGuard: () => void;
 }
 
 /**
@@ -49,6 +61,7 @@ export function useInputHistory({ workingDirectory, sessionId, sends }: UseInput
 
   /** The key of the send shown in the composer, or null while the composer holds the draft. */
   const [position, setPosition] = useState<string | null>(null);
+  const [isGuarded, setGuarded] = useState(false);
   const draftRef = useRef('');
 
   // What has been read from the backend, by send key. In refs: pages land without re-rendering the composer.
@@ -102,6 +115,7 @@ export function useInputHistory({ workingDirectory, sessionId, sends }: UseInput
     askedRef.current = new Set();
     draftRef.current = '';
     setPosition(null);
+    setGuarded(false);
   }, [sessionId]);
 
   const at = position === null ? -1 : sends.findIndex((entry) => entry.key === position);
@@ -115,36 +129,45 @@ export function useInputHistory({ workingDirectory, sessionId, sends }: UseInput
   const resetHistory = useCallback(() => {
     draftRef.current = '';
     setPosition(null);
+    setGuarded(false);
   }, []);
 
-  const navigateUp = useCallback((currentValue: string) => {
+  const disarmGuard = useCallback(() => setGuarded(false), []);
+
+  const navigateUp = useCallback((currentValue: string): HistoryStep => {
     const target = index - 1;
     if (target < 0) return null;
+    const fromDraft = index === sends.length;
+    if (fromDraft && !isGuarded) {
+      setGuarded(true);
+      return 'guard';
+    }
     const text = textFor(sends[target]);
     if (text === undefined) {
       ensure(target);
-      return undefined;
+      return 'reading';
     }
-    if (index === sends.length) draftRef.current = currentValue;
+    if (fromDraft) draftRef.current = currentValue;
+    setGuarded(false);
     setPosition(sends[target].key);
-    return text;
-  }, [sends, index, textFor, ensure]);
+    return { text };
+  }, [sends, index, isGuarded, textFor, ensure]);
 
-  const navigateDown = useCallback(() => {
+  const navigateDown = useCallback((): HistoryStep => {
     if (index === sends.length) return null;
     const target = index + 1;
     if (target === sends.length) {
       setPosition(null);
-      return draftRef.current;
+      return { text: draftRef.current };
     }
     const text = textFor(sends[target]);
     if (text === undefined) {
       ensure(target);
-      return undefined;
+      return 'reading';
     }
     setPosition(sends[target].key);
-    return text;
+    return { text };
   }, [sends, index, textFor, ensure]);
 
-  return { navigateUp, navigateDown, resetHistory, isNavigating: index < sends.length };
+  return { navigateUp, navigateDown, resetHistory, isNavigating: index < sends.length, isGuarded, disarmGuard };
 }

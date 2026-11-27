@@ -9,7 +9,7 @@ vi.mock('@/hooks/useBridge', () => ({
   useBridge: () => bridge,
 }));
 
-import { useInputHistory } from '../useInputHistory';
+import { useInputHistory, type HistoryStep } from '../useInputHistory';
 import { MessageType } from '@/shared';
 import type { SendIndexEntry } from '@/pages/ChatPage/sendList';
 import type { LoadedMessageDto } from '@/types';
@@ -38,15 +38,22 @@ function render(sends: SendIndexEntry[], sessionId: string | null = 's1') {
 }
 
 type History = ReturnType<typeof render>['result'];
+/** What a step did, with a recalled text given as the text itself. */
+const said = (step: HistoryStep) => (step && typeof step === 'object' ? step.text : step);
+function press(result: History, current = 'draft') {
+  let step: HistoryStep = null;
+  act(() => { step = result.current.navigateUp(current); });
+  return said(step);
+}
+/** Up, passing the guard that stands between the draft and the history. */
 function up(result: History, current = 'draft') {
-  let value: string | null | undefined;
-  act(() => { value = result.current.navigateUp(current); });
-  return value;
+  const first = press(result, current);
+  return first === 'guard' ? press(result, current) : first;
 }
 function down(result: History) {
-  let value: string | null | undefined;
-  act(() => { value = result.current.navigateDown(); });
-  return value;
+  let step: HistoryStep = null;
+  act(() => { step = result.current.navigateDown(); });
+  return said(step);
 }
 
 describe('useInputHistory', () => {
@@ -62,6 +69,28 @@ describe('useInputHistory', () => {
     expect(up(result)).toBe('oldest');
     // Nothing older: the key falls through instead of sticking on the last entry.
     expect(up(result)).toBeNull();
+  });
+
+  it('says what the next press does before it leaves the draft', () => {
+    const { result } = render([loaded('u1', 'older'), loaded('u2', 'newer')]);
+
+    expect(press(result, 'half-typed')).toBe('guard');
+    expect(result.current.isGuarded).toBe(true);
+    expect(result.current.isNavigating).toBe(false);
+
+    expect(press(result, 'half-typed')).toBe('newer');
+    expect(result.current.isGuarded).toBe(false);
+    // Inside the history there is no guard between one send and the next.
+    expect(press(result, 'newer')).toBe('older');
+  });
+
+  it('asks again after the guard was stood down', () => {
+    const { result } = render([loaded('u1', 'only')]);
+    press(result);
+
+    act(() => { result.current.disarmGuard(); });
+
+    expect(press(result)).toBe('guard');
   });
 
   it('walks back down to the draft that was being written', () => {
@@ -111,7 +140,7 @@ describe('useInputHistory', () => {
     sendMock.mockReturnValue(new Promise(() => {}));
     const { result } = render([unloaded('u0')]);
 
-    expect(up(result)).toBeUndefined();
+    expect(up(result)).toBe('reading');
     expect(result.current.isNavigating).toBe(false);
   });
 
@@ -170,13 +199,14 @@ describe('useInputHistory', () => {
     const { result } = render([unloaded('u0')]);
 
     await waitFor(() => expect(sendMock).toHaveBeenCalled());
-    expect(up(result)).toBeUndefined();
+    expect(up(result)).toBe('reading');
   });
 
-  it('has nothing to walk in a session with no sends', () => {
+  it('has nothing to walk, and no guard to show, in a session with no sends', () => {
     const { result } = render([]);
 
-    expect(up(result)).toBeNull();
+    expect(press(result)).toBeNull();
+    expect(result.current.isGuarded).toBe(false);
     expect(sendMock).not.toHaveBeenCalled();
   });
 });

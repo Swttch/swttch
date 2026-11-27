@@ -145,6 +145,10 @@
       "steerMessage": "現在の作業を調整します...",
       "followUp": "{{send}} で送信、{{queue}} でキューに追加して後で送信"
     },
+    "history": {
+      "guard": "もう一度↑で履歴を表示",
+      "guardKeepsDraft": "もう一度↑で履歴を表示（下書きは保持されます）"
+    },
     "renameSuggestion": {
       "hint": "(Tabで補完)"
     },

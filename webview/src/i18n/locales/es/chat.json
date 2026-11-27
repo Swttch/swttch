@@ -145,6 +145,10 @@
       "steerMessage": "Ajustar la ejecución actual...",
       "followUp": "{{send}} para enviar, {{queue}} para añadir a la cola"
     },
+    "history": {
+      "guard": "Pulsa ↑ otra vez para ver el historial",
+      "guardKeepsDraft": "Pulsa ↑ otra vez para ver el historial (tu borrador se conserva)"
+    },
     "renameSuggestion": {
       "hint": "(Tab para completar)"
     },

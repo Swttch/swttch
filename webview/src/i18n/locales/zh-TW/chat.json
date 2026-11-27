@@ -145,6 +145,10 @@
       "steerMessage": "調整目前的工作...",
       "followUp": "{{send}} 傳送，{{queue}} 加入佇列稍後傳送"
     },
+    "history": {
+      "guard": "再按一次向上鍵瀏覽歷史記錄",
+      "guardKeepsDraft": "再按一次向上鍵瀏覽歷史記錄（草稿會保留）"
+    },
     "renameSuggestion": {
       "hint": "(按 Tab 補全)"
     },

@@ -145,6 +145,10 @@
       "steerMessage": "Aktuellen Lauf steuern...",
       "followUp": "{{send}} zum Senden, {{queue}} zum Einreihen für später"
     },
+    "history": {
+      "guard": "Noch einmal ↑ drücken, um den Verlauf zu durchsuchen",
+      "guardKeepsDraft": "Noch einmal ↑ drücken, um den Verlauf zu durchsuchen (dein Entwurf bleibt erhalten)"
+    },
     "renameSuggestion": {
       "hint": "(Tab zum Übernehmen)"
     },

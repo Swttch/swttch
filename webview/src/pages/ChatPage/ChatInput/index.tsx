@@ -1,7 +1,7 @@
 import { getPendingReplies, removePendingReply, subscribePendingReplies, takeSendRequest, updatePendingReply } from '@/utils/composerReplies';
 import { getPendingElements, pngFromBase64, removePendingElement, subscribeComposerElements, subscribeComposerFiles, subscribeComposerImages, subscribePendingElements } from '@/utils/composerElements';
 import toast from 'react-hot-toast';
-import { useCallback, useContext, useEffect, useRef, KeyboardEvent, useState, useSyncExternalStore, type ClipboardEvent as ReactClipboardEvent, type DragEvent as ReactDragEvent } from 'react';
+import { useCallback, useContext, useEffect, useLayoutEffect, useRef, KeyboardEvent, useState, useSyncExternalStore, type ClipboardEvent as ReactClipboardEvent, type DragEvent as ReactDragEvent } from 'react';
 import { CommandPalettePanel } from '@/commandPalette/ui/CommandPalettePanel';
 import { useCommandPalette } from '@/commandPalette/hooks/useCommandPalette';
 import { PanelSectionId, PanelItemType, CommandItem } from '@/types/commandPalette';
@@ -96,7 +96,8 @@ import {
 } from '@/utils/composerShortcut';
 import { FollowUpBehavior, SessionActivity, resolveFollowUpBehavior } from '@/shared';
 import { useSessionActivity } from '@/hooks/useSessionActivity';
-import { arrowRecallsHistory } from './caretAtEdge';
+import { ArrowMove, caretLength, historyArrow, readCaret } from './historyArrow';
+import { HistoryNotice } from './HistoryNotice';
 import { basename } from './basename';
 import {
   findChipRange,
@@ -166,7 +167,14 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
   const queueWhileWaiting = cardWaiting && runningActivity(chatStream.messages) !== null;
   const { input: value, setInput: onChange, setComposerHasContent } = useChatInputState();
   const sends = useContext(SendListContext);
-  const { navigateUp, navigateDown, resetHistory } = useInputHistory({ workingDirectory, sessionId: currentSessionId, sends });
+  const { navigateUp, navigateDown, resetHistory, isGuarded, disarmGuard } = useInputHistory({ workingDirectory, sessionId: currentSessionId, sends });
+  /** Where the caret goes once a recalled text is in the box. A new object for every recall. */
+  const [caretRequest, setCaretRequest] = useState<{ at: 'start' | 'end' } | null>(null);
+  // Runs after the editor has written the text into the page, which also moves the caret: the request wins.
+  useLayoutEffect(() => {
+    const el = textareaRef.current;
+    if (el && caretRequest) setCaretOffset(el, caretRequest.at === 'start' ? 0 : caretLength(el));
+  }, [caretRequest, textareaRef]);
   // The recording itself belongs to DictationProvider, which sits above this
   // component: a recording has to outlive the composer, because an approval
   // prompt takes this slot and unmounts it mid-sentence (issue #409). What is
@@ -1053,6 +1061,8 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
     // Feed the IME truth: keyCode 229 means the IME is still processing this
     // keystroke, so mark composition active before any Enter decision runs.
     ime.noteKeyDown(e.nativeEvent.keyCode);
+    // Only the Up that follows the guard goes into the history; any other key stands it down.
+    if (e.key !== 'ArrowUp' || e.shiftKey) disarmGuard();
 
     // Write down which physical key this is, so a command typed with another
     // layout on can be read back as the keys that were pressed. A key only
@@ -1199,45 +1209,28 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
     // Enter that reaches here is one a composition is holding; leave it alone.
     if (isEnterKey) return;
 
-    if (e.key === 'ArrowUp' && !palette.showSlashCommands) {
-      // Moving comes first, and the history only gets the key once the caret has
-      // nowhere left to go: Up walks up the visual rows, then from the top row to
-      // the very first character, and only the press after that — one the
-      // composer would not act on at all — recalls the previous prompt.
-      //
-      // This used to scan the text for "\n" instead, which is the mistake
-      // utils/domSelection warns about: a soft-wrapped prompt is one run of text
-      // with no newline in it, so every visual row read as "the first line" and
-      // Up jumped to the previous prompt mid-paragraph.
-      if (!arrowRecallsHistory(e, e.currentTarget, CaretDirection.Backward)) return;
+    if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && !palette.showSlashCommands) {
+      // A held modifier asks for something else: Shift selects (#396), and the others are the system's own moves.
+      if (e.shiftKey || e.altKey || e.ctrlKey || e.metaKey || isIMEComposing) return;
+      const up = e.key === 'ArrowUp';
+      const el = e.currentTarget;
+      const move = historyArrow(up ? CaretDirection.Backward : CaretDirection.Forward, readCaret(el));
+      if (move === ArrowMove.Native) return;
+      if (move !== ArrowMove.Leave) {
+        e.preventDefault();
+        setCaretOffset(el, move === ArrowMove.ToStart ? 0 : caretLength(el));
+        return;
+      }
 
-      const historyValue = navigateUp(value);
-      if (historyValue === null) return;
+      const step = up ? navigateUp(value) : navigateDown();
+      if (step === null) return;
       e.preventDefault();
-      // Still being read from the backend: the key is taken, and the next press finds it.
-      if (historyValue === undefined) return;
-      applyHistoryValue(historyValue);
-      // Land on the character the walk continues from, so holding Up keeps
-      // moving through prompts instead of re-crossing the one just recalled.
-      requestAnimationFrame(() => {
-        const target = textareaRef.current;
-        if (target) setCaretOffset(target, 0);
-      });
-    } else if (e.key === 'ArrowDown' && !palette.showSlashCommands) {
-      // The mirror of Up: the last character, not the last row.
-      if (!arrowRecallsHistory(e, e.currentTarget, CaretDirection.Forward)) return;
-
-      const historyValue = navigateDown();
-      if (historyValue === null) return;
-      e.preventDefault();
-      if (historyValue === undefined) return;
-      const applied = applyHistoryValue(historyValue);
-      requestAnimationFrame(() => {
-        const target = textareaRef.current;
-        if (target) setCaretOffset(target, applied.length);
-      });
+      if (step === 'guard' || step === 'reading') return;
+      applyHistoryValue(step.text);
+      // Land on the edge the walk goes on from, so the same arrow keeps stepping through the sends.
+      setCaretRequest({ at: up ? 'start' : 'end' });
     }
-  }, [disabled, value, attachments.length, submitComposer, onSubmit, navigateUp, navigateDown, onChange, palette, mention, promptLibrary, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, appSettings.composerSendShortcut, appSettings.composerSendShortcutCustom, appSettings.composerNewlineShortcut, appSettings.composerNewlineShortcutCustom, ime, handleRichChange, textareaRef, renameGhost]);
+  }, [disabled, value, attachments.length, submitComposer, onSubmit, navigateUp, navigateDown, disarmGuard, applyHistoryValue, onChange, palette, mention, promptLibrary, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, appSettings.composerSendShortcut, appSettings.composerSendShortcutCustom, appSettings.composerNewlineShortcut, appSettings.composerNewlineShortcutCustom, ime, handleRichChange, textareaRef, renameGhost]);
 
   // Wrap the attachment paste handler so files keep their dedicated path while
   // text goes through the browser's own editing pipeline.
@@ -1586,6 +1579,9 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
         <DragOverlay visible={isDragOver} />
         </>}
         editor={<>
+          <HistoryNotice guarded={isGuarded} hasDraft={value.trim() !== ''} />
+          {/* A click puts the caret somewhere else, which stands the guard down too. */}
+          <div onMouseDown={disarmGuard}>
           <RichInput
             ref={textareaRef}
             ime={ime}
@@ -1596,7 +1592,7 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
               if (promptLibrary.isActive) promptLibrary.handleKeyUp(e);
             }}
             onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
+            onBlur={() => { setIsFocused(false); disarmGuard(); }}
             onPaste={handleRichPaste}
             placeholder={
               // While a turn runs, the placeholder names what this message will
@@ -1619,6 +1615,7 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
             ghostText={renameGhost}
             ghostHint={renameGhost ? t('chatInput.renameSuggestion.hint') : null}
           />
+          </div>
           {voiceEnabled && (
             <MicButton
               state={dictation.state}

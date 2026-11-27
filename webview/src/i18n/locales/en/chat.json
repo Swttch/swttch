@@ -145,6 +145,10 @@
       "steerMessage": "Steer the current run...",
       "followUp": "{{send}} to send, {{queue}} to queue for later"
     },
+    "history": {
+      "guard": "Press Up again to browse history",
+      "guardKeepsDraft": "Press Up again to browse history (your draft is kept)"
+    },
     "renameSuggestion": {
       "hint": "(Tab to accept)"
     },

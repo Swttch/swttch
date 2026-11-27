@@ -145,6 +145,10 @@
       "steerMessage": "현재 작업을 조정합니다...",
       "followUp": "{{send}} 키로 보내기, {{queue}} 키로 대기열에 추가하여 나중에 보내기"
     },
+    "history": {
+      "guard": "한 번 더 위로 올려 히스토리 탐색",
+      "guardKeepsDraft": "한 번 더 위로 올려 히스토리 탐색 (초안은 유지됩니다)"
+    },
     "renameSuggestion": {
       "hint": "(Tab으로 완성)"
     },
