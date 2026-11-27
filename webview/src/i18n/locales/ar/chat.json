@@ -147,7 +147,8 @@
     },
     "history": {
       "guard": "اضغط ↑ مرة أخرى لتصفح السجل",
-      "guardKeepsDraft": "اضغط ↑ مرة أخرى لتصفح السجل (ستبقى مسودتك)"
+      "guardKeepsDraft": "اضغط ↑ مرة أخرى لتصفح السجل (ستبقى مسودتك)",
+      "position": "السجل {{index}}/{{total}}"
     },
     "renameSuggestion": {
       "hint": "(Tab للإكمال)"

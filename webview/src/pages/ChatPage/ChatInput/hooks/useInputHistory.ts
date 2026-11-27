@@ -43,6 +43,11 @@ interface UseInputHistoryReturn {
   /** Leave the history and forget the saved draft. */
   resetHistory: () => void;
   isNavigating: boolean;
+  /**
+   * Where the walk stands, counted over the sends alone: the newest is `total`, the oldest 1, and the draft has no
+   * number. `total` is the number of ticks of the send index. Null while the composer holds the draft.
+   */
+  position: { index: number; total: number } | null;
   /** The next Up leaves the draft: the composer says so. */
   isGuarded: boolean;
   /** Anything but that next Up stands the guard down. */
@@ -60,7 +65,7 @@ export function useInputHistory({ workingDirectory, sessionId, sends }: UseInput
   const { send } = useBridge();
 
   /** The key of the send shown in the composer, or null while the composer holds the draft. */
-  const [position, setPosition] = useState<string | null>(null);
+  const [shownKey, setShownKey] = useState<string | null>(null);
   const [isGuarded, setGuarded] = useState(false);
   const draftRef = useRef('');
 
@@ -114,11 +119,11 @@ export function useInputHistory({ workingDirectory, sessionId, sends }: UseInput
     textsRef.current = new Map();
     askedRef.current = new Set();
     draftRef.current = '';
-    setPosition(null);
+    setShownKey(null);
     setGuarded(false);
   }, [sessionId]);
 
-  const at = position === null ? -1 : sends.findIndex((entry) => entry.key === position);
+  const at = shownKey === null ? -1 : sends.findIndex((entry) => entry.key === shownKey);
   /** Where the walk stands in the list; past its end while the composer holds the draft. */
   const index = at === -1 ? sends.length : at;
 
@@ -128,7 +133,7 @@ export function useInputHistory({ workingDirectory, sessionId, sends }: UseInput
 
   const resetHistory = useCallback(() => {
     draftRef.current = '';
-    setPosition(null);
+    setShownKey(null);
     setGuarded(false);
   }, []);
 
@@ -149,7 +154,7 @@ export function useInputHistory({ workingDirectory, sessionId, sends }: UseInput
     }
     if (fromDraft) draftRef.current = currentValue;
     setGuarded(false);
-    setPosition(sends[target].key);
+    setShownKey(sends[target].key);
     return { text };
   }, [sends, index, isGuarded, textFor, ensure]);
 
@@ -157,7 +162,7 @@ export function useInputHistory({ workingDirectory, sessionId, sends }: UseInput
     if (index === sends.length) return null;
     const target = index + 1;
     if (target === sends.length) {
-      setPosition(null);
+      setShownKey(null);
       return { text: draftRef.current };
     }
     const text = textFor(sends[target]);
@@ -165,9 +170,12 @@ export function useInputHistory({ workingDirectory, sessionId, sends }: UseInput
       ensure(target);
       return 'reading';
     }
-    setPosition(sends[target].key);
+    setShownKey(sends[target].key);
     return { text };
   }, [sends, index, textFor, ensure]);
 
-  return { navigateUp, navigateDown, resetHistory, isNavigating: index < sends.length, isGuarded, disarmGuard };
+  const isNavigating = index < sends.length;
+  const position = isNavigating ? { index: index + 1, total: sends.length } : null;
+
+  return { navigateUp, navigateDown, resetHistory, isNavigating, position, isGuarded, disarmGuard };
 }

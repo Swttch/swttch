@@ -147,7 +147,8 @@
     },
     "history": {
       "guard": "Press Up again to browse history",
-      "guardKeepsDraft": "Press Up again to browse history (your draft is kept)"
+      "guardKeepsDraft": "Press Up again to browse history (your draft is kept)",
+      "position": "History {{index}}/{{total}}"
     },
     "renameSuggestion": {
       "hint": "(Tab to accept)"

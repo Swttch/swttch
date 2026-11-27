@@ -71,6 +71,24 @@ describe('useInputHistory', () => {
     expect(up(result)).toBeNull();
   });
 
+  it('numbers the sends from the oldest, with no number for the draft', () => {
+    const { result, rerender } = render([loaded('u2', 'b'), loaded('u3', 'c')]);
+    expect(result.current.position).toBeNull();
+
+    up(result);
+    expect(result.current.position).toEqual({ index: 2, total: 2 });
+    up(result, 'c');
+    expect(result.current.position).toEqual({ index: 1, total: 2 });
+
+    // The count follows the list, which is the send index's own.
+    rerender({ sends: [loaded('u1', 'a'), loaded('u2', 'b'), loaded('u3', 'c')], sessionId: 's1' });
+    expect(result.current.position).toEqual({ index: 2, total: 3 });
+
+    down(result);
+    down(result);
+    expect(result.current.position).toBeNull();
+  });
+
   it('says what the next press does before it leaves the draft', () => {
     const { result } = render([loaded('u1', 'older'), loaded('u2', 'newer')]);
 

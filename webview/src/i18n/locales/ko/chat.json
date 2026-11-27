@@ -147,7 +147,8 @@
     },
     "history": {
       "guard": "한 번 더 위로 올려 히스토리 탐색",
-      "guardKeepsDraft": "한 번 더 위로 올려 히스토리 탐색 (초안은 유지됩니다)"
+      "guardKeepsDraft": "한 번 더 위로 올려 히스토리 탐색 (초안은 유지됩니다)",
+      "position": "히스토리 {{index}}/{{total}}"
     },
     "renameSuggestion": {
       "hint": "(Tab으로 완성)"

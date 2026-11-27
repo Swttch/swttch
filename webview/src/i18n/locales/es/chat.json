@@ -147,7 +147,8 @@
     },
     "history": {
       "guard": "Pulsa ↑ otra vez para ver el historial",
-      "guardKeepsDraft": "Pulsa ↑ otra vez para ver el historial (tu borrador se conserva)"
+      "guardKeepsDraft": "Pulsa ↑ otra vez para ver el historial (tu borrador se conserva)",
+      "position": "Historial {{index}}/{{total}}"
     },
     "renameSuggestion": {
       "hint": "(Tab para completar)"

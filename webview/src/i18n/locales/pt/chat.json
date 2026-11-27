@@ -147,7 +147,8 @@
     },
     "history": {
       "guard": "Pressione ↑ novamente para ver o histórico",
-      "guardKeepsDraft": "Pressione ↑ novamente para ver o histórico (seu rascunho é mantido)"
+      "guardKeepsDraft": "Pressione ↑ novamente para ver o histórico (seu rascunho é mantido)",
+      "position": "Histórico {{index}}/{{total}}"
     },
     "renameSuggestion": {
       "hint": "(Tab para completar)"

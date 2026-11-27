@@ -147,7 +147,8 @@
     },
     "history": {
       "guard": "再按一次向上键浏览历史记录",
-      "guardKeepsDraft": "再按一次向上键浏览历史记录（草稿会保留）"
+      "guardKeepsDraft": "再按一次向上键浏览历史记录（草稿会保留）",
+      "position": "历史记录 {{index}}/{{total}}"
     },
     "renameSuggestion": {
       "hint": "(按 Tab 补全)"

@@ -167,7 +167,7 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
   const queueWhileWaiting = cardWaiting && runningActivity(chatStream.messages) !== null;
   const { input: value, setInput: onChange, setComposerHasContent } = useChatInputState();
   const sends = useContext(SendListContext);
-  const { navigateUp, navigateDown, resetHistory, isGuarded, disarmGuard } = useInputHistory({ workingDirectory, sessionId: currentSessionId, sends });
+  const { navigateUp, navigateDown, resetHistory, position: historyPosition, isGuarded, disarmGuard } = useInputHistory({ workingDirectory, sessionId: currentSessionId, sends });
   /** Where the caret goes once a recalled text is in the box. A new object for every recall. */
   const [caretRequest, setCaretRequest] = useState<{ at: 'start' | 'end' } | null>(null);
   // Runs after the editor has written the text into the page, which also moves the caret: the request wins.
@@ -1579,7 +1579,7 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
         <DragOverlay visible={isDragOver} />
         </>}
         editor={<>
-          <HistoryNotice guarded={isGuarded} hasDraft={value.trim() !== ''} />
+          <HistoryNotice position={historyPosition} guarded={isGuarded} hasDraft={value.trim() !== ''} />
           {/* A click puts the caret somewhere else, which stands the guard down too. */}
           <div onMouseDown={disarmGuard}>
           <RichInput
