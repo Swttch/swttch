@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs';
+import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { ccgHomeDir } from '../../config/ccg-home';
 
@@ -22,13 +22,18 @@ function ledgerPath(): string {
 }
 
 function persist(path: string, ledger: Ledger): void {
+  const temporary = `${path}.${process.pid}.tmp`;
   try {
     mkdirSync(dirname(path), { recursive: true });
-    const temporary = `${path}.${process.pid}.tmp`;
     writeFileSync(temporary, JSON.stringify(ledger));
     renameSync(temporary, path);
   } catch {
     // Not written: the answer is still right until this process ends.
+    try {
+      rmSync(temporary, { force: true });
+    } catch {
+      // Nothing more to do: the next write by this process reuses the name.
+    }
   }
 }
 

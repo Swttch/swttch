@@ -1,5 +1,5 @@
-import { readFile, writeFile, rename, unlink, mkdir, chmod, readdir } from 'fs/promises';
-import { existsSync } from 'fs';
+import { readFile, unlink, readdir } from 'fs/promises';
+import { existsSync, chmodSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { randomUUID } from 'crypto';
 import { AccountPoolStrategy, type AccountPool, type StoredAccount } from '../../shared';
@@ -72,19 +72,32 @@ export function newAccountPoolId(): string {
   return `pool-${randomUUID()}`;
 }
 
-async function writeAtomic0600(target: string, content: string): Promise<void> {
+// Synchronous on purpose. The backend ends itself from the event loop (a signal
+// handler, the idle timer, a restart request), and with no `await` between creating
+// the temp file and renaming it, none of those can run in between and leave the temp
+// file behind. Only a forced kill or a power cut still can.
+function writeAtomic0600(target: string, content: string): void {
   // NOTE: On Windows, POSIX mode 0o600 is not enforced by the filesystem (NTFS
   // ignores the mode bits). Security on Windows relies entirely on the user's ACL.
   // The CLI shares this same limitation and does not apply any Windows-specific ACL
   // hardening either, so our behaviour matches.
-  await mkdir(dirname(target), { recursive: true });
+  mkdirSync(dirname(target), { recursive: true });
   const temp = `${target}.${randomUUID()}.tmp`;
   try {
-    await writeFile(temp, content, { encoding: 'utf-8', mode: 0o600 });
-    await rename(temp, target);
-    await chmod(target, 0o600).catch(() => undefined);
+    writeFileSync(temp, content, { encoding: 'utf-8', mode: 0o600 });
+    renameSync(temp, target);
+    try {
+      chmodSync(target, 0o600);
+    } catch {
+      // The temp file was created 0600 and the rename carried that over.
+    }
   } finally {
-    if (existsSync(temp)) await unlink(temp).catch(() => undefined);
+    // Still there only when the write or the rename failed. `force` makes a missing file no error.
+    try {
+      rmSync(temp, { force: true });
+    } catch {
+      // Must not replace the reason the save failed.
+    }
   }
 }
 
@@ -169,7 +182,7 @@ export async function readRegistry(): Promise<AccountsRegistry> {
 
 /** Overwrite the registry (0600; it carries no secrets but stays user-private). */
 export async function writeRegistry(registry: AccountsRegistry): Promise<void> {
-  await writeAtomic0600(registryPath(), JSON.stringify(registry, null, 2) + '\n');
+  writeAtomic0600(registryPath(), JSON.stringify(registry, null, 2) + '\n');
 }
 
 /**
@@ -243,7 +256,7 @@ export async function readSnapshot(id: string): Promise<AccountSnapshot | null> 
 
 /** Write one account's credential snapshot (0600). */
 export async function writeSnapshot(id: string, snapshot: AccountSnapshot): Promise<void> {
-  await writeAtomic0600(accountSnapshotPath(id), JSON.stringify(snapshot, null, 2) + '\n');
+  writeAtomic0600(accountSnapshotPath(id), JSON.stringify(snapshot, null, 2) + '\n');
 }
 
 /** Remove an account's metadata entry and its credential snapshot. */

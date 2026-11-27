@@ -1,5 +1,5 @@
-import { readFile, writeFile, rename, unlink, mkdir, chmod } from 'fs/promises';
-import { existsSync } from 'fs';
+import { readFile } from 'fs/promises';
+import { existsSync, chmodSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { randomUUID } from 'crypto';
 import type { ScheduledMessage } from '../../shared';
@@ -32,18 +32,29 @@ function storePath(): string {
   return join(baseDir(), 'scheduled-messages.json');
 }
 
-async function writeAtomic0600(target: string, content: string): Promise<void> {
+function writeAtomic0600(target: string, content: string): void {
   // Mirrors account-store's atomic write: write to a unique temp file, then
   // rename over the target so a concurrent reader never sees a partial file.
+  // Synchronous for the same reason too: the backend's own shutdown cannot run
+  // between the two steps and leave the temp file behind.
   // (On Windows NTFS ignores the 0o600 mode bits — same limitation as the CLI.)
-  await mkdir(dirname(target), { recursive: true });
+  mkdirSync(dirname(target), { recursive: true });
   const temp = `${target}.${randomUUID()}.tmp`;
   try {
-    await writeFile(temp, content, { encoding: 'utf-8', mode: 0o600 });
-    await rename(temp, target);
-    await chmod(target, 0o600).catch(() => undefined);
+    writeFileSync(temp, content, { encoding: 'utf-8', mode: 0o600 });
+    renameSync(temp, target);
+    try {
+      chmodSync(target, 0o600);
+    } catch {
+      // The temp file was created 0600 and the rename carried that over.
+    }
   } finally {
-    if (existsSync(temp)) await unlink(temp).catch(() => undefined);
+    // Still there only when the write or the rename failed. `force` makes a missing file no error.
+    try {
+      rmSync(temp, { force: true });
+    } catch {
+      // Must not replace the reason the save failed.
+    }
   }
 }
 
@@ -103,7 +114,7 @@ export async function readAllSchedules(): Promise<ScheduledMessagesFile> {
 
 /** Overwrite the whole store (0600). */
 async function writeAllSchedules(all: ScheduledMessagesFile): Promise<void> {
-  await writeAtomic0600(storePath(), JSON.stringify(all, null, 2) + '\n');
+  writeAtomic0600(storePath(), JSON.stringify(all, null, 2) + '\n');
 }
 
 /** Read one session's reservations (empty array when the session has none). */

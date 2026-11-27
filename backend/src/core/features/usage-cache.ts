@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, unlinkSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import type { CcbUsageResponse } from '../handlers/getUsage';
 import { ccgHomeDir } from '../../config/ccg-home';
@@ -56,13 +56,18 @@ function filePath(accountId: string, kind: 'snapshot' | 'cooldown'): string {
 }
 
 function writeAtomic(path: string, value: unknown): void {
+  const tmp = `${path}.${process.pid}.tmp`;
   try {
     mkdirSync(baseDir(), { recursive: true });
-    const tmp = `${path}.${process.pid}.tmp`;
     writeFileSync(tmp, JSON.stringify(value, null, 2), { encoding: 'utf8', mode: 0o600 });
     renameSync(tmp, path);
   } catch {
     // A cache that cannot be written is not a failure of the thing it caches.
+    try {
+      rmSync(tmp, { force: true });
+    } catch {
+      // Nothing more to do: the next write by this process reuses the name.
+    }
   }
 }
 

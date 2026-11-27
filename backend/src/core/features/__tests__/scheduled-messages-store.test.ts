@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, rm, readFile, writeFile } from 'fs/promises';
+import { readdirSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
@@ -135,6 +136,17 @@ describe('scheduled-messages-store', () => {
     const storeFile = join(tempHome, '.claude-code-gui', 'scheduled-messages.json');
     const raw = JSON.parse(await readFile(storeFile, 'utf-8'));
     expect(raw['sess-a'][0].id).toBe('r1');
+  });
+
+  // The backend ends itself from the event loop, which cannot turn between two microtasks. A save that is done
+  // by then never has a temp file lying around for a shutdown to leave behind.
+  it('has the file in place and no temp file before the event loop can turn', async () => {
+    const saved = addSchedule(makeMsg('sess-a', 'r1'));
+
+    for (let tick = 0; tick < 20; tick++) await null;
+
+    expect(readdirSync(join(tempHome, '.claude-code-gui'))).toEqual(['scheduled-messages.json']);
+    await saved;
   });
 
   it('updateSchedule patches message and sendAt in place, preserving other fields', async () => {
