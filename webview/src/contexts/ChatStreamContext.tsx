@@ -101,6 +101,8 @@ export interface HeldMessage {
   attachments?: Attachment[];
   /** Already handed to the CLI (at an allow), still drawn here until the call it waited for has finished. */
   released?: boolean;
+  /** The id it was handed to the CLI under, once released. */
+  sentUuid?: string;
 }
 
 interface ChatStreamContextType {
@@ -699,13 +701,13 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     const pending = sentWhileRunningRef.current;
     if (pending.length === 0) return;
     setSentWhileRunning([]);
-    pending.forEach((sent) => appendSentMessage(sent.content, sent.context, sent.attachments));
+    pending.forEach((sent) => appendSentMessage(sent.content, sent.context, sent.attachments, sent.uuid));
   }, [chatStream.isStreaming, appendSentMessage]);
 
   const sendMessage = useCallback(
-    (content: string, inputMode: InputMode, context?: Context[], attachments?: Attachment[], accountId?: string, inChatNow = false, skipEcho = false, restore?: HeldRestore) => {
-      // The CLI records the message under this id, which is how a request about it (send now, cancel) names it.
-      const messageUuid = crypto.randomUUID();
+    (content: string, inputMode: InputMode, context?: Context[], attachments?: Attachment[], accountId?: string, inChatNow = false, skipEcho = false, restore?: HeldRestore, messageUuid: string = crypto.randomUUID()) => {
+      // The CLI records the message under `messageUuid`, which is how a request about it (send now, cancel) names it
+      // and how the bubble is tied to the saved message.
       // Prepend the IDE-context tag (open file / selection) when the toggle is on
       // and a selection is available. parseUserContent() turns the tag back into a
       // context chip in the UI bubble, while the CLI sees the same hint. Gated on
@@ -750,13 +752,13 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
       } else if (inChatNow && isStreamingRef.current && !isNewSession) {
         // Written under a permission card and handed over with its answer: it is read before the turn goes on, so
         // it stands here, above whatever the turn writes next, without beginning a turn of its own.
-        appendSentMessage(content, context, attachments);
+        appendSentMessage(content, context, attachments, messageUuid);
       } else if (isStreamingRef.current && !isNewSession) {
         // The ref moves with the state, not after the next render: a tool call can finish before this one.
         sentWhileRunningRef.current = [...sentWhileRunningRef.current, { id: crypto.randomUUID(), uuid: messageUuid, restore, content, context, attachments }];
         setSentWhileRunning(sentWhileRunningRef.current);
       } else {
-        addUserMessage(content, context, attachments);
+        addUserMessage(content, context, attachments, messageUuid);
       }
 
       // 강등 감지를 위해 이번에 요청한 모드를 기록한다(systemInit 수신 시 비교).
@@ -1049,7 +1051,9 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
       );
       // In order, each one handed over before the next: the CLI reads its input in the order it arrives.
       for (const held of all) {
-        await sendMessage(held.content, held.inputMode, undefined, held.attachments, undefined, true, keepShown);
+        const sentUuid = crypto.randomUUID();
+        if (keepShown) setHeldMessages((rest) => rest.map((other) => (other.id === held.id ? { ...other, sentUuid } : other)));
+        await sendMessage(held.content, held.inputMode, undefined, held.attachments, undefined, true, keepShown, undefined, sentUuid);
       }
     },
     [sendMessage]
@@ -1059,7 +1063,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     const released = heldMessagesRef.current.filter((held) => held.released);
     if (released.length === 0) return;
     setHeldMessages((rest) => rest.filter((held) => !held.released));
-    released.forEach((held) => appendSentMessage(held.content, undefined, held.attachments));
+    released.forEach((held) => appendSentMessage(held.content, undefined, held.attachments, held.sentUuid));
   }, [appendSentMessage]);
 
   // handleSubmit: convenience wrapper for form submission.

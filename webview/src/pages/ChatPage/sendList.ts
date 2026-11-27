@@ -1,4 +1,4 @@
-import { type SessionSend } from '@/shared';
+import { QUEUED_KEY_PREFIX, type SessionSend } from '@/shared';
 import { type LoadedMessageDto } from '@/types';
 import type { SendSection } from './groupIntoSendSections';
 import { isUserSend } from './paging';
@@ -10,8 +10,9 @@ export interface SendIndexEntry {
   /** The section this send opens, which is also how a jump finds it. */
   key: string;
   /**
-   * The id the session's record knows this send by, which is what an edit of it is kept under: a send made in this
-   * view goes by a local `key` that a reload does not bring back. The `key` while the record's id is not known.
+   * What an edit of this send is kept under: the id the CLI records it by, which is the same before and after a reload.
+   * A send made in this view goes by a local `key` that a reload does not bring back; the `key` only while no other id
+   * is known.
    */
   recordId: string;
   /** What the tick's preview card shows. For a send that is not loaded, the cut copy the backend keeps. */
@@ -36,9 +37,12 @@ const imagesIn = (message: LoadedMessageDto): number => {
   return Array.isArray(content) ? content.filter((block) => block.type === 'image').length : 0;
 };
 
+/** A send read while Claude was working comes back marked as such; the mark is not part of the id it was sent under. */
+const recordIdOf = (id: string) => (id.startsWith(QUEUED_KEY_PREFIX) ? id.slice(QUEUED_KEY_PREFIX.length) : id);
+
 const notLoaded = (send: SessionSend): SendIndexEntry => ({
   key: send.uuid,
-  recordId: send.uuid,
+  recordId: recordIdOf(send.uuid),
   text: composeSendText(send.preview),
   images: send.images ?? 0,
   loaded: false,
@@ -63,7 +67,7 @@ export function buildEntries(
     .filter(section => section.head !== null && isUserSend(section.head))
     .map(section => ({
       key: section.key,
-      recordId: recordedUuidOf(section.head!) ?? section.key,
+      recordId: recordIdOf(section.head!.sentUuid ?? recordedUuidOf(section.head!) ?? section.key),
       text: sendText(section.head!),
       images: imagesIn(section.head!),
       message: section.head!,

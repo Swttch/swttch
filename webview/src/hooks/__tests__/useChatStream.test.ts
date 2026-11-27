@@ -1286,7 +1286,11 @@ describe('useChatStream', () => {
       expect(bridge.send).toHaveBeenCalledWith(MessageType.SEND_MESSAGE, {
         content: 'Test message',
         context: [],
+        messageUuid: expect.any(String),
       });
+      // The bubble is tied to the id the message went under (#735).
+      const resent = result.current.messages.find((m) => m.sentUuid !== undefined);
+      expect(bridge.send).toHaveBeenCalledWith(MessageType.SEND_MESSAGE, expect.objectContaining({ messageUuid: resent!.sentUuid }));
     });
 
     it('retry는 실패한 메시지 이후의 메시지들을 제거한다', () => {

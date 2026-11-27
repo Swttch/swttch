@@ -121,6 +121,10 @@ export class LoadedMessageDto {
   // the section identity do not change under the user mid-session.
   cliUuid?: string;
 
+  // A send made on this screen: the id handed to the backend with it, which the CLI records it under. The screen's own
+  // `uuid` is a local one, so this is what ties the bubble to the saved message before and after a reload (#735).
+  sentUuid?: string;
+
   // UI-only: the id a streamed reply was first drawn under, which the chat keeps as
   // its React key. The CLI writes each finished content block of a response as an
   // entry of its own, and the reply takes over each entry's `uuid` as it arrives —

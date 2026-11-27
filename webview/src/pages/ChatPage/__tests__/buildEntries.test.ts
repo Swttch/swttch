@@ -30,6 +30,18 @@ describe('buildEntries', () => {
     expect(entries.map(e => e.key)).toEqual(['c']);
   });
 
+  // #735. An edit is kept under the record id, which has to be the same before and after a reload.
+  it('names a send by the id it was sent under, on this screen and read back, mid-answer ones included', () => {
+    const onScreen = section('msg-1');
+    onScreen.head!.sentUuid = 'abc';
+
+    expect(buildEntries([], [onScreen])[0]).toMatchObject({ key: 'msg-1', recordId: 'abc' });
+    // Read back: a send taken up mid-answer carries the mark of the queue in front of the same id.
+    expect(buildEntries([], [section('queued-abc')])[0]).toMatchObject({ key: 'queued-abc', recordId: 'abc' });
+    expect(buildEntries([send('queued-abc')], [])[0]).toMatchObject({ key: 'queued-abc', recordId: 'abc' });
+    expect(buildEntries([], [section('abc')])[0]).toMatchObject({ key: 'abc', recordId: 'abc' });
+  });
+
   // #747. After a jump back the transcript holds two stretches: the pages around the send jumped to, and the newest
   // ones. The sends between them were dropped from the rail, so it lost ticks and a tick led somewhere else.
   it('keeps the sends of the index that stand between two loaded stretches', () => {
