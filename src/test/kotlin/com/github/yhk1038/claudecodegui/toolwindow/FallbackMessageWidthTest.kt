@@ -5,6 +5,9 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import javax.swing.BorderFactory
+import javax.swing.JLabel
+import javax.swing.JPanel
 
 /**
  * Guards the re-flow rule behind [fallbackMessageWidth] — the fix for the
@@ -77,6 +80,39 @@ class FallbackMessageWidthTest {
                 val result = fallbackMessageWidth(panelWidth, horizontalInsets = 80)
                 assertTrue(result <= usable) {
                     "width $result leaves no gutter in the $usable px available in a ${panelWidth}px panel"
+                }
+            }
+        }
+    }
+
+    @Nested
+    inner class Rendered {
+
+        private val body =
+            "<h2 style='margin-top:0;'>Claude Code GUI needs JCEF</h2>" +
+                "<p>This IDE is running without JCEF, which Claude Code GUI requires to render " +
+                "its chat UI. Click below to install a JCEF-enabled JetBrains Runtime.</p>" +
+                "<ol style='text-align:left;'>" +
+                "<li>Open Find Action: <b>Cmd+Shift+A</b> (macOS) or <b>Ctrl+Shift+A</b> (Windows/Linux)</li>" +
+                "</ol>"
+
+        @Test
+        fun `the text as drawn fits the panel, whatever Swing makes of a markup pixel`() {
+            // Swing draws a CSS pixel wider than a panel pixel (1.3 times), so asking
+            // for the free width cut the end off every line.
+            for (panelWidth in listOf(340, 420, 500, 600, 700, 900)) {
+                val panel = JPanel()
+                panel.border = BorderFactory.createEmptyBorder(40, 40, 40, 40)
+                panel.setSize(panelWidth, 600)
+                val label = JLabel()
+
+                panel.installReflowingMessage(label, body)
+
+                // A fresh label measures the markup itself, free of the pinned size.
+                val drawn = JLabel(label.text).preferredSize.width
+                val available = panelWidth - 80
+                assertTrue(drawn <= available) {
+                    "text drawn $drawn px wide in $available px of a ${panelWidth}px panel"
                 }
             }
         }
