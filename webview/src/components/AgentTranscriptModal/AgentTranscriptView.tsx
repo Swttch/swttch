@@ -4,6 +4,7 @@ import { LoadedMessageDto } from '@/types';
 import { isUserSend } from '@/pages/ChatPage/paging';
 import { MessageBubble } from '@/pages/ChatPage/MessageBubble';
 import { groupIntoSendSections } from '@/pages/ChatPage/groupIntoSendSections';
+import { isCompanionNote } from '@/pages/ChatPage/hideCliNotes';
 import { useTranscriptViewMode } from '@/pages/ChatPage/message-renderers/transcriptViewMode';
 import { TranscriptUserMessage } from '@/pages/ChatPage/transcript/TranscriptUserMessage';
 import { TranscriptBody } from '@/pages/ChatPage/transcript/TranscriptBody';
@@ -18,14 +19,6 @@ import '@/pages/ChatPage/streaming.css';
 import { StreamingIndicator } from '@/pages/ChatPage/StreamingIndicator';
 import { ScrollToBottomButton } from '@/components/ScrollToBottomButton';
 import { shortModelName } from './AgentDetailHeader';
-
-/**
- * A note the CLI slips in beside a turn for the model ("Your previous response had no visible output..."). It is in the
- * record as a user entry, marked `isMeta` and `turnCompanion`, but nobody sent it, so the transcript does not draw it.
- */
-function isNoteForClaude(message: LoadedMessageDto): boolean {
-  return message.isMeta === true && (message as { turnCompanion?: unknown }).turnCompanion === true;
-}
 
 /**
  * A workflow gives its agent the prompt inside a frame of its own: a heading line, a paragraph on who wrote the text
@@ -203,7 +196,7 @@ export function AgentTranscriptView(props: Props) {
     () =>
       viewMode === null
         ? []
-        : groupIntoSendSections(record.filter((message) => !isNoteForClaude(message)).map(withoutHarnessFrame)),
+        : groupIntoSendSections(record.filter((message) => !isCompanionNote(message)).map(withoutHarnessFrame)),
     [viewMode, record],
   );
 

@@ -54,6 +54,8 @@ export class LoadedMessageDto {
   parentUuid?: string | null;
   isSidechain?: boolean;
   isMeta?: boolean;
+  // The CLI sets this on an entry it writes beside a turn for the model, such as the request to resume a cut answer.
+  turnCompanion?: boolean;
 
   @Type(() => MessageDto)
   message?: MessageDto;

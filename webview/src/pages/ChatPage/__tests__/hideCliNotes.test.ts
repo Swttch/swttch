@@ -49,5 +49,27 @@ describe('hideCliNotes', () => {
 
   it('leaves an entry that is not isMeta alone, even if it begins like a note', () => {
     expect(hideCliNotes([user('u1', '[Image: mine]')])).toHaveLength(1);
+    expect(hideCliNotes([user('u2', 'Output token limit hit, what does that mean?')])).toHaveLength(1);
+  });
+
+  const cutOff = 'Your response above was cut off mid-stream. Resume directly from where it stops — no apology, no recap.';
+
+  it('drops the request the CLI writes to Claude when an answer was cut off', () => {
+    const list = [user('u1', 'hi'), user('n1', cutOff, { isMeta: true, turnCompanion: true })];
+    expect(hideCliNotes(list).map((m) => m.uuid)).toEqual(['u1']);
+  });
+
+  it('drops that request while it streams, and in a record that does not mark it a companion', () => {
+    expect(hideCliNotes([user('l1', cutOff, { isSynthetic: true })])).toEqual([]);
+    expect(hideCliNotes([user('o1', cutOff, { isMeta: true })])).toEqual([]);
+  });
+
+  it('drops a companion note in words it has not met', () => {
+    expect(hideCliNotes([user('n1', 'Some later request of the CLI.', { isMeta: true, turnCompanion: true })])).toEqual([]);
+  });
+
+  it('keeps a companion entry that says where it came from', () => {
+    const list = [user('p1', 'from elsewhere', { isMeta: true, turnCompanion: true, origin: { kind: 'peer' } })];
+    expect(hideCliNotes(list)).toHaveLength(1);
   });
 });
