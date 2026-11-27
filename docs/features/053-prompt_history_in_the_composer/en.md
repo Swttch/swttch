@@ -32,6 +32,19 @@ comes and goes.
 A message recalled with Up arrives with the caret at its start, so the next Up moves straight on. One recalled with
 Down arrives with the caret at its end.
 
+## Seeing and clearing the changes
+
+While any message has a change kept, the line over the box carries a mark with their number: **Edited** when the message
+on screen is one of them, a dim **Edits** when it is not. The draft shows it too.
+
+Press the mark to open **History**.
+
+- Every message you sent is listed, newest first, with its number and one line of preview.
+- Changed ones are marked **Edited** and start open.
+- Opening a row shows the whole message, pictures included. A changed one shows your change.
+- **Go to** closes the window and puts that message in the box.
+- **Discard edit** removes the change at once.
+
 ## A message comes back as you sent it
 
 Its pictures return to the attachment row, reply and excerpt cards return above the text, and a message addressed to

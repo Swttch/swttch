@@ -150,7 +150,16 @@
       "guardKeepsDraft": "برای مرور تاریخچه دوباره ↑ را بزنید (پیش‌نویس شما حفظ می‌شود)",
       "position": "تاریخچه {{index}}/{{total}}",
       "modified": "ویرایش‌شده",
-      "restoreDraft": "<kbd>↓</kbd> برای بازیابی پیش‌نویس"
+      "restoreDraft": "<kbd>↓</kbd> برای بازیابی پیش‌نویس",
+      "edits": "ویرایش‌ها",
+      "modal": {
+        "title": "تاریخچه",
+        "jump": "رفتن",
+        "revert": "لغو ویرایش",
+        "loading": "در حال بارگیری…",
+        "unavailable": "خواندن این پیام ممکن نشد.",
+        "empty": "(خالی)"
+      }
     },
     "renameSuggestion": {
       "hint": "(Tab برای تکمیل)"

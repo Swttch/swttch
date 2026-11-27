@@ -150,7 +150,16 @@
       "guardKeepsDraft": "한 번 더 위로 올려 히스토리 탐색 (초안은 유지됩니다)",
       "position": "히스토리 {{index}}/{{total}}",
       "modified": "수정됨",
-      "restoreDraft": "<kbd>↓</kbd>로 임시 저장 내용 복원"
+      "restoreDraft": "<kbd>↓</kbd>로 임시 저장 내용 복원",
+      "edits": "수정 내역",
+      "modal": {
+        "title": "히스토리",
+        "jump": "이동",
+        "revert": "수정 취소",
+        "loading": "불러오는 중…",
+        "unavailable": "메시지를 불러오지 못했습니다.",
+        "empty": "(비어 있음)"
+      }
     },
     "renameSuggestion": {
       "hint": "(Tab으로 완성)"

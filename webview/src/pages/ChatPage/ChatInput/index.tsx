@@ -95,6 +95,7 @@ import { FollowUpBehavior, SessionActivity, resolveFollowUpBehavior } from '@/sh
 import { useSessionActivity } from '@/hooks/useSessionActivity';
 import { ArrowMove, caretLength, historyArrow, readCaret } from './historyArrow';
 import { HistoryNotice } from './HistoryNotice';
+import { HistoryModal } from './HistoryModal';
 import { LiveText } from './draft/liveText';
 import { useComposerDraft } from './draft/useComposerDraft';
 import { composerDraftStore } from './draft/composerDraftStore';
@@ -161,7 +162,7 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
   const queueWhileWaiting = cardWaiting && runningActivity(chatStream.messages) !== null;
   const { input: value, setInput: onChange, setComposerHasContent } = useChatInputState();
   const sends = useContext(SendListContext);
-  const { navigateUp, navigateDown, resetHistory, slot: historySlot, position: historyPosition, isGuarded, disarmGuard } = useInputHistory({ workingDirectory, sessionId: currentSessionId, sends });
+  const { navigateUp, navigateDown, contentOf, jumpTo, resetHistory, slot: historySlot, position: historyPosition, isGuarded, disarmGuard } = useInputHistory({ workingDirectory, sessionId: currentSessionId, sends });
   /** Where the caret goes once a recalled text is in the box. A new object for every recall. */
   const [caretRequest, setCaretRequest] = useState<{ at: 'start' | 'end' } | null>(null);
   // Runs after the editor has written the text into the page, which also moves the caret: the request wins.
@@ -592,7 +593,7 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
   }, [handoffState, currentSessionId]);
 
   const draftChannel = useMemo(() => ({ send: bridge.send, subscribe: bridge.subscribe }), [bridge.send, bridge.subscribe]);
-  const { show: showSlot, sent: draftSent, isModified, isModifiedWith, hasDraft } = useComposerDraft({
+  const { show: showSlot, sent: draftSent, revert: revertEdit, edits, isModified, isModifiedWith, hasDraft } = useComposerDraft({
     sessionId: currentSessionId,
     workingDirectory,
     channel: draftChannel,
@@ -604,6 +605,31 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
   // Declared after the draft, so that it has the value by the time the text on screen stops standing in for it.
   const [liveText] = useState(() => new LiveText());
   useEffect(() => liveText.set(null), [liveText, value]);
+
+  // The history modal (#735). Only edits of sends the history still holds are counted.
+  const [isHistoryOpen, setHistoryOpen] = useState(false);
+  useEffect(() => setHistoryOpen(false), [currentSessionId]);
+  const otherEdits = useMemo(
+    () => sends.filter((entry) => entry.key !== historySlot?.key && edits[entry.key] !== undefined).length,
+    [sends, edits, historySlot?.key],
+  );
+  const openHistory = useCallback(() => {
+    disarmGuard();
+    setHistoryOpen(true);
+  }, [disarmGuard]);
+  const closeHistory = useCallback(() => {
+    setHistoryOpen(false);
+    // Deferred past the dialog's unmount, which would otherwise take the focus with it.
+    setTimeout(() => textareaRef.current?.focus(), 0);
+  }, [textareaRef]);
+  const jumpFromHistory = useCallback(async (sendKey: string) => {
+    if (!(await contentOf(sendKey))) return;
+    const step = jumpTo(sendKey);
+    if (step === null || step === 'guard' || step === 'reading') return;
+    showSlot(step.slot);
+    setCaretRequest({ at: 'end' });
+    closeHistory();
+  }, [contentOf, jumpTo, showSlot, closeHistory]);
 
   const sendToSession = useSendToSession();
   const { sendMessage } = chatStream;
@@ -1536,7 +1562,21 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
             hasDraft={hasDraft}
             liveText={liveText}
             isModifiedWith={isModifiedWith}
+            otherEdits={otherEdits}
+            onOpenHistory={openHistory}
           />
+          {isHistoryOpen && (
+            <HistoryModal
+              entries={sends}
+              edits={edits}
+              currentKey={historySlot?.key ?? null}
+              loadContent={contentOf}
+              pictureOf={(id) => composerDraftStore.picture(id)}
+              onJump={(sendKey) => void jumpFromHistory(sendKey)}
+              onRevert={revertEdit}
+              onClose={closeHistory}
+            />
+          )}
           {/* A click puts the caret somewhere else, which stands the guard down too. */}
           <div onMouseDown={disarmGuard}>
           <RichInput

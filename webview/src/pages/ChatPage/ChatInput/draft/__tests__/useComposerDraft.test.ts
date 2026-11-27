@@ -132,6 +132,22 @@ describe('useComposerDraft', () => {
     expect(result.current.draft.isModified).toBe(false);
   });
 
+  it('gives up one edit, and shows the send as sent when it is the one on screen', () => {
+    const { result } = composer();
+    walk(result, send('u1', 'first'));
+    type(result, 'first, changed');
+    walk(result, send('u2', 'second'));
+    type(result, 'second, changed');
+
+    act(() => result.current.draft.revert('u1'));
+    expect(Object.keys(draftOf('s1').edits)).toEqual(['u2']);
+    expect(shown(result)).toBe('second, changed');
+
+    act(() => result.current.draft.revert('u2'));
+    expect(draftOf('s1').edits).toEqual({});
+    expect(shown(result)).toBe('second');
+  });
+
   it('keeps an edit that emptied the send', () => {
     const { result } = composer();
     walk(result, send('u1', 'sent'));

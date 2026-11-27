@@ -150,7 +150,16 @@
       "guardKeepsDraft": "もう一度↑で履歴を表示（下書きは保持されます）",
       "position": "履歴 {{index}}/{{total}}",
       "modified": "編集済み",
-      "restoreDraft": "<kbd>↓</kbd>で下書きを復元"
+      "restoreDraft": "<kbd>↓</kbd>で下書きを復元",
+      "edits": "編集履歴",
+      "modal": {
+        "title": "履歴",
+        "jump": "移動",
+        "revert": "編集を破棄",
+        "loading": "読み込み中…",
+        "unavailable": "メッセージを読み込めませんでした。",
+        "empty": "(空)"
+      }
     },
     "renameSuggestion": {
       "hint": "(Tabで補完)"

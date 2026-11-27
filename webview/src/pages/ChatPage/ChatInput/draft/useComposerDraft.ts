@@ -149,8 +149,20 @@ export function useComposerDraft({ sessionId, workingDirectory, channel, content
     else heldRef.current = kept;
   }, [key, put]);
 
+  /** Give up the edit of the send `sendKey`, which shows as it was sent again. */
+  const revert = useCallback((sendKey: string) => {
+    const current = composerDraftStore.get(key);
+    if (current.edits[sendKey] === undefined) return;
+    const edits = { ...current.edits };
+    delete edits[sendKey];
+    composerDraftStore.change(key, { ...current, edits });
+    const at = slotRef.current;
+    if (at?.key === sendKey) put(at.original);
+  }, [key, put]);
+
   const hasDraft = !isEmptyContent({ ...draft.content, text: draft.content.text.trim() });
   /** Whether the send shown reads as changed with `text` in the box, ahead of the composer's value. */
   const isModifiedWith = (text: string) => slot !== null && !sameContent({ ...content, text }, slot.original);
-  return { show, sent, hasDraft, isModified: slot !== null && draft.edits[slot.key] !== undefined, isModifiedWith };
+  const isModified = slot !== null && draft.edits[slot.key] !== undefined;
+  return { show, sent, revert, edits: draft.edits, hasDraft, isModified, isModifiedWith };
 }

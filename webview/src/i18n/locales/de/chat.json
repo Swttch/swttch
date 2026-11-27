@@ -150,7 +150,16 @@
       "guardKeepsDraft": "Noch einmal ↑ drücken, um den Verlauf zu durchsuchen (dein Entwurf bleibt erhalten)",
       "position": "Verlauf {{index}}/{{total}}",
       "modified": "Bearbeitet",
-      "restoreDraft": "<kbd>↓</kbd>, um deinen Entwurf wiederherzustellen"
+      "restoreDraft": "<kbd>↓</kbd>, um deinen Entwurf wiederherzustellen",
+      "edits": "Änderungen",
+      "modal": {
+        "title": "Verlauf",
+        "jump": "Öffnen",
+        "revert": "Änderung verwerfen",
+        "loading": "Wird geladen…",
+        "unavailable": "Diese Nachricht konnte nicht gelesen werden.",
+        "empty": "(leer)"
+      }
     },
     "renameSuggestion": {
       "hint": "(Tab zum Übernehmen)"

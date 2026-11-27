@@ -150,7 +150,16 @@
       "guardKeepsDraft": "اضغط ↑ مرة أخرى لتصفح السجل (ستبقى مسودتك)",
       "position": "السجل {{index}}/{{total}}",
       "modified": "معدّل",
-      "restoreDraft": "<kbd>↓</kbd> لاستعادة المسودة"
+      "restoreDraft": "<kbd>↓</kbd> لاستعادة المسودة",
+      "edits": "التعديلات",
+      "modal": {
+        "title": "السجل",
+        "jump": "انتقال",
+        "revert": "تجاهل التعديل",
+        "loading": "جارٍ التحميل…",
+        "unavailable": "تعذّرت قراءة هذه الرسالة.",
+        "empty": "(فارغ)"
+      }
     },
     "renameSuggestion": {
       "hint": "(Tab للإكمال)"

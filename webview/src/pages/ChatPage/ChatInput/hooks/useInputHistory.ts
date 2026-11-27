@@ -42,6 +42,10 @@ interface UseInputHistoryReturn {
   navigateUp: () => HistoryStep;
   /** One send forward, or back to the draft. */
   navigateDown: () => HistoryStep;
+  /** The send `key` as it was sent, read from the backend if it is not here; undefined when it cannot be read. */
+  contentOf: (key: string) => Promise<ComposerContent | undefined>;
+  /** Show the send `key`, wherever the walk stands. Its content has to be here (see `contentOf`). */
+  jumpTo: (key: string) => HistoryStep;
   /** Leave the history. */
   resetHistory: () => void;
   /** The send shown, with what it held as sent, or null while the composer holds the draft. */
@@ -73,7 +77,8 @@ export function useInputHistory({ workingDirectory, sessionId, sends }: UseInput
 
   // What has been read from the backend, by send key. In refs: pages land without re-rendering the composer.
   const contentsRef = useRef(new Map<string, ComposerContent>());
-  const askedRef = useRef(new Set<string>());
+  /** The pages being read, by the cursor they were asked with. */
+  const askedRef = useRef(new Map<string, Promise<void>>());
   // Guards against a page of a session the user has left being applied to the one they moved to.
   const sessionRef = useRef<string | null>(sessionId);
 
@@ -82,29 +87,39 @@ export function useInputHistory({ workingDirectory, sessionId, sends }: UseInput
     [],
   );
 
-  const readPage = useCallback(async (beforeUuid: string | undefined) => {
-    if (!workingDirectory || !sessionId) return;
+  const readPage = useCallback((beforeUuid: string | undefined): Promise<void> => {
+    if (!workingDirectory || !sessionId) return Promise.resolve();
     const asked = beforeUuid ?? '';
-    if (askedRef.current.has(asked)) return;
-    askedRef.current.add(asked);
-    try {
-      const res = await send<PromptHistoryResponse>(MessageType.LOAD_PROMPT_HISTORY, {
-        workingDir: workingDirectory,
-        sessionId,
-        beforeUuid,
-      });
-      if (res.status !== 'ok' || sessionRef.current !== sessionId) return;
-      // The records arrive as the session file has them, and are read here the way the transcript reads them.
-      for (const { entry } of restoreQueuedEntries(res.entries ?? [])) {
-        const message = entry as unknown as LoadedMessageDto;
-        if (message.uuid && isUserSend(message)) contentsRef.current.set(message.uuid, sendContent(message, composerDraftStore));
+    const pending = askedRef.current.get(asked);
+    if (pending) return pending;
+    const read = async () => {
+      try {
+        const res = await send<PromptHistoryResponse>(MessageType.LOAD_PROMPT_HISTORY, {
+          workingDir: workingDirectory,
+          sessionId,
+          beforeUuid,
+        });
+        if (res.status !== 'ok' || sessionRef.current !== sessionId) return;
+        // The records arrive as the session file has them, and are read here the way the transcript reads them.
+        for (const { entry } of restoreQueuedEntries(res.entries ?? [])) {
+          const message = entry as unknown as LoadedMessageDto;
+          if (message.uuid && isUserSend(message)) contentsRef.current.set(message.uuid, sendContent(message, composerDraftStore));
+        }
+      } catch {
+        // A failed page leaves the history at what already loaded; the next press asks again.
       }
-    } catch {
-      // A failed page leaves the history at what already loaded; the next press asks again.
-    } finally {
-      askedRef.current.delete(asked);
-    }
+    };
+    const reading = read().finally(() => askedRef.current.delete(asked));
+    askedRef.current.set(asked, reading);
+    return reading;
   }, [workingDirectory, sessionId, send]);
+
+  const contentOf = useCallback(async (key: string) => {
+    const at = sends.findIndex((entry) => entry.key === key);
+    if (at === -1) return undefined;
+    if (contentFor(sends[at]) === undefined) await readPage(sends[at + 1]?.key);
+    return contentFor(sends[at]);
+  }, [sends, contentFor, readPage]);
 
   /** Read what is missing of the sends at `from` and the few before it. */
   const ensure = useCallback((from: number) => {
@@ -119,7 +134,7 @@ export function useInputHistory({ workingDirectory, sessionId, sends }: UseInput
   useEffect(() => {
     sessionRef.current = sessionId;
     contentsRef.current = new Map();
-    askedRef.current = new Set();
+    askedRef.current = new Map();
     setShownKey(null);
     setGuarded(false);
   }, [sessionId]);
@@ -171,6 +186,11 @@ export function useInputHistory({ workingDirectory, sessionId, sends }: UseInput
     return stepTo(target);
   }, [sends, index, stepTo]);
 
+  const jumpTo = useCallback((key: string): HistoryStep => {
+    const target = sends.findIndex((entry) => entry.key === key);
+    return target === -1 ? null : stepTo(target);
+  }, [sends, stepTo]);
+
   const shown = index < sends.length ? sends[index] : null;
   const original = shown ? contentFor(shown) : undefined;
   const slot = useMemo(
@@ -181,5 +201,5 @@ export function useInputHistory({ workingDirectory, sessionId, sends }: UseInput
   );
   const position = shown ? { index: index + 1, total: sends.length } : null;
 
-  return { navigateUp, navigateDown, resetHistory, slot, position, isGuarded, disarmGuard };
+  return { navigateUp, navigateDown, contentOf, jumpTo, resetHistory, slot, position, isGuarded, disarmGuard };
 }

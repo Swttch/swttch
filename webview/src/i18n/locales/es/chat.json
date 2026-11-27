@@ -150,7 +150,16 @@
       "guardKeepsDraft": "Pulsa ↑ otra vez para ver el historial (tu borrador se conserva)",
       "position": "Historial {{index}}/{{total}}",
       "modified": "Editado",
-      "restoreDraft": "<kbd>↓</kbd> para restaurar tu borrador"
+      "restoreDraft": "<kbd>↓</kbd> para restaurar tu borrador",
+      "edits": "Cambios",
+      "modal": {
+        "title": "Historial",
+        "jump": "Ir",
+        "revert": "Descartar cambios",
+        "loading": "Cargando…",
+        "unavailable": "No se pudo leer este mensaje.",
+        "empty": "(vacío)"
+      }
     },
     "renameSuggestion": {
       "hint": "(Tab para completar)"

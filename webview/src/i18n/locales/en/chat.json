@@ -150,7 +150,16 @@
       "guardKeepsDraft": "Press Up again to browse history (your draft is kept)",
       "position": "History {{index}}/{{total}}",
       "modified": "Edited",
-      "restoreDraft": "<kbd>↓</kbd> to restore your draft"
+      "restoreDraft": "<kbd>↓</kbd> to restore your draft",
+      "edits": "Edits",
+      "modal": {
+        "title": "History",
+        "jump": "Go to",
+        "revert": "Discard edit",
+        "loading": "Loading…",
+        "unavailable": "This message could not be read.",
+        "empty": "(empty)"
+      }
     },
     "renameSuggestion": {
       "hint": "(Tab to accept)"

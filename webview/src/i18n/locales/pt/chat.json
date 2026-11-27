@@ -150,7 +150,16 @@
       "guardKeepsDraft": "Pressione ↑ novamente para ver o histórico (seu rascunho é mantido)",
       "position": "Histórico {{index}}/{{total}}",
       "modified": "Editado",
-      "restoreDraft": "<kbd>↓</kbd> para restaurar seu rascunho"
+      "restoreDraft": "<kbd>↓</kbd> para restaurar seu rascunho",
+      "edits": "Alterações",
+      "modal": {
+        "title": "Histórico",
+        "jump": "Ir",
+        "revert": "Descartar alteração",
+        "loading": "Carregando…",
+        "unavailable": "Não foi possível ler esta mensagem.",
+        "empty": "(vazio)"
+      }
     },
     "renameSuggestion": {
       "hint": "(Tab para completar)"

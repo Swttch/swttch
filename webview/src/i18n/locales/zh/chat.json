@@ -150,7 +150,16 @@
       "guardKeepsDraft": "再按一次向上键浏览历史记录（草稿会保留）",
       "position": "历史记录 {{index}}/{{total}}",
       "modified": "已编辑",
-      "restoreDraft": "按 <kbd>↓</kbd> 恢复草稿"
+      "restoreDraft": "按 <kbd>↓</kbd> 恢复草稿",
+      "edits": "修改记录",
+      "modal": {
+        "title": "历史记录",
+        "jump": "跳转",
+        "revert": "撤销修改",
+        "loading": "加载中…",
+        "unavailable": "无法读取这条消息。",
+        "empty": "（空）"
+      }
     },
     "renameSuggestion": {
       "hint": "(按 Tab 补全)"

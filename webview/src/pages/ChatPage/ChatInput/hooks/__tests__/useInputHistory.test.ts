@@ -89,6 +89,21 @@ describe('useInputHistory', () => {
     expect(result.current.position).toBeNull();
   });
 
+  it('goes to a send by name, reading it first when it is not here', async () => {
+    sendMock.mockResolvedValue({ status: 'ok', entries: [record('u1', 'far back')] });
+    const { result } = render([unloaded('u1'), unloaded('u2'), unloaded('u3'), unloaded('u4'), unloaded('u5'), loaded('u6', 'newest')]);
+
+    let content: { text: string } | undefined;
+    await act(async () => { content = await result.current.contentOf('u1'); });
+    expect(content?.text).toBe('far back');
+    expect(sendMock).toHaveBeenCalledWith(MessageType.LOAD_PROMPT_HISTORY, { workingDir: '/w', sessionId: 's1', beforeUuid: 'u2' });
+
+    let step: HistoryStep = null;
+    act(() => { step = result.current.jumpTo('u1'); });
+    expect(said(step)).toBe('far back');
+    expect(result.current.position).toEqual({ index: 1, total: 6 });
+  });
+
   it('says what the next press does before it leaves the draft', () => {
     const { result } = render([loaded('u1', 'older'), loaded('u2', 'newer')]);
 
