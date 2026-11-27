@@ -43,7 +43,7 @@ Down arrives with the caret at its end.
 While any message has a change kept, the line over the box carries a mark with their number: **Edited** when the message
 on screen is one of them, a dim **Edits** when it is not. The draft shows it too.
 
-Press the mark to open **History**.
+Press the position label (`History 19/19`) or the mark to open **History**.
 
 - Every message you sent is listed in the order sent (1 at the top), with its number and one line of preview.
 - Changed ones carry an orange dot and start open.

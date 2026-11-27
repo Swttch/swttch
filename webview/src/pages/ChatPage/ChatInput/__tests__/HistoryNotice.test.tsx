@@ -53,7 +53,7 @@ describe('HistoryNotice', () => {
   it('counts the send shown among the edits once it is changed', () => {
     render(<HistoryNotice {...walking} modified otherEdits={2} />);
 
-    expect(screen.getByRole('button').textContent).toBe('Edited3');
+    expect(screen.getByRole('button', { name: /Edited/ }).textContent).toBe('Edited3');
   });
 
   it('opens the history from the mark, which stays the same button while the guard comes and goes', () => {
@@ -65,6 +65,15 @@ describe('HistoryNotice', () => {
     fireEvent.click(mark);
 
     expect(screen.getByRole('button')).toBe(mark);
+    expect(onOpenHistory).toHaveBeenCalled();
+  });
+
+  it('opens the history from the position label, with no edit kept', () => {
+    const onOpenHistory = vi.fn();
+    render(<HistoryNotice {...walking} onOpenHistory={onOpenHistory} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'History 5/6' }));
+
     expect(onOpenHistory).toHaveBeenCalled();
   });
 

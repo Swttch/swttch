@@ -17,7 +17,7 @@ interface Props {
   isModifiedWith?: (text: string) => boolean;
   /** How many sends other than the one shown have an edit kept. */
   otherEdits?: number;
-  /** Open the history modal, from the mark that counts the edits. */
+  /** Open the history modal, from the position label or from the mark that counts the edits. */
   onOpenHistory?: () => void;
 }
 
@@ -29,8 +29,8 @@ const LINE = 'box-content flex h-[calc(1rem+2px)] min-w-0 items-center gap-1.5 o
 /**
  * The line over the text of the composer that says where the arrow keys are in the history (#735): ahead of the first
  * step out of the draft, what the next press does, and during the walk, which send is shown and the way back to the
- * draft. While any send has an edit kept, a mark counts the edits and opens the history, from the draft too. The box
- * grows and shrinks around the line.
+ * draft. While any send has an edit kept, a mark counts the edits, from the draft too. The mark and the position label
+ * open the history. The box grows and shrinks around the line.
  */
 export function HistoryNotice(props: Props) {
   const { t } = useTranslation('chat');
@@ -54,7 +54,11 @@ export function HistoryNotice(props: Props) {
     >
       <div className="min-h-0 overflow-hidden">
         <div role="status" className={`${LINE} select-none text-xs text-text-tertiary tabular-nums`}>
-          {shown?.position && <span className="shrink-0">{t('chatInput.history.position', shown.position)}</span>}
+          {shown?.position && (
+            <button type="button" onClick={shown.onOpenHistory} className="shrink-0 rounded transition-colors hover:text-text-primary hover:underline">
+              {t('chatInput.history.position', shown.position)}
+            </button>
+          )}
           {/* One place in the line for every state, so a press on it lands although the words around it change. */}
           {shown && shown.edits > 0 && (
             <button

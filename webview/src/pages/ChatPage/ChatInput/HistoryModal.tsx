@@ -47,11 +47,12 @@ export function HistoryModal(props: Props) {
       return next;
     });
 
-  // Open on what the mark was about: the edited send in the composer, or the newest edited one.
+  // Open on what was asked about: the edited send in the composer, else the newest edited one, else, with nothing
+  // edited, the send in the composer.
   const [firstInView] = useState(() => {
     const current = entries.find((e) => e.recordId === currentKey);
     if (current && edits[current.recordId] !== undefined) return current.key;
-    return [...entries].reverse().find((e) => edits[e.recordId] !== undefined)?.key;
+    return [...entries].reverse().find((e) => edits[e.recordId] !== undefined)?.key ?? current?.key;
   });
   useEffect(() => {
     const row = Array.from(listRef.current?.children ?? []).find((li) => li.getAttribute('data-send') === firstInView);
