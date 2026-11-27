@@ -11,8 +11,7 @@ type FileAction = (target: Bridge, path: string) => Promise<void>;
 /**
  * Run an action on a clicked file through the bridge that can do it, and ack with
  * `{ ok, reason? }` like OPEN_FILE does so the webview can tell the user when it
- * did not work. The path is resolved the same way an open is: a Git Bash, WSL or
- * UNC spelling becomes the one this machine can see.
+ * did not work. The path is resolved the same way an open is (see resolveOpenFilePath).
  */
 async function runFileAction(
   action: FileAction,
@@ -28,7 +27,10 @@ async function runFileAction(
     ackOpenFile(connections, connectionId, message, { ok: false, reason: 'no-path' });
     return;
   }
-  const filePath = resolveOpenFilePath(requestedPath);
+  const workingDir = message.payload?.workingDir;
+  const { path: filePath } = resolveOpenFilePath(requestedPath, {
+    workingDir: typeof workingDir === 'string' ? workingDir : undefined,
+  });
   if (!existsSync(filePath)) {
     console.error('[node-backend]', `${label}: not found:`, filePath);
     ackOpenFile(connections, connectionId, message, { ok: false, reason: 'not-found' });

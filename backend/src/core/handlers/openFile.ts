@@ -13,19 +13,20 @@ export async function openFileHandler(
   bridges: Record<ClientEnv, Bridge>,
 ): Promise<void> {
   const requestedPath = message.payload?.filePath as string;
-  // The clicked path may be spelled for another side of the machine (Git Bash's `/c/…`
-  // on Windows, a WSL UNC path or `C:/…` under WSL); open it under the spelling this
-  // backend can actually see.
-  const filePath = requestedPath ? resolveOpenFilePath(requestedPath) : requestedPath;
+  // The project this open came from: relative paths are read from it, and "open files
+  // with" resolves per project.
+  const rawWorkingDir = message.payload?.workingDir;
+  const workingDir = typeof rawWorkingDir === 'string' ? rawWorkingDir : undefined;
+  // What was clicked may carry a position or a heading, or be spelled for another side
+  // of the machine; open the file this backend can actually see, at that place.
+  const target = requestedPath ? resolveOpenFilePath(requestedPath, { workingDir }) : undefined;
+  const filePath = target?.path ?? requestedPath;
   // Validate at runtime rather than asserting: a non-number line/column (a caller
   // slip) must not flow downstream to the IDE as a bogus coordinate.
   const rawLine = message.payload?.line;
   const rawColumn = message.payload?.column;
-  const line = typeof rawLine === 'number' ? rawLine : undefined;
-  const column = typeof rawColumn === 'number' ? rawColumn : undefined;
-  // The project this open came from, so "open files with" resolves per project.
-  const rawWorkingDir = message.payload?.workingDir;
-  const workingDir = typeof rawWorkingDir === 'string' ? rawWorkingDir : undefined;
+  const line = typeof rawLine === 'number' ? rawLine : target?.line;
+  const column = typeof rawColumn === 'number' ? rawColumn : typeof rawLine === 'number' ? undefined : target?.column;
 
   if (filePath) {
     // Fail fast with feedback when the target does not exist: a clicked reference

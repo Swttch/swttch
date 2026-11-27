@@ -24,6 +24,9 @@ const SENT_TEXT_EXTENSIONS = new Set([
   'py', 'js', 'jsx', 'ts', 'tsx', 'mjs', 'cjs', 'css', 'sh', 'sql', 'mmd', 'rb', 'go', 'rs', 'java', 'kt',
 ]);
 
+/** A `#section` or `?query` written after a file name. */
+const FRAGMENT_AFTER_EXTENSION = /(?<=\.[A-Za-z0-9]+)[#?][^\\/]*$/;
+
 /** True when a file Claude handed over opens in the pane: what a path click shows there, and text as code. */
 export function isSentFileViewable(path: string): boolean {
   if (isPreviewablePath(path)) return true;
@@ -67,8 +70,10 @@ export function isPreviewablePath(path: string): boolean {
  */
 export function openChatFile(path: string, ...position: [line?: number, column?: number]): Promise<void> {
   const [line, column] = position;
-  if (line === undefined && column === undefined && isPreviewablePath(path)) {
-    filePreviewPaneStore.open(path);
+  // `page.html#section` names the page: the pane opens files, not places in them.
+  const file = path.replace(FRAGMENT_AFTER_EXTENSION, '');
+  if (line === undefined && column === undefined && isPreviewablePath(file)) {
+    filePreviewPaneStore.open(file);
     return Promise.resolve();
   }
   // Passed on exactly as given: a click that named no column makes the same call it always did.

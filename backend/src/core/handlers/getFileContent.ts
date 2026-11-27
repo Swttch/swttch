@@ -3,6 +3,7 @@ import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { MessageType } from '../../shared';
 import { readFileContentChunk } from '../features/fileContent';
+import { resolveOpenFilePath } from '../features/resolveOpenFilePath';
 
 /**
  * Answer one piece of a file the preview pane shows next to the chat (a page, a
@@ -18,8 +19,13 @@ export async function getFileContentHandler(
 ): Promise<void> {
   const path = message.payload?.path;
   const offset = message.payload?.offset;
+  const workingDir = message.payload?.workingDir;
+  // The same file a click opens, so a path in another spelling is shown as well as opened.
   const answer = typeof path === 'string' && path !== ''
-    ? await readFileContentChunk(path, typeof offset === 'number' ? offset : 0)
+    ? await readFileContentChunk(
+        resolveOpenFilePath(path, { workingDir: typeof workingDir === 'string' ? workingDir : undefined }).path,
+        typeof offset === 'number' ? offset : 0,
+      )
     : { ok: false as const, reason: 'unreadable' as const };
 
   connections.sendTo(connectionId, MessageType.ACK, {

@@ -15,6 +15,10 @@ describe('resolveFilePath', () => {
     expect(resolveFilePath('C:/proj/file.ts', '/abs/project')).toBe('C:/proj/file.ts');
     expect(resolveFilePath('C:\\proj\\file.ts', '/abs/project')).toBe('C:\\proj\\file.ts');
   });
+  it('UNC 경로와 홈 경로(~/…)는 워킹디렉토리에 붙이지 않는다 (#708)', () => {
+    expect(resolveFilePath('\\\\server\\share\\a.ts', '/abs/project')).toBe('\\\\server\\share\\a.ts');
+    expect(resolveFilePath('~/notes/a.md', '/abs/project')).toBe('~/notes/a.md');
+  });
   it('워킹디렉토리가 없으면 상대경로를 그대로 반환한다', () => {
     expect(resolveFilePath('src/file.ts', null)).toBe('src/file.ts');
     expect(resolveFilePath('src/file.ts', undefined)).toBe('src/file.ts');
@@ -22,6 +26,30 @@ describe('resolveFilePath', () => {
 });
 
 describe('tokenizeMessagePaths', () => {
+  it('공백이 든 경로는 CLI 처럼 @"…" 로 읽는다 (#708)', () => {
+    expect(tokenizeMessagePaths('봐줘 @"docs/my file.md#L3-L5" 부탁')).toEqual([
+      { text: '봐줘 ', isPath: false },
+      { text: '@"docs/my file.md#L3-L5"', isPath: true },
+      { text: ' 부탁', isPath: false },
+    ]);
+    expect(pathFromToken('@"docs/my file.md#L3-L5"')).toBe('docs/my file.md');
+    expect(lineFromToken('@"docs/my file.md#L3-L5"')).toBe(3);
+  });
+
+  it('에이전트 언급 @"… (agent)" 는 파일이 아니다 (#708)', () => {
+    expect(tokenizeMessagePaths('ask @"code reviewer (agent)" now').every((s) => !s.isPath)).toBe(true);
+  });
+
+  it('띄어쓰기 없이 이어지는 전각 문장부호 앞에서 경로를 끝낸다 (#708)', () => {
+    expect(tokenizeMessagePaths('看@src/app.ts，然后@docs/说明.md。')).toEqual([
+      { text: '看', isPath: false },
+      { text: '@src/app.ts', isPath: true },
+      { text: '，然后', isPath: false },
+      { text: '@docs/说明.md', isPath: true },
+      { text: '。', isPath: false },
+    ]);
+  });
+
   it('빈 문자열은 빈 배열을 반환한다', () => {
     expect(tokenizeMessagePaths('')).toEqual([]);
   });

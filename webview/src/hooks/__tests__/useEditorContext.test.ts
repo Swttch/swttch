@@ -60,6 +60,12 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('buildEditorContextText', () => {
+  it('quotes a path with a space, line range included, as the CLI reads it (#708)', () => {
+    expect(buildEditorContextText({ relativePath: 'docs/my file.md', startLine: 3, endLine: 5 } as never)).toBe(
+      '@"docs/my file.md#L3-L5"',
+    );
+  });
+
   it('prefixes @ and appends #L range when both start and end lines are numbers', () => {
     expect(
       buildEditorContextText({

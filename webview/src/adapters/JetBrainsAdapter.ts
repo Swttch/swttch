@@ -63,12 +63,12 @@ export class JetBrainsAdapter implements IdeAdapter {
   }
 
   async openFileWithSystemApp(filePath: string): Promise<void> {
-    const res = await getBridge().request(MessageType.OPEN_FILE_WITH_SYSTEM_APP, { filePath });
+    const res = await getBridge().request(MessageType.OPEN_FILE_WITH_SYSTEM_APP, { filePath, workingDir: readWorkingDirFromUrl() });
     assertFileOpened(res, filePath);
   }
 
   async revealFile(filePath: string): Promise<void> {
-    const res = await getBridge().request(MessageType.REVEAL_FILE, { filePath });
+    const res = await getBridge().request(MessageType.REVEAL_FILE, { filePath, workingDir: readWorkingDirFromUrl() });
     assertFileOpened(res, filePath);
   }
 
