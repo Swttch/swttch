@@ -1278,17 +1278,19 @@ class ClaudeCodePanel(
         // tab can't jump to about:blank#blocked.
         // CefDragHandler only has onDragEnter (no onDrop hook), and the page-level
         // dataTransfer can't carry absolute file paths for security reasons. So:
-        //   1. On drag-enter, stash the OS paths on the backend (NATIVE_DROP),
+        //   1. On drag-enter, stash what CEF names the files on the backend (NATIVE_DROP),
         //   2. Return false so CEF forwards the drag as HTML5 events,
         //   3. The webview's drop handler issues NATIVE_DROP_FLUSH, which makes
         //      the backend replay the stashed paths back as NATIVE_DROP_ENTRIES.
-        // Net effect: attach happens on drop (not on hover) AND uses the real
-        // OS paths Kotlin received from CEF.
-        JcefHandlers.onFileDrag(b) { paths ->
-            logger.debug("[NativeDrop] CefDragHandler.onDragEnter stashing ${paths.size} file(s)")
-            val files = paths.map { path ->
+        // Net effect: attach happens on drop (not on hover) AND uses real OS
+        // paths. CEF can give only a file's name (macOS); the backend then looks
+        // up the full path before it replays the entry.
+        JcefHandlers.onFileDrag(b) { names ->
+            logger.debug("[NativeDrop] CefDragHandler.onDragEnter stashing ${names.size} file(s)")
+            val files = names.map { name ->
+                val path = cefDraggedPath(name)
                 val file = File(path)
-                DroppedFile(file.absolutePath, file.isDirectory)
+                DroppedFile(path, file.isAbsolute && file.isDirectory)
             }
             dispatchNativeDrop(files)
         }

@@ -74,8 +74,9 @@ internal object JcefHandlers {
      * Register a file-drop listener on [browser]'s drag handler.
      *
      * CEF asks the embedder about every drag before it does anything of its own
-     * (download / navigate / open-in-new-tab). [onFilesDragged] receives the
-     * absolute OS paths of a file drag; everything else is ignored.
+     * (download / navigate / open-in-new-tab). [onFilesDragged] receives what CEF
+     * names the files of a file drag, which is a full path or only the file's name
+     * (see [cefDraggedPath]); everything else is ignored.
      *
      * Always answers `false`, letting CEF forward the drag to the page as normal
      * HTML5 events — the paths stashed here are replayed later, on drop. Returning
