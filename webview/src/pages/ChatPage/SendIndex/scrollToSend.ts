@@ -110,14 +110,25 @@ const READER_EVENTS = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const
 /** Lets go of the send being gone to, when there is one. */
 let letGo: (() => void) | null = null;
 
+/** The sentinel of the send that opens the given section, when the transcript draws it. */
+function sentinelOf(sectionKey: string): HTMLElement | null {
+  return document.querySelector<HTMLElement>(
+    `[data-send-section="${CSS.escape(sectionKey)}"] [data-send-sentinel]`,
+  );
+}
+
 /**
  * Go to a send and hold it there while what came near for the first time settles: a code block holds a stand-in
  * height until it is drawn, and pages loaded around the send arrive over the next moments, and either moves the send
  * from where it was put. With `glide` the way there is glided first, and the hold begins where the glide comes to
  * rest, which puts the chat on the send if the glide stopped short of it. The reader touching the page ends it at once.
+ *
+ * A page landing can draw the send's section anew, so a sentinel that is gone is looked for again by its section.
  */
-function goTo(sentinel: HTMLElement, glide: boolean): void {
+function goTo(target: HTMLElement, glide: boolean): void {
   letGo?.();
+  let sentinel = target;
+  const key = target.closest('[data-send-section]')?.getAttribute('data-send-section');
   const topOf = () => sentinel.getBoundingClientRect().top;
   const started = performance.now();
   let frame = 0;
@@ -139,7 +150,11 @@ function goTo(sentinel: HTMLElement, glide: boolean): void {
     if (letGo === stop) letGo = null;
   };
   const watch = () => {
-    if (!sentinel.isConnected) return stop();
+    if (!sentinel.isConnected) {
+      const anew = key ? sentinelOf(key) : null;
+      if (!anew) return stop();
+      sentinel = anew;
+    }
     const at = topOf();
     if (until === 0) {
       rested = Math.abs(at - top) < 1 ? rested + 1 : 0;
@@ -180,9 +195,7 @@ function goTo(sentinel: HTMLElement, glide: boolean): void {
  * (see `ChatFollowContext`); it is left alone when there is nothing to jump to.
  */
 export function scrollToSend(sectionKey: string, releaseFollow?: (() => void) | null, arriving = false): boolean {
-  const sentinel = document.querySelector<HTMLElement>(
-    `[data-send-section="${CSS.escape(sectionKey)}"] [data-send-sentinel]`,
-  );
+  const sentinel = sentinelOf(sectionKey);
   if (!sentinel) return false;
   releaseFollow?.();
   scrollSendIntoView(sentinel, arriving);

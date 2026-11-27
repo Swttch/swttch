@@ -152,6 +152,21 @@ describe('scrollToSend', () => {
     expect(sentinel.scrollIntoView).toHaveBeenCalledTimes(1);
   });
 
+  // #708. A page landing can draw the section anew, with a sentinel that is another element.
+  it('keeps going to the send when its section is drawn anew on the way', async () => {
+    const sentinel = sendAt(1100);
+    scrollToSend('s1');
+
+    const anew = document.createElement('div');
+    anew.setAttribute('data-send-sentinel', '');
+    anew.getBoundingClientRect = () => ({ top: 600 }) as DOMRect;
+    anew.scrollIntoView = vi.fn();
+    sentinel.replaceWith(anew);
+    await frames(30);
+
+    expect(anew.scrollIntoView).toHaveBeenLastCalledWith(atOnce);
+  });
+
   // Issue #701: the chat follows a streaming reply by writing the scroll position every frame, which cancels
   // the browser's smooth scroll. Following stops first, or the reply pulls the view back under the jump.
   it('stops the chat following the reply before it jumps', () => {
