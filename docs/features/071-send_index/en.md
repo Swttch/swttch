@@ -129,11 +129,8 @@ replaces it with the real message, unabridged.
 - **The preview is 400 characters.** Anything longer is cut with an ellipsis.
   The full text is always in the chat itself — click the tick to go and read it.
 - **Images pasted into a prompt do not appear in the card.** The card carries
-  text only. A session's attachments are what the [Assets](../059-assets/en.md)
-  screen is for.
-- **A message typed while a turn was running** is rebuilt by the chat from the
-  CLI's queue records, and has no id of its own to jump to. It still gets a tick
-  once the chat has loaded that far.
+  text only, and a message of pictures alone reads "Image". A session's
+  attachments are what the [Assets](../059-assets/en.md) screen is for.
 - **The rail is not shown in a session with nothing sent yet**, since there is
   nothing to index.
 
@@ -167,11 +164,15 @@ nothing; the wave and the card appear when the pointer is on a tick itself.
 
 ## What counts as a prompt
 
-The rail lists what you typed. Text the app or the CLI wrote into the
-conversation is left out: the reminders wrapped around a message, finished
-background tasks, interrupt markers, another session's message, and the note the
-desktop app writes about sessions this one started. A message that has a
-reminder in front of what you typed is listed by what you typed.
+One rule decides the chat's user bubbles, the ticks and the composer's
+[Up and Down history](../053-prompt_history_in_the_composer/en.md), so they
+always agree ([#735](https://github.com/Swttch/swttch/issues/735)): a message
+drawn as yours has a tick, and one that is not drawn as yours has none. Messages
+sent while Claude was working, slash commands drawn as your message and messages
+of pictures alone count. Reminders wrapped around a message are not part of it;
+finished background tasks, interrupt markers, model changes, other sessions'
+messages and the notes the desktop app writes about sessions this one started do
+not count.
 
 A prompt that opens with an `@@` mention shows the mention's name, and one made
 of reply cards shows each quote and its comment, as the chat bubble does, rather

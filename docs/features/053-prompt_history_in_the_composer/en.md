@@ -1,45 +1,67 @@
-# Up and Down walk the prompts you typed
+# Up and Down walk the messages you sent
 
 > Language: **English** · [한국어](./ko.md)
 
-## What went wrong
+Press Up in the message box to bring back what you sent before, as in a terminal, and Down to come back. What you were
+writing is kept while you look, and is waiting for you when you come back down.
 
-Pressing Up in the composer is supposed to bring back the last thing you asked for, the way it does in a terminal. In a conversation you had just reopened, it usually brought back nothing at all.
+First made to work in a reopened conversation in [#395](https://github.com/Swttch/swttch/pull/395). The draft, the
+guard, the label and the shared draft came with [#735](https://github.com/Swttch/swttch/issues/735).
 
-When it did bring something back, it was often not something you had typed. `<command-name>/model</command-name>` and its XML siblings, the "[Request interrupted by user]" marker, the summary blob the CLI writes when a conversation is compacted, and the background-task notifications the CLI posts to itself all took their turn in the composer.
+## Moving, then walking
 
-Messages you had typed while Claude was still working never appeared at all.
+**The arrow keys move the caret first.** Up walks up the rows of your text, wrapped rows included, then to its very
+first character. Down mirrors it to the very last one. This is the same on macOS, Linux and Windows. Holding Shift
+selects text, and never recalls.
 
-And on a long prompt, Up did not move the caret up a line. It jumped straight to the previous prompt, from wherever the caret happened to be.
+**Leaving your draft takes one more press.** At the very start of what you are writing, Up first shows a line over the
+text:
 
-## Why it happened
+> Press Up again to browse history (your draft is kept)
 
-**The history was read from the wrong place.** It was built from the transcript the chat screen was holding, and the chat screen holds one page: the newest 50 *entries*. An entry is rarely a prompt. Across 119 conversations in this repository, 3,190 prompts were typed and only 129 of them — 4% — fell inside that newest page. The largest conversation had 193 prompts and none of them were in it.
+The next Up goes to your last message. Any other key or a click makes the line go away. Inside the history there is no
+such line: each press moves on.
 
-**Almost everything in a transcript is a `user` entry.** In one 9,326-line conversation, 1,345 entries were of that kind and 1,281 of them were tool results being fed back to the model. Roughly 46 were typed by a person. Reading them all as prompts is what put the CLI's own writing into the composer.
+**While you walk, the box says where you are**, for example `History 19/19`. The newest message is the highest number,
+the oldest is 1, and your draft has no number. The total is the number of ticks on the [send index](../071-send_index/en.md),
+because both show the same list.
 
-**A message typed mid-turn is not written as a message.** The CLI records that it queued the text and, later, that it consumed it, and never writes the entry a reader would look for. The chat transcript already rebuilt those; the history did not know to.
+A message recalled with Up arrives with the caret at its start, so the next Up moves straight on. One recalled with
+Down arrives with the caret at its end.
 
-**The arrow keys were guarded by searching the text for a line break.** A prompt that is one long sentence has no line break in it — the composer folds it across several rows to fit the width. Every row therefore counted as "the first line", and Up was handed to the history while you were still reading your way up a paragraph.
+## A message comes back as you sent it
 
-## What changed
+Its pictures return to the attachment row, reply and excerpt cards return above the text, and a message addressed to
+another session with `@@` is addressed to it again.
 
-**The prompts come from the backend now.** It holds the whole conversation, not a page of it, so reopening a conversation and pressing Up finds what you asked for however long ago you asked it. They arrive twenty at a time and extend as you keep walking back, so opening a conversation stays cheap: a prompt carries whatever you pasted into it, and sending a hundred of them at once would mean 21MB for the worst conversation measured here.
+**Change a recalled message and the change stays with it.** Walk away and back and you find your changed version,
+marked **Edited**. Your draft is not touched. Sending any message drops all such changes, and if you sent a recalled
+message, your draft comes back into the box. The message in the conversation is never changed.
 
-**Only what a person typed is offered.** The CLI marks some of its own entries, and those are skipped. The rest were measured against every conversation on the machine and are skipped by what they say — slash-command expansions, command output, interrupt markers, and the notifications the CLI posts into the conversation.
+## What counts as a message you sent
 
-**A message typed while Claude was working is offered too.** It is recovered from the queue bookkeeping, using the same rule the chat transcript uses to rebuild the bubble, so a message cannot be visible on screen and missing from the history.
+The same rule decides the chat's bubbles, the ticks of the send index and this history:
 
-**A prompt you have just sent is there immediately**, before the CLI has written it down.
+- Included: what you typed, messages sent while Claude was still working, slash commands drawn as your message (such as
+  `/rename my name`), and messages made of pictures alone.
+- Left out: commands that only do something and leave no message (such as `/clear` or `/usage`), model changes,
+  messages from other sessions and notes the app writes for Claude, finished background tasks, and interrupt markers.
 
-**The arrow keys move the caret first.** Up walks up the rows of a long prompt, then to its very first character. Only the press after that — one the composer would have done nothing with — brings back a prompt. Down mirrors it at the last character. A recalled prompt arrives with the caret on the edge you are walking towards, so holding the key keeps moving through prompts rather than back through the one you just recalled.
+## Your draft is kept
 
-**Emptying the composer starts the walk over**, so the next Up begins at the most recent prompt instead of resuming where you left off.
+A draft is everything in the message box: the text, attached pictures and files, reply and excerpt cards, picked page
+elements and the `@@` recipient. Each session has its own.
 
-**Holding Shift selects, and never recalls.** Shift with an arrow is a selection gesture, so the history does not take the key at all — including from the very first character, where a recalled prompt leaves the caret and where pressing Shift used to replace the prompt rather than select it.
+- It stays when you switch sessions, close and reopen the tab, or restart the IDE.
+- Another window showing the same session gets the change within a moment. A window you are typing in is never
+  overwritten with older text.
+- Another device connected to the same plugin backend, such as a phone over a remote tunnel, sees it too.
+- The draft of a session that has not had its first message yet stays in its own window.
+
+The plugin backend keeps drafts under its data folder (`~/.claude-code-gui`), pictures included, and removes a draft
+once it is empty.
 
 ## Limits
 
-The history covers the conversation you are in. Prompts from your other conversations in the same project are not offered, even though the CLI's own terminal history reaches across them: recalling a line from a conversation you are not looking at is more surprise than help.
-
-Slash commands are left out. The transcript stores `/model haiku` as an XML expansion rather than as what you typed, and a history that hands back the expansion would be worse than one that skips it.
+- The history covers the conversation you are in, not your other conversations in the project.
+- A recalled message that held a picked page element gets its text back, not the element's chip.
