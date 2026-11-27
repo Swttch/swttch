@@ -65,61 +65,100 @@ export const SEND_SCROLL_OPTIONS: ScrollIntoViewOptions = {
 const GLIDE_SCREENS = 2;
 
 /**
+ * Whether the stretch the transcript window holds nothing of lies between the top of the chat and a send. Such a send
+ * is further than it looks: the stretch fills while the way to it is being crossed (#708).
+ */
+function isPastGap(scroller: HTMLElement, sentinel: HTMLElement): boolean {
+  const gap = scroller.querySelector('[data-window-gap]');
+  if (!gap) return false;
+  const at = gap.getBoundingClientRect().top;
+  return (at - scroller.getBoundingClientRect().top) * (at - sentinel.getBoundingClientRect().top) <= 0;
+}
+
+/**
  * Move the chat to a send, given its sentinel.
  *
  * A short way is glided. A long one is gone at once, and so is the way to a send that has just been loaded for
  * (`arriving`): while a glide is on its way, the pages it passes are loaded and let go of, the reader's place is
  * held through each of those by writing the scroll position, and the first such write ends the glide. The jump
  * then stopped wherever it had got to, and the send it was going to was let go of (#747).
+ *
+ * A short glide can be ended the same way by a page on its way in, so once it has come to rest the chat is put on
+ * the send and held there, as after a jump made at once (#708).
  */
 export function scrollSendIntoView(sentinel: HTMLElement, arriving = false): void {
   const scroller = sentinel.closest<HTMLElement>('[data-chat-scroll]');
   let atOnce = arriving;
   if (!atOnce && scroller) {
     const distance = Math.abs(sentinel.getBoundingClientRect().top - scroller.getBoundingClientRect().top);
-    atOnce = distance > rectMetrics().fromLayout(scroller.clientHeight * GLIDE_SCREENS);
+    atOnce = distance > rectMetrics().fromLayout(scroller.clientHeight * GLIDE_SCREENS) || isPastGap(scroller, sentinel);
   }
-  if (!atOnce) {
-    letGo?.();
-    sentinel.scrollIntoView(SEND_SCROLL_OPTIONS);
-    return;
-  }
-  holdOn(sentinel);
+  goTo(sentinel, !atOnce);
 }
 
-/** How long a send that was gone to at once is held where it was put. */
+/** How long a send that was gone to is held where it was put. */
 const HOLD_MS = 800;
+/** A glide has come to rest once the send has stayed where it is for this many frames. */
+const RESTED_FRAMES = 6;
+/** A glide may take this long to start moving, so rest is not looked for before. */
+const GLIDE_START_MS = 200;
+/** A glide that has not come to rest by now is ended. */
+const GLIDE_LIMIT_MS = 2000;
 /** What the reader does to take the page over again. */
 const READER_EVENTS = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const;
 
-/** Lets go of the send being held, when there is one. */
+/** Lets go of the send being gone to, when there is one. */
 let letGo: (() => void) | null = null;
 
 /**
- * Put the chat on a send and hold it there while what came near for the first time settles: a code block holds a
- * stand-in height until it is drawn, and pages loaded around the send arrive over the next moments, and either moves
- * the send from where it was put. The reader touching the page ends it at once.
+ * Go to a send and hold it there while what came near for the first time settles: a code block holds a stand-in
+ * height until it is drawn, and pages loaded around the send arrive over the next moments, and either moves the send
+ * from where it was put. With `glide` the way there is glided first, and the hold begins where the glide comes to
+ * rest, which puts the chat on the send if the glide stopped short of it. The reader touching the page ends it at once.
  */
-function holdOn(sentinel: HTMLElement): void {
+function goTo(sentinel: HTMLElement, glide: boolean): void {
   letGo?.();
+  const topOf = () => sentinel.getBoundingClientRect().top;
+  const started = performance.now();
   let frame = 0;
   let top = 0;
+  /** When the hold ends; 0 while the glide is still on its way. */
+  let until = 0;
+  let rested = 0;
   const land = () => {
     sentinel.scrollIntoView({ ...SEND_SCROLL_OPTIONS, behavior: 'instant' });
-    top = sentinel.getBoundingClientRect().top;
+    top = topOf();
+  };
+  const hold = () => {
+    land();
+    until = performance.now() + HOLD_MS;
   };
   const stop = () => {
     cancelAnimationFrame(frame);
     for (const event of READER_EVENTS) window.removeEventListener(event, stop, true);
     if (letGo === stop) letGo = null;
   };
-  const until = performance.now() + HOLD_MS;
   const watch = () => {
-    if (!sentinel.isConnected || performance.now() > until) return stop();
-    if (Math.abs(sentinel.getBoundingClientRect().top - top) > 1) land();
+    if (!sentinel.isConnected) return stop();
+    const at = topOf();
+    if (until === 0) {
+      rested = Math.abs(at - top) < 1 ? rested + 1 : 0;
+      top = at;
+      const age = performance.now() - started;
+      if ((rested >= RESTED_FRAMES && age >= GLIDE_START_MS) || age >= GLIDE_LIMIT_MS) hold();
+    } else if (performance.now() > until) {
+      return stop();
+    } else if (Math.abs(at - top) > 1) {
+      land();
+    }
     frame = requestAnimationFrame(watch);
   };
-  land();
+  if (glide) {
+    top = topOf();
+    sentinel.scrollIntoView(SEND_SCROLL_OPTIONS);
+  } else {
+    hold();
+  }
   for (const event of READER_EVENTS) window.addEventListener(event, stop, true);
   frame = requestAnimationFrame(watch);
   letGo = stop;
