@@ -162,7 +162,7 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
   const queueWhileWaiting = cardWaiting && runningActivity(chatStream.messages) !== null;
   const { input: value, setInput: onChange, setComposerHasContent } = useChatInputState();
   const sends = useContext(SendListContext);
-  const { navigateUp, navigateDown, contentOf, jumpTo, resetHistory, slot: historySlot, position: historyPosition, isGuarded, disarmGuard } = useInputHistory({ workingDirectory, sessionId: currentSessionId, sends });
+  const { navigateUp, navigateDown, contentOf, recall, resetHistory, slot: historySlot, position: historyPosition, isGuarded, disarmGuard } = useInputHistory({ workingDirectory, sessionId: currentSessionId, sends });
   /** Where the caret goes once a recalled text is in the box. A new object for every recall. */
   const [caretRequest, setCaretRequest] = useState<{ at: 'start' | 'end' } | null>(null);
   // Runs after the editor has written the text into the page, which also moves the caret: the request wins.
@@ -622,14 +622,14 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
     // Deferred past the dialog's unmount, which would otherwise take the focus with it.
     setTimeout(() => textareaRef.current?.focus(), 0);
   }, [textareaRef]);
-  const jumpFromHistory = useCallback(async (sendKey: string) => {
+  const recallFromHistory = useCallback(async (sendKey: string) => {
     if (!(await contentOf(sendKey))) return;
-    const step = jumpTo(sendKey);
+    const step = recall(sendKey);
     if (step === null || step === 'guard' || step === 'reading') return;
     showSlot(step.slot);
     setCaretRequest({ at: 'end' });
     closeHistory();
-  }, [contentOf, jumpTo, showSlot, closeHistory]);
+  }, [contentOf, recall, showSlot, closeHistory]);
 
   const sendToSession = useSendToSession();
   const { sendMessage } = chatStream;
@@ -1572,7 +1572,7 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
               currentKey={historySlot?.key ?? null}
               loadContent={contentOf}
               pictureOf={(id) => composerDraftStore.picture(id)}
-              onJump={(sendKey) => void jumpFromHistory(sendKey)}
+              onRecall={(sendKey) => void recallFromHistory(sendKey)}
               onRevert={revertEdit}
               onClose={closeHistory}
             />

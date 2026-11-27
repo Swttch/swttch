@@ -1,7 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { ChevronRightIcon, PhotoIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ArrowUturnLeftIcon, ChevronDownIcon, PhotoIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '@/i18n';
 import { Portal } from '@/components/Portal';
+import { Tooltip } from '@/components/Tooltip';
 import { useEscapeLayer } from '@/hooks/useEscapeLayer';
 import type { ComposerContent } from '@/shared';
 import type { SendIndexEntry } from '../sendList';
@@ -18,16 +19,16 @@ interface Props {
   /** The bytes of a picture, base64. */
   pictureOf: (id: string) => string | undefined;
   /** Put a send in the composer. */
-  onJump: (key: string) => void;
+  onRecall: (key: string) => void;
   /** Give up the edit of a send. */
   onRevert: (key: string) => void;
   onClose: () => void;
 }
 
 /**
- * The history of the composer in one list (#735): every send of the session, newest first, folded to a line each. A
- * send with an edit kept is marked, starts open, and shows the edit. From here one goes to a send, or gives up its
- * edit.
+ * The history of the composer in one list (#735): every send of the session in the order sent, folded to a line each.
+ * A send with an edit kept carries a dot, starts open, and shows the edit. From here one puts a send in the composer,
+ * or gives up its edit.
  */
 export function HistoryModal(props: Props) {
   const { entries, edits, currentKey, onClose } = props;
@@ -102,18 +103,16 @@ export function HistoryModal(props: Props) {
             </button>
           </div>
           <ol ref={listRef} className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
-            {entries
-              .map((entry, at) => (
-                <HistoryRow
-                  key={entry.key}
-                  {...props}
-                  entry={entry}
-                  number={at + 1}
-                  isOpen={opened.has(entry.key)}
-                  onToggle={() => toggle(entry.key)}
-                />
-              ))
-              .reverse()}
+            {entries.map((entry, at) => (
+              <HistoryRow
+                key={entry.key}
+                {...props}
+                entry={entry}
+                number={at + 1}
+                isOpen={opened.has(entry.key)}
+                onToggle={() => toggle(entry.key)}
+              />
+            ))}
           </ol>
         </div>
       </div>
@@ -123,7 +122,7 @@ export function HistoryModal(props: Props) {
 
 type RowProps = Props & { entry: SendIndexEntry; number: number; isOpen: boolean; onToggle: () => void };
 
-function HistoryRow({ entry, number, isOpen, onToggle, edits, currentKey, loadContent, pictureOf, onJump, onRevert }: RowProps) {
+function HistoryRow({ entry, number, isOpen, onToggle, edits, currentKey, loadContent, pictureOf, onRecall, onRevert }: RowProps) {
   const { t } = useTranslation('chat');
   const { t: tt } = useTranslation('chatTools');
   const bodyId = useId();
@@ -134,46 +133,59 @@ function HistoryRow({ entry, number, isOpen, onToggle, edits, currentKey, loadCo
 
   return (
     <li data-send={entry.key} className={`rounded-lg ${entry.key === currentKey ? 'bg-surface-hover/50' : ''}`}>
-      <div className="flex items-center gap-1 pe-2">
+      <div className="flex items-center gap-1 rounded-lg pe-1 hover:bg-surface-hover">
         <button
           type="button"
           aria-expanded={isOpen}
           aria-controls={bodyId}
           onClick={onToggle}
-          className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-start text-sm text-[var(--tr-text)] hover:bg-surface-hover"
+          className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-start text-sm text-[var(--tr-text)]"
         >
-          <ChevronRightIcon className={`h-3.5 w-3.5 shrink-0 text-text-tertiary transition-transform ${isOpen ? 'rotate-90' : ''}`} />
           <span className="w-7 shrink-0 text-end text-xs tabular-nums text-text-tertiary">{number}</span>
           <span className={`min-w-0 flex-1 truncate ${words === '' ? 'text-text-tertiary' : ''}`}>{preview}</span>
           {pictures > 0 && <PhotoIcon className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />}
-          {edit && (
-            <span className="shrink-0 rounded border border-accent-claude/60 px-1 text-[0.6875rem] leading-4 text-accent-claude">
-              {t('chatInput.history.modified')}
-            </span>
-          )}
         </button>
+        {edit && (
+          <>
+            <Tooltip content={t('chatInput.history.modified')} desktop>
+              <span role="img" aria-label={t('chatInput.history.modified')} className="flex h-6 w-4 shrink-0 items-center justify-center">
+                <span className="h-2 w-2 rounded-full bg-accent-claude" />
+              </span>
+            </Tooltip>
+            <Tooltip content={t('chatInput.history.modal.revert')} desktop>
+              <button
+                type="button"
+                aria-label={t('chatInput.history.modal.revert')}
+                onClick={() => onRevert(entry.key)}
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-text-secondary hover:bg-surface-tooltip hover:text-text-primary"
+              >
+                <ArrowUturnLeftIcon className="h-3.5 w-3.5" />
+              </button>
+            </Tooltip>
+          </>
+        )}
         <button
           type="button"
-          onClick={() => onJump(entry.key)}
+          onClick={() => onRecall(entry.key)}
           className="shrink-0 rounded px-2 py-1 text-xs text-text-secondary hover:bg-surface-tooltip hover:text-text-primary"
         >
-          {t('chatInput.history.modal.jump')}
+          {t('chatInput.history.modal.recall')}
+        </button>
+        {/* The row's own button already folds and unfolds for keyboard and screen readers; this is its pointer handle. */}
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-hidden="true"
+          data-testid="history-chevron"
+          onClick={onToggle}
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-text-tertiary hover:text-text-primary"
+        >
+          <ChevronDownIcon className={`h-3.5 w-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </button>
       </div>
       {isOpen && (
-        <div id={bodyId} className="ms-[4.125rem] me-2 pb-2">
+        <div id={bodyId} className="ms-[2.75rem] me-2 pb-2">
           {edit ? <ContentView content={edit} pictureOf={pictureOf} /> : <SentView sendKey={entry.key} loadContent={loadContent} pictureOf={pictureOf} />}
-          {edit && (
-            <div className="mt-1.5 flex justify-end">
-              <button
-                type="button"
-                onClick={() => onRevert(entry.key)}
-                className="rounded border border-border-default px-2 py-1 text-xs text-text-secondary hover:bg-surface-tooltip hover:text-text-primary"
-              >
-                {t('chatInput.history.modal.revert')}
-              </button>
-            </div>
-          )}
         </div>
       )}
     </li>

@@ -39,11 +39,11 @@ on screen is one of them, a dim **Edits** when it is not. The draft shows it too
 
 Press the mark to open **History**.
 
-- Every message you sent is listed, newest first, with its number and one line of preview.
-- Changed ones are marked **Edited** and start open.
-- Opening a row shows the whole message, pictures included. A changed one shows your change.
-- **Go to** closes the window and puts that message in the box.
-- **Discard edit** removes the change at once.
+- Every message you sent is listed in the order sent (1 at the top), with its number and one line of preview.
+- Changed ones carry an orange dot (**Edited** on hover) and start open.
+- Pressing a row, or the arrow at its end, shows the whole message, pictures included. A changed one shows your change.
+- **Load into input** closes the window and puts that message in the box.
+- The undo icon (**Discard edit**) removes the change at once.
 
 ## A message comes back as you sent it
 

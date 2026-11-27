@@ -154,7 +154,7 @@
       "edits": "修改紀錄",
       "modal": {
         "title": "歷史紀錄",
-        "jump": "前往",
+        "recall": "載入輸入框",
         "revert": "復原修改",
         "loading": "載入中…",
         "unavailable": "無法讀取這則訊息。",

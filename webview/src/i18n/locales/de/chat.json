@@ -154,7 +154,7 @@
       "edits": "Änderungen",
       "modal": {
         "title": "Verlauf",
-        "jump": "Öffnen",
+        "recall": "Ins Eingabefeld laden",
         "revert": "Änderung verwerfen",
         "loading": "Wird geladen…",
         "unavailable": "Diese Nachricht konnte nicht gelesen werden.",

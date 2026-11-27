@@ -154,7 +154,7 @@
       "edits": "Edits",
       "modal": {
         "title": "History",
-        "jump": "Go to",
+        "recall": "Load into input",
         "revert": "Discard edit",
         "loading": "Loading…",
         "unavailable": "This message could not be read.",

@@ -154,7 +154,7 @@
       "edits": "Modifications",
       "modal": {
         "title": "Historique",
-        "jump": "Y aller",
+        "recall": "Charger dans la saisie",
         "revert": "Annuler la modification",
         "loading": "Chargement…",
         "unavailable": "Impossible de lire ce message.",

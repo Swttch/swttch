@@ -154,7 +154,7 @@
       "edits": "修改记录",
       "modal": {
         "title": "历史记录",
-        "jump": "跳转",
+        "recall": "载入输入框",
         "revert": "撤销修改",
         "loading": "加载中…",
         "unavailable": "无法读取这条消息。",

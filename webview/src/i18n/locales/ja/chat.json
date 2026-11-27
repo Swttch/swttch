@@ -154,7 +154,7 @@
       "edits": "編集履歴",
       "modal": {
         "title": "履歴",
-        "jump": "移動",
+        "recall": "入力欄に読み込む",
         "revert": "編集を破棄",
         "loading": "読み込み中…",
         "unavailable": "メッセージを読み込めませんでした。",

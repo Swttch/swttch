@@ -154,7 +154,7 @@
       "edits": "수정 내역",
       "modal": {
         "title": "히스토리",
-        "jump": "이동",
+        "recall": "입력칸에 불러오기",
         "revert": "수정 취소",
         "loading": "불러오는 중…",
         "unavailable": "메시지를 불러오지 못했습니다.",

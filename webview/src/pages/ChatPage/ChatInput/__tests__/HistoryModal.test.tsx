@@ -9,7 +9,7 @@ const written = (text: string): ComposerContent => ({ ...emptyContent(), text })
 const entry = (key: string, text: string, images = 0): SendIndexEntry => ({ key, text, images, loaded: false });
 
 function show(props: Partial<React.ComponentProps<typeof HistoryModal>> = {}) {
-  const calls = { onJump: vi.fn(), onRevert: vi.fn(), onClose: vi.fn(), loadContent: vi.fn(async (key: string) => written(`all of ${key}`)) };
+  const calls = { onRecall: vi.fn(), onRevert: vi.fn(), onClose: vi.fn(), loadContent: vi.fn(async (key: string) => written(`all of ${key}`)) };
   const view = render(
     <HistoryModal
       entries={[entry('u1', 'oldest'), entry('u2', 'middle'), entry('u3', '', 1)]}
@@ -28,10 +28,24 @@ const rows = () => within(screen.getByRole('dialog')).getAllByRole('listitem');
 const header = (row: HTMLElement) => row.querySelector('button[aria-expanded]') as HTMLButtonElement;
 
 describe('HistoryModal', () => {
-  it('lists every send, newest first, with its number', () => {
+  it('lists every send in the order sent, with its number', () => {
     show();
 
-    expect(rows().map((row) => header(row).textContent)).toEqual(['3Image', '2middle, changedEdited', '1oldest']);
+    expect(rows().map((row) => header(row).textContent)).toEqual(['1oldest', '2middle, changed', '3Image']);
+  });
+
+  it('puts a dot named "Edited" on the edited sends alone', () => {
+    show();
+
+    expect(rows().map((row) => within(row).queryByRole('img', { name: 'Edited' }) !== null)).toEqual([false, true, false]);
+  });
+
+  it('unfolds from the arrow at the end of the row too', () => {
+    show();
+
+    fireEvent.click(within(rows()[0]).getByTestId('history-chevron'));
+
+    expect(header(rows()[0]).getAttribute('aria-expanded')).toBe('true');
   });
 
   it('starts with the edited sends open on their edit, and the rest folded', () => {
@@ -45,17 +59,17 @@ describe('HistoryModal', () => {
   it('reads a send when its row is opened', async () => {
     const { loadContent } = show();
 
-    fireEvent.click(header(rows()[2]));
+    fireEvent.click(header(rows()[0]));
 
-    expect(await within(rows()[2]).findByText('all of u1')).toBeTruthy();
+    expect(await within(rows()[0]).findByText('all of u1')).toBeTruthy();
     expect(loadContent).toHaveBeenCalledWith('u1');
   });
 
-  it('goes to a send, and gives up an edit only where there is one', () => {
-    const { onJump, onRevert } = show();
+  it('puts a send in the composer, and gives up an edit only where there is one', () => {
+    const { onRecall, onRevert } = show();
 
-    fireEvent.click(within(rows()[2]).getByRole('button', { name: 'Go to' }));
-    expect(onJump).toHaveBeenCalledWith('u1');
+    fireEvent.click(within(rows()[0]).getByRole('button', { name: 'Load into input' }));
+    expect(onRecall).toHaveBeenCalledWith('u1');
 
     expect(screen.getAllByRole('button', { name: 'Discard edit' })).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: 'Discard edit' }));

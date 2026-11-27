@@ -45,7 +45,7 @@ interface UseInputHistoryReturn {
   /** The send `key` as it was sent, read from the backend if it is not here; undefined when it cannot be read. */
   contentOf: (key: string) => Promise<ComposerContent | undefined>;
   /** Show the send `key`, wherever the walk stands. Its content has to be here (see `contentOf`). */
-  jumpTo: (key: string) => HistoryStep;
+  recall: (key: string) => HistoryStep;
   /** Leave the history. */
   resetHistory: () => void;
   /** The send shown, with what it held as sent, or null while the composer holds the draft. */
@@ -186,7 +186,7 @@ export function useInputHistory({ workingDirectory, sessionId, sends }: UseInput
     return stepTo(target);
   }, [sends, index, stepTo]);
 
-  const jumpTo = useCallback((key: string): HistoryStep => {
+  const recall = useCallback((key: string): HistoryStep => {
     const target = sends.findIndex((entry) => entry.key === key);
     return target === -1 ? null : stepTo(target);
   }, [sends, stepTo]);
@@ -201,5 +201,5 @@ export function useInputHistory({ workingDirectory, sessionId, sends }: UseInput
   );
   const position = shown ? { index: index + 1, total: sends.length } : null;
 
-  return { navigateUp, navigateDown, contentOf, jumpTo, resetHistory, slot, position, isGuarded, disarmGuard };
+  return { navigateUp, navigateDown, contentOf, recall, resetHistory, slot, position, isGuarded, disarmGuard };
 }
