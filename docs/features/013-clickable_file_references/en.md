@@ -53,9 +53,15 @@ A reference opens however Claude or the CLI happens to spell it:
 | Names with spaces, in a link or an `@"…"` mention | `[notes](docs/my%20file.md)`, `@"docs/my file.md"` |
 | Positions and ranges | `a.ts:10`, `a.ts:10:5`, `a.ts:10-20`, `a.ts#L10C5` |
 
+![An answer in the chat with ten file references, each underlined as a link: a heading link, a backslash path, a relative path, a name with a space, a Chinese folder, a route folder, a plain-text path, a code span, a file made just before the click and a missing file](./assets/file-links-in-answer.png)
+
+![A markdown file opened by a heading link: the editor's caret is on line 11, the heading the link named](./assets/heading-link-opens.png)
+
 What is on disk decides: a `#` or a `:` that is part of a file name is never cut off.
 
 A file Claude has just written opens in the IDE editor right away, before the IDE has noticed it on its own.
+
+![On the left, the Windows dialog asking which app should open a .ts file, which a link to a new file brought up before. On the right, the same link opening the file in the IDE editor at line 2](./assets/new-file-before-after.png)
 
 If a clicked reference points at a path that isn't on disk (a stale or made-up
 path), the open no longer fails silently — a short toast tells you the file
