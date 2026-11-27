@@ -195,6 +195,18 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.38.5 - Various bug fixes, including the message history in the chat input</h3>
+            <ul>
+                <li>Add an option to the new permission card to allow all edits for the session (#774, reported by @itachi-8733)</li>
+                <li>Improve the sent message history (#769)</li>
+                <li>Fix the draft being typed getting lost (#769, reported by @VijitCoder)</li>
+                <li>Fix messages sent while Claude was working, and picture-only messages, missing from the message history and the send index (#769)</li>
+                <li>Fix requests the CLI writes to Claude showing up as boxes in the chat (#769)</li>
+                <li>Fix cases where file links do not open (#773, reported by @tianguanlong)</li>
+                <li>Fix Windows asking which app to use when opening a link to a newly created file (#773)</li>
+                <li>Fix the send index not jumping, or jumping to the wrong place (#773, reported by @tianguanlong)</li>
+                <li>Fix the editor split divider not moving while a chat tab is open (#772, reported by @nadia-tarashkevich)</li>
+            </ul>
             <h3>0.38.4 - Various bug fixes, big and small</h3>
             <ul>
                 <li>Fix every message failing to send on Windows when the session manager MCP is installed (#756 by @LiMuhua)</li>
