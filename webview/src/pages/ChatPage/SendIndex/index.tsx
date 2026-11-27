@@ -517,6 +517,8 @@ export function SendIndex(props: Props) {
   const jumpTo = (index: number) => {
     const entry = entries[index];
     if (!entry) return;
+    // A send still being loaded for is no longer where the reader is going (#708).
+    setPendingJump(null);
     /*
       Ask the DOM first rather than trusting `loaded`.
 

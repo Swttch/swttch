@@ -86,11 +86,19 @@ export function mirrorSettingsForOverrides(settings: SettingsState): void {
 }
 
 /**
- * How many entries one page of a session's messages holds: the `chatPageSize` setting, which the URL's
+ * How many entries of the conversation one page of a session's messages holds: the `chatPageSize` setting, which the URL's
  * `pageSize` has already been laid over (see `applyUrlOverridesToSettings`). Read outside React by the
  * code that asks the backend for a page, so the size it asks for and the size the transcript window
  * counts in are the same number.
  */
 export function resolveMessagePageSize(): number {
   return mirroredSettings?.[SettingKey.CHAT_PAGE_SIZE] ?? DEFAULT_SETTINGS[SettingKey.CHAT_PAGE_SIZE];
+}
+
+/**
+ * How many pages the window keeps around the page the reader is on: the `chatHistoryPages` setting. A jump asks for
+ * that many at once.
+ */
+export function resolveHistoryPages(): number {
+  return mirroredSettings?.[SettingKey.CHAT_HISTORY_PAGES] ?? DEFAULT_SETTINGS[SettingKey.CHAT_HISTORY_PAGES];
 }

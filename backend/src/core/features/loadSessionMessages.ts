@@ -8,7 +8,7 @@ import {
   type SessionMessage,
 } from './sessionIndex';
 import { CLI_FLAG_TO_INPUT_MODE } from '../claude-process';
-import { QUEUED_KEY_PREFIX, restoreQueuedEntries } from '../../shared';
+import { PAGE_RECORDS_PER_ENTRY, QUEUED_KEY_PREFIX, restoreQueuedEntries } from '../../shared';
 
 // Raw JSONL entry - passed through as-is to match Kotlin backend
 export type { SessionMessage };
@@ -78,6 +78,27 @@ function snapStartToUuid(chain: ReadonlyArray<{ uuid?: unknown }>, start: number
   let i = start;
   while (i > 0 && typeof chain[i].uuid !== 'string') i--;
   return i;
+}
+
+// Where the page that ends before `end` begins: `size` entries of the conversation back, with every record between
+// them, or fewer where the limit of records is reached first (see PAGE_RECORDS_PER_ENTRY).
+function pageStartBefore(chain: ReadonlyArray<IndexedEntry>, end: number, size: number): number {
+  const limit = size * PAGE_RECORDS_PER_ENTRY;
+  let start = end;
+  for (let counted = 0; start > 0 && counted < size && end - start < limit; start--) {
+    if (chain[start - 1].counted) counted++;
+  }
+  return start;
+}
+
+// Where the page that begins at `start` ends (exclusive), counted the same way toward the newest.
+function pageEndAfter(chain: ReadonlyArray<IndexedEntry>, start: number, size: number): number {
+  const limit = size * PAGE_RECORDS_PER_ENTRY;
+  let end = start;
+  for (let counted = 0; end < chain.length && counted < size && end - start < limit; end++) {
+    if (chain[end].counted) counted++;
+  }
+  return end;
 }
 
 // The index of the first uuid-bearing entry after `index`, or the chain's length
@@ -262,7 +283,7 @@ export async function loadSessionMessages(
 
   // Compute the latest (newest) page — shared by the no-cursor case and the
   // cursor-miss fallback below.
-  const latestPageStart = snapStartToUuid(chain, Math.max(0, total - pageSize));
+  const latestPageStart = snapStartToUuid(chain, pageStartBefore(chain, total, pageSize));
 
   if (afterUuid) {
     /*
@@ -289,7 +310,7 @@ export async function loadSessionMessages(
       const stopIndex = untilUuid ? chain.findIndex(m => m.uuid === untilUuid) : -1;
       const stop = stopIndex > index ? stopIndex : -1;
       if (start < total) {
-        const rawEnd = start + pageSize;
+        const rawEnd = pageEndAfter(chain, start, pageSize);
         let end = rawEnd >= total ? total : snapStartToUuid(chain, rawEnd);
         // A group longer than a page still has to make progress.
         if (end <= start) end = nextUuidIndexAfter(chain, start);
@@ -322,8 +343,8 @@ export async function loadSessionMessages(
       hasMore = latestPageStart > 0;
       reset = true;
     } else {
-      const start = snapStartToUuid(chain, Math.max(0, index - Math.floor(pageSize / 2)));
-      const rawEnd = Math.max(start + pageSize, index + 1);
+      const start = snapStartToUuid(chain, pageStartBefore(chain, index, Math.floor(pageSize / 2)));
+      const rawEnd = Math.max(pageEndAfter(chain, start, pageSize), index + 1);
       let end = rawEnd >= total ? total : snapStartToUuid(chain, rawEnd);
       // Walking back to a uuid entry must not cut the target itself off.
       if (end <= index) end = nextUuidIndexAfter(chain, index);
@@ -336,7 +357,7 @@ export async function loadSessionMessages(
     const index = chain.findIndex(m => m.uuid === beforeUuid);
     if (index !== -1) {
       // Return older messages (indices before index).
-      let startIndex = snapStartToUuid(chain, Math.max(0, index - pageSize));
+      let startIndex = snapStartToUuid(chain, pageStartBefore(chain, index, pageSize));
       // Where the client already holds what comes before: the page begins right after it. The entries
       // without a uuid that follow that entry are its own, which the client holds.
       const stopIndex = untilUuid ? chain.findIndex(m => m.uuid === untilUuid) : -1;

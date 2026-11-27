@@ -113,6 +113,18 @@ describe('settings', () => {
       }
     });
 
+    // #708: a page counted in messages has its own key; the old one stays for plugins not yet updated.
+    it('rejects a messages-per-page outside 10..1000 and accepts the ends', async () => {
+      for (const bad of [9, 1001, 20.5, 'x', null]) {
+        const result = await saveSettingToFile('chatMessagesPerPage', bad);
+        expect(result.status).toBe('error');
+        expect(result.error).toContain('chatMessagesPerPage must be an integer between 10 and 1000');
+      }
+      for (const good of [10, 20, 1000]) {
+        expect((await saveSettingToFile('chatMessagesPerPage', good)).status).toBe('ok');
+      }
+    });
+
     it('takes a boolean for chatWindowing and nothing else', async () => {
       for (const bad of ['yes', 1, null]) {
         const result = await saveSettingToFile('chatWindowing', bad);
@@ -849,6 +861,8 @@ describe('settings', () => {
         openSettingsAs: 'overlay',
         chatWindowing: true,
         chatPageSize: 50,
+        chatMessagesPerPage: 20,
+        chatPageSizeMigrated: false,
         chatLatestPages: 5,
         chatHistoryPages: 5,
         hideToolCalls: false,
@@ -1007,6 +1021,8 @@ export default {
         openSettingsAs: 'overlay',
         chatWindowing: true,
         chatPageSize: 50,
+        chatMessagesPerPage: 20,
+        chatPageSizeMigrated: false,
         chatLatestPages: 5,
         chatHistoryPages: 5,
         hideToolCalls: false,

@@ -25,6 +25,7 @@ import {
   LEGACY_SHOW_DIFF_IN_IDE_KEY,
   DIFF_SURFACE_KEY,
   DESKTOP_SCALE_MARKER_KEY,
+  PAGE_SIZE_MARKER_KEY,
 } from '../settings-migration';
 import { DiffSurface } from '../../../shared';
 
@@ -303,7 +304,7 @@ describe('migrateSettingsToCorrectStore', () => {
         language: 'korean',
         permissions: { defaultMode: 'auto' },
       });
-      mockReadSettingsFile.mockResolvedValue({ theme: 'dark', fontSize: 13, desktopScaleMigrated: true });
+      mockReadSettingsFile.mockResolvedValue({ theme: 'dark', fontSize: 13, desktopScaleMigrated: true, chatPageSizeMigrated: true });
 
       await migrateSettingsToCorrectStore();
 
@@ -357,7 +358,7 @@ describe('migrateSettingsToCorrectStore', () => {
     });
 
     it('does nothing when the legacy key is absent', async () => {
-      mockReadSettingsFile.mockResolvedValue({ [DESKTOP_SCALE_MARKER_KEY]: true });
+      mockReadSettingsFile.mockResolvedValue({ [DESKTOP_SCALE_MARKER_KEY]: true, [PAGE_SIZE_MARKER_KEY]: true });
 
       await migrateSettingsToCorrectStore();
 
@@ -367,7 +368,11 @@ describe('migrateSettingsToCorrectStore', () => {
     // Idempotency: the first run clears the legacy key, so a second run reads an
     // app store without it and has nothing to do.
     it('does nothing when the legacy key was already cleared to null', async () => {
-      mockReadSettingsFile.mockResolvedValue({ [LEGACY_SHOW_DIFF_IN_IDE_KEY]: null, [DESKTOP_SCALE_MARKER_KEY]: true });
+      mockReadSettingsFile.mockResolvedValue({
+        [LEGACY_SHOW_DIFF_IN_IDE_KEY]: null,
+        [DESKTOP_SCALE_MARKER_KEY]: true,
+        [PAGE_SIZE_MARKER_KEY]: true,
+      });
 
       await migrateSettingsToCorrectStore();
 
@@ -442,7 +447,7 @@ describe('migrateSettingsToCorrectStore', () => {
     });
 
     it('does not move a 13 chosen after the migration ran', async () => {
-      mockReadSettingsFile.mockResolvedValue({ fontSize: 13, [DESKTOP_SCALE_MARKER_KEY]: true });
+      mockReadSettingsFile.mockResolvedValue({ fontSize: 13, [DESKTOP_SCALE_MARKER_KEY]: true, [PAGE_SIZE_MARKER_KEY]: true });
 
       await migrateSettingsToCorrectStore();
 
@@ -458,4 +463,48 @@ describe('migrateSettingsToCorrectStore', () => {
       expect(mockSaveSettingToFile).not.toHaveBeenCalledWith(DESKTOP_SCALE_MARKER_KEY, true);
     });
   });
+
+  // #708. A page is counted in messages now, not in records of the file, so it has a setting of its own. A stored 50
+  // is the old default (every settings file is written with all defaults) and is not carried; another number was
+  // chosen by the user and is. The old key stays for a plugin that has not been updated yet and shares the file.
+  describe('page size: records → messages', () => {
+    const carried = (value: unknown) => expect(mockSaveSettingToFile).toHaveBeenCalledWith('chatMessagesPerPage', value);
+
+    it('leaves the old default behind, so the new default applies, and marks the migration done', async () => {
+      mockReadSettingsFile.mockResolvedValue({ chatPageSize: 50, desktopScaleMigrated: true });
+
+      await migrateSettingsToCorrectStore();
+
+      expect(mockSaveSettingToFile).not.toHaveBeenCalledWith('chatMessagesPerPage', expect.anything());
+      expect(mockSaveSettingToFile).not.toHaveBeenCalledWith('chatPageSize', expect.anything());
+      expect(mockSaveSettingToFile).toHaveBeenCalledWith(PAGE_SIZE_MARKER_KEY, true);
+    });
+
+    it('carries a size the user chose', async () => {
+      mockReadSettingsFile.mockResolvedValue({ chatPageSize: 120, desktopScaleMigrated: true });
+
+      await migrateSettingsToCorrectStore();
+
+      carried(120);
+      expect(mockSaveSettingToFile).toHaveBeenCalledWith(PAGE_SIZE_MARKER_KEY, true);
+    });
+
+    it('runs once', async () => {
+      mockReadSettingsFile.mockResolvedValue({ chatPageSize: 120, desktopScaleMigrated: true, [PAGE_SIZE_MARKER_KEY]: true });
+
+      await migrateSettingsToCorrectStore();
+
+      expect(mockSaveSettingToFile).not.toHaveBeenCalled();
+    });
+
+    it('is not marked when the move failed, so the next startup tries again', async () => {
+      mockReadSettingsFile.mockResolvedValue({ chatPageSize: 120, desktopScaleMigrated: true });
+      mockSaveSettingToFile.mockResolvedValue({ status: 'error', error: 'disk full' });
+
+      await migrateSettingsToCorrectStore();
+
+      expect(mockSaveSettingToFile).not.toHaveBeenCalledWith(PAGE_SIZE_MARKER_KEY, true);
+    });
+  });
 });
+

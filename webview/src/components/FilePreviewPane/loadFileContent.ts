@@ -1,5 +1,6 @@
 import { getBridge } from '@/api/bridge/Bridge';
 import { MessageType } from '@/shared';
+import { readWorkingDirFromUrl } from '@/contexts/workingDirParam';
 
 export type FileContentKind = 'html' | 'image' | 'pdf' | 'video' | 'text';
 
@@ -55,7 +56,7 @@ export async function loadFileContent(path: string, isCancelled: () => boolean =
 
   try {
     for (;;) {
-      const answer = (await getBridge().request(MessageType.GET_FILE_CONTENT, { path, offset: loaded })) as BackendChunk | undefined;
+      const answer = (await getBridge().request(MessageType.GET_FILE_CONTENT, { path, offset: loaded, workingDir: readWorkingDirFromUrl() })) as BackendChunk | undefined;
       if (isCancelled()) return { ok: false, reason: 'unreadable' };
       if (!answer?.ok || !answer.kind || answer.size === undefined || answer.base64 === undefined) {
         return { ok: false, reason: answer?.reason ?? 'unreadable', size: answer?.size, maxBytes: answer?.maxBytes };

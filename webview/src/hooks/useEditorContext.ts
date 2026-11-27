@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { getCaretOffset, setCaretOffset } from '@/utils/domSelection';
 import { MessageType } from '@/shared';
+import { formatFileMention } from '@/utils/fileMention';
 
 /**
  * Payload pushed by the backend over the `EDITOR_CONTEXT` IPC message.
@@ -50,9 +51,9 @@ function normalizeDir(dir: string): string {
 export function buildEditorContextText(payload: EditorContextPayload): string {
   const { relativePath, startLine, endLine } = payload;
   if (typeof startLine === 'number' && typeof endLine === 'number') {
-    return `@${relativePath}#L${startLine}-L${endLine}`;
+    return formatFileMention(`${relativePath}#L${startLine}-L${endLine}`);
   }
-  return `@${relativePath}`;
+  return formatFileMention(relativePath);
 }
 
 export interface InsertAtCursorResult {

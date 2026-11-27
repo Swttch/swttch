@@ -83,14 +83,23 @@ function isOnlyEnvelopes(text: string): boolean {
   return text.includes('<') && text.replace(ENVELOPE, '').trim() === '';
 }
 
-/** The `attachment` entries that carry a message typed during a turn, by the id the `remove` quotes as `commandUuid`. */
+/**
+ * The `attachment` entries that carry a message typed during a turn, by the id the `remove` quotes as `commandUuid`.
+ * A message with pictures has its blocks as the prompt. A message of words alone has a string, which counts only where
+ * the entry says it is a prompt: a notice the CLI queued for Claude is written the same way (#708).
+ */
 function queuedAttachments(entries: readonly Record<string, unknown>[]): Map<string, Record<string, unknown>> {
   const found = new Map<string, Record<string, unknown>>();
   for (const entry of entries) {
     if (entry.type !== 'attachment') continue;
-    const attachment = entry.attachment as { type?: unknown; prompt?: unknown; source_uuid?: unknown } | undefined;
+    const attachment = entry.attachment as
+      | { type?: unknown; commandMode?: unknown; prompt?: unknown; source_uuid?: unknown }
+      | undefined;
     if (attachment?.type !== 'queued_command' || typeof attachment.source_uuid !== 'string') continue;
-    if (Array.isArray(attachment.prompt) && attachment.prompt.length > 0) found.set(attachment.source_uuid, entry);
+    const { prompt } = attachment;
+    const blocks = Array.isArray(prompt) && prompt.length > 0;
+    const words = typeof prompt === 'string' && prompt !== '' && attachment.commandMode === 'prompt';
+    if (blocks || words) found.set(attachment.source_uuid, entry);
   }
   return found;
 }
@@ -120,6 +129,8 @@ export function restoreQueuedEntries(entries: readonly Record<string, unknown>[]
   const attachments = queuedAttachments(entries);
   const waiting: Record<string, unknown>[] = [];
   const named = new Map<string, number>();
+  // The commands already rebuilt: pages joined in the webview can hold a record without a uuid twice.
+  const rebuilt = new Set<string>();
   const restored: RestoredEntry[] = [];
 
   for (const entry of entries) {
@@ -147,6 +158,10 @@ export function restoreQueuedEntries(entries: readonly Record<string, unknown>[]
     // A queued background notice (`<task-notification>`, a `<system-reminder>`) is text for the model, not something
     // the user sent: drawn as a user message it is an empty bubble once its tags are stripped.
     if (isOnlyEnvelopes(operation.content)) continue;
+    if (operation.commandUuid) {
+      if (rebuilt.has(operation.commandUuid)) continue;
+      rebuilt.add(operation.commandUuid);
+    }
 
     let name = operation.commandUuid ?? '';
     if (!name) {
@@ -164,7 +179,7 @@ export function restoreQueuedEntries(entries: readonly Record<string, unknown>[]
         uuid: `${QUEUED_KEY_PREFIX}${name}`,
         timestamp: operation.timestamp,
         // The attachment that carries the same message keeps its pictures; the bookkeeping has only the words.
-        message: { role: 'user', content: prompt ?? operation.content },
+        message: { role: 'user', content: Array.isArray(prompt) ? prompt : operation.content },
       },
       sources: [enqueue, attachment, entry].filter((source): source is Record<string, unknown> => !!source),
     });

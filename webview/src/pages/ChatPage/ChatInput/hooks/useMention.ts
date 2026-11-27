@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, type RefObject } from 'react';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { MessageType } from '@/shared';
 import { replaceRangeWithText } from '../RichInput/replaceRangeWithText';
+import { formatFileMention } from '@/utils/fileMention';
 
 export enum MentionItemType {
   File = 'file',
@@ -74,14 +75,14 @@ interface UseMentionParams {
  * Build the inline path token for a selected mention result. The token is
  * prefixed with `@` so Claude Code CLI can recognise it as a file reference.
  * Directories get a single trailing slash (added only when not already present).
- * Examples: `@src/App.tsx`, `@src/utils/`.
+ * Examples: `@src/App.tsx`, `@src/utils/`, `@"docs/my file.md"`.
  */
 export function buildMentionToken(result: MentionResult): string {
   if (result.type === MentionItemType.Directory) {
     const path = result.relativePath.endsWith('/') ? result.relativePath : `${result.relativePath}/`;
-    return `@${path}`;
+    return formatFileMention(path);
   }
-  return `@${result.relativePath}`;
+  return formatFileMention(result.relativePath);
 }
 
 interface UseMentionReturn {

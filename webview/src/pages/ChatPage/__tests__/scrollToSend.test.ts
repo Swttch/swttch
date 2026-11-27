@@ -58,6 +58,36 @@ describe('scrollToSend', () => {
     expect(sentinel.scrollIntoView).toHaveBeenCalledWith(atOnce);
   });
 
+  /** The mark of the stretch the window does not hold, `top` pixels from the top of the chat. */
+  function gapAt(top: number): void {
+    const gap = document.createElement('div');
+    gap.setAttribute('data-window-gap', '');
+    gap.getBoundingClientRect = () => ({ top }) as DOMRect;
+    document.querySelector('[data-chat-scroll]')!.append(gap);
+  }
+
+  // #708. A send past the stretch not held looks near, and is not: the stretch fills while a glide crosses it.
+  it.each([
+    [1100, 700],
+    [-900, -300],
+  ])('goes at once to a send (%s) with a stretch not held on the way (%s)', (top, gap) => {
+    const sentinel = sendAt(top);
+    gapAt(gap);
+    scrollToSend('s1');
+    expect(sentinel.scrollIntoView).toHaveBeenCalledWith(atOnce);
+  });
+
+  it.each([
+    [1100, 1500],
+    [1100, -300],
+    [-900, 700],
+  ])('glides a short way (%s) when the stretch not held is elsewhere (%s)', (top, gap) => {
+    const sentinel = sendAt(top);
+    gapAt(gap);
+    scrollToSend('s1');
+    expect(sentinel.scrollIntoView).toHaveBeenCalledWith(SEND_SCROLL_OPTIONS);
+  });
+
   const frames = (n: number) =>
     new Promise<void>((done) => {
       const next = (left: number) => (left === 0 ? done() : requestAnimationFrame(() => next(left - 1)));
@@ -86,6 +116,55 @@ describe('scrollToSend', () => {
     await frames(3);
 
     expect(sentinel.scrollIntoView).toHaveBeenCalledTimes(1);
+  });
+
+  // #708. A page that lands during a glide moves the scroll position to keep the reader's place, which ends the glide.
+  it('finishes a glide that stopped short of the send', async () => {
+    const sentinel = sendAt(1100);
+    scrollToSend('s1');
+
+    sentinel.getBoundingClientRect = () => ({ top: 600 }) as DOMRect;
+    await frames(30);
+
+    expect(sentinel.scrollIntoView).toHaveBeenCalledTimes(2);
+    expect(sentinel.scrollIntoView).toHaveBeenLastCalledWith(atOnce);
+  });
+
+  it('leaves a glide that is still on its way alone', async () => {
+    const sentinel = sendAt(1100);
+    let top = 1100;
+    sentinel.getBoundingClientRect = () => ({ top: (top -= 20) }) as DOMRect;
+    scrollToSend('s1');
+
+    await frames(30);
+
+    expect(sentinel.scrollIntoView).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves a stopped glide alone once the reader took the page over', async () => {
+    const sentinel = sendAt(1100);
+    scrollToSend('s1');
+
+    window.dispatchEvent(new Event('wheel'));
+    sentinel.getBoundingClientRect = () => ({ top: 600 }) as DOMRect;
+    await frames(30);
+
+    expect(sentinel.scrollIntoView).toHaveBeenCalledTimes(1);
+  });
+
+  // #708. A page landing can draw the section anew, with a sentinel that is another element.
+  it('keeps going to the send when its section is drawn anew on the way', async () => {
+    const sentinel = sendAt(1100);
+    scrollToSend('s1');
+
+    const anew = document.createElement('div');
+    anew.setAttribute('data-send-sentinel', '');
+    anew.getBoundingClientRect = () => ({ top: 600 }) as DOMRect;
+    anew.scrollIntoView = vi.fn();
+    sentinel.replaceWith(anew);
+    await frames(30);
+
+    expect(anew.scrollIntoView).toHaveBeenLastCalledWith(atOnce);
   });
 
   // Issue #701: the chat follows a streaming reply by writing the scroll position every frame, which cancels

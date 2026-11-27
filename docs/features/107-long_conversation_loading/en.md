@@ -12,29 +12,29 @@ You do not have to do anything. It is on by default, and a long conversation loo
 
 ## What the chat keeps in memory
 
-A conversation is read in **pages** of 50 messages. The chat keeps two groups of pages:
+A conversation is read in **pages** of 20 messages. A message here is what you sent, an answer of Claude's, or a tool call. The results of tool calls and the other records Claude Code writes into the session file are not counted; they come with the page, where they stand. The chat keeps two groups of pages:
 
 - **The newest pages (5 by default).** They are always kept, so going to the bottom of the conversation never has to wait.
 - **The pages around where you are reading (5 by default).** When you scroll back through older messages, the pages you are reading and the ones next to them are kept. The pages are loaded one step before you reach them, so you do not wait at the edge.
 
-With the defaults that is up to **500 messages** in memory at once, however long the conversation is. A page you move away from is let go of, and loaded again when you return to it.
+With the defaults that is up to **200 messages** in memory at once, however long the conversation is. A page you move away from is let go of, and loaded again when you return to it.
 
 Three things you may notice:
 
 - **Your place does not move.** When pages are added above what you are reading, or pages at the top are let go of, the chat holds the first message in view where it was, so the text under your eyes does not jump.
-- **Jumping far works.** Choosing a message in the send index (the rail of your sent messages) loads the part of the conversation around that message, even if it was let go of.
+- **Jumping far works.** Choosing a message in the send index (the rail of your sent messages) loads the part of the conversation around that message, even if it was let go of. All the pages kept around where you read (5 by default) are loaded at once, so you can read on up or down as soon as you arrive.
 - **While Claude replies, only the new text is drawn.** Long conversations used to redraw every message held in memory for each piece of the reply. Now only the part that changed is redrawn.
 
 ## The settings
 
 **Settings → General → Loading conversations** has four rows. They apply to the whole app, so on the Project tab they are dimmed and show the value in use ([how the Project tab shows inherited settings](../089-project_tab_shows_inherited_settings/en.md)).
 
-![The Loading conversations section of Settings → General. The switch "Release conversation you scrolled away from" is on. Below it are "Messages loaded at a time" (50), "Newest pages always kept" (5) and "Pages kept while reading history" (5), and the line "Up to 500 messages are kept in memory at once."](./assets/settings-windowing-on.png)
+![The Loading conversations section of Settings → General. The switch "Release conversation you scrolled away from" is on. Below it are "Messages loaded at a time" (20), "Newest pages always kept" (5) and "Pages kept while reading history" (5), and the line "Up to 200 messages are kept in memory at once."](./assets/settings-windowing-on.png)
 
 | Row | Default | Range | What it does |
 |-----|---------|-------|--------------|
 | **Release conversation you scrolled away from** | On | On / Off | On: pages you are far from are let go of. Off: every message that has been loaded stays in memory. |
-| **Messages loaded at a time** | 50 | 50 to 1000 | The size of one page. A bigger page means more in memory at once. |
+| **Messages loaded at a time** | 20 | 10 to 1000 | The size of one page. A bigger page means more in memory at once. |
 | **Newest pages always kept** | 5 | 2 to 20 | How many of the newest pages are never let go of. |
 | **Pages kept while reading history** | 5 | 2 to 20 | How many pages follow you while you read older messages. |
 
@@ -44,13 +44,13 @@ The line under the rows adds the three numbers up (page size × (newest pages + 
 
 ![The same section with "Messages loaded at a time" set to 300. Under that row, in amber, "Not recommended". Under the last row, in amber, "Up to 3000 messages would be kept in memory at once. Long conversations can make the chat slow."](./assets/settings-memory-heavy.png)
 
-A page size above 200 is accepted but marked **Not recommended**: the bigger the page, the more of the conversation is in memory and drawn at once.
+A page size above 50 is accepted but marked **Not recommended**: the bigger the page, the more of the conversation is in memory and drawn at once.
 
 ### Turning the release off
 
 If the pages coming and going bother you, turn **Release conversation you scrolled away from** off. Nothing is let go of any more: every message the chat has loaded stays in memory, and older pages are still loaded as you scroll up. The rows for the page counts and the total are hidden, because they only mean something while pages are let go of. **Messages loaded at a time** stays.
 
-![The same section with the switch off. Only the switch and "Messages loaded at a time" (50) are shown.](./assets/settings-windowing-off.png)
+![The same section with the switch off. Only the switch and "Messages loaded at a time" (20) are shown.](./assets/settings-windowing-off.png)
 
 With the release off, a very long conversation gets heavy again the longer you read, which is what this change was made to fix. Use it for a reader who prefers that to the pages being let go of.
 

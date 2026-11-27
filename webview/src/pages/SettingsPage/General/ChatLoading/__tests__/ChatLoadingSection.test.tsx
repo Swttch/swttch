@@ -51,6 +51,19 @@ describe('ChatLoadingSection', () => {
     expect(screen.getByRole('status')).toBeInTheDocument();
   });
 
+  // #708: a page holds 20 messages by default, and more than 50 is slow enough to be called out.
+  it('holds 20 messages a page by default, and calls out more than 50', () => {
+    const { rerender } = render(<ChatLoadingSection />);
+    const size = () => screen.getByRole('spinbutton', { name: chat.pageSize.label });
+    expect(size()).toHaveValue(20);
+    expect(size()).toHaveAttribute('min', '10');
+    expect(screen.queryByText(chat.notRecommended)).toBeNull();
+
+    mockSettings = { chatMessagesPerPage: 60 };
+    rerender(<ChatLoadingSection />);
+    expect(screen.getByText(chat.notRecommended)).toBeInTheDocument();
+  });
+
   it('keeps only the switch and the page size when window sliding is off', () => {
     mockSettings = { chatWindowing: false };
     render(<ChatLoadingSection />);

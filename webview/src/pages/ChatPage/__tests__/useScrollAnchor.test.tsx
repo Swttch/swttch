@@ -3,6 +3,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { ZOOM_RECTS_ATTRIBUTE } from '@/utils/zoomRects';
 import { entryMarker, SCROLL_UNANCHORED_ATTRIBUTE, useScrollAnchor } from '../useScrollAnchor';
 
+/** Stands in the list for the mark of the stretch the window does not hold. */
+const GAP = '(gap)';
+
 /**
  * jsdom lays nothing out, so the transcript is imitated: entries stacked in a scroll container, each with a layout
  * height, and rectangles reported the way a browser reports them under the page zoom. `scrollTop` is always in layout
@@ -20,22 +23,24 @@ function transcript(entries: [uuid: string, height: number][], zoom = 1, rects: 
   container.getBoundingClientRect = () => ({ top: 0, bottom: 500 * unit }) as DOMRect;
 
   let list = entries;
+  const nodeFor = (uuid: string) => {
+    const node = document.createElement('div');
+    const marks = uuid === GAP ? { 'data-window-gap': '' } : entryMarker(uuid);
+    for (const [name, value] of Object.entries(marks)) node.setAttribute(name, value);
+    node.getBoundingClientRect = () => {
+      let above = 0;
+      for (const child of Array.from(container.children)) {
+        if (child === node) break;
+        above += list[Array.from(container.children).indexOf(child)][1];
+      }
+      const height = list[Array.from(container.children).indexOf(node)][1];
+      return { top: (above - top) * unit, bottom: (above + height - top) * unit } as DOMRect;
+    };
+    return node;
+  };
   const draw = () => {
     container.innerHTML = '';
-    for (const [uuid] of list) {
-      const node = document.createElement('div');
-      for (const [name, value] of Object.entries(entryMarker(uuid))) node.setAttribute(name, value);
-      node.getBoundingClientRect = () => {
-        let above = 0;
-        for (const child of Array.from(container.children)) {
-          if (child === node) break;
-          above += list[Array.from(container.children).indexOf(child)][1];
-        }
-        const height = list[Array.from(container.children).indexOf(node)][1];
-        return { top: (above - top) * unit, bottom: (above + height - top) * unit } as DOMRect;
-      };
-      container.append(node);
-    }
+    for (const [uuid] of list) container.append(nodeFor(uuid));
   };
   draw();
 
@@ -53,6 +58,18 @@ function transcript(entries: [uuid: string, height: number][], zoom = 1, rects: 
       list = next;
       draw();
     },
+    /** A new entry in front of the one at `index`. The entries already drawn stay the elements they were. */
+    insert: (index: number, entry: [string, number]) => {
+      const before = container.children[index] ?? null;
+      list = [...list.slice(0, index), entry, ...list.slice(index)];
+      container.insertBefore(nodeFor(entry[0]), before);
+    },
+    /** An entry already drawn gets taller where it stands. */
+    resize: (index: number, height: number) => {
+      list = list.map((entry, i) => (i === index ? [entry[0], height] : entry));
+    },
+    /** Where the element at `index` has its top edge below the container's, in layout pixels. */
+    offsetAt: (index: number) => container.children[index].getBoundingClientRect().top / unit,
   };
 }
 
@@ -154,5 +171,84 @@ describe('useScrollAnchor: the noted entry is not drawn any more', () => {
     page.redraw(OLDER);
     expect(page.anchor.restore()).toBe(false);
     expect(page.container.scrollTop).toBe(30);
+  });
+});
+
+describe('useScrollAnchor: an entry cut off by the top edge changes inside', () => {
+  // A jump leaves the send it went to a little below the top edge, with the end of the reply before it above.
+  // When the older page lands, that reply can grow where it is (#708).
+  it('holds what starts on the screen, so the growth does not push it down', () => {
+    const page = transcript([['before', 241], ['send', 88], ['reply', 600]]);
+    page.scrollTo(213);
+    page.anchor.capture();
+
+    page.resize(0, 310);
+    expect(page.anchor.restore()).toBe(true);
+
+    expect(page.offsetOf('send')).toBeCloseTo(28);
+  });
+
+  it('holds the cut entry when nothing else starts on the screen', () => {
+    const page = transcript([['long', 900], ['below', 100]]);
+    page.scrollTo(100);
+    page.anchor.capture();
+
+    page.insert(0, ['older', 400]);
+    expect(page.anchor.restore()).toBe(true);
+
+    expect(page.offsetOf('long')).toBeCloseTo(-100);
+  });
+
+  it('does not hold an entry below the screen while one is being read', () => {
+    const page = transcript([['long', 900], ['below', 100]]);
+    page.scrollTo(100);
+    page.anchor.capture();
+
+    // It grows past the bottom of the screen: what is being read has not moved.
+    page.resize(0, 1000);
+    expect(page.anchor.restore()).toBe(true);
+
+    expect(page.container.scrollTop).toBe(100);
+  });
+});
+
+describe('useScrollAnchor: an entry drawn in two places', () => {
+  // One entry can hold a report of the app's and the user's send, drawn as a line of the reply before and as the
+  // bubble. A page then lands in the gap further down. Holding what is past the gap took the reader there (#708).
+  it('holds the very element that was on the screen, not one past where the page landed', () => {
+    const page = transcript([['send', 38], ['send', 463], ['after-gap', 600]]);
+    page.scrollTo(10);
+    page.anchor.capture();
+
+    page.insert(2, ['filled', 1052]);
+    expect(page.anchor.restore()).toBe(true);
+
+    expect(page.offsetAt(1)).toBeCloseTo(28);
+    expect(page.container.scrollTop).toBe(10);
+  });
+});
+
+describe('useScrollAnchor: the stretch not held is on the screen', () => {
+  // What is past the stretch moves when the stretch fills. A reader whose screen begins before it stays put.
+  it('holds what is before the stretch, though only what is past it starts on the screen', () => {
+    const page = transcript([['cut', 300], [GAP, 0], ['past', 100]]);
+    page.scrollTo(100);
+    page.anchor.capture();
+
+    page.insert(1, ['filled', 500]);
+    expect(page.anchor.restore()).toBe(true);
+
+    expect(page.container.scrollTop).toBe(100);
+  });
+
+  it('holds what is past the stretch for a reader whose screen begins there', () => {
+    const page = transcript([['older', 100], [GAP, 0], ['read', 600]]);
+    page.scrollTo(150);
+    page.anchor.capture();
+
+    page.insert(1, ['filled', 500]);
+    expect(page.anchor.restore()).toBe(true);
+
+    expect(page.offsetOf('read')).toBeCloseTo(-50);
   });
 });

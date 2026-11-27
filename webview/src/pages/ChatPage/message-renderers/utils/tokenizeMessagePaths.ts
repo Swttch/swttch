@@ -3,6 +3,7 @@ import {
   readSessionMention,
   type SessionMention,
 } from '../../ChatInput/sessionMentionTag';
+import { LINE_ANCHOR } from './fileLocator';
 
 /**
  * A contiguous run of a submitted user message, classified for chip rendering.
@@ -23,17 +24,21 @@ export interface MessageSegment {
  * Matches an `@`-prefixed path mention inside a submitted message.
  *
  * - `@` opens the token.
- * - `\S*` greedily absorbs the body (any non-space run, e.g. `src/file.ts`,
- *   `src/file.ts#L10-L25`, `src/utils/`).
- * - `[^\s.,;:!?)\]}]` forces the LAST captured character to be a non-trailing
- *   punctuation char, so a sentence-ending mark is left as plain text
- *   (`@file.ts.` → token `@file.ts` + plain `.`). A bare `@` cannot match
- *   because at least one valid final char is required.
+ * - `@"…"` is a path with a space in it, as the CLI writes one (see
+ *   `formatFileMention`). `@"name (agent)"` names an agent, not a file.
+ * - The body is any run without a space, e.g. `src/file.ts`,
+ *   `src/file.ts#L10-L25`, `src/utils/`. It also ends at a full-width comma or
+ *   full stop (`。，、；！？`): Chinese and Japanese prose follows one with no space.
+ * - The LAST captured character must not be trailing punctuation, so a
+ *   sentence-ending mark is left as plain text (`@file.ts.` → token `@file.ts`
+ *   + plain `.`). A bare `@` cannot match because at least one valid final char
+ *   is required.
  *
  * Folder mentions end in `/`, which is intentionally NOT in the excluded set,
  * so `@src/utils/` keeps its trailing slash.
  */
-const PATH_TOKEN_PATTERN = /@\S*[^\s.,;:!?)\]}]/g;
+const PATH_TOKEN_PATTERN =
+  /@"(?![^"\n]* \(agent\)")[^"\n]+"|@[^\s"。，、；！？]*[^\s".,;:!?)\]}。，、；！？：（）【】「」『』]/g;
 
 /**
  * A match that is a session mention rather than a file one, and so is not a
@@ -121,15 +126,6 @@ function tokenizePaths(text: string): MessageSegment[] {
 }
 
 /**
- * Trailing GitHub-style line anchor on a path token or link href: `#L10`,
- * `#L10-L25`, or with a column, `#L10C5` / `#L10C5-L20C15`. Capture group 1 is
- * the (1-based) start line and group 2 the (1-based) start column, if present.
- * Shared by the `@`-mention helpers and the assistant markdown-link parser so
- * the recognized syntax lives in one place.
- */
-export const LINE_ANCHOR = /#L(\d+)(?:C(\d+))?(?:-L\d+(?:C\d+)?)?$/;
-
-/**
  * Normalize an `@`-path token into the path to open in the IDE.
  *
  * Strips the leading `@` and any trailing line range (`#L10` or `#L10-L25`).
@@ -141,6 +137,7 @@ export const LINE_ANCHOR = /#L(\d+)(?:C(\d+))?(?:-L\d+(?:C\d+)?)?$/;
  */
 export function pathFromToken(token: string): string {
   return token
+    .replace(/^@"(.*)"$/, '$1')
     .replace(/^@/, '')
     .replace(LINE_ANCHOR, '');
 }
@@ -154,7 +151,7 @@ export function pathFromToken(token: string): string {
  * @example lineFromToken('@src/file.ts')         // undefined
  */
 export function lineFromToken(token: string): number | undefined {
-  const match = LINE_ANCHOR.exec(token);
+  const match = LINE_ANCHOR.exec(token.replace(/"$/, ''));
   return match ? Number(match[1]) : undefined;
 }
 
@@ -172,12 +169,14 @@ export function isFolderToken(token: string): boolean {
  * path, and the backend forwards the path verbatim, so the webview must combine
  * the relative mention with the working directory here.
  *
- * Already-absolute paths pass through unchanged — POSIX (leading `/`) or
- * Windows drive-rooted (`C:/…`, `C:\…`), matching `joinProjectPath`. When the
+ * Already-absolute paths pass through unchanged — POSIX (leading `/`), Windows
+ * drive-rooted (`C:/…`, `C:\…`) or UNC — and so does a home path (`~/…`),
+ * which only the backend can expand. When the
  * working directory is unknown the relative path is returned as-is (best effort).
  */
 export function resolveFilePath(relativePath: string, workingDir: string | null | undefined): string {
-  if (relativePath.startsWith('/') || /^[A-Za-z]:[\\/]/.test(relativePath)) return relativePath;
+  // Absolute, UNC (`\\host\share`) and home (`~/…`) paths say where they are by themselves.
+  if (/^(?:\/|\\\\|~[\\/]|[A-Za-z]:[\\/])/.test(relativePath)) return relativePath;
   if (!workingDir) return relativePath;
   return `${workingDir.replace(/[\\/]+$/, '')}/${relativePath}`;
 }

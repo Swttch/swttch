@@ -115,3 +115,37 @@ describe('linkifyPlainTextFileRefs with a Windows drive path', () => {
     expect(linkifyPlainTextFileRefs('example.py:9')).toBe('example.py:9');
   });
 });
+
+// #708: the wider path forms must not turn other text into links.
+describe('linkifyPlainTextFileRefs leaves what is not a file reference', () => {
+  it.each([
+    'log in as CORP\\john.doe today',
+    'run `CORP\\john.doe` now',
+    '[Note]: https://example.com/a/b.md',
+    '[docs]: ./docs/a.md "Docs"',
+    'an unmatched [ bracket and `arr[0]` code',
+  ])('%s', (text) => {
+    expect(linkifyPlainTextFileRefs(text)).toBe(text);
+  });
+
+  it('still links a path in a line that only looks like a definition', () => {
+    expect(linkifyPlainTextFileRefs('[Note]: see src/a.ts:3')).toBe('[Note]: see [src/a.ts:3](src/a.ts#L3)');
+  });
+
+  it('keeps a bracket inside code from swallowing a later link', () => {
+    expect(linkifyPlainTextFileRefs('`a[` then [b](src/b.ts) and src/c.ts')).toBe(
+      '`a[` then [b](src/b.ts) and [src/c.ts](src/c.ts)',
+    );
+  });
+});
+
+// #708: a reply is scanned again on every streamed piece, so a long one must stay quick.
+describe('linkifyPlainTextFileRefs on a long paragraph', () => {
+  it('scans 20,000 characters of Chinese with no space in them in well under a second', () => {
+    const paragraph = '这是一个很长的中文段落没有任何标点符号和空格'.repeat(1000);
+    const started = performance.now();
+    expect(linkifyPlainTextFileRefs(paragraph)).toBe(paragraph);
+    // Trying a path at every letter took 24 seconds; the bound only has to tell those apart.
+    expect(performance.now() - started).toBeLessThan(2000);
+  });
+});

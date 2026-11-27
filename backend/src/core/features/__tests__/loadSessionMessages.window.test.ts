@@ -9,6 +9,7 @@ vi.mock('../getProjectSessionsPath', () => ({
 
 import { loadSessionMessages } from '../loadSessionMessages';
 import { getProjectSessionsPath } from '../getProjectSessionsPath';
+import { restoreQueuedEntries } from '../../../shared';
 
 const mockGetPath = vi.mocked(getProjectSessionsPath);
 
@@ -303,5 +304,32 @@ describe('loadSessionMessages: pages after and around an entry', () => {
     expect(page.reset).toBe(false);
     expect(page.messages.some(m => m.operation === 'remove')).toBe(true);
     expect(page.messages.some(m => m.uuid === 'c12')).toBe(false);
+  });
+
+  it('serves a page the message can be rebuilt from when its enqueue is further back than the page reaches (#708)', async () => {
+    const lines: string[] = [];
+    let parent: string | undefined;
+    const chain = (uuid: string, entry: Record<string, unknown>) => {
+      lines.push(JSON.stringify({ ...entry, uuid, parentUuid: parent }));
+      parent = uuid;
+    };
+    for (let i = 1; i <= 20; i++) {
+      chain(`c${i}`, { type: i % 2 ? 'user' : 'assistant' });
+      // Sent after c2, and taken by the CLI only after c15: Claude was at work all that time.
+      if (i === 2) lines.push(JSON.stringify({ type: 'queue-operation', operation: 'enqueue', content: 'typed mid-turn', timestamp: 't1' }));
+      if (i === 15) {
+        chain('att', {
+          type: 'attachment',
+          attachment: { type: 'queued_command', commandMode: 'prompt', prompt: 'typed mid-turn', source_uuid: 'cmd-1' },
+        });
+        lines.push(JSON.stringify({ type: 'queue-operation', operation: 'remove', content: 'typed mid-turn', timestamp: 't2', commandUuid: 'cmd-1' }));
+      }
+    }
+    await writeFile(join(tmpDir, 'sess.jsonl'), lines.join('\n'));
+
+    const page = await loadSessionMessages('/work', 'sess', undefined, 4, undefined, 'queued-cmd-1');
+
+    expect(page.messages.some(m => m.operation === 'enqueue')).toBe(false);
+    expect(restoreQueuedEntries(page.messages).map(({ entry }) => entry.uuid)).toContain('queued-cmd-1');
   });
 });

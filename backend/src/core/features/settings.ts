@@ -91,7 +91,12 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   hostMode: 'editor-tab',
   openSettingsAs: 'overlay',
   chatWindowing: true,
+  // Replaced by `chatMessagesPerPage` (#708). Kept, untouched, for a plugin that has not been updated yet and reads
+  // the same file: it counts a page in records, where this one counts messages (see settings-migration.ts).
   chatPageSize: 50,
+  chatMessagesPerPage: 20,
+  // Set once a size the user chose has been carried from `chatPageSize` to `chatMessagesPerPage`
+  chatPageSizeMigrated: false,
   chatLatestPages: 5,
   chatHistoryPages: 5,
   hideToolCalls: false,
@@ -191,7 +196,9 @@ const COMMENT_MAP: Record<string, string> = {
   hostMode: '채팅을 띄우는 자리: "editor-tab" | "tool-window"',
   openSettingsAs: '설정 화면을 여는 방식: "overlay" | "new-tab"',
   chatWindowing: '긴 대화에서 멀어진 페이지를 메모리에서 비운다. false면 불러온 메시지를 모두 메모리에 두는 이전 방식으로 동작한다',
-  chatPageSize: '채팅 기록을 한 번에 불러오는 메시지 수(한 페이지). 50~1000',
+  chatPageSize: '[레거시] chatMessagesPerPage로 대체됨. 업데이트 전의 플러그인이 읽으므로 남겨 둔다',
+  chatMessagesPerPage: '채팅 기록을 한 번에 불러오는 메시지 수(한 페이지). 10~1000',
+  chatPageSizeMigrated: '[내부] chatPageSize에서 고른 값을 chatMessagesPerPage로 옮겼는지. 직접 지우지 않는다',
   chatLatestPages: '항상 메모리에 두는 가장 최근 페이지 수. 2~20',
   chatHistoryPages: '과거를 볼 때 메모리에 두는 페이지 수. 스크롤을 따라 이동한다. 2~20',
   hideToolCalls: '명령 실행·조회처럼 과정에 해당하는 도구 카드를 채팅에서 숨긴다(CLI의 focus view와 같은 자리). 파일 변경(Edit/Write)과 질문·계획처럼 사용자를 향한 것은 계속 보인다',
@@ -550,6 +557,13 @@ function validateSetting(key: string, value: unknown): string | null {
       const n = Number(value);
       if (!Number.isInteger(n) || n < 50 || n > 1000) {
         return 'chatPageSize must be an integer between 50 and 1000';
+      }
+      break;
+    }
+    case 'chatMessagesPerPage': {
+      const n = Number(value);
+      if (value === null || !Number.isInteger(n) || n < 10 || n > 1000) {
+        return 'chatMessagesPerPage must be an integer between 10 and 1000';
       }
       break;
     }

@@ -14,10 +14,11 @@ export async function getPageUrlHandler(connectionId: string, message: IPCMessag
   const reply = (body: Record<string, unknown>) => connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId, ...body });
   const { path, workingDir, inject } = (message.payload ?? {}) as { path?: unknown; workingDir?: unknown; inject?: unknown };
   if (typeof path !== 'string' || path === '') return reply({ error: 'no-path' });
-  const file = resolveOpenFilePath(path);
+  const project = typeof workingDir === 'string' && workingDir !== '' ? resolveOpenFilePath(workingDir).path : undefined;
+  const { path: file } = resolveOpenFilePath(path, { workingDir: project });
   if (!existsSync(file)) return reply({ error: 'not-found' });
   try {
-    reply({ ...(await servePage(file, typeof workingDir === 'string' && workingDir !== '' ? resolveOpenFilePath(workingDir) : undefined, typeof inject === 'string' ? inject : '')) });
+    reply({ ...(await servePage(file, project, typeof inject === 'string' ? inject : '')) });
   } catch (error) {
     console.error('[node-backend]', 'GET_PAGE_URL failed:', error);
     reply({ error: 'serve-failed' });

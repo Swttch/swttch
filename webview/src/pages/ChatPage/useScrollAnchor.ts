@@ -17,27 +17,47 @@ export const SCROLL_UNANCHORED_ATTRIBUTE = 'data-scroll-unanchored';
 
 interface Anchor {
   uuid: string;
+  /** The element that drew it, which tells two drawings of one entry apart for as long as it stays. */
+  node: HTMLElement;
   /** How far below the top of the scroll container the entry's top edge was, as a rectangle reports it. */
   offset: number;
+  /** Where it comes in the order of holding: see `holdRank`. */
+  rank: number;
 }
 
 /** How many entries from the first one in view are noted, so that one that is no longer drawn has a stand-in. */
 const NOTED_ENTRIES = 5;
 
 /**
+ * The order in which noted entries are held: what begins on the screen, then what the top edge cuts through, then
+ * what is below the screen. The cut one can grow inside when a page lands, which would push everything the reader
+ * sees below it down (#708). Last comes what is past the stretch the window holds nothing of, when the screen begins
+ * before it: filling the stretch moves all of that.
+ */
+function holdRank(offset: number, screenHeight: number, pastGap: boolean): number {
+  if (pastGap) return 3;
+  if (offset < -1) return 1;
+  return offset < screenHeight ? 0 : 2;
+}
+
+/**
  * Keep the reader's place when entries are added or taken away above it (#680).
  *
  * The transcript window puts pages in front of what is held (an older page) and
  * lets go of entries at the top (a trim), and both move everything the reader is
- * looking at. The place to hold is one entry: the first one still in view. Its
- * distance from the top edge is noted while the screen is as the reader left it
- * (`capture`), and once the new entries are drawn (`restore`) the scroll position
- * is moved by however far that entry has moved.
+ * looking at. The place to hold is one entry: the first one that begins on the
+ * screen, or, when none does, the one filling it. Its distance from the top edge
+ * is noted while the screen is as the reader left it (`capture`), and once the
+ * new entries are drawn (`restore`) the scroll position is moved by however far
+ * that entry has moved.
  *
- * The entries right after it are noted too, because the first one can stop being
- * drawn: a page of the window can begin with a tool result whose call is on the
- * page before it, and when that page arrives the result is folded into its call
- * (#747).
+ * The entries around it are noted too, because it can stop being drawn: a page of
+ * the window can begin with a tool result whose call is on the page before it,
+ * and when that page arrives the result is folded into its call (#747).
+ *
+ * One entry can be drawn in two places (a report of the app's written into the
+ * entry of the user's send), so what is held is the element that was noted, and
+ * the uuid only finds it again when that element was drawn anew (#708).
  *
  * Holding an entry rather than adding up heights is what makes taking entries
  * away work too: nothing has to know how tall what was dropped had been.
@@ -53,12 +73,15 @@ export function useScrollAnchor(
 ) {
   const anchorsRef = useRef<Anchor[]>([]);
 
-  /** Note the first entries in view, each with its offset from the top of the container. */
+  /** Note the first entries in view, each with its offset from the top of the container, best to hold first. */
   const capture = useCallback(() => {
     const container = scrollRef.current;
     if (!container) return;
-    const containerTop = container.getBoundingClientRect().top;
+    const { top: containerTop, bottom: containerBottom } = container.getBoundingClientRect();
     const nodes = container.querySelectorAll<HTMLElement>(`[${ENTRY_UUID_ATTRIBUTE}]`);
+    const screenHeight = containerBottom - containerTop;
+    const gap = container.querySelector('[data-window-gap]');
+    const isPast = (node: Node) => !!gap && !!(gap.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING);
     const anchors: Anchor[] = [];
     for (const node of nodes) {
       const rect = node.getBoundingClientRect();
@@ -68,10 +91,14 @@ export function useScrollAnchor(
       if (node.closest(`[${SCROLL_UNANCHORED_ATTRIBUTE}]`)) continue;
       const uuid = node.getAttribute(ENTRY_UUID_ATTRIBUTE);
       if (!uuid || !isAnchorable(uuid)) continue;
-      anchors.push({ uuid, offset: rect.top - containerTop });
+      const offset = rect.top - containerTop;
+      // Past the stretch only counts against an entry when the first one noted is before it.
+      const pastGap = isPast(node) && anchors.length > 0 && !isPast(anchors[0].node);
+      anchors.push({ uuid, node, offset, rank: holdRank(offset, screenHeight, pastGap) });
       if (anchors.length === NOTED_ENTRIES) break;
     }
-    anchorsRef.current = anchors;
+    // The sort keeps the order of the transcript among the entries of one rank.
+    anchorsRef.current = anchors.sort((a, b) => a.rank - b.rank);
   }, [scrollRef, isAnchorable]);
 
   /** Move the scroll position so a noted entry is where it was. False when none of them can be told on the screen. */
@@ -81,9 +108,13 @@ export function useScrollAnchor(
     const drawn = Array.from(container.querySelectorAll<HTMLElement>(`[${ENTRY_UUID_ATTRIBUTE}]`));
     for (const anchor of anchorsRef.current) {
       const matches = drawn.filter(node => node.getAttribute(ENTRY_UUID_ATTRIBUTE) === anchor.uuid);
-      // Gone, or drawn more than once: there is no telling which one the reader was looking at.
-      if (matches.length !== 1) continue;
-      const moved = matches[0].getBoundingClientRect().top - container.getBoundingClientRect().top - anchor.offset;
+      // The element itself, or the only drawing of its entry. Gone, or drawn anew more than once: there is no
+      // telling which one the reader was looking at.
+      const held = matches.includes(anchor.node) ? anchor.node : matches.length === 1 ? matches[0] : undefined;
+      if (!held) continue;
+      const rect = held.getBoundingClientRect();
+      if (rect.bottom <= rect.top) continue;
+      const moved = rect.top - container.getBoundingClientRect().top - anchor.offset;
       // Rectangles are not in the pixels `scrollTop` is in under the UI zoom (see zoomRects).
       if (moved !== 0) container.scrollTop += rectMetrics().toFixed(moved);
       return true;

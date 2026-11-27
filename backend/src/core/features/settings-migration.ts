@@ -110,6 +110,32 @@ async function migrateDesktopScale(app: Record<string, unknown>): Promise<void> 
   await saveSettingToFile(DESKTOP_SCALE_MARKER_KEY, true);
 }
 
+/**
+ * App → app, once: a page of the chat is counted in messages now, not in records of the session file (#708), so its
+ * size has a setting of its own.
+ *
+ * A stored 50 is the old default (every settings file is written with all defaults at creation), so the new default
+ * applies. Another value was chosen by the user and is carried over. The old key is left as it is: a plugin that has
+ * not been updated shares the file and counts records, where a page of 20 would hold next to nothing. It runs ONCE,
+ * marked by a key of its own, so a size picked afterwards stays.
+ */
+export const PAGE_SIZE_MARKER_KEY = 'chatPageSizeMigrated';
+export const OLD_PAGE_SIZE_DEFAULT = 50;
+
+async function migratePageSize(app: Record<string, unknown>): Promise<void> {
+  if (app[PAGE_SIZE_MARKER_KEY] === true) return;
+  const chosen = app['chatPageSize'];
+  if (typeof chosen === 'number' && chosen !== OLD_PAGE_SIZE_DEFAULT) {
+    const moved = await saveSettingToFile('chatMessagesPerPage', chosen);
+    if (moved.status !== 'ok') {
+      // Not marked, so the next startup tries again.
+      console.error('[node-backend]', 'settings migration: failed to carry the page size over:', moved.error);
+      return;
+    }
+  }
+  await saveSettingToFile(PAGE_SIZE_MARKER_KEY, true);
+}
+
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -357,6 +383,7 @@ export async function migrateSettingsToCorrectStore(): Promise<void> {
     await migrateRenamedKeys(native, app);
     await migrateDiffSurface(app);
     await migrateDesktopScale(app);
+    await migratePageSize(app);
   } catch (err) {
     console.error('[node-backend]', 'settings migration failed (non-fatal):', err);
   }

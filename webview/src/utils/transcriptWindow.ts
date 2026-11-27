@@ -1,3 +1,5 @@
+import { countsTowardPage, PAGE_RECORDS_PER_ENTRY } from '@/shared';
+
 /**
  * Which part of a long transcript the webview keeps in memory (#680).
  *
@@ -20,6 +22,9 @@
  * entries on either side, because a cursor the backend can follow has to be a real
  * entry uuid. There is never more than one gap.
  *
+ * A page is `pageSize` entries of the conversation with every record between them, not `pageSize`
+ * records (see `countsTowardPage`, which the backend cuts its pages by).
+ *
  * Everything here is a pure function over the flat message array the transcript
  * already renders. Nothing in this file knows about React, the DOM or the bridge.
  *
@@ -33,6 +38,8 @@
 
 export interface WindowEntry {
   uuid?: string | null;
+  /** What kind of record it is, which says whether a page counts it. */
+  type?: unknown;
 }
 
 /** The hole between the recycler's last page and the pages after it. */
@@ -57,7 +64,7 @@ export interface WindowState {
 }
 
 export interface WindowConfig {
-  /** Entries per page. */
+  /** Entries of the conversation per page. */
   pageSize: number;
   /** Pages of the newest entries that are never dropped. */
   latestPages: number;
@@ -165,14 +172,7 @@ export function pageSpans<T extends WindowEntry>(
 
   // Cut the newest page into pages of `pageSize`.
   const newest = spans[spans.length - 1];
-  const cuts: number[] = [];
-  let at = newest.from + config.pageSize;
-  while (messages.length - at >= config.pageSize) {
-    while (at < messages.length && !hasUuid(messages[at])) at++;
-    if (at >= messages.length) break;
-    cuts.push(at);
-    at += config.pageSize;
-  }
+  const cuts = pageCuts(messages, newest.from, config.pageSize);
   if (cuts.length > 0) {
     spans.pop();
     let from = newest.from;
@@ -183,6 +183,29 @@ export function pageSpans<T extends WindowEntry>(
     spans.push({ from, to: newest.to, start: firstUuidOf(messages.slice(from, newest.to)) ?? '' });
   }
   return spans;
+}
+
+/**
+ * Where the pages after the one that begins at `from` begin: each `pageSize` entries of the conversation on (or as many
+ * records as that many may bring), at the next entry that has a uuid, as long as at least a page remains after the cut.
+ */
+function pageCuts<T extends WindowEntry>(messages: readonly T[], from: number, pageSize: number): number[] {
+  const limit = pageSize * PAGE_RECORDS_PER_ENTRY;
+  // How many counted entries are at or after each index, which says whether a page remains there.
+  const countedFrom = new Array<number>(messages.length + 1).fill(0);
+  for (let i = messages.length - 1; i >= from; i--) {
+    countedFrom[i] = countedFrom[i + 1] + (countsTowardPage(messages[i]) ? 1 : 0);
+  }
+  const cuts: number[] = [];
+  let start = from;
+  for (;;) {
+    let at = start;
+    while (at < messages.length && countedFrom[start] - countedFrom[at] < pageSize && at - start < limit) at++;
+    while (at < messages.length && !hasUuid(messages[at])) at++;
+    if (at >= messages.length || (countedFrom[at] < pageSize && messages.length - at < limit)) return cuts;
+    cuts.push(at);
+    start = at;
+  }
 }
 
 /** The index (into `spans`) of the page that holds the message at `messageIndex`. */
@@ -328,11 +351,28 @@ export function prependToLatest<T extends WindowEntry>(
 }
 
 /**
- * A page around an entry far from what is held arrived (the find bar or the send
+ * What was asked for around an entry far from what is held arrived (the find bar or the send
  * index jumping to it): it takes the place of the recycler. The newest pages stay.
- * When the page overlaps what is held it is joined to it instead.
+ * When it overlaps what is held it is joined to it instead.
+ *
+ * It is several pages' worth (as many as the recycler keeps), and is held as that many pages,
+ * so that the reader moving on lets go of one at a time.
  */
 export function jumpTo<T extends WindowEntry>(
+  messages: readonly T[],
+  state: WindowState,
+  page: readonly T[],
+  pageHasOlder: boolean,
+  config: WindowConfig,
+): WindowResult<T> {
+  const joined = joinAround(messages, state, page, pageHasOlder, config);
+  const inner = pageSpans(page, { gap: null, hasOlder: false, starts: [] }, config).map(span => span.start);
+  const starts = [...joined.state.starts, ...inner];
+  return { messages: joined.messages, state: normalizeState(joined.messages, { ...joined.state, starts }) };
+}
+
+/** Where what arrived goes among what is held. */
+function joinAround<T extends WindowEntry>(
   messages: readonly T[],
   state: WindowState,
   page: readonly T[],
