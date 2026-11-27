@@ -6,7 +6,7 @@ Press Up in the message box to bring back what you sent before, as in a terminal
 writing is kept while you look, and is waiting for you when you come back down.
 
 First made to work in a reopened conversation in [#395](https://github.com/Swttch/swttch/pull/395). The draft, the
-guard, the label and the shared draft came with [#735](https://github.com/Swttch/swttch/issues/735).
+guard, the label, the shared draft and the history window came with [#735](https://github.com/Swttch/swttch/issues/735).
 
 ## Moving, then walking
 
@@ -19,6 +19,8 @@ text:
 
 > Press Up again to browse history (your draft is kept)
 
+![Up pressed at the start of the draft “Next, update the changelog”: a line over it reads “Press Up again to browse history (your draft is kept)”](assets/history-guard.png)
+
 The next Up goes to your last message. Any other key or a click makes the line go away. Inside the history there is no
 such line: each press moves on.
 
@@ -29,8 +31,12 @@ because both show the same list.
 While a draft is waiting, the line also says **↓ to restore your draft**. The box grows and shrinks smoothly as the line
 comes and goes.
 
+![The newest message recalled with Up: the line reads “History 3/3” and “↓ to restore your draft”](assets/history-walk.png)
+
 A message recalled with Up arrives with the caret at its start, so the next Up moves straight on. One recalled with
 Down arrives with the caret at its end.
+
+![The message box while walking the history: a line over the text reads “History 2/3”, an “Edited” mark with the count 1, and “↓ to restore your draft”](assets/history-edited.png)
 
 ## Seeing and clearing the changes
 
@@ -45,6 +51,8 @@ Press the mark to open **History**.
 - The arrow icon (**Load into input**) closes the window and puts that message in the box.
 - Under the pointer the dot turns into an X (**Discard edit**), which removes the change at once. A screen without a
   pointer shows the X from the start.
+
+![The “History” window: three sent messages with their numbers; message 2, changed and carrying an orange dot, and message 3, opened by a press, stand out, and each row ends in an arrow button](assets/history-modal.png)
 
 ## A message comes back as you sent it
 
@@ -62,7 +70,8 @@ The same rule decides the chat's bubbles, the ticks of the send index and this h
 - Included: what you typed, messages sent while Claude was still working, slash commands drawn as your message (such as
   `/rename my name`), and messages made of pictures alone.
 - Left out: commands that only do something and leave no message (such as `/clear` or `/usage`), model changes,
-  messages from other sessions and notes the app writes for Claude, finished background tasks, and interrupt markers.
+  messages from other sessions and notes the app writes for Claude, finished background tasks, interrupt markers, and the requests the `claude` program writes to Claude when an answer was
+  cut off or came out empty (the chat does not draw them either).
 
 ## Your draft is kept
 
@@ -77,6 +86,11 @@ elements and the `@@` recipient. Each session has its own.
 
 The plugin backend keeps drafts under its data folder (`~/.claude-code-gui`), pictures included, and removes a draft
 once it is empty.
+
+## Characters being composed
+
+Characters typed through an input method, as in Korean, Japanese or Chinese, are underlined until they are committed.
+When you are changing a recalled message, **Edited** appears with the very first of them.
 
 ## Limits
 
