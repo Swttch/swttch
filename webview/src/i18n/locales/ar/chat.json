@@ -149,7 +149,8 @@
       "guard": "اضغط ↑ مرة أخرى لتصفح السجل",
       "guardKeepsDraft": "اضغط ↑ مرة أخرى لتصفح السجل (ستبقى مسودتك)",
       "position": "السجل {{index}}/{{total}}",
-      "modified": "معدّل"
+      "modified": "معدّل",
+      "restoreDraft": "<kbd>↓</kbd> لاستعادة المسودة"
     },
     "renameSuggestion": {
       "hint": "(Tab للإكمال)"

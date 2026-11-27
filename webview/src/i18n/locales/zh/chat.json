@@ -149,7 +149,8 @@
       "guard": "再按一次向上键浏览历史记录",
       "guardKeepsDraft": "再按一次向上键浏览历史记录（草稿会保留）",
       "position": "历史记录 {{index}}/{{total}}",
-      "modified": "已编辑"
+      "modified": "已编辑",
+      "restoreDraft": "按 <kbd>↓</kbd> 恢复草稿"
     },
     "renameSuggestion": {
       "hint": "(按 Tab 补全)"

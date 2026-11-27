@@ -591,7 +591,7 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
   }, [handoffState, currentSessionId]);
 
   const draftChannel = useMemo(() => ({ send: bridge.send, subscribe: bridge.subscribe }), [bridge.send, bridge.subscribe]);
-  const { show: showSlot, sent: draftSent, isModified } = useComposerDraft({
+  const { show: showSlot, sent: draftSent, isModified, hasDraft } = useComposerDraft({
     sessionId: currentSessionId,
     workingDirectory,
     channel: draftChannel,
@@ -1525,7 +1525,7 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
         <DragOverlay visible={isDragOver} />
         </>}
         editor={<>
-          <HistoryNotice position={historyPosition} modified={isModified} guarded={isGuarded} hasDraft={value.trim() !== '' || attachments.length > 0 || pendingReplies.length > 0 || pageElements.length > 0} />
+          <HistoryNotice position={historyPosition} modified={isModified} guarded={isGuarded} hasDraft={hasDraft} />
           {/* A click puts the caret somewhere else, which stands the guard down too. */}
           <div onMouseDown={disarmGuard}>
           <RichInput

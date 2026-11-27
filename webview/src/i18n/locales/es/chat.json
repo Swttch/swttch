@@ -149,7 +149,8 @@
       "guard": "Pulsa ↑ otra vez para ver el historial",
       "guardKeepsDraft": "Pulsa ↑ otra vez para ver el historial (tu borrador se conserva)",
       "position": "Historial {{index}}/{{total}}",
-      "modified": "Editado"
+      "modified": "Editado",
+      "restoreDraft": "<kbd>↓</kbd> para restaurar tu borrador"
     },
     "renameSuggestion": {
       "hint": "(Tab para completar)"

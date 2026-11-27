@@ -149,5 +149,6 @@ export function useComposerDraft({ sessionId, workingDirectory, channel, content
     else heldRef.current = kept;
   }, [key, put]);
 
-  return { show, sent, isModified: slot !== null && draft.edits[slot.key] !== undefined };
+  const hasDraft = !isEmptyContent({ ...draft.content, text: draft.content.text.trim() });
+  return { show, sent, hasDraft, isModified: slot !== null && draft.edits[slot.key] !== undefined };
 }

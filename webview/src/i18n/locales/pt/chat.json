@@ -149,7 +149,8 @@
       "guard": "Pressione ↑ novamente para ver o histórico",
       "guardKeepsDraft": "Pressione ↑ novamente para ver o histórico (seu rascunho é mantido)",
       "position": "Histórico {{index}}/{{total}}",
-      "modified": "Editado"
+      "modified": "Editado",
+      "restoreDraft": "<kbd>↓</kbd> para restaurar seu rascunho"
     },
     "renameSuggestion": {
       "hint": "(Tab para completar)"

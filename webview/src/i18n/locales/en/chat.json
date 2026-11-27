@@ -149,7 +149,8 @@
       "guard": "Press Up again to browse history",
       "guardKeepsDraft": "Press Up again to browse history (your draft is kept)",
       "position": "History {{index}}/{{total}}",
-      "modified": "Edited"
+      "modified": "Edited",
+      "restoreDraft": "<kbd>↓</kbd> to restore your draft"
     },
     "renameSuggestion": {
       "hint": "(Tab to accept)"

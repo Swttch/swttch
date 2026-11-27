@@ -26,6 +26,9 @@ such line: each press moves on.
 the oldest is 1, and your draft has no number. The total is the number of ticks on the [send index](../071-send_index/en.md),
 because both show the same list.
 
+While a draft is waiting, the line also says **↓ to restore your draft**. The box grows and shrinks smoothly as the line
+comes and goes.
+
 A message recalled with Up arrives with the caret at its start, so the next Up moves straight on. One recalled with
 Down arrives with the caret at its end.
 

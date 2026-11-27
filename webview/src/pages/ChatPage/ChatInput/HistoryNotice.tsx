@@ -1,4 +1,5 @@
-import { useTranslation } from '@/i18n';
+import { useRef } from 'react';
+import { Trans, useTranslation } from '@/i18n';
 
 interface Props {
   /** The send shown, counted from the oldest, or null while the box holds the draft. */
@@ -7,28 +8,65 @@ interface Props {
   modified: boolean;
   /** The next Up leaves the draft for the history. */
   guarded: boolean;
-  /** Something is written in the box, which the walk will keep. */
+  /** Something is written in the draft, which the walk keeps. */
   hasDraft: boolean;
 }
 
+/** A line as tall as the "Edited" mark, so the mark's arrival moves nothing. */
+const LINE = 'box-content flex h-[calc(1rem+2px)] min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap ps-3 pe-11 pb-1.5';
+
 /**
  * The line over the text of the composer that says where the arrow keys are in the history (#735): ahead of the first
- * step out of the draft, what the next press does, and during the walk, which send is shown.
+ * step out of the draft, what the next press does, and during the walk, which send is shown and the way back to the
+ * draft. The box grows and shrinks around it.
  */
-export function HistoryNotice({ position, modified, guarded, hasDraft }: Props) {
+export function HistoryNotice(props: Props) {
   const { t } = useTranslation('chat');
-  if (!position && !guarded) return null;
+  const open = props.position !== null || props.guarded;
+
+  // The line closes with the words it had: it would otherwise empty first and shrink after.
+  const shownRef = useRef<Props | null>(null);
+  if (open) shownRef.current = props;
+  const shown = shownRef.current;
 
   return (
-    <div role="status" className="flex select-none items-center gap-1.5 ps-3 pe-11 pb-0.5 text-xs text-text-tertiary tabular-nums">
-      {position
-        ? t('chatInput.history.position', position)
-        : t(hasDraft ? 'chatInput.history.guardKeepsDraft' : 'chatInput.history.guard')}
-      {position && modified && (
-        <span className="rounded border border-border-default px-1 text-[0.6875rem] leading-4 text-text-secondary">
-          {t('chatInput.history.modified')}
-        </span>
-      )}
+    <div
+      aria-hidden={!open}
+      className={`grid transition-[grid-template-rows,opacity,visibility] duration-200 ease-out motion-reduce:transition-none ${
+        open ? 'visible grid-rows-[1fr] opacity-100' : 'invisible grid-rows-[0fr] opacity-0'
+      }`}
+    >
+      <div className="min-h-0 overflow-hidden">
+        <div role="status" className={`${LINE} select-none text-xs text-text-tertiary tabular-nums`}>
+          {shown && !shown.position && (
+            <span className="truncate">{t(shown.hasDraft ? 'chatInput.history.guardKeepsDraft' : 'chatInput.history.guard')}</span>
+          )}
+          {shown?.position && (
+            <>
+              <span className="shrink-0">{t('chatInput.history.position', shown.position)}</span>
+              {shown.modified && (
+                <span className="shrink-0 rounded border border-border-default px-1 text-[0.6875rem] leading-4 text-text-secondary">
+                  {t('chatInput.history.modified')}
+                </span>
+              )}
+              {shown.hasDraft && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span className="inline-flex min-w-0 items-center gap-1 overflow-hidden">
+                    <Trans
+                      t={t}
+                      i18nKey="chatInput.history.restoreDraft"
+                      components={{
+                        kbd: <kbd className="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded border border-border-default px-0.5 font-sans" />,
+                      }}
+                    />
+                  </span>
+                </>
+              )}
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
