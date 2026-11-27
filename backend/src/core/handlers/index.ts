@@ -206,6 +206,7 @@ import {
 } from './prompts';
 import { getSessionAssetsHandler } from './getSessionAssets';
 import { getSessionSendsHandler } from './getSessionSends';
+import { getComposerDraftHandler, saveComposerDraftHandler } from './composerDraft';
 import { getSessionTailHandler } from './getSessionTail';
 import { getSessionParentTitleHandler } from './getSessionParentTitle';
 import { getDesktopSessionHandler } from './getDesktopSession';
@@ -873,6 +874,12 @@ export async function handleMessage(
       break;
     case MessageType.GET_SESSION_SENDS:
       await getSessionSendsHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_COMPOSER_DRAFT:
+      await getComposerDraftHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.SAVE_COMPOSER_DRAFT:
+      await saveComposerDraftHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_SESSION_TAIL:
       await getSessionTailHandler(connectionId, message, connections, bridge);

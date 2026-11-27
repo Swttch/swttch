@@ -2,7 +2,7 @@ import { createReadStream } from 'fs';
 import { stat } from 'fs/promises';
 import { join } from 'path';
 import { getProjectSessionsPath } from './getProjectSessionsPath';
-import { chainStampsPermissionMode, isTypedPrompt } from './loadPromptHistory';
+import { entryCommandName, isUserSendEntry } from '../../shared';
 import type { SessionMessage } from './loadSessionMessages';
 
 /**
@@ -57,6 +57,20 @@ function promptTextOf(entry: SessionMessage): string {
 }
 
 /**
+ * Whether an entry is a prompt whose uuid a send of the webview can be given: a send of the user's (`isUserSendEntry`)
+ * with words in it, and not the record of a slash command, whose text is not the one the webview sent.
+ *
+ * `permissionMode` is what the CLI stamps on every entry it processed as a prompt. It is used to reject, never on its
+ * own to accept, and only where the entries read stamp it at all, so a session written by a CLI old enough not to set
+ * the field is still answered.
+ */
+function namesASend(entry: SessionMessage, stampsPermissionMode: boolean): boolean {
+  if (entry.isSidechain || !isUserSendEntry(entry) || entryCommandName(entry) !== undefined) return false;
+  if (!promptTextOf(entry).trim()) return false;
+  return !stampsPermissionMode || entry.permissionMode !== undefined;
+}
+
+/**
  * The last send the CLI recorded in a session, and whether it can be rewound to.
  *
  * Exists because the CLI never echoes user messages back on stdout: the webview
@@ -99,7 +113,7 @@ export async function readLastRecordedSend(
     }
 
     /*
-     * `isTypedPrompt` rather than "is a user entry with string content".
+     * `namesASend` rather than "is a user entry with string content".
      *
      * Most `user` entries are not prompts, and the ones that fool a naive test
      * are exactly the ones that follow a turn: a `/model` switch writes
@@ -107,17 +121,12 @@ export async function readLastRecordedSend(
      * entries, all `type: "user"` with plain string content. Taking the last of
      * those as "the send that just finished" reported a uuid the user never
      * typed, and the actions went missing on the message they belonged to.
-     *
-     * That test already exists with the measurements behind it (#396), so it is
-     * reused rather than approximated. The stamping question is answered from
-     * the tail, which is where any recent entry is; a tail with none degrades to
-     * the other nets rather than rejecting everything.
      */
-    const stamped = chainStampsPermissionMode(entries);
+    const stamped = entries.some(entry => entry.type === 'user' && entry.permissionMode !== undefined);
     for (let i = entries.length - 1; i >= 0; i--) {
       const entry = entries[i];
       if (typeof entry.uuid !== 'string') continue;
-      if (!isTypedPrompt(entry, stamped)) continue;
+      if (!namesASend(entry, stamped)) continue;
       return {
         uuid: entry.uuid,
         canRewind: snapshotFor.has(entry.uuid),

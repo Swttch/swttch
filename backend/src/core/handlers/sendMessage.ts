@@ -101,6 +101,7 @@ export async function sendMessageHandler(
       connections.broadcastToSession(resolvedSessionId, MessageType.USER_MESSAGE_BROADCAST, {
         content: content.trim(),
         sessionId: resolvedSessionId,
+        messageUuid,
       }, connectionId);
 
       // 새 세션이 시작된 경우에만 활성/사용 신호를 보낸다(동의 시에만, 내부에서 게이팅).

@@ -2,204 +2,252 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 
 const sendMock = vi.fn();
+// One object, as the real hook hands out one stable `send`.
+const bridge = { send: sendMock };
 
 vi.mock('@/hooks/useBridge', () => ({
-  useBridge: () => ({ send: sendMock }),
+  useBridge: () => bridge,
 }));
 
-import { useInputHistory } from '../useInputHistory';
+import { useInputHistory, type HistoryStep } from '../useInputHistory';
 import { MessageType } from '@/shared';
+import type { SendIndexEntry } from '@/pages/ChatPage/sendList';
+import type { LoadedMessageDto } from '@/types';
 
 /** A raw JSONL entry as the backend passes it through, untouched. */
-function entry(uuid: string, text: string) {
-  return {
-    type: 'user',
-    uuid,
-    permissionMode: 'default',
-    message: { role: 'user', content: [{ type: 'text', text }] },
-  };
+function record(uuid: string, text: string) {
+  return { type: 'user', uuid, message: { role: 'user', content: [{ type: 'text', text }] } };
 }
 
-function page(entries: ReturnType<typeof entry>[], hasMore = false, oldestUuid?: string) {
-  return { status: 'ok', entries, hasMore, oldestUuid: oldestUuid ?? entries[0]?.uuid };
+/** A send the transcript holds. */
+function loaded(key: string, text: string): SendIndexEntry {
+  return { key, recordId: key, text, images: 0, loaded: true, message: record(key, text) as unknown as LoadedMessageDto };
 }
 
-function render(sessionId: string | null = 's1', workingDirectory: string | null = '/w') {
-  return renderHook(() => useInputHistory({ workingDirectory, sessionId }));
+/** A send known only by its name. */
+function unloaded(key: string): SendIndexEntry {
+  return { key, recordId: key, text: '', images: 0, loaded: false };
+}
+
+function render(sends: SendIndexEntry[], sessionId: string | null = 's1') {
+  return renderHook(
+    (props: { sends: SendIndexEntry[]; sessionId: string | null }) =>
+      useInputHistory({ workingDirectory: '/w', sessionId: props.sessionId, sends: props.sends }),
+    { initialProps: { sends, sessionId } },
+  );
+}
+
+type History = ReturnType<typeof render>['result'];
+/** What a step did: a recalled send by its text, the draft as `draft`. */
+const said = (step: HistoryStep) => (step && typeof step === 'object' ? (step.slot ? step.slot.original.text : 'draft') : step);
+function press(result: History) {
+  let step: HistoryStep = null;
+  act(() => { step = result.current.navigateUp(); });
+  return said(step);
+}
+/** Up, passing the guard that stands between the draft and the history. */
+function up(result: History) {
+  const first = press(result);
+  return first === 'guard' ? press(result) : first;
+}
+function down(result: History) {
+  let step: HistoryStep = null;
+  act(() => { step = result.current.navigateDown(); });
+  return said(step);
 }
 
 describe('useInputHistory', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    sendMock.mockResolvedValue(page([]));
+    sendMock.mockResolvedValue({ status: 'ok', entries: [] });
   });
 
-  it('asks the backend for the session prompts on mount', async () => {
-    sendMock.mockResolvedValue(page([entry('u1', 'first'), entry('u2', 'second')]));
-    const { result } = render();
+  it('walks the sends of the list newest first, and stops at the oldest', () => {
+    const { result } = render([loaded('u1', 'oldest'), loaded('u2', 'newest')]);
 
-    await waitFor(() => expect(result.current.isEmpty).toBe(false));
-
-    expect(sendMock).toHaveBeenCalledWith(MessageType.LOAD_PROMPT_HISTORY, {
-      workingDir: '/w',
-      sessionId: 's1',
-      beforeUuid: undefined,
-    });
-  });
-
-  it('walks the fetched prompts newest first', async () => {
-    // The backend sends transcript order (oldest first); Up must start at the newest.
-    sendMock.mockResolvedValue(page([entry('u1', 'oldest'), entry('u2', 'newest')]));
-    const { result } = render();
-    await waitFor(() => expect(result.current.isEmpty).toBe(false));
-
-    act(() => { expect(result.current.navigateUp('draft')).toBe('newest') });
-    act(() => { expect(result.current.navigateUp('draft')).toBe('oldest') });
+    expect(up(result)).toBe('newest');
+    expect(up(result)).toBe('oldest');
     // Nothing older: the key falls through instead of sticking on the last entry.
-    act(() => { expect(result.current.navigateUp('draft')).toBeNull() });
+    expect(up(result)).toBeNull();
   });
 
-  it('recalls what was typed, without the notes the GUI and the IDE put around it (#232, #719)', async () => {
-    const ide =
-      '<ide_selection>The user selected the lines 1 to 2 from src/a.ts:\nfoo\n\nThis may or may not be related to the current task.</ide_selection>';
-    sendMock.mockResolvedValue(
-      page([
-        entry('u1', `${ide}fix it`),
-        entry('u2', 'rename the helper\n<system-reminder>Call SendMessage now.</system-reminder>'),
-      ]),
-    );
-    const { result } = render();
-    await waitFor(() => expect(result.current.isEmpty).toBe(false));
+  it('numbers the sends from the oldest, with no number for the draft', () => {
+    const { result, rerender } = render([loaded('u2', 'b'), loaded('u3', 'c')]);
+    expect(result.current.position).toBeNull();
 
-    act(() => { expect(result.current.navigateUp('draft')).toBe('rename the helper') });
-    act(() => { expect(result.current.navigateUp('draft')).toBe('fix it') });
+    up(result);
+    expect(result.current.position).toEqual({ index: 2, total: 2 });
+    up(result);
+    expect(result.current.position).toEqual({ index: 1, total: 2 });
+
+    // The count follows the list, which is the send index's own.
+    rerender({ sends: [loaded('u1', 'a'), loaded('u2', 'b'), loaded('u3', 'c')], sessionId: 's1' });
+    expect(result.current.position).toEqual({ index: 2, total: 3 });
+
+    down(result);
+    down(result);
+    expect(result.current.position).toBeNull();
   });
 
-  it('restores the draft when walking back down past the newest', async () => {
-    sendMock.mockResolvedValue(page([entry('u1', 'sent before')]));
-    const { result } = render();
-    await waitFor(() => expect(result.current.isEmpty).toBe(false));
+  it('recalls a send by name, reading it first when it is not here', async () => {
+    sendMock.mockResolvedValue({ status: 'ok', entries: [record('u1', 'far back')] });
+    const { result } = render([unloaded('u1'), unloaded('u2'), unloaded('u3'), unloaded('u4'), unloaded('u5'), loaded('u6', 'newest')]);
 
-    act(() => { result.current.navigateUp('half-typed') });
-    expect(result.current.isNavigating).toBe(true);
+    let content: { text: string } | undefined;
+    await act(async () => { content = await result.current.contentOf('u1'); });
+    expect(content?.text).toBe('far back');
+    expect(sendMock).toHaveBeenCalledWith(MessageType.LOAD_PROMPT_HISTORY, { workingDir: '/w', sessionId: 's1', beforeUuid: 'u2' });
 
-    act(() => { expect(result.current.navigateDown()).toBe('half-typed') });
-    expect(result.current.isNavigating).toBe(false);
+    let step: HistoryStep = null;
+    act(() => { step = result.current.recall('u1'); });
+    expect(said(step)).toBe('far back');
+    expect(result.current.position).toEqual({ index: 1, total: 6 });
   });
 
-  it('finds a just-sent prompt without another round trip', async () => {
-    sendMock.mockResolvedValue(page([entry('u1', 'from the transcript')]));
-    const { result } = render();
-    await waitFor(() => expect(result.current.isEmpty).toBe(false));
-    sendMock.mockClear();
+  it('names a recalled send by the id the record knows it by', () => {
+    const { result } = render([{ ...loaded('msg-1', 'just sent'), recordId: 'uuid-1' }]);
 
-    act(() => { result.current.pushToHistory('just typed') });
+    up(result);
 
-    // The CLI has not written it to the transcript yet, so the backend cannot
-    // know about it — it has to come from here.
-    act(() => { expect(result.current.navigateUp('')).toBe('just typed') });
-    act(() => { expect(result.current.navigateUp('')).toBe('from the transcript') });
-    expect(sendMock).not.toHaveBeenCalled();
+    expect(result.current.slot?.key).toBe('uuid-1');
   });
 
-  it('resets the walk position without forgetting the prompts', async () => {
-    sendMock.mockResolvedValue(page([entry('u1', 'a'), entry('u2', 'b')]));
-    const { result } = render();
-    await waitFor(() => expect(result.current.isEmpty).toBe(false));
+  it('says what the next press does before it leaves the draft', () => {
+    const { result } = render([loaded('u1', 'older'), loaded('u2', 'newer')]);
 
-    act(() => { result.current.navigateUp('draft') });
-    act(() => { result.current.resetHistory() });
+    expect(press(result)).toBe('guard');
+    expect(result.current.isGuarded).toBe(true);
+    expect(result.current.slot).toBeNull();
 
-    expect(result.current.isNavigating).toBe(false);
-    // The next Up starts from the newest again rather than resuming mid-walk.
-    act(() => { expect(result.current.navigateUp('')).toBe('b') });
+    expect(press(result)).toBe('newer');
+    expect(result.current.isGuarded).toBe(false);
+    // Inside the history there is no guard between one send and the next.
+    expect(press(result)).toBe('older');
   });
 
-  it('fetches the next page as the walk nears the end of what is loaded', async () => {
-    sendMock.mockResolvedValueOnce(page([entry('u1', 'p1'), entry('u2', 'p2')], true, 'u1'));
-    const { result } = render();
-    await waitFor(() => expect(result.current.isEmpty).toBe(false));
-    sendMock.mockClear();
-    sendMock.mockResolvedValue(page([entry('u0', 'p0')], false, 'u0'));
+  it('asks again after the guard was stood down', () => {
+    const { result } = render([loaded('u1', 'only')]);
+    press(result);
 
-    act(() => { result.current.navigateUp('') });
+    act(() => { result.current.disarmGuard(); });
+
+    expect(press(result)).toBe('guard');
+  });
+
+  it('walks back down to the draft that was being written', () => {
+    const { result } = render([loaded('u1', 'older'), loaded('u2', 'newer')]);
+
+    up(result);
+    up(result);
+    expect(down(result)).toBe('newer');
+    expect(down(result)).toBe('draft');
+    expect(result.current.slot).toBeNull();
+    expect(down(result)).toBeNull();
+  });
+
+  it('gives back what was typed, without what the GUI and the IDE put around it (#232, #719)', () => {
+    const ide = '<ide_selection>The user selected the lines 1 to 2 from src/a.ts:\nfoo\n\nThis may or may not be related to the current task.</ide_selection>';
+    const { result } = render([
+      loaded('u1', `${ide}fix it`),
+      loaded('u2', 'rename the helper\n<system-reminder>Call SendMessage now.</system-reminder>'),
+    ]);
+
+    expect(up(result)).toBe('rename the helper');
+    expect(up(result)).toBe('fix it');
+  });
+
+  it('gives back a command as it reads, not as it is recorded', () => {
+    const { result } = render([
+      loaded('u1', '<command-name>/rename</command-name>\n<command-message>rename</command-message>\n<command-args>My name</command-args>'),
+    ]);
+
+    expect(up(result)).toBe('/rename My name');
+  });
+
+  it('reads a send the transcript does not hold from the backend, asking with the send after it', async () => {
+    sendMock.mockResolvedValue({ status: 'ok', entries: [record('u0', 'far back')] });
+    const { result } = render([unloaded('u0'), loaded('u1', 'near')]);
 
     await waitFor(() => expect(sendMock).toHaveBeenCalledWith(MessageType.LOAD_PROMPT_HISTORY, {
       workingDir: '/w',
       sessionId: 's1',
       beforeUuid: 'u1',
     }));
-    // The older page appends behind what was already there.
-    await waitFor(() => {
-      act(() => { result.current.navigateUp('') });
-      act(() => { expect(result.current.navigateUp('')).toBe('p0') });
+    up(result);
+    expect(up(result)).toBe('far back');
+  });
+
+  it('holds the walk while a send is still being read', () => {
+    sendMock.mockReturnValue(new Promise(() => {}));
+    const { result } = render([unloaded('u0')]);
+
+    expect(up(result)).toBe('reading');
+    expect(result.current.slot).toBeNull();
+  });
+
+  it('reads a message typed during a turn out of its queue records', async () => {
+    sendMock.mockResolvedValue({
+      status: 'ok',
+      entries: [
+        { type: 'queue-operation', operation: 'enqueue', content: 'typed mid-turn', timestamp: 't1' },
+        { type: 'queue-operation', operation: 'remove', content: 'typed mid-turn', timestamp: 't2' },
+      ],
     });
+    const { result } = render([unloaded('queued-t2-1')]);
+
+    await waitFor(() => expect(up(result)).toBe('typed mid-turn'));
   });
 
-  it('does not page past the end when the backend says there is no more', async () => {
-    sendMock.mockResolvedValue(page([entry('u1', 'only')], false, 'u1'));
-    const { result } = render();
-    await waitFor(() => expect(result.current.isEmpty).toBe(false));
-    sendMock.mockClear();
+  it('finds a send made after the session was opened, as soon as the list has it', () => {
+    const { result, rerender } = render([loaded('u1', 'before')]);
 
-    act(() => { result.current.navigateUp('') });
+    rerender({ sends: [loaded('u1', 'before'), loaded('u2', 'just sent')], sessionId: 's1' });
 
-    expect(sendMock).not.toHaveBeenCalled();
+    expect(up(result)).toBe('just sent');
   });
 
-  it('drops the previous session prompts when the session changes', async () => {
-    sendMock.mockResolvedValue(page([entry('u1', 'from session one')]));
-    const { result, rerender } = renderHook(
-      ({ sessionId }) => useInputHistory({ workingDirectory: '/w', sessionId }),
-      { initialProps: { sessionId: 's1' as string | null } },
-    );
-    await waitFor(() => expect(result.current.isEmpty).toBe(false));
+  it('keeps its place when older sends are added to the list', () => {
+    const { result, rerender } = render([loaded('u2', 'b'), loaded('u3', 'c')]);
+    up(result);
 
-    sendMock.mockResolvedValue(page([]));
-    rerender({ sessionId: 's2' });
+    rerender({ sends: [loaded('u1', 'a'), loaded('u2', 'b'), loaded('u3', 'c')], sessionId: 's1' });
 
-    await waitFor(() => expect(result.current.isEmpty).toBe(true));
-    act(() => { expect(result.current.navigateUp('')).toBeNull() });
+    expect(up(result)).toBe('b');
   });
 
-  it('keeps the first prompt of a session that was created by sending it', async () => {
-    // Sending from an uninitialized session creates the session, so sessionId
-    // goes null -> id. Treating that as a switch would discard the very prompt
-    // that caused it, and Up would find nothing at all.
-    const { result, rerender } = renderHook(
-      ({ sessionId }) => useInputHistory({ workingDirectory: '/w', sessionId }),
-      { initialProps: { sessionId: null as string | null } },
-    );
+  it('starts from the newest again after a reset', () => {
+    const { result } = render([loaded('u1', 'a'), loaded('u2', 'b')]);
+    up(result);
+    up(result);
 
-    act(() => { result.current.pushToHistory('the first thing typed') });
-    rerender({ sessionId: 's-new' });
+    act(() => { result.current.resetHistory(); });
 
-    await waitFor(() => expect(result.current.isEmpty).toBe(false));
-    act(() => { expect(result.current.navigateUp('')).toBe('the first thing typed') });
-    // Nothing to ask the backend for either: the transcript has no prompt this
-    // hook does not already hold, and asking would risk showing it twice.
-    expect(sendMock).not.toHaveBeenCalled();
+    expect(result.current.slot).toBeNull();
+    expect(up(result)).toBe('b');
   });
 
-  it('requests nothing until there is a session to ask about', () => {
-    render(null);
-    expect(sendMock).not.toHaveBeenCalled();
-  });
+  it('leaves the walk when the session changes', () => {
+    const { result, rerender } = render([loaded('u1', 'a')]);
+    up(result);
 
-  it('leaves the history empty when the backend reports an error', async () => {
-    sendMock.mockResolvedValue({ status: 'error', error: 'nope' });
-    const { result } = render();
+    rerender({ sends: [loaded('x1', 'other')], sessionId: 's2' });
 
-    await waitFor(() => expect(sendMock).toHaveBeenCalled());
-    expect(result.current.isEmpty).toBe(true);
-    act(() => { expect(result.current.navigateUp('')).toBeNull() });
+    expect(result.current.slot).toBeNull();
   });
 
   it('survives a rejected request', async () => {
     sendMock.mockRejectedValue(new Error('socket closed'));
-    const { result } = render();
+    const { result } = render([unloaded('u0')]);
 
     await waitFor(() => expect(sendMock).toHaveBeenCalled());
-    expect(result.current.isEmpty).toBe(true);
+    expect(up(result)).toBe('reading');
+  });
+
+  it('has nothing to walk, and no guard to show, in a session with no sends', () => {
+    const { result } = render([]);
+
+    expect(press(result)).toBeNull();
+    expect(result.current.isGuarded).toBe(false);
+    expect(sendMock).not.toHaveBeenCalled();
   });
 });

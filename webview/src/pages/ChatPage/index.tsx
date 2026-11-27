@@ -68,6 +68,8 @@ import { reuseSections } from './reuseSections';
 import type { SendSection } from './groupIntoSendSections';
 import { mergeSplitThinkingMessages } from './mergeSplitThinkingMessages';
 import { restoreQueuedMessages } from './restoreQueuedMessages';
+import { buildEntries } from './sendList';
+import { SendListContext } from './SendListContext';
 import { hideCliNotes } from './hideCliNotes';
 import { placeCompactCommand } from './placeCompactCommand';
 import { splitSectionsAtGap } from './windowGapSections';
@@ -383,6 +385,8 @@ function ChatPageContent() {
   */
   const sessionSends = useSessionSends(true) ?? EMPTY_SENDS;
   const carried = useMemo(() => carriedSend(sections, sessionSends), [sections, sessionSends]);
+  // The composer's history walks the same list the send index draws.
+  const sendList = useMemo(() => buildEntries(sessionSends, sections), [sessionSends, sections]);
 
 
   // Scroll preservation while the window changes.
@@ -794,6 +798,7 @@ function ChatPageContent() {
             strip, stretched across the container, ends up centred instead of
             sitting a rail's width off to the start side. No `w-full`: a fixed
             width would hold the strip at the padded width and ignore the margin. */}
+        <SendListContext.Provider value={sendList}>
         <div
           id={CHAT_FOOTER_ID}
           className="sticky start-0 bottom-0 z-10 flex flex-col max-h-full"
@@ -901,6 +906,7 @@ function ChatPageContent() {
               </div>
           )}
         </div>
+        </SendListContext.Provider>
       </div>
 
       <BackgroundTasksPanel />

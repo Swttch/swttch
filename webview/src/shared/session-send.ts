@@ -15,7 +15,10 @@
  * full by loading the transcript around that send.
  */
 export interface SessionSend {
-  /** `uuid` of the JSONL entry. Also how a jump finds the send in the transcript. */
+  /**
+   * The name the send goes by: the `uuid` of its JSONL entry, or, for a message typed during a turn, which has no
+   * entry of its own, the name `restoreQueuedEntries` gives it. Also how a jump finds the send in the transcript.
+   */
   uuid: string;
   /** The entry's `timestamp`, or null when it carries none. */
   timestamp: string | null;
@@ -27,4 +30,6 @@ export interface SessionSend {
    * one long sentence.
    */
   preview: string;
+  /** How many pictures the send holds, absent when it holds none. A send of pictures alone has an empty preview. */
+  images?: number;
 }

@@ -352,7 +352,8 @@
     }
   },
   "sendIndex": {
-    "holdHint": "Hold to see every prompt"
+    "holdHint": "Hold to see every prompt",
+    "imageOnly": "Image"
   },
   "sideSessionsEvent": {
     "title": "Update on sessions you started"

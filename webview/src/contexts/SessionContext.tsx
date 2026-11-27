@@ -186,6 +186,8 @@ export interface SessionHandoff {
    * have to retype from memory the message they were reworking.
    */
   promptText?: string;
+  /** The reply and excerpt cards the forked send opened with (an excerpt has no comment). */
+  cards?: { quote: string; comment: string }[];
   /**
    * The session being opened already has its transcript on disk. A fork writes the branch before it opens it, so the
    * session is new to the list but not to the disk: `addNewSession` then does not mark it as "just created", and

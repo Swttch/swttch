@@ -145,6 +145,21 @@
       "steerMessage": "调整当前任务...",
       "followUp": "{{send}} 发送，{{queue}} 加入队列稍后发送"
     },
+    "history": {
+      "guard": "再按一次向上键浏览历史记录",
+      "guardKeepsDraft": "再按一次向上键浏览历史记录（草稿会保留）",
+      "position": "历史记录 {{index}}/{{total}}",
+      "modified": "已编辑",
+      "restoreDraft": "按 <kbd>↓</kbd> 恢复草稿",
+      "edits": "修改记录",
+      "modal": {
+        "title": "历史记录",
+        "recall": "载入输入框",
+        "revert": "撤销修改",
+        "unavailable": "无法读取这条消息。",
+        "empty": "（空）"
+      }
+    },
     "renameSuggestion": {
       "hint": "(按 Tab 补全)"
     },

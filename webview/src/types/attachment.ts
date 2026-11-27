@@ -28,8 +28,9 @@ export abstract class Attachment {
   readonly id: string;
   abstract readonly type: AttachmentType;
 
-  constructor() {
-    this.id = crypto.randomUUID();
+  /** An id is given when an attachment already known is made again (a draft put back in the composer). */
+  constructor(id?: string) {
+    this.id = id ?? crypto.randomUUID();
   }
 
   abstract get displayLabel(): string;
@@ -44,8 +45,8 @@ export class ImageAttachment extends Attachment {
   readonly base64: string;
   readonly size: number;
 
-  constructor(params: { fileName: string; mimeType: string; base64: string; size: number }) {
-    super();
+  constructor(params: { fileName: string; mimeType: string; base64: string; size: number; id?: string }) {
+    super(params.id);
     this.fileName = params.fileName;
     this.mimeType = params.mimeType;
     this.base64 = params.base64;
@@ -79,8 +80,8 @@ export class FileAttachment extends Attachment {
   readonly absolutePath: string;
   readonly size?: number;
 
-  constructor(params: { fileName: string; absolutePath: string; size?: number }) {
-    super();
+  constructor(params: { fileName: string; absolutePath: string; size?: number; id?: string }) {
+    super(params.id);
     this.fileName = params.fileName;
     this.absolutePath = params.absolutePath;
     this.size = params.size;
@@ -107,8 +108,8 @@ export class FolderAttachment extends Attachment {
   readonly folderName: string;
   readonly absolutePath: string;
 
-  constructor(params: { folderName: string; absolutePath: string }) {
-    super();
+  constructor(params: { folderName: string; absolutePath: string; id?: string }) {
+    super(params.id);
     this.folderName = params.folderName;
     this.absolutePath = FolderAttachment.normalizeTrailingSeparator(params.absolutePath);
   }

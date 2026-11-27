@@ -1,7 +1,7 @@
-import { getPendingReplies, removePendingReply, subscribePendingReplies, takeSendRequest, updatePendingReply } from '@/utils/composerReplies';
-import { getPendingElements, pngFromBase64, removePendingElement, subscribeComposerElements, subscribeComposerFiles, subscribeComposerImages, subscribePendingElements } from '@/utils/composerElements';
+import { getPendingReplies, removePendingReply, replacePendingReplies, subscribePendingReplies, takeSendRequest, updatePendingReply } from '@/utils/composerReplies';
+import { getPendingElements, pngFromBase64, removePendingElement, replacePendingElements, subscribeComposerElements, subscribeComposerFiles, subscribeComposerImages, subscribePendingElements } from '@/utils/composerElements';
 import toast from 'react-hot-toast';
-import { useCallback, useEffect, useRef, KeyboardEvent, useState, useSyncExternalStore, type ClipboardEvent as ReactClipboardEvent, type DragEvent as ReactDragEvent } from 'react';
+import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, KeyboardEvent, useState, useSyncExternalStore, type ClipboardEvent as ReactClipboardEvent, type DragEvent as ReactDragEvent } from 'react';
 import { CommandPalettePanel } from '@/commandPalette/ui/CommandPalettePanel';
 import { useCommandPalette } from '@/commandPalette/hooks/useCommandPalette';
 import { PanelSectionId, PanelItemType, CommandItem } from '@/types/commandPalette';
@@ -20,7 +20,8 @@ import { ComposerFocusPolicy } from './composerFocusPolicy';
 import { useConfirmDialog } from '@/components/ConfirmDialog/useConfirmDialog';
 import { useChatInputFocus } from '../../../contexts/ChatInputFocusContext';
 import { useInputHistory } from './hooks/useInputHistory';
-import { useSessionContext } from '@/contexts/SessionContext';
+import { SendListContext } from '../SendListContext';
+import { useSessionContext, type SessionHandoff } from '@/contexts/SessionContext';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { useChatInputState } from '@/contexts/ChatInputStateContext';
 import { useBackgroundTaskActions } from '@/hooks/useBackgroundTaskActions';
@@ -80,10 +81,7 @@ import { renameSuggestion } from './renameSuggestion';
 import { typedKeys } from '@/commandPalette/typedKeys';
 import {
   wrapChipForTranscript,
-  readFirstSessionMention,
-  stripSessionMentionTags,
 } from './sessionMentionTag';
-import { AGENT_TRIGGER } from '@/utils/findAgentToken';
 import { isMobile, isBrowser } from '@/config/environment';
 import { featureDocUrl } from '@/config/app';
 import {
@@ -95,7 +93,15 @@ import {
 } from '@/utils/composerShortcut';
 import { FollowUpBehavior, SessionActivity, resolveFollowUpBehavior } from '@/shared';
 import { useSessionActivity } from '@/hooks/useSessionActivity';
-import { arrowRecallsHistory } from './caretAtEdge';
+import { ArrowMove, caretLength, historyArrow, readCaret } from './historyArrow';
+import { HistoryNotice } from './HistoryNotice';
+import { HistoryModal } from './HistoryModal';
+import { LiveText } from './draft/liveText';
+import { useComposerDraft } from './draft/useComposerDraft';
+import { composerDraftStore } from './draft/composerDraftStore';
+import { attachmentsOf, contentOfComposer, elementsOf } from './draft/composerContent';
+import { useLocation } from 'react-router-dom';
+import type { ComposerContent } from '@/shared';
 import { basename } from './basename';
 import {
   findChipRange,
@@ -122,15 +128,6 @@ import { getCaretOffset, setCaretOffset, CaretDirection } from '@/utils/domSelec
 import { MessageType } from '@/shared';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useTranslation } from '@/i18n';
-
-/**
- * Where a composer's recipient is kept while its session is not on screen.
- *
- * Sits beside `claude-gui:draft:<id>`, which holds the words, because the two
- * are one draft: restoring the text without the address gives back a chip that
- * looks addressed and is not.
- */
-const RECIPIENT_DRAFT_PREFIX = 'claude-gui:draft-recipient:';
 
 interface NativeDropEntry {
   path: string;
@@ -164,8 +161,15 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
   const { handleSubmit: onSubmit, isStreaming, stop: onStop, queuedMessages, cancelQueuedMessage, mergeQueuedMessages, moveQueuedMessage, steerQueuedMessage } = chatStream;
   const queueWhileWaiting = cardWaiting && runningActivity(chatStream.messages) !== null;
   const { input: value, setInput: onChange, setComposerHasContent } = useChatInputState();
-  const inputHistory = useInputHistory({ workingDirectory, sessionId: currentSessionId });
-  const { pushToHistory, navigateUp, navigateDown, resetHistory } = inputHistory;
+  const sends = useContext(SendListContext);
+  const { navigateUp, navigateDown, contentOf, recall, resetHistory, slot: historySlot, position: historyPosition, isGuarded, disarmGuard } = useInputHistory({ workingDirectory, sessionId: currentSessionId, sends });
+  /** Where the caret goes once a recalled text is in the box. A new object for every recall. */
+  const [caretRequest, setCaretRequest] = useState<{ at: 'start' | 'end' } | null>(null);
+  // Runs after the editor has written the text into the page, which also moves the caret: the request wins.
+  useLayoutEffect(() => {
+    const el = textareaRef.current;
+    if (el && caretRequest) setCaretOffset(el, caretRequest.at === 'start' ? 0 : caretLength(el));
+  }, [caretRequest, textareaRef]);
   // The recording itself belongs to DictationProvider, which sits above this
   // component: a recording has to outlive the composer, because an approval
   // prompt takes this slot and unmounts it mid-sentence (issue #409). What is
@@ -208,6 +212,7 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
     cancelUpload,
     clearAttachments,
     restoreAttachments,
+    replaceAttachments,
     error: attachmentError,
     isDragOver,
     handlePaste,
@@ -530,58 +535,6 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
   }, [value, recipient]);
 
   /**
-   * Carry the recipient across a session switch, beside the draft.
-   *
-   * The draft is a plain string in localStorage, so switching away and back
-   * restored the words and lost the address: the chip came back as dead text
-   * that still read as addressed, and the next Enter sent it here instead.
-   *
-   * Keyed off the TEXT rather than restored on its own, which is what keeps the
-   * two in step without either having to land first. The recipient re-attaches
-   * only while its chip is actually standing in the composer, so a draft the
-   * user has since edited past the chip does not get an address back.
-   */
-  useEffect(() => {
-    if (!currentSessionId || recipient) return;
-    try {
-      const stored = localStorage.getItem(`${RECIPIENT_DRAFT_PREFIX}${currentSessionId}`);
-      if (!stored) return;
-      const parsed = JSON.parse(stored) as AgentRecipient;
-      if (parsed?.token && value.includes(parsed.token)) setRecipient(parsed);
-    } catch {
-      // localStorage may be unavailable, and a draft we cannot read is a draft
-      // with no recipient — the same state as never having had one.
-    }
-  }, [currentSessionId, value, recipient]);
-
-  /**
-   * The session the save below last ran for.
-   *
-   * Arriving at a session, this composer has no recipient yet and no text yet —
-   * the draft lands a commit later. Measured: the save read that as "the user
-   * took the chip off" and deleted the stored address before the restore above
-   * had any text to match it against, so the chip came back dead every time.
-   */
-  const savedRecipientSessionRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!currentSessionId) return;
-    const key = `${RECIPIENT_DRAFT_PREFIX}${currentSessionId}`;
-    const sameSession = savedRecipientSessionRef.current === currentSessionId;
-    savedRecipientSessionRef.current = currentSessionId;
-    try {
-      if (recipient) localStorage.setItem(key, JSON.stringify(recipient));
-      // Only a clear that happens WHILE staying on one session is the user
-      // clearing it. Being slow to delete costs nothing: the next real clear
-      // removes it, and a stored address only reattaches to a draft whose chip
-      // is still standing.
-      else if (sameSession) localStorage.removeItem(key);
-    } catch {
-      // As above: losing the stored address costs the chip, not the message.
-    }
-  }, [recipient, currentSessionId]);
-
-  /**
    * Keep the caret out of the middle of the recipient chip.
    *
    * The arrow keys are handled in keydown, but they are not the only way in: a
@@ -608,42 +561,80 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
     return () => document.removeEventListener('selectionchange', onSelectionChange);
   }, [recipient, value, textareaRef]);
 
-  /**
-   * Put a recalled prompt back in the composer, chip and all.
-   *
-   * A prompt that addressed another session comes back carrying its
-   * `<session-mention>` tag. Dropping the tag and keeping the words would leave
-   * `@@some title` sitting there looking addressed while the next Enter sent it
-   * to THIS session with a stray mention at the front — the worst of the three
-   * possible outcomes, because it looks right.
-   *
-   * So the tag is read back into the recipient and only its label goes into the
-   * text, which is exactly the state the composer was in before the send.
-   */
-  const applyHistoryValue = useCallback(
-    (raw: string) => {
-      const mention = readFirstSessionMention(raw);
-      setRecipient(
-        mention
-          ? {
-              name: mention.agentName,
-              sessionId: mention.sessionId,
-              sessionDir: mention.sessionDir,
-              label: mention.label.startsWith(AGENT_TRIGGER)
-                ? mention.label.slice(AGENT_TRIGGER.length)
-                : mention.label,
-              token: mention.label,
-            }
-          : null,
-      );
-      const applied = stripSessionMentionTags(raw);
-      onChange(applied);
-      // Answered so the caller can place the caret against what actually landed:
-      // the tag is longer than the chip it becomes, so the raw length overshoots.
-      return applied;
-    },
-    [onChange],
+  /** Put a whole content in the composer: the session's draft, or a send recalled from its history. */
+  const applyContent = useCallback((next: ComposerContent) => {
+    onChange(next.text);
+    setRecipient(next.recipient);
+    setPathTokens(next.pathTokens);
+    replaceAttachments(attachmentsOf(next, composerDraftStore));
+    replacePendingReplies(next.replies);
+    replacePendingElements(elementsOf(next));
+  }, [onChange, replaceAttachments]);
+
+  const content = useMemo(
+    () => contentOfComposer({ text: value, recipient, pathTokens, attachments, replies: pendingReplies, elements: pageElements }, composerDraftStore),
+    [value, recipient, pathTokens, attachments, pendingReplies, pageElements],
   );
+
+  // A fork opens a session that has no draft yet and hands over the send it was made before.
+  const location = useLocation();
+  const handoffState = location.state as SessionHandoff | null;
+  const handoff = useMemo<ComposerContent | null>(() => {
+    const cards = handoffState?.cards ?? [];
+    if (!handoffState?.promptText && cards.length === 0) return null;
+    return {
+      text: handoffState?.promptText ?? '',
+      recipient: null,
+      pathTokens: [],
+      attachments: [],
+      replies: cards.map((card, i) => ({ id: `handoff-${currentSessionId}-${i}`, ...card })),
+      elements: [],
+    };
+  }, [handoffState, currentSessionId]);
+
+  const draftChannel = useMemo(() => ({ send: bridge.send, subscribe: bridge.subscribe }), [bridge.send, bridge.subscribe]);
+  const { show: showSlot, sent: draftSent, revert: revertEdit, adopt: adoptEdit, edits, isModified, isModifiedWith, hasDraft } = useComposerDraft({
+    sessionId: currentSessionId,
+    workingDirectory,
+    channel: draftChannel,
+    content,
+    apply: applyContent,
+    slot: historySlot,
+    handoff,
+  });
+  // Declared after the draft, so that it has the value by the time the text on screen stops standing in for it.
+  const [liveText] = useState(() => new LiveText());
+  useEffect(() => liveText.set(null), [liveText, value]);
+
+  // An edit made before the record's id of its send arrived moves under that id.
+  useEffect(() => {
+    for (const entry of sends) if (entry.recordId !== entry.key) adoptEdit(entry.key, entry.recordId);
+  }, [sends, edits, adoptEdit]);
+
+  // The history modal (#735). Only edits of sends the history still holds are counted.
+  const [isHistoryOpen, setHistoryOpen] = useState(false);
+  useEffect(() => setHistoryOpen(false), [currentSessionId]);
+  const otherEdits = useMemo(
+    () => sends.filter((entry) => entry.recordId !== historySlot?.key && edits[entry.recordId] !== undefined).length,
+    [sends, edits, historySlot?.key],
+  );
+  const openHistory = useCallback(() => {
+    disarmGuard();
+    setHistoryOpen(true);
+  }, [disarmGuard]);
+  const closeHistory = useCallback(() => {
+    setHistoryOpen(false);
+    // Deferred past the dialog's unmount, which would otherwise take the focus with it.
+    setTimeout(() => textareaRef.current?.focus(), 0);
+  }, [textareaRef]);
+  const recallFromHistory = useCallback(async (sendKey: string) => {
+    if (!(await contentOf(sendKey))) return;
+    const step = recall(sendKey);
+    if (step === null || step === 'guard' || step === 'reading') return;
+    showSlot(step.slot);
+    setCaretRequest({ at: 'end' });
+    closeHistory();
+  }, [contentOf, recall, showSlot, closeHistory]);
 
   const sendToSession = useSendToSession();
   const { sendMessage } = chatStream;
@@ -680,23 +671,14 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
         agentName: recipient.name,
         sessionDir: recipient.sessionDir,
       });
-      // The WRAPPED form goes to history, not the box's own text.
-      //
-      // Up walks two lists that have to look alike: prompts fetched from the
-      // transcript, which hold the tag, and prompts pushed here so Up finds the
-      // one just sent without a round trip. Pushing the bare text made those two
-      // disagree, so recalling a send that had just happened gave back a chip
-      // with no address behind it — the exact failure this tag exists to stop,
-      // reappearing for the one entry most likely to be recalled.
-      pushToHistory(shown);
       sendToSession(recipient.name, shown, body, { inputMode: mode, sendMessage });
       onChange('');
       setRecipient(null);
       setPathTokens([]);
+      resetHistory();
+      draftSent(historySlot !== null);
       return;
     }
-
-    pushToHistory(value);
 
     const delivery = onSubmit(undefined, mode, attachments.length > 0 ? attachments : undefined, invertFollowUp, queueWhileWaiting, { pathTokens });
     // The message is handed to the CLI before the question it replaces is closed: the CLI then finds the message
@@ -704,6 +686,9 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
     if (onQuestionReplied) Promise.resolve(delivery).finally(onQuestionReplied);
     clearAttachments();
     setPathTokens([]);
+    resetHistory();
+    // Last: after a send of the history, the draft that waited behind it comes back into the box.
+    draftSent(historySlot !== null);
   }, [
     disabled,
     value,
@@ -711,7 +696,9 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
     pageElements,
     pendingReplies,
     uploads,
-    pushToHistory,
+    resetHistory,
+    draftSent,
+    historySlot,
     recipient,
     sendToSession,
     mode,
@@ -918,14 +905,11 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
     const prev = prevChatInputSessionRef.current;
     prevChatInputSessionRef.current = currentSessionId;
     if (prev !== null && prev !== currentSessionId) {
-      clearAttachments();
-      setPathTokens([]);
-      // The prompt history resets itself on the session change — it owns its own
-      // fetch for the new session, so nothing to clear here.
+      // What the composer holds is the draft hook's to change.
       // 새 세션에서는 동의 배너를 다시 노출한다(미응답 상태인 경우).
       setConsentDismissed(false);
     }
-  }, [currentSessionId, clearAttachments]);
+  }, [currentSessionId]);
 
   // A session another IDE window's backend runs: this tab only watches it (its stream is the transcript), so nothing
   // here says it is working. The backends say so through the session activity, and the stop button follows it: the stop
@@ -998,18 +982,6 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
     return () => window.removeEventListener('keydown', handleEscKey);
   }, [isInterruptible, onStop, textareaRef, showSchedulePopover, confirmStopBackgroundTasks]);
 
-  // The prompt history is no longer built from the loaded transcript. It cannot
-  // be: pagination hands the webview the newest 50 *entries*, and entries are
-  // dominated by tool_result plumbing, so a resumed session's typed prompts are
-  // almost entirely outside what `messages` holds. useInputHistory asks the
-  // backend, which has the whole active chain, instead.
-
-  // Abandon history navigation once the composer is empty again, so the next Up
-  // starts from the most recent prompt rather than resuming mid-walk.
-  useEffect(() => {
-    if (value === '') resetHistory();
-  }, [value, resetHistory]);
-
   // A prompt picked in the library modal lands at the END of whatever is already
   // in the composer, not at the caret: while the modal was open the composer had
   // no visible caret, so "where the caret was" is not a place the user chose.
@@ -1070,6 +1042,8 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
     // Feed the IME truth: keyCode 229 means the IME is still processing this
     // keystroke, so mark composition active before any Enter decision runs.
     ime.noteKeyDown(e.nativeEvent.keyCode);
+    // Only the Up that follows the guard goes into the history; any other key stands it down.
+    if (e.key !== 'ArrowUp' || e.shiftKey) disarmGuard();
 
     // Write down which physical key this is, so a command typed with another
     // layout on can be read back as the keys that were pressed. A key only
@@ -1216,42 +1190,28 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
     // Enter that reaches here is one a composition is holding; leave it alone.
     if (isEnterKey) return;
 
-    if (e.key === 'ArrowUp' && !palette.showSlashCommands) {
-      // Moving comes first, and the history only gets the key once the caret has
-      // nowhere left to go: Up walks up the visual rows, then from the top row to
-      // the very first character, and only the press after that — one the
-      // composer would not act on at all — recalls the previous prompt.
-      //
-      // This used to scan the text for "\n" instead, which is the mistake
-      // utils/domSelection warns about: a soft-wrapped prompt is one run of text
-      // with no newline in it, so every visual row read as "the first line" and
-      // Up jumped to the previous prompt mid-paragraph.
-      if (!arrowRecallsHistory(e, e.currentTarget, CaretDirection.Backward)) return;
+    if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && !palette.showSlashCommands) {
+      // A held modifier asks for something else: Shift selects (#396), and the others are the system's own moves.
+      if (e.shiftKey || e.altKey || e.ctrlKey || e.metaKey || isIMEComposing) return;
+      const up = e.key === 'ArrowUp';
+      const el = e.currentTarget;
+      const move = historyArrow(up ? CaretDirection.Backward : CaretDirection.Forward, readCaret(el));
+      if (move === ArrowMove.Native) return;
+      if (move !== ArrowMove.Leave) {
+        e.preventDefault();
+        setCaretOffset(el, move === ArrowMove.ToStart ? 0 : caretLength(el));
+        return;
+      }
 
-      const historyValue = navigateUp(value);
-      if (historyValue === null) return;
+      const step = up ? navigateUp() : navigateDown();
+      if (step === null) return;
       e.preventDefault();
-      applyHistoryValue(historyValue);
-      // Land on the character the walk continues from, so holding Up keeps
-      // moving through prompts instead of re-crossing the one just recalled.
-      requestAnimationFrame(() => {
-        const target = textareaRef.current;
-        if (target) setCaretOffset(target, 0);
-      });
-    } else if (e.key === 'ArrowDown' && !palette.showSlashCommands) {
-      // The mirror of Up: the last character, not the last row.
-      if (!arrowRecallsHistory(e, e.currentTarget, CaretDirection.Forward)) return;
-
-      const historyValue = navigateDown();
-      if (historyValue === null) return;
-      e.preventDefault();
-      const applied = applyHistoryValue(historyValue);
-      requestAnimationFrame(() => {
-        const target = textareaRef.current;
-        if (target) setCaretOffset(target, applied.length);
-      });
+      if (step === 'guard' || step === 'reading') return;
+      showSlot(step.slot);
+      // Land on the edge the walk goes on from, so the same arrow keeps stepping through the sends.
+      setCaretRequest({ at: up ? 'start' : 'end' });
     }
-  }, [disabled, value, attachments.length, submitComposer, onSubmit, pushToHistory, navigateUp, navigateDown, onChange, palette, mention, promptLibrary, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, appSettings.composerSendShortcut, appSettings.composerSendShortcutCustom, appSettings.composerNewlineShortcut, appSettings.composerNewlineShortcutCustom, ime, handleRichChange, textareaRef, renameGhost]);
+  }, [disabled, value, attachments.length, submitComposer, onSubmit, navigateUp, navigateDown, disarmGuard, showSlot, onChange, palette, mention, promptLibrary, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, appSettings.composerSendShortcut, appSettings.composerSendShortcutCustom, appSettings.composerNewlineShortcut, appSettings.composerNewlineShortcutCustom, ime, handleRichChange, textareaRef, renameGhost]);
 
   // Wrap the attachment paste handler so files keep their dedicated path while
   // text goes through the browser's own editing pipeline.
@@ -1600,17 +1560,42 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
         <DragOverlay visible={isDragOver} />
         </>}
         editor={<>
+          <HistoryNotice
+            position={historyPosition}
+            modified={isModified}
+            guarded={isGuarded}
+            hasDraft={hasDraft}
+            liveText={liveText}
+            isModifiedWith={isModifiedWith}
+            otherEdits={otherEdits}
+            onOpenHistory={openHistory}
+          />
+          {isHistoryOpen && (
+            <HistoryModal
+              entries={sends}
+              edits={edits}
+              currentKey={historySlot?.key ?? null}
+              loadContent={contentOf}
+              pictureOf={(id) => composerDraftStore.picture(id)}
+              onRecall={(sendKey) => void recallFromHistory(sendKey)}
+              onRevert={revertEdit}
+              onClose={closeHistory}
+            />
+          )}
+          {/* A click puts the caret somewhere else, which stands the guard down too. */}
+          <div onMouseDown={disarmGuard}>
           <RichInput
             ref={textareaRef}
             ime={ime}
             value={value}
             onChange={handleRichChange}
+            onLiveText={liveText.set}
             onKeyDown={handleKeyDown}
             onKeyUp={(e) => {
               if (promptLibrary.isActive) promptLibrary.handleKeyUp(e);
             }}
             onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
+            onBlur={() => { setIsFocused(false); disarmGuard(); }}
             onPaste={handleRichPaste}
             placeholder={
               // While a turn runs, the placeholder names what this message will
@@ -1633,6 +1618,7 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
             ghostText={renameGhost}
             ghostHint={renameGhost ? t('chatInput.renameSuggestion.hint') : null}
           />
+          </div>
           {voiceEnabled && (
             <MicButton
               state={dictation.state}

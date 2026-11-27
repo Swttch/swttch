@@ -151,6 +151,22 @@ export function pointToTextOffset(
 // ---------------------------------------------------------------------------
 
 /**
+ * The plain-text offset where the selection begins, or the caret when nothing is selected. Returns 0 if there is no
+ * selection or the selection is outside `root`.
+ */
+export function getSelectionStartOffset(root: HTMLElement): number {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return 0;
+  const { startContainer, startOffset } = selection.getRangeAt(0);
+  if (!root.contains(startContainer)) return 0;
+  // Measured as a range, which also reads a point between the children of an element.
+  const before = document.createRange();
+  before.selectNodeContents(root);
+  before.setEnd(startContainer, startOffset);
+  return before.toString().length;
+}
+
+/**
  * Return the current caret (focus) position as a plain-text offset relative to
  * `root.textContent`. Returns 0 if there is no selection or the selection is
  * outside `root`.

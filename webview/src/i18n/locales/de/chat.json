@@ -145,6 +145,21 @@
       "steerMessage": "Aktuellen Lauf steuern...",
       "followUp": "{{send}} zum Senden, {{queue}} zum Einreihen für später"
     },
+    "history": {
+      "guard": "Noch einmal ↑ drücken, um den Verlauf zu durchsuchen",
+      "guardKeepsDraft": "Noch einmal ↑ drücken, um den Verlauf zu durchsuchen (dein Entwurf bleibt erhalten)",
+      "position": "Verlauf {{index}}/{{total}}",
+      "modified": "Bearbeitet",
+      "restoreDraft": "<kbd>↓</kbd>, um deinen Entwurf wiederherzustellen",
+      "edits": "Änderungen",
+      "modal": {
+        "title": "Verlauf",
+        "recall": "Ins Eingabefeld laden",
+        "revert": "Änderung verwerfen",
+        "unavailable": "Diese Nachricht konnte nicht gelesen werden.",
+        "empty": "(leer)"
+      }
+    },
     "renameSuggestion": {
       "hint": "(Tab zum Übernehmen)"
     },

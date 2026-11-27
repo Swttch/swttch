@@ -7,8 +7,7 @@ vi.mock('../loadSessionMessages', async () => {
 
 import {
   loadPromptHistory,
-  isTypedPrompt,
-  chainStampsPermissionMode,
+  collectPrompts,
   PROMPT_HISTORY_PAGE_BYTES,
 } from '../loadPromptHistory';
 import { loadPromptChain, type SessionMessage } from '../loadSessionMessages';
@@ -36,117 +35,20 @@ function prompt(uuid: string, text: string, extra: Record<string, unknown> = {})
   };
 }
 
-describe('isTypedPrompt', () => {
-  it('accepts a typed prompt, as string content or text blocks', () => {
-    expect(isTypedPrompt(prompt('u1', 'hello'), true)).toBe(true);
-    expect(isTypedPrompt({
-      type: 'user',
-      uuid: 'u2',
-      permissionMode: 'default',
-      message: { role: 'user', content: 'hello' },
-    }, true)).toBe(true);
+describe('collectPrompts', () => {
+  // What a send is, is tested with the shared rule (shared/__tests__/user-send.test.ts). Here: how the list uses it.
+  it('leaves out a subagent\'s own turns, which the chat never shows as the user\'s', () => {
+    expect(collectPrompts([prompt('u1', 'subagent turn', { isSidechain: true })])).toEqual([]);
   });
 
-  it('rejects the tool results that make up most user entries', () => {
-    // Measured: 1,281 of 1,345 user entries in one session were these.
-    expect(isTypedPrompt({
-      type: 'user',
-      uuid: 'u1',
-      message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 't1', content: 'ok' }] },
-    }, true)).toBe(false);
-  });
+  it('names a message typed during a turn and keeps the records it came from', () => {
+    const enqueue = { type: 'queue-operation', operation: 'enqueue', content: 'typed mid-turn', timestamp: 't1' };
+    const remove = { type: 'queue-operation', operation: 'remove', content: 'typed mid-turn', timestamp: 't2' };
 
-  it('rejects entries the CLI flags as its own', () => {
-    expect(isTypedPrompt(prompt('u1', 'skill preamble', { isMeta: true }), true)).toBe(false);
-    expect(isTypedPrompt(prompt('u2', 'continued from', { isCompactSummary: true }), true)).toBe(false);
-    expect(isTypedPrompt(prompt('u3', 'subagent turn', { isSidechain: true }), true)).toBe(false);
-    expect(isTypedPrompt(prompt('u4', 'expanded skill', { isSynthetic: true }), true)).toBe(false);
-    expect(isTypedPrompt(prompt('u5', 'expanded skill', { sourceToolUseID: 't1' }), true)).toBe(false);
-  });
+    const prompts = collectPrompts([prompt('u1', 'before'), enqueue, remove]);
 
-  it('rejects CLI-authored text that carries no flag at all', () => {
-    // These three carry nothing to distinguish them by field — measured across
-    // this repo's transcripts, so content is the only signal available.
-    const noFlags = { permissionMode: undefined };
-    expect(isTypedPrompt(prompt('u1', '<command-name>/model</command-name>', noFlags), false)).toBe(false);
-    expect(isTypedPrompt(prompt('u2', '<local-command-stdout>Set model</local-command-stdout>', noFlags), false)).toBe(false);
-    expect(isTypedPrompt(prompt('u3', '[Request interrupted by user for tool use]', noFlags), false)).toBe(false);
-  });
-
-  it('rejects the prompts the CLI writes into the conversation itself', () => {
-    // These DO carry permissionMode — the CLI stamps whatever it processes as a
-    // prompt, including its own — so only their text sets them apart. A
-    // task-notification showing up in the walk is what surfaced this.
-    expect(isTypedPrompt(prompt('u1', '<task-notification>\n<task-id>by3nh39lb</task-id>\n</task-notification>'), true)).toBe(false);
-    expect(isTypedPrompt(prompt('u2', '<ide_opened_file>src/App.tsx</ide_opened_file>'), true)).toBe(false);
-    expect(isTypedPrompt(prompt('u3', '<system-reminder>be brief</system-reminder>'), true)).toBe(false);
-  });
-
-  it('keeps what was typed after a reminder the app wrapped around it (#657)', () => {
-    // The reminder and the typed text sit in one entry, the reminder first. Dropping the entry for
-    // its opening block dropped the typed text with it.
-    expect(isTypedPrompt(prompt('u1', '<system-reminder>Linked sessions now</system-reminder>\n\nfix the rail'), true)).toBe(true);
-    expect(isTypedPrompt(prompt('u2', '<system-reminder>a</system-reminder>\n<system-reminder>b</system-reminder>'), true)).toBe(false);
-    expect(isTypedPrompt(prompt('u3', '<system-reminder>a</system-reminder>\n<task-notification>x</task-notification>'), true)).toBe(false);
-  });
-
-  it('keeps what was typed after the IDE context the plugin wrote ahead of it (#719)', () => {
-    // The plugin puts the open file or the selection in the same entry, in front of the typed words
-    // (`injectIdeContext`). Dropping the entry for the tag at its start left such a send out of the Up walk.
-    const file = '<ide_opened_file>The user opened the file src/a.ts in the IDE. This may or may not be related to the current task.</ide_opened_file>';
-    const selection = '<ide_selection>The user selected the lines 1 to 2 from src/a.ts:\nfoo\n\nThis may or may not be related to the current task.</ide_selection>';
-    expect(isTypedPrompt(prompt('u1', `${file}fix it`), true)).toBe(true);
-    expect(isTypedPrompt(prompt('u2', `${selection}fix it`), true)).toBe(true);
-    // An entry that is only the context has nothing typed in it.
-    expect(isTypedPrompt(prompt('u3', file), true)).toBe(false);
-    expect(isTypedPrompt(prompt('u4', selection), true)).toBe(false);
-  });
-
-  it('rejects the desktop app\'s note about sessions this one started', () => {
-    const note = '<system-reminder>The session "x" finished a turn.</system-reminder>\n<side-sessions-event>None of the sessions is working now.</side-sessions-event>';
-    expect(isTypedPrompt(prompt('u1', note), true)).toBe(false);
-  });
-
-  it('keeps a prompt that merely opens with markup the user typed', () => {
-    // The list is by name rather than "any tag" so typing about markup still
-    // counts as typing.
-    expect(isTypedPrompt(prompt('u1', '<div> is not closing, why?'), true)).toBe(true);
-  });
-
-  it('rejects an entry with no text once non-text blocks are ignored', () => {
-    expect(isTypedPrompt({
-      type: 'user',
-      uuid: 'u1',
-      permissionMode: 'default',
-      message: { role: 'user', content: [{ type: 'image', source: {} }] },
-    }, true)).toBe(false);
-    expect(isTypedPrompt(prompt('u2', '   '), true)).toBe(false);
-  });
-
-  it('requires permissionMode only when the chain stamps it', () => {
-    const unstamped: SessionMessage = {
-      type: 'user',
-      uuid: 'u1',
-      message: { role: 'user', content: [{ type: 'text', text: 'hello' }] },
-    };
-    // A chain that stamps the field: an entry without it was not a prompt.
-    expect(isTypedPrompt(unstamped, true)).toBe(false);
-    // A chain old enough not to stamp it must still yield its history rather
-    // than reporting an empty one.
-    expect(isTypedPrompt(unstamped, false)).toBe(true);
-  });
-});
-
-describe('chainStampsPermissionMode', () => {
-  it('is true when any user entry carries the field', () => {
-    expect(chainStampsPermissionMode([prompt('u1', 'a')])).toBe(true);
-  });
-
-  it('is false for a chain that never carries it', () => {
-    expect(chainStampsPermissionMode([
-      { type: 'user', uuid: 'u1', message: { role: 'user', content: 'a' } },
-      { type: 'assistant', uuid: 'a1', message: { role: 'assistant', content: [] } },
-    ])).toBe(false);
+    expect(prompts.map(p => p.key)).toEqual(['u1', 'queued-t2-1']);
+    expect(prompts[1].sources).toEqual([enqueue, remove]);
   });
 });
 
@@ -193,7 +95,7 @@ describe('loadPromptHistory', () => {
       prompt('u1', 'first'),
       { type: 'assistant', uuid: 'a1', message: { role: 'assistant', content: [{ type: 'text', text: 'reply' }] } },
       { type: 'user', uuid: 'u2', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 't', content: 'x' }] } },
-      prompt('u3', '[Request interrupted by user]', { permissionMode: undefined }),
+      prompt('u3', '[Request interrupted by user]'),
       prompt('u4', 'second'),
     ]);
 
@@ -262,9 +164,7 @@ describe('loadPromptHistory', () => {
 
     const page = await loadPromptHistory('/w', 's1');
 
-    expect(page.entries.map(e => (e.content as string) ?? textOf(e))).toEqual([
-      'before', 'typed mid-turn', 'after',
-    ]);
+    expect(collectPrompts(page.entries).map(p => textOf(p.entry))).toEqual(['before', 'typed mid-turn', 'after']);
   });
 
   it('rejects a CLI-authored prompt that reached the queue instead of a user entry', async () => {
@@ -284,7 +184,7 @@ describe('loadPromptHistory', () => {
 
     const page = await loadPromptHistory('/w', 's1');
 
-    expect(page.entries.map(e => (e.content as string) ?? textOf(e))).toEqual(['before', 'after']);
+    expect(collectPrompts(page.entries).map(p => textOf(p.entry))).toEqual(['before', 'after']);
   });
 
   it('keeps a queued prompt that merely opens with markup the user typed', async () => {
@@ -296,7 +196,7 @@ describe('loadPromptHistory', () => {
 
     const page = await loadPromptHistory('/w', 's1');
 
-    expect(page.entries.map(e => e.content as string)).toEqual(['<div> is not closing, why?']);
+    expect(collectPrompts(page.entries).map(p => textOf(p.entry))).toEqual(['<div> is not closing, why?']);
   });
 
   it('does not double-count a message the CLI also wrote a user entry for', async () => {
@@ -314,27 +214,21 @@ describe('loadPromptHistory', () => {
     expect(page.entries[0].uuid).toBe('u1');
   });
 
-  it('starts a page at an entry that has a uuid, since the cursor must be one', async () => {
-    // A queued prompt has no uuid to be the cursor. Left at the front of a page,
-    // it would be sent again with the next page and the client, which dedupes by
-    // uuid, would show it twice.
-    //
-    // Sized so the queued prompt lands exactly on the page boundary: 31 prompts
-    // in all, a 20-entry page starts at index 11, so the queued one is put there.
+  it('pages from a message typed during a turn, whose name is its cursor', async () => {
+    // Sized so the queued prompt lands exactly on the page boundary: 31 prompts in all, a 20-entry page starts at
+    // index 11, so the queued one is put there.
     const chain: SessionMessage[] = [];
     for (let i = 0; i < 11; i++) chain.push(prompt(`u${i}`, `prompt ${i}`));
-    chain.push({ type: 'queue-operation', operation: 'enqueue', content: 'queued' });
-    chain.push({ type: 'queue-operation', operation: 'remove', content: 'queued' });
+    chain.push({ type: 'queue-operation', operation: 'enqueue', content: 'queued', timestamp: 't' });
+    chain.push({ type: 'queue-operation', operation: 'remove', content: 'queued', timestamp: 't' });
     for (let i = 11; i < 30; i++) chain.push(prompt(`u${i}`, `prompt ${i}`));
     vi.mocked(loadPromptChain).mockResolvedValue(chain);
 
     const page = await loadPromptHistory('/w', 's1');
+    expect(page.oldestUuid).toBe('queued-t-1');
 
-    // Without the snap the page would begin on the queued entry, whose uuid is
-    // undefined, and the cursor would point past it.
-    expect(typeof page.entries[0].uuid).toBe('string');
-    expect(page.oldestUuid).toBe(page.entries[0].uuid);
-    expect(page.entries[0].uuid).toBe('u10');
+    const older = await loadPromptHistory('/w', 's1', page.oldestUuid);
+    expect(older.entries.map(e => e.uuid)).toEqual(Array.from({ length: 11 }, (_, i) => `u${i}`));
   });
 
   it('returns an empty page for a session with no prompts', async () => {

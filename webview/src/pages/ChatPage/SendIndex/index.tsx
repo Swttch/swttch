@@ -4,18 +4,19 @@ import { parseCrossSessionPreview } from '../message-renderers/CrossSessionMessa
 import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { CHAT_FOOTER_ID } from '../chatFooter';
 import { matchesShortcut, shouldToggleOnShortcut } from '@/utils/shortcut';
-import { isCliAuthoredText, type SessionSend } from '@/shared';
-import { getTextContent } from '@/types';
+import { type SessionSend } from '@/shared';
 import { useApi } from '@/contexts/ApiContext';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { useWorkingDir } from '@/contexts/WorkingDirContext';
 import type { SendSection } from '../groupIntoSendSections';
-import { composeSendText, sendText } from '../sendText';
+import { buildEntries } from '../sendList';
 import { SendIndexList } from './SendIndexList';
 import { scrollToSend } from './scrollToSend';
 import { ChatFollowContext } from '../ChatFollowContext';
 import { readingLineSectionKey } from './readingLine';
 import { useTopBar } from '@/contexts/TopBarContext';
+
+export { buildEntries };
 
 /**
  * How wide the rail is, in pixels.
@@ -175,97 +176,6 @@ const CARD_MAX_LINES = 4;
 /** Card width in pixels, wide enough for a sentence without covering the transcript. */
 const CARD_WIDTH = 280;
 
-/** One row of the rail: a send, and the text its preview card shows. */
-interface SendIndexEntry {
-  /** The section this send opens, which is also how a jump finds it. */
-  key: string;
-  text: string;
-  /**
-   * Whether the transcript currently holds this send.
-   *
-   * Never drawn. A tick looks the same either way on purpose: which sends we
-   * have fetched is our paging arrangement, not a property of the conversation,
-   * and a dimmer tick reads as a lesser or deleted message. It only decides
-   * whether a jump can scroll straight there or has to load first.
-   */
-  loaded: boolean;
-}
-
-/**
- * The rail's rows: every send in the session, in transcript order.
- *
- * Two sources, joined rather than merged entry by entry. The loaded transcript
- * is authoritative from its oldest send onward, and the backend index covers
- * everything before that.
- *
- * Splitting them at that boundary — instead of taking the union and deduping —
- * is what keeps sends the index cannot name. A message typed while a turn was
- * running exists only as queue bookkeeping with no uuid; the transcript rebuilds
- * it locally under a key only the transcript can produce, so it appears in the
- * loaded half and nowhere else. A union keyed on uuid would drop it.
- */
-export function buildEntries(
-  sessionSends: SessionSend[],
-  loadedSections: SendSection[],
-): SendIndexEntry[] {
-  const loaded = loadedSections
-    // A section can open with something the CLI wrote (a finished-task note, an interrupt marker) that the
-    // backend index leaves out; drawing it here would put a tick on the rail that vanishes once the same
-    // send is read from the index instead (#657).
-    .filter(section => section.head !== null && !isCliAuthoredText(getTextContent(section.head)))
-    .map(section => ({ key: section.key, text: sendText(section.head!), loaded: true }));
-
-  // Nothing loaded yet: the index is all there is to draw.
-  if (loaded.length === 0) {
-    return sessionSends.map(send => ({ key: send.uuid, text: composeSendText(send.preview), loaded: false }));
-  }
-
-  /*
-    Where the loaded run begins inside the index: the first loaded send the index
-    knows. The loaded run can open with sends the index has no entry for (a send
-    typed while a turn was running, which only the transcript can name), so
-    looking up only its very first send would miss and throw the whole index
-    away, leaving a rail that grows by one tick per page scrolled (#657).
-
-    No send found at all means the index is stale against the transcript — a
-    rewind or an edit rebuilt the chain under it. Showing the loaded half alone
-    is the honest answer there: it is the half we can still vouch for, and the
-    query refetches on its own.
-  */
-  const indexed = new Set(sessionSends.map(send => send.uuid));
-  const anchor = loaded.find(entry => indexed.has(entry.key));
-  if (!anchor) return loaded;
-  const boundary = sessionSends.findIndex(send => send.uuid === anchor.key);
-
-  const older = sessionSends
-    .slice(0, boundary)
-    .map(send => ({ key: send.uuid, text: composeSendText(send.preview), loaded: false }));
-
-  // What the index holds before the anchor comes first, minus anything the transcript already has.
-  const loadedKeys = new Set(loaded.map(entry => entry.key));
-  const entries = older.filter(entry => !loadedKeys.has(entry.key));
-
-  /*
-    The loaded run is not always one stretch: after a jump back it holds the pages around the send jumped to and
-    the newest ones, with a gap between. The sends of the index that stand in a gap are put back, in front of the
-    loaded send that follows them, or the rail loses their ticks and a tick leads to another send (#747). Nothing
-    the index holds after the last loaded send it knows is added: the newest pages are always loaded, so what the
-    index has beyond them is not in this transcript.
-  */
-  const position = new Map(sessionSends.map((send, at) => [send.uuid, at]));
-  let next = boundary;
-  for (const entry of loaded) {
-    const at = position.get(entry.key);
-    if (at !== undefined) {
-      for (const send of sessionSends.slice(next, at)) {
-        if (!loadedKeys.has(send.uuid)) entries.push({ key: send.uuid, text: composeSendText(send.preview), loaded: false });
-      }
-      next = Math.max(next, at + 1);
-    }
-    entries.push(entry);
-  }
-  return entries;
-}
 
 /**
  * Default keystrokes, until the settings rows that hold them exist.
@@ -403,9 +313,13 @@ export function SendIndex(props: Props) {
     was asked before that run is carried in from the index instead; see
     carriedSend.
   */
+  const { t } = useTranslation('chatTools');
   const entries = useMemo(
-    () => buildEntries(sessionSends, sections),
-    [sessionSends, sections],
+    // A send of pictures alone has no words to show: its card and its row say what it is.
+    () => buildEntries(sessionSends, sections).map(entry =>
+      entry.text || entry.images === 0 ? entry : { ...entry, text: t('sendIndex.imageOnly') },
+    ),
+    [sessionSends, sections, t],
   );
 
   /*

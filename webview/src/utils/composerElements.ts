@@ -50,6 +50,12 @@ export function restorePendingElements(entries: readonly PendingElement[]): void
   if (back.length > 0) setPending([...back, ...pending]);
 }
 
+/** Puts exactly these chips in the row, in place of whatever is there. */
+export function replacePendingElements(entries: readonly PendingElement[]): void {
+  if (pending.length === 0 && entries.length === 0) return;
+  setPending([...entries]);
+}
+
 /** Takes one chip out of the row. */
 export function removePendingElement(token: string): void {
   setPending(pending.filter((entry) => entry.token !== token));

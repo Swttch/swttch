@@ -348,7 +348,8 @@
     }
   },
   "sendIndex": {
-    "holdHint": "길게 눌러 전체 목록 보기"
+    "holdHint": "길게 눌러 전체 목록 보기",
+    "imageOnly": "이미지"
   },
   "sideSessionsEvent": {
     "title": "시작한 세션에서 온 알림"

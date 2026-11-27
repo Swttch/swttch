@@ -54,6 +54,8 @@ export class LoadedMessageDto {
   parentUuid?: string | null;
   isSidechain?: boolean;
   isMeta?: boolean;
+  // The CLI sets this on an entry it writes beside a turn for the model, such as the request to resume a cut answer.
+  turnCompanion?: boolean;
 
   @Type(() => MessageDto)
   message?: MessageDto;
@@ -118,6 +120,10 @@ export class LoadedMessageDto {
   // turn ends. Kept beside `uuid` rather than replacing it so the React key and
   // the section identity do not change under the user mid-session.
   cliUuid?: string;
+
+  // A send made on this screen: the id handed to the backend with it, which the CLI records it under. The screen's own
+  // `uuid` is a local one, so this is what ties the bubble to the saved message before and after a reload (#735).
+  sentUuid?: string;
 
   // UI-only: the id a streamed reply was first drawn under, which the chat keeps as
   // its React key. The CLI writes each finished content block of a response as an

@@ -148,7 +148,7 @@ export interface UseChatStreamOptions {
    * `tool_result` after the send is the moment: the bubble belongs right after it, and what Claude writes
    * next belongs below it — the place a reload draws it. Returns the messages (and forgets them), or nothing.
    */
-  takeSentWhileRunning?: () => Array<{ content: string; context?: Context[]; attachments?: Attachment[] }>;
+  takeSentWhileRunning?: () => Array<{ uuid?: string; content: string; context?: Context[]; attachments?: Attachment[] }>;
   /** 에러 발생 시 콜백 */
   onError?: (error: Error) => void;
   /** 시스템 메시지 수신 시 콜백 */
@@ -182,9 +182,10 @@ export interface UseChatStreamReturn {
   authDiagnosis: { envApiKeys: string[]; message: string } | null;
 
   // 로컬 메시지 조작 (전송은 하지 않음)
-  addUserMessage: (content: string, context?: Context[], attachments?: Attachment[]) => void;
+  /** `sentUuid` is the id the message is sent under. */
+  addUserMessage: (content: string, context?: Context[], attachments?: Attachment[], sentUuid?: string) => void;
   /** Put a message sent while a turn was running into the chat, without beginning a turn. */
-  appendSentMessage: (content: string, context?: Context[], attachments?: Attachment[]) => void;
+  appendSentMessage: (content: string, context?: Context[], attachments?: Attachment[], sentUuid?: string) => void;
   /**
    * Put a message handed to the backend of another IDE window into the chat, without beginning a turn: the turn that
    * answers it is that backend's, and this screen only reads it from the transcript. The bubble stays, through the
@@ -712,7 +713,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
   }, [bridge.isConnected, isStreaming, endStreaming]);
 
   // The message a send puts in the chat, built from what was typed and attached.
-  const buildUserMessage = useCallback((content: string, context?: Context[], attachments?: Attachment[]): LoadedMessageDto => {
+  const buildUserMessage = useCallback((content: string, context?: Context[], attachments?: Attachment[], sentUuid?: string): LoadedMessageDto => {
     // 파일/폴더 첨부를 context로 변환
     const fileContexts: Context[] = (attachments ?? [])
       .filter(att => !isImageAttachment(att))
@@ -752,6 +753,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     const userMessage: LoadedMessageDto = {
       type: LoadedMessageType.User,
       uuid: generateMessageId(),
+      sentUuid,
       timestamp: new Date().toISOString(),
       message: { role: MessageRole.User, content: messageContent } as any,
       context: allContexts,
@@ -766,9 +768,9 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     setTurnStartedAt(Date.now());
   }, []);
 
-  const appendSentMessage = useCallback((content: string, context?: Context[], attachments?: Attachment[]) => {
+  const appendSentMessage = useCallback((content: string, context?: Context[], attachments?: Attachment[], sentUuid?: string) => {
     if (!content.trim() && (!attachments || attachments.length === 0)) return;
-    appendMessage(buildUserMessage(content, context, attachments), true);
+    appendMessage(buildUserMessage(content, context, attachments, sentUuid), true);
   }, [appendMessage, buildUserMessage]);
 
   // Messages this screen put in the chat for another backend's session that the transcript does not hold yet, by the
@@ -795,7 +797,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
   dropUnconfirmedEchoesRef.current = dropUnconfirmedEchoes;
 
   // addUserMessage - 로컬 상태 조작만 (bridge.send 하지 않음)
-  const addUserMessage = useCallback((content: string, context?: Context[], attachments?: Attachment[]) => {
+  const addUserMessage = useCallback((content: string, context?: Context[], attachments?: Attachment[], sentUuid?: string) => {
     if (!content.trim() && (!attachments || attachments.length === 0)) return;
 
     setTurnOutputTokens(0);
@@ -803,7 +805,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     setError(null);
     setAuthDiagnosis(null);
 
-    const userMessage = buildUserMessage(content, context, attachments);
+    const userMessage = buildUserMessage(content, context, attachments, sentUuid);
     appendMessage(userMessage, true);
 
     // 스트리밍 중이면 사용자 메시지만 추가 (assistant placeholder 생성 스킵).
@@ -1033,10 +1035,12 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
       setMessages(prev => prev.slice(0, messageIndex));
       // Re-add user message and trigger send
       const content = getTextContent(userMessage);
-      addUserMessage(content, userMessage.context);
+      const messageUuid = crypto.randomUUID();
+      addUserMessage(content, userMessage.context, undefined, messageUuid);
       // Also send via bridge
       bridge.send(MessageType.SEND_MESSAGE, {
         content,
+        messageUuid,
         context: userMessage.context || [],
       }).catch((err) => {
         console.error('[useChatStream] Error retrying message:', err);
@@ -1787,7 +1791,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
             const taken = takeSentWhileRunningRef.current?.() ?? [];
             if (taken.length > 0) {
               sealStreamingAssistant();
-              taken.forEach(sent => appendMessage(buildUserMessage(sent.content, sent.context, sent.attachments), true));
+              taken.forEach(sent => appendMessage(buildUserMessage(sent.content, sent.context, sent.attachments, sent.uuid), true));
             }
           }
         }
@@ -1857,6 +1861,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
       const userMessage: LoadedMessageDto = {
         type: LoadedMessageType.User,
         uuid: generateMessageId(),
+        sentUuid: message.payload?.messageUuid as string | undefined,
         timestamp: new Date().toISOString(),
         message: { role: MessageRole.User, content } as any,
       };

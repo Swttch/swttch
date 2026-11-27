@@ -24,7 +24,7 @@ interface Props {
 }
 
 /**
- * The microphone button, sitting inside the input box at its top right.
+ * The microphone button, sitting inside the input box at the end side, halfway down the text area.
  *
  * Tap **or** hold — the user does not choose a mode. A quick press toggles
  * recording on and leaves it on; pressing and holding records only while held.
@@ -75,7 +75,7 @@ export function MicButton(props: Props) {
     //
     // end-2 rather than end-0: the input's own horizontal padding is 12px, so
     // pinning to the container edge would sit the button on the border.
-    <div className="absolute top-[5px] end-2 z-20 group/mic">
+    <div className="absolute top-1/2 -translate-y-1/2 end-2 z-20 group/mic">
       {/* Dimmed but NOT disabled when dictation is unavailable, which is the
           one case here that is neither "works" nor "give up".
 

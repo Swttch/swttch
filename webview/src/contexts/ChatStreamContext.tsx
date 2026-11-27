@@ -1,7 +1,6 @@
 import { expandElementTokens, getPendingElements, restorePendingElements, type PendingElement } from '@/utils/composerElements';
 import { expandReplyCards, getPendingReplies, restorePendingReplies, type PendingReply } from '@/utils/composerReplies';
 import { createContext, useContext, ReactNode, useEffect, useCallback, useState, useRef, useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
 import { useChatStream } from '../hooks/useChatStream';
 import { useDiffs } from '../hooks/useDiffs';
 import { useTools } from '../hooks/useTools';
@@ -9,7 +8,7 @@ import { useBridgeContext } from './BridgeContext';
 import { takePendingTranscriptView } from '@/utils/pendingTranscriptView';
 import { findLastRecordedRun } from '@/utils/lastRecordedRun';
 import { SettingKey } from '@/types/settings';
-import { useSessionContext, type SessionHandoff } from './SessionContext';
+import { useSessionContext } from './SessionContext';
 import { useOptionalAllowAllCommands } from './AllowAllCommandsContext';
 import { useCliConfig } from './CliConfigContext';
 import { useClaudeSettings } from './ClaudeSettingsContext';
@@ -102,6 +101,8 @@ export interface HeldMessage {
   attachments?: Attachment[];
   /** Already handed to the CLI (at an allow), still drawn here until the call it waited for has finished. */
   released?: boolean;
+  /** The id it was handed to the CLI under, once released. */
+  sentUuid?: string;
 }
 
 interface ChatStreamContextType {
@@ -487,31 +488,11 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     }
   }, [chatStream.systemInit, session.syncEffectiveMode, session.notifyAutoFallback]);
 
-  // The fork note a send action left on the navigation to this new session
-  // (issue #356). Read through a ref so `sendMessage` does not have to list the
-  // location among its dependencies and be rebuilt on every navigation.
-  const location = useLocation();
-  const forkHandoff = location.state as SessionHandoff | null;
 
   // 모든 세션별 상태를 한 번에 리셋하는 통합 함수
   const resetForSessionSwitch = useCallback(() => {
     chatStreamClearMessages();
     chatStreamResetStreamState();
-    // Restore draft input from cache (tab move/split restoration)
-    let draft: string | null = null;
-    try {
-      draft = session.currentSessionId
-        ? localStorage.getItem(`claude-gui:draft:${session.currentSessionId}`)
-        : null;
-    } catch {
-      // localStorage may be unavailable in some environments (e.g., tests)
-    }
-    // A fork excludes the send it branched from, so that text is handed over and
-    // put back in the composer — otherwise the user would have to retype from
-    // memory the message they opened the fork to reword. It wins over a stored
-    // draft: they asked for this text a moment ago, and a session that does not
-    // exist yet has no draft of its own.
-    setInput(forkHandoff?.promptText || draft || '');
     setIsThinkingExpanded(false);
     setSessionModel(null);
     tools.clearToolUses();
@@ -520,7 +501,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     // The queue belongs to the session being left, not the one arriving — the
     // GET_QUEUED_MESSAGES fetch below fills in whatever the new session already has.
     setQueuedMessages([]);
-  }, [chatStreamClearMessages, chatStreamResetStreamState, setInput, tools.clearToolUses, diffs.clearDiffs, session.currentSessionId, forkHandoff?.promptText]);
+  }, [chatStreamClearMessages, chatStreamResetStreamState, tools.clearToolUses, diffs.clearDiffs]);
 
   // resetForSessionSwitch is called directly by SessionLoader
   // when currentSessionId changes (URL-driven reactive pattern)
@@ -682,17 +663,6 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   }, [bridge.isConnected, bridge, session.currentSessionId]);
 
   // sendMessage: add to local state + send to backend (or queue if streaming)
-  /*
-   * Put the forked send back in the composer.
-   *
-   * Separate from the session-switch reset even though that also seeds the
-   * composer: the reset runs off `currentSessionId`, and a fork changes the id
-   * and the navigation state in the same commit, so which of the two the reset
-   * sees is a race. This runs off the state alone and wins it either way.
-   */
-  useEffect(() => {
-    if (forkHandoff?.promptText) setInput(forkHandoff.promptText);
-  }, [forkHandoff?.promptText, setInput]);
 
   // Sessions whose CLI the backend of another IDE window holds: this screen does not run their turns. Read when a
   // message is sent, so it is kept in a ref: a change of it draws nothing.
@@ -731,13 +701,13 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     const pending = sentWhileRunningRef.current;
     if (pending.length === 0) return;
     setSentWhileRunning([]);
-    pending.forEach((sent) => appendSentMessage(sent.content, sent.context, sent.attachments));
+    pending.forEach((sent) => appendSentMessage(sent.content, sent.context, sent.attachments, sent.uuid));
   }, [chatStream.isStreaming, appendSentMessage]);
 
   const sendMessage = useCallback(
-    (content: string, inputMode: InputMode, context?: Context[], attachments?: Attachment[], accountId?: string, inChatNow = false, skipEcho = false, restore?: HeldRestore) => {
-      // The CLI records the message under this id, which is how a request about it (send now, cancel) names it.
-      const messageUuid = crypto.randomUUID();
+    (content: string, inputMode: InputMode, context?: Context[], attachments?: Attachment[], accountId?: string, inChatNow = false, skipEcho = false, restore?: HeldRestore, messageUuid: string = crypto.randomUUID()) => {
+      // The CLI records the message under `messageUuid`, which is how a request about it (send now, cancel) names it
+      // and how the bubble is tied to the saved message.
       // Prepend the IDE-context tag (open file / selection) when the toggle is on
       // and a selection is available. parseUserContent() turns the tag back into a
       // context chip in the UI bubble, while the CLI sees the same hint. Gated on
@@ -782,13 +752,13 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
       } else if (inChatNow && isStreamingRef.current && !isNewSession) {
         // Written under a permission card and handed over with its answer: it is read before the turn goes on, so
         // it stands here, above whatever the turn writes next, without beginning a turn of its own.
-        appendSentMessage(content, context, attachments);
+        appendSentMessage(content, context, attachments, messageUuid);
       } else if (isStreamingRef.current && !isNewSession) {
         // The ref moves with the state, not after the next render: a tool call can finish before this one.
         sentWhileRunningRef.current = [...sentWhileRunningRef.current, { id: crypto.randomUUID(), uuid: messageUuid, restore, content, context, attachments }];
         setSentWhileRunning(sentWhileRunningRef.current);
       } else {
-        addUserMessage(content, context, attachments);
+        addUserMessage(content, context, attachments, messageUuid);
       }
 
       // 강등 감지를 위해 이번에 요청한 모드를 기록한다(systemInit 수신 시 비교).
@@ -1081,7 +1051,9 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
       );
       // In order, each one handed over before the next: the CLI reads its input in the order it arrives.
       for (const held of all) {
-        await sendMessage(held.content, held.inputMode, undefined, held.attachments, undefined, true, keepShown);
+        const sentUuid = crypto.randomUUID();
+        if (keepShown) setHeldMessages((rest) => rest.map((other) => (other.id === held.id ? { ...other, sentUuid } : other)));
+        await sendMessage(held.content, held.inputMode, undefined, held.attachments, undefined, true, keepShown, undefined, sentUuid);
       }
     },
     [sendMessage]
@@ -1091,7 +1063,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     const released = heldMessagesRef.current.filter((held) => held.released);
     if (released.length === 0) return;
     setHeldMessages((rest) => rest.filter((held) => !held.released));
-    released.forEach((held) => appendSentMessage(held.content, undefined, held.attachments));
+    released.forEach((held) => appendSentMessage(held.content, undefined, held.attachments, held.sentUuid));
   }, [appendSentMessage]);
 
   // handleSubmit: convenience wrapper for form submission.

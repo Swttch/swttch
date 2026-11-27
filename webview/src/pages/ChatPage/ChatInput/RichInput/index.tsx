@@ -11,8 +11,8 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type UIEvent as ReactUIEvent,
 } from 'react';
-import { setCaretOffset } from '@/utils/domSelection';
-import { splitIntoSegments } from './segments';
+import { getSelectionStartOffset, setCaretOffset, type TextRange } from '@/utils/domSelection';
+import { splitAtRange, splitIntoSegments } from './segments';
 import { useIMEComposition, type IMEComposition } from './useIMEComposition';
 import { insertNewlineAtCursor } from './insertNewlineAtCursor';
 import { typedKeys } from '@/commandPalette/typedKeys';
@@ -56,6 +56,8 @@ interface Props {
    * Ignored when there is no `ghostText`.
    */
   ghostHint?: string | null;
+  /** The text in the box after every edit, composing text included, which `onChange` waits out. */
+  onLiveText?: (text: string) => void;
   /**
    * IME composition state, optionally owned by the parent (ChatInput) so its
    * keydown handler and this editor agree on a single source of truth. Under
@@ -125,6 +127,7 @@ export const RichInput = forwardRef<HTMLDivElement, Props>((props: Props, ref) =
     interimRange = null,
     ghostText = null,
     ghostHint = null,
+    onLiveText,
     ime: imeProp,
   } = props;
 
@@ -144,6 +147,11 @@ export const RichInput = forwardRef<HTMLDivElement, Props>((props: Props, ref) =
   // editable glyphs would vanish during composition and the visible text would
   // appear to lag one character behind.
   const [displayText, setDisplayText] = useState(value);
+
+  // The characters an IME is composing, underlined in the mirror. The browser's own underline takes the colour of the
+  // editable layer's glyphs, which are transparent, so it cannot be seen.
+  const [composing, setComposing] = useState<TextRange | null>(null);
+  const compositionStartRef = useRef(0);
 
   // Expose the editable div to the parent (focus / domSelection utilities) while
   // keeping our own internal ref for sync work.
@@ -176,6 +184,7 @@ export const RichInput = forwardRef<HTMLDivElement, Props>((props: Props, ref) =
     // External value changes (submit/clear/Alt+K insert) must repaint the
     // mirror to match the freshly written DOM.
     setDisplayText(value);
+    setComposing(null);
 
     // Only reposition the caret when this element is focused, so background
     // (programmatic) updates don't steal the selection from elsewhere.
@@ -189,6 +198,7 @@ export const RichInput = forwardRef<HTMLDivElement, Props>((props: Props, ref) =
       const text = e.currentTarget.textContent ?? '';
       // Always repaint the mirror in real time, including mid-composition.
       setDisplayText(text);
+      onLiveText?.(text);
       // Report the input BEFORE the composing guard below reads the flag: an
       // edit that belongs to no composition is what lowers a flag an IME left
       // stuck by never firing compositionend (issue #403). Reporting after the
@@ -205,9 +215,11 @@ export const RichInput = forwardRef<HTMLDivElement, Props>((props: Props, ref) =
       // reporting to the parent until compositionend to avoid emitting partial
       // glyphs. The mirror still updates above so the user sees live feedback.
       if (isComposingRef.current) return;
+      // Also ends the underline of a composition an IME left without a compositionend (issue #403).
+      setComposing(null);
       onChange(text);
     },
-    [onChange, ime, isComposingRef],
+    [onChange, onLiveText, ime, isComposingRef],
   );
 
   // beforeinput safety net (issue #215): under JCEF a non-English-layout Enter
@@ -229,8 +241,9 @@ export const RichInput = forwardRef<HTMLDivElement, Props>((props: Props, ref) =
     [onChange, isComposingRef],
   );
 
-  const handleCompositionStart = useCallback(() => {
+  const handleCompositionStart = useCallback((e: ReactCompositionEvent<HTMLDivElement>) => {
     ime.handleCompositionStart();
+    compositionStartRef.current = getSelectionStartOffset(e.currentTarget);
   }, [ime]);
 
   const handleCompositionUpdate = useCallback(
@@ -238,6 +251,8 @@ export const RichInput = forwardRef<HTMLDivElement, Props>((props: Props, ref) =
       // Repaint the mirror on every composition update so the in-progress
       // glyphs track the caret without lagging a character behind.
       setDisplayText(e.currentTarget.textContent ?? '');
+      const start = compositionStartRef.current;
+      setComposing({ start, end: start + (e.data ?? '').length });
     },
     [],
   );
@@ -247,6 +262,7 @@ export const RichInput = forwardRef<HTMLDivElement, Props>((props: Props, ref) =
       ime.handleCompositionEnd();
       const text = e.currentTarget.textContent ?? '';
       setDisplayText(text);
+      setComposing(null);
       onChange(text);
     },
     [onChange, ime],
@@ -275,6 +291,22 @@ export const RichInput = forwardRef<HTMLDivElement, Props>((props: Props, ref) =
   // zero-content newline so the mirror's height matches the editable div.
   const trailingNewline = displayText.endsWith('\n');
 
+  /** A run of the mirror starting at offset `from`, with its composed characters underlined. */
+  const paint = (text: string, from: number) => {
+    const [before, composed, after] = splitAtRange(text, from, composing);
+    if (!composed) return text;
+    return (
+      <>
+        {before}
+        <span data-testid="richInputComposing" className="underline decoration-2 underline-offset-4 [text-decoration-skip-ink:none]">
+          {composed}
+        </span>
+        {after}
+      </>
+    );
+  };
+  let painted = 0;
+
   return (
     <div className="relative">
       {/* Mirror overlay — paints visible text + chips behind the editable div. */}
@@ -300,15 +332,15 @@ export const RichInput = forwardRef<HTMLDivElement, Props>((props: Props, ref) =
             {displayText.slice(interim.end)}
           </>
         ) : (
-          segments.map((seg, i) =>
-            seg.isToken ? (
-              <span key={i} className="richInputChip">
-                {seg.text}
+          segments.map((seg, i) => {
+            const from = painted;
+            painted += seg.text.length;
+            return (
+              <span key={i} className={seg.isToken ? 'richInputChip' : undefined}>
+                {paint(seg.text, from)}
               </span>
-            ) : (
-              <span key={i}>{seg.text}</span>
-            ),
-          )
+            );
+          })
         )}
         {ghostText && (
           <>

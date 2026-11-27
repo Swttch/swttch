@@ -145,6 +145,21 @@
       "steerMessage": "Steer the current run...",
       "followUp": "{{send}} to send, {{queue}} to queue for later"
     },
+    "history": {
+      "guard": "Press Up again to browse history",
+      "guardKeepsDraft": "Press Up again to browse history (your draft is kept)",
+      "position": "History {{index}}/{{total}}",
+      "modified": "Edited",
+      "restoreDraft": "<kbd>↓</kbd> to restore your draft",
+      "edits": "Edits",
+      "modal": {
+        "title": "History",
+        "recall": "Load into input",
+        "revert": "Discard edit",
+        "unavailable": "This message could not be read.",
+        "empty": "(empty)"
+      }
+    },
     "renameSuggestion": {
       "hint": "(Tab to accept)"
     },

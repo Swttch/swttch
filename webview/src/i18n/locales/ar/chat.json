@@ -145,6 +145,21 @@
       "steerMessage": "توجيه العملية الحالية...",
       "followUp": "{{send}} للإرسال، {{queue}} للإضافة إلى قائمة الانتظار وإرسالها لاحقًا"
     },
+    "history": {
+      "guard": "اضغط ↑ مرة أخرى لتصفح السجل",
+      "guardKeepsDraft": "اضغط ↑ مرة أخرى لتصفح السجل (ستبقى مسودتك)",
+      "position": "السجل {{index}}/{{total}}",
+      "modified": "معدّل",
+      "restoreDraft": "<kbd>↓</kbd> لاستعادة المسودة",
+      "edits": "التعديلات",
+      "modal": {
+        "title": "السجل",
+        "recall": "تحميل في حقل الإدخال",
+        "revert": "تجاهل التعديل",
+        "unavailable": "تعذّرت قراءة هذه الرسالة.",
+        "empty": "(فارغ)"
+      }
+    },
     "renameSuggestion": {
       "hint": "(Tab للإكمال)"
     },

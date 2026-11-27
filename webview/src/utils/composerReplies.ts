@@ -54,6 +54,14 @@ export function restorePendingReplies(entries: readonly PendingReply[]): void {
   if (back.length > 0) setPending([...back, ...pending]);
 }
 
+/** Puts exactly these cards in the row, in place of whatever is there (a draft or a recalled send put in the box). */
+export function replacePendingReplies(entries: readonly PendingReply[]): void {
+  if (pending.length === 0 && entries.length === 0) return;
+  // Cards made from here on must not take an id one of these has.
+  for (const entry of entries) counter = Math.max(counter, Number(/^reply-(\d+)$/.exec(entry.id)?.[1] ?? 0));
+  setPending([...entries]);
+}
+
 export function removePendingReply(id: string): void {
   setPending(pending.filter((entry) => entry.id !== id));
 }

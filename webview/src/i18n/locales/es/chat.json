@@ -145,6 +145,21 @@
       "steerMessage": "Ajustar la ejecución actual...",
       "followUp": "{{send}} para enviar, {{queue}} para añadir a la cola"
     },
+    "history": {
+      "guard": "Pulsa ↑ otra vez para ver el historial",
+      "guardKeepsDraft": "Pulsa ↑ otra vez para ver el historial (tu borrador se conserva)",
+      "position": "Historial {{index}}/{{total}}",
+      "modified": "Editado",
+      "restoreDraft": "<kbd>↓</kbd> para restaurar tu borrador",
+      "edits": "Cambios",
+      "modal": {
+        "title": "Historial",
+        "recall": "Cargar en el campo",
+        "revert": "Descartar cambios",
+        "unavailable": "No se pudo leer este mensaje.",
+        "empty": "(vacío)"
+      }
+    },
     "renameSuggestion": {
       "hint": "(Tab para completar)"
     },
