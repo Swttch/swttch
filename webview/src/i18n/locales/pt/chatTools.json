@@ -352,7 +352,8 @@
     }
   },
   "sendIndex": {
-    "holdHint": "Mantenha pressionado para ver todos os prompts"
+    "holdHint": "Mantenha pressionado para ver todos os prompts",
+    "imageOnly": "Imagem"
   },
   "sideSessionsEvent": {
     "title": "Novidades das sessões iniciadas"

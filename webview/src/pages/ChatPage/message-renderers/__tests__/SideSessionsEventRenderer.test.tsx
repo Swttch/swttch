@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseSideSessionsEvent } from '../SideSessionsEventRenderer';
-import { isSideSessionsEventText } from '../../../../shared';
+import { isUserSendEntry } from '../../../../shared';
 
 const note = '<system-reminder>\nThe session "a" finished a turn.\n</system-reminder>\n<system-reminder>\nThe session "b" is working.\n</system-reminder>\n<side-sessions-event>None of the sessions is working now.</side-sessions-event>';
 
@@ -21,8 +21,9 @@ describe('parseSideSessionsEvent', () => {
     expect(parseSideSessionsEvent('what is <side-sessions-event> for?')).toBeUndefined();
   });
 
-  it('is recognised as not typed by the shared check', () => {
-    expect(isSideSessionsEventText(note)).toBe(true);
-    expect(isSideSessionsEventText('hello')).toBe(false);
+  it('is not a send of the user\'s', () => {
+    const entry = (content: string) => ({ type: 'user', message: { role: 'user', content } });
+    expect(isUserSendEntry(entry(note))).toBe(false);
+    expect(isUserSendEntry(entry('hello'))).toBe(true);
   });
 });

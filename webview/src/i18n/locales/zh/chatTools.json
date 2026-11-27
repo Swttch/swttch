@@ -348,7 +348,8 @@
     }
   },
   "sendIndex": {
-    "holdHint": "长按查看全部提问"
+    "holdHint": "长按查看全部提问",
+    "imageOnly": "图片"
   },
   "sideSessionsEvent": {
     "title": "已启动会话的通知"

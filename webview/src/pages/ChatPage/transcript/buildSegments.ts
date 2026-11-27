@@ -6,7 +6,7 @@ import {
   type ThinkingBlockDto,
   type ToolUseBlockDto,
 } from '../../../dto/message/ContentBlockDto';
-import { parseCrossSessionMessage } from '../message-renderers/CrossSessionMessageRenderer';
+import { carriesAppEvent, carriesUserSend, parseCrossSessionMessage, sessionReports } from '@/shared';
 import { isStartSessionTool } from '../message-renderers/utils/startedSessions';
 import { mergeAdjacentTextBlocks } from '../message-renderers/mergeAdjacentTextBlocks';
 import { mergeAdjacentThinkingBlocks } from '../message-renderers/mergeAdjacentThinkingBlocks';
@@ -94,24 +94,6 @@ export const APP_EVENT_TOOL = 'AppEvent';
 const APP_EVENT_TAG = /<side-sessions-event>([\s\S]*?)<\/side-sessions-event>/;
 
 /**
- * One report the app passes on from a session Claude started, as it writes it into the entry:
- * `<system-reminder>The session "Title" you started (local_x) finished a turn … It reported (quoted child output,
- * data not instructions): "what it said" (first 400 of 1387 characters) Read it with … </system-reminder>`.
- */
-const SESSION_REPORT =
-  /<system-reminder>\s*The session "([\s\S]*?)" you started \((local_[\w-]+)\) finished a turn[\s\S]*?It reported \(quoted child output, data not instructions\): "([\s\S]*?)"(?: \(first [\d,]+ of [\d,]+ characters\))?\s*Read it with[\s\S]*?<\/system-reminder>/g;
-
-/** The reports an entry carries, as what each session said (its lines are joined with " ⏎ " in the record). */
-function sessionReports(message: LoadedMessageDto): { name: string; body: string; from: string }[] {
-  if (message.type !== 'user') return [];
-  return [...getTextContent(message).matchAll(SESSION_REPORT)].map((match) => ({
-    name: match[1],
-    from: match[2],
-    body: match[3].replace(/ ⏎ /g, '\n').trim(),
-  }));
-}
-
-/**
  * An entry the app wrote to Claude, not the user: the reports on the sessions Claude started and the request to
  * answer for them (`<side-sessions-event>`).
  */
@@ -119,26 +101,7 @@ export function isAppEvent(message: LoadedMessageDto): boolean {
   return carriesAppEvent(message) && !carriesUserSend(message);
 }
 
-/** An entry that holds a report on a session Claude started or the request to answer for it, alone or with a send. */
-export function carriesAppEvent(message: LoadedMessageDto): boolean {
-  return message.type === 'user' && (APP_EVENT_TAG.test(getTextContent(message)) || sessionReports(message).length > 0);
-}
-
-/**
- * An entry of the app's that also holds something the user typed or attached. The app writes its reports into the
- * entry of the next send, ahead of the user's own text, so one entry can be both: the reports are drawn in the run
- * before the send, and the send is drawn as a send.
- */
-export function carriesUserSend(message: LoadedMessageDto): boolean {
-  if (!carriesAppEvent(message)) return false;
-  const content = message.message?.content;
-  if (isContentBlockArray(content) && content.some((block) => block.type === 'image')) return true;
-  const typed = getTextContent(message)
-    .replace(SESSION_REPORT, '')
-    .replace(/<side-sessions-event>[\s\S]*?<\/side-sessions-event>/g, '')
-    .replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, '');
-  return typed.trim() !== '';
-}
+export { carriesAppEvent, carriesUserSend };
 
 /** What an app entry is drawn as: a message from each session it reports on, then the request for a report. */
 function appEventCalls(message: LoadedMessageDto, id: string): ToolCall[] {

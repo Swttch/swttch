@@ -1,5 +1,5 @@
 import { getTextContent, type LoadedMessageDto } from '@/types';
-import { withoutIdeContext } from '@/shared';
+import { withoutAppEvents, withoutIdeContext } from '@/shared';
 import {
   parseUserContent,
   stripPickedElements,
@@ -47,7 +47,7 @@ export function commandSendText(commandName: string | undefined, args: string): 
  * Slash commands are not handled here: `commandSendText` says what a command reads as.
  */
 export function typedSendText(raw: string): string {
-  return unwrapPastedContent(withoutIdeContext(stripPickedElements(stripSystemReminders(raw)))).trim();
+  return unwrapPastedContent(withoutIdeContext(withoutAppEvents(stripPickedElements(stripSystemReminders(raw))))).trim();
 }
 
 /**
@@ -83,4 +83,15 @@ export function composeSendText(raw: string): string {
     parsed.text,
   ];
   return lines.map(line => line.trim()).filter(Boolean).join('\n');
+}
+
+/**
+ * What the composer takes back of a send: what a person typed, or the command as it reads. The history recalls this
+ * (#735), the same words a fork puts back.
+ */
+export function recalledText(message: LoadedMessageDto): string {
+  const stored = getTextContent(message);
+  const parsed = parseUserContent(stored);
+  if (parsed.commandName !== undefined) return commandSendText(parsed.commandName, parsed.text);
+  return typedSendText(stored);
 }

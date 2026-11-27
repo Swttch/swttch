@@ -1,224 +1,150 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useBridge } from '@/hooks/useBridge';
-import { MessageType, isQueueOperation } from '@/shared';
-import { getTextContent, type LoadedMessageDto } from '@/types';
-import { typedSendText } from '@/pages/ChatPage/sendText';
+import { MessageType, restoreQueuedEntries } from '@/shared';
+import type { LoadedMessageDto } from '@/types';
+import { isUserSend } from '@/pages/ChatPage/paging';
+import { recalledText } from '@/pages/ChatPage/sendText';
+import type { SendIndexEntry } from '@/pages/ChatPage/sendList';
 
 /**
- * How close to the end of the loaded history the cursor may get before the next
- * page is fetched. Small, because a page is 20: the fetch starts while the user
- * still has entries left to walk through, so the next Up press finds them there.
+ * How many sends beyond the one shown are kept ready. Small, because a page is 20: the fetch starts while there are
+ * still sends left to walk through, so the next press finds them there.
  */
 const PREFETCH_MARGIN = 3;
-
-/**
- * The text of one prompt entry, whichever shape the CLI wrote it in.
- *
- * A prompt typed while a turn was running has no `user` entry to read: the CLI
- * only recorded queue bookkeeping, which carries the text at the top level
- * instead of under `message.content`. Reading just one of the two shapes is what
- * made those prompts skip in the walk.
- */
-function promptTextOf(entry: Record<string, unknown>): string {
-  const raw = isQueueOperation(entry)
-    ? typeof entry.content === 'string'
-      ? entry.content
-      : ''
-    : getTextContent(entry as unknown as LoadedMessageDto);
-  // What was STORED is not what was TYPED. A send that addresses another
-  // session, or cancels a task, carries a `<system-reminder>` the GUI wrapped
-  // around the user's words — measured: Up recalled the whole delivery
-  // instruction, tag and markers and all, straight into the composer. The IDE's
-  // open file and selection ride ahead of a send the same way (#719).
-  //
-  // `typedSendText` takes those off, and is the one answer a fork takes back too.
-  // The `<session-mention>` tag stays, so the composer can put the chip back as a
-  // live chip rather than as dead text that looks addressed and is not.
-  return typedSendText(raw);
-}
 
 interface PromptHistoryResponse {
   status: string;
   entries?: Record<string, unknown>[];
-  hasMore?: boolean;
-  oldestUuid?: string;
-  error?: string;
 }
 
 interface UseInputHistoryArgs {
   workingDirectory: string | null | undefined;
   sessionId: string | null;
+  /** Every send of the session, oldest first: the list the send index draws (see `buildEntries`). */
+  sends: SendIndexEntry[];
 }
 
 interface UseInputHistoryReturn {
-  /** Record a prompt the user just sent, so Up finds it without a round trip. */
-  pushToHistory: (value: string) => void;
-  /** The previous prompt, or null when there is none (the key then falls through). */
-  navigateUp: (currentValue: string) => string | null;
-  /** The next prompt, or the draft that was being written when navigation began. */
-  navigateDown: () => string | null;
-  /** Abandon navigation and forget the saved draft. */
+  /**
+   * The send before the one shown. `null` when there is none (the key then falls through), `undefined` when it is
+   * still being read from the backend.
+   */
+  navigateUp: (currentValue: string) => string | null | undefined;
+  /** The send after the one shown, or the draft that was being written when the walk began. */
+  navigateDown: () => string | null | undefined;
+  /** Leave the history and forget the saved draft. */
   resetHistory: () => void;
-  isEmpty: boolean;
   isNavigating: boolean;
 }
 
 /**
- * The composer's up/down-arrow prompt history, for the current session only.
+ * The composer's Up and Down history of the current session.
  *
- * The prompts come from the backend rather than from the loaded transcript. They
- * have to: a transcript page is 50 *entries*, and entries are overwhelmingly
- * tool_result plumbing, so measured over 119 sessions of this repo only 129 of
- * 3,190 typed prompts (4%) fall inside the newest page — and in the largest
- * session, none of its 193 prompts did. Deriving the history from `messages`, the
- * way this hook used to, therefore produced an empty or near-empty list for any
- * resumed session.
- *
- * Pages arrive newest-first and are appended as the user walks back, so opening a
- * session costs one small request instead of the whole prompt list (which reaches
- * 21MB for a session whose prompts carry pasted screenshots).
+ * It walks the very list the send index draws, so a step of the history and a tick are always the same send (#735).
+ * The transcript holds the newest sends; the ones further back are known by name only, and their text is read from
+ * the backend a page at a time as the walk gets near them.
  */
-export function useInputHistory({
-  workingDirectory,
-  sessionId,
-}: UseInputHistoryArgs): UseInputHistoryReturn {
+export function useInputHistory({ workingDirectory, sessionId, sends }: UseInputHistoryArgs): UseInputHistoryReturn {
   const { send } = useBridge();
 
-  // Prompts fetched from the backend, newest first.
-  const [fetched, setFetched] = useState<string[]>([]);
-  // Prompts sent from this composer since the session was loaded, newest first.
-  // Kept apart from `fetched` because the backend only learns about them once the
-  // CLI has written them to the transcript; holding them here means Up finds the
-  // prompt just sent immediately, with no round trip and no re-fetch.
-  const [localSent, setLocalSent] = useState<string[]>([]);
+  /** The key of the send shown in the composer, or null while the composer holds the draft. */
+  const [position, setPosition] = useState<string | null>(null);
+  const draftRef = useRef('');
 
-  const [historyIndex, setHistoryIndex] = useState<number>(-1);
-  const [unsavedDraft, setUnsavedDraft] = useState<string>('');
+  // What has been read from the backend, by send key. In refs: pages land without re-rendering the composer.
+  const textsRef = useRef(new Map<string, string>());
+  const askedRef = useRef(new Set<string>());
+  // Guards against a page of a session the user has left being applied to the one they moved to.
+  const sessionRef = useRef<string | null>(sessionId);
 
-  // Paging state lives in refs: it changes as pages land but must never re-render
-  // the composer, and the fetch callback reads the current values directly.
-  const cursorRef = useRef<string | undefined>(undefined);
-  const hasMoreRef = useRef(false);
-  const loadingRef = useRef(false);
-  // Guards against a page from a session the user has already left being applied
-  // to the session they moved to.
-  const loadedSessionRef = useRef<string | null>(null);
+  const textFor = useCallback(
+    (entry: SendIndexEntry) => (entry.message ? recalledText(entry.message) : textsRef.current.get(entry.key)),
+    [],
+  );
 
-  const fetchPage = useCallback(async (targetSessionId: string, beforeUuid?: string) => {
-    if (!workingDirectory || loadingRef.current) return;
-    loadingRef.current = true;
+  const readPage = useCallback(async (beforeUuid: string | undefined) => {
+    if (!workingDirectory || !sessionId) return;
+    const asked = beforeUuid ?? '';
+    if (askedRef.current.has(asked)) return;
+    askedRef.current.add(asked);
     try {
       const res = await send<PromptHistoryResponse>(MessageType.LOAD_PROMPT_HISTORY, {
         workingDir: workingDirectory,
-        sessionId: targetSessionId,
+        sessionId,
         beforeUuid,
       });
-      if (res.status !== 'ok') return;
-      if (loadedSessionRef.current !== targetSessionId) return;
-
-      // The backend sends the entries untouched, in transcript order. Reverse to
-      // newest-first (the order Up walks) and take the text here, where display
-      // processing belongs.
-      const texts = (res.entries ?? [])
-        .map(promptTextOf)
-        .filter(text => text.trim().length > 0)
-        .reverse();
-
-      hasMoreRef.current = !!res.hasMore;
-      cursorRef.current = res.oldestUuid;
-      setFetched(prev => (beforeUuid ? [...prev, ...texts] : texts));
+      if (res.status !== 'ok' || sessionRef.current !== sessionId) return;
+      // The records arrive as the session file has them, and are read here the way the transcript reads them.
+      for (const { entry } of restoreQueuedEntries(res.entries ?? [])) {
+        const message = entry as unknown as LoadedMessageDto;
+        if (message.uuid && isUserSend(message)) textsRef.current.set(message.uuid, recalledText(message));
+      }
     } catch {
-      // A failed page leaves the history at whatever already loaded. Nothing to
-      // report to the user: the arrow key simply stops finding older prompts.
+      // A failed page leaves the history at what already loaded; the next press asks again.
     } finally {
-      loadingRef.current = false;
+      askedRef.current.delete(asked);
     }
-  }, [workingDirectory, send]);
+  }, [workingDirectory, sessionId, send]);
 
-  // The session this hook last reacted to. `undefined` means "not yet mounted",
-  // which is distinct from `null` (mounted on a session that does not exist yet).
-  const previousSessionRef = useRef<string | null | undefined>(undefined);
+  /** Read what is missing of the sends at `from` and the few before it. */
+  const ensure = useCallback((from: number) => {
+    for (let i = from; i >= 0 && i > from - PREFETCH_MARGIN; i--) {
+      if (textFor(sends[i]) !== undefined) continue;
+      // A page ends just before its cursor, so the send after the missing one asks for it and the ones before it.
+      void readPage(sends[i + 1]?.key);
+      return;
+    }
+  }, [sends, textFor, readPage]);
 
-  // Load the newest page when the session changes, and drop everything the
-  // previous session had.
   useEffect(() => {
-    const previous = previousSessionRef.current;
-    previousSessionRef.current = sessionId;
-    // Kept current in both branches: it is what tells a landing page which
-    // session it belongs to, and a session born here still pages later.
-    loadedSessionRef.current = sessionId;
+    sessionRef.current = sessionId;
+    textsRef.current = new Map();
+    askedRef.current = new Set();
+    draftRef.current = '';
+    setPosition(null);
+  }, [sessionId]);
 
-    // A null → id change is not a switch to another conversation: it is this
-    // composer's own session coming into existence, created by the prompt that
-    // was just sent. Everything below would throw that prompt away and then ask
-    // the backend for a transcript that either does not have it yet or has it
-    // already — a lost entry or a duplicated one. A session born here has no
-    // history but what was typed here, so leave it alone.
-    if (previous === null && sessionId) return;
+  const at = position === null ? -1 : sends.findIndex((entry) => entry.key === position);
+  /** Where the walk stands in the list; past its end while the composer holds the draft. */
+  const index = at === -1 ? sends.length : at;
 
-    setFetched([]);
-    setLocalSent([]);
-    setHistoryIndex(-1);
-    setUnsavedDraft('');
-    cursorRef.current = undefined;
-    hasMoreRef.current = false;
-    loadingRef.current = false;
-
-    if (!sessionId || !workingDirectory) return;
-    void fetchPage(sessionId);
-  }, [sessionId, workingDirectory, fetchPage]);
-
-  const pushToHistory = useCallback((value: string) => {
-    setLocalSent(prev => [value, ...prev]);
-    setHistoryIndex(-1);
-    setUnsavedDraft('');
-  }, []);
+  useEffect(() => {
+    if (sends.length > 0) ensure(index - 1);
+  }, [sends, index, ensure]);
 
   const resetHistory = useCallback(() => {
-    setHistoryIndex(-1);
-    setUnsavedDraft('');
+    draftRef.current = '';
+    setPosition(null);
   }, []);
 
-  const history = [...localSent, ...fetched];
-
-  const navigateUp = useCallback((currentValue: string): string | null => {
-    const combined = [...localSent, ...fetched];
-    const newIndex = historyIndex + 1;
-    if (newIndex >= combined.length) return null;
-
-    if (historyIndex === -1) setUnsavedDraft(currentValue);
-    setHistoryIndex(newIndex);
-
-    // Start the next page while entries are still left to walk, so it is already
-    // there by the time the cursor reaches the end.
-    if (
-      hasMoreRef.current &&
-      sessionId &&
-      newIndex >= combined.length - PREFETCH_MARGIN
-    ) {
-      void fetchPage(sessionId, cursorRef.current);
+  const navigateUp = useCallback((currentValue: string) => {
+    const target = index - 1;
+    if (target < 0) return null;
+    const text = textFor(sends[target]);
+    if (text === undefined) {
+      ensure(target);
+      return undefined;
     }
+    if (index === sends.length) draftRef.current = currentValue;
+    setPosition(sends[target].key);
+    return text;
+  }, [sends, index, textFor, ensure]);
 
-    return combined[newIndex];
-  }, [localSent, fetched, historyIndex, sessionId, fetchPage]);
+  const navigateDown = useCallback(() => {
+    if (index === sends.length) return null;
+    const target = index + 1;
+    if (target === sends.length) {
+      setPosition(null);
+      return draftRef.current;
+    }
+    const text = textFor(sends[target]);
+    if (text === undefined) {
+      ensure(target);
+      return undefined;
+    }
+    setPosition(sends[target].key);
+    return text;
+  }, [sends, index, textFor, ensure]);
 
-  const navigateDown = useCallback((): string | null => {
-    if (historyIndex === -1) return null;
-
-    const newIndex = historyIndex - 1;
-    setHistoryIndex(newIndex);
-    if (newIndex === -1) return unsavedDraft;
-
-    const combined = [...localSent, ...fetched];
-    return combined[newIndex];
-  }, [localSent, fetched, historyIndex, unsavedDraft]);
-
-  return {
-    pushToHistory,
-    navigateUp,
-    navigateDown,
-    resetHistory,
-    isEmpty: history.length === 0,
-    isNavigating: historyIndex !== -1,
-  };
+  return { navigateUp, navigateDown, resetHistory, isNavigating: index < sends.length };
 }

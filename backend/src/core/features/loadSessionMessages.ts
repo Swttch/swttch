@@ -8,6 +8,7 @@ import {
   type SessionMessage,
 } from './sessionIndex';
 import { CLI_FLAG_TO_INPUT_MODE } from '../claude-process';
+import { QUEUED_KEY_PREFIX, restoreQueuedEntries } from '../../shared';
 
 // Raw JSONL entry - passed through as-is to match Kotlin backend
 export type { SessionMessage };
@@ -191,6 +192,22 @@ export function findLastReportedModeInPage(page: SessionMessage[]): string | nul
   return null;
 }
 
+/**
+ * Where in the chain a message rebuilt from the queue records stands: at the `remove` that consumed it, which is where
+ * the chat draws it. Such a message has no entry of its own, so a jump to it names it and is answered here.
+ */
+function indexOfQueued(
+  chain: IndexedEntry[],
+  key: string,
+  prompts: SessionMessage[],
+  queueRecords: Map<SessionMessage, IndexedEntry>,
+): number {
+  const sources = restoreQueuedEntries(prompts).find(({ entry }) => entry.uuid === key)?.sources;
+  const remove = sources?.[sources.length - 1];
+  const indexed = remove ? queueRecords.get(remove) : undefined;
+  return indexed ? chain.indexOf(indexed) : -1;
+}
+
 export async function loadSessionMessages(
   workingDir: string,
   targetSessionId: string,
@@ -206,12 +223,16 @@ export async function loadSessionMessages(
   */
   let chain: IndexedEntry[];
   let workflowChain: SessionMessage[];
+  let prompts: SessionMessage[];
+  let queueRecords: Map<SessionMessage, IndexedEntry>;
   let inPlanMode = false;
   try {
     const sessionsPath = await getProjectSessionsPath(workingDir);
     const sessionFile = join(sessionsPath, `${targetSessionId}.jsonl`);
     const index = await getSessionIndex(sessionFile, sessionsPath, targetSessionId);
     chain = index.entries;
+    prompts = index.promptChain;
+    queueRecords = index.queueRecords;
     workflowChain = index.workflowChain;
     inPlanMode = index.inPlanMode;
   } catch (err) {
@@ -288,7 +309,9 @@ export async function loadSessionMessages(
       newest pages it already has and puts this page where the recycler was, so
       nothing between the two has to be sent. An unknown uuid is a cursor miss.
     */
-    const index = chain.findIndex(m => m.uuid === aroundUuid);
+    const index = aroundUuid.startsWith(QUEUED_KEY_PREFIX)
+      ? indexOfQueued(chain, aroundUuid, prompts, queueRecords)
+      : chain.findIndex(m => m.uuid === aroundUuid);
     if (index === -1) {
       console.warn(
         '[node-backend]',

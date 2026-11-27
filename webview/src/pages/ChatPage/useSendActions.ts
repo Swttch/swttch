@@ -40,7 +40,7 @@ function retypedSend(send: LoadedMessageDto): Retyped | null {
     return { text: commandSendText(parsed.commandName, parsed.text), replies: [], excerpts: [] };
   }
   const typed = typedSendText(stored);
-  // Anchored like the shared `isCliAuthoredText`, so a send that only quotes the tag further in is still a send.
+  // Anchored, so a send that only quotes the tag further in is still a send.
   if (typed.startsWith('<local-command-stdout>')) return null;
   const cards = parseReplyBlocks(typed);
   if (!cards) return { text: typed, replies: [], excerpts: [] };

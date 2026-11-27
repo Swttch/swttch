@@ -1,7 +1,7 @@
 import { getPendingReplies, removePendingReply, subscribePendingReplies, takeSendRequest, updatePendingReply } from '@/utils/composerReplies';
 import { getPendingElements, pngFromBase64, removePendingElement, subscribeComposerElements, subscribeComposerFiles, subscribeComposerImages, subscribePendingElements } from '@/utils/composerElements';
 import toast from 'react-hot-toast';
-import { useCallback, useEffect, useRef, KeyboardEvent, useState, useSyncExternalStore, type ClipboardEvent as ReactClipboardEvent, type DragEvent as ReactDragEvent } from 'react';
+import { useCallback, useContext, useEffect, useRef, KeyboardEvent, useState, useSyncExternalStore, type ClipboardEvent as ReactClipboardEvent, type DragEvent as ReactDragEvent } from 'react';
 import { CommandPalettePanel } from '@/commandPalette/ui/CommandPalettePanel';
 import { useCommandPalette } from '@/commandPalette/hooks/useCommandPalette';
 import { PanelSectionId, PanelItemType, CommandItem } from '@/types/commandPalette';
@@ -20,6 +20,7 @@ import { ComposerFocusPolicy } from './composerFocusPolicy';
 import { useConfirmDialog } from '@/components/ConfirmDialog/useConfirmDialog';
 import { useChatInputFocus } from '../../../contexts/ChatInputFocusContext';
 import { useInputHistory } from './hooks/useInputHistory';
+import { SendListContext } from '../SendListContext';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { useChatInputState } from '@/contexts/ChatInputStateContext';
@@ -164,8 +165,8 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
   const { handleSubmit: onSubmit, isStreaming, stop: onStop, queuedMessages, cancelQueuedMessage, mergeQueuedMessages, moveQueuedMessage, steerQueuedMessage } = chatStream;
   const queueWhileWaiting = cardWaiting && runningActivity(chatStream.messages) !== null;
   const { input: value, setInput: onChange, setComposerHasContent } = useChatInputState();
-  const inputHistory = useInputHistory({ workingDirectory, sessionId: currentSessionId });
-  const { pushToHistory, navigateUp, navigateDown, resetHistory } = inputHistory;
+  const sends = useContext(SendListContext);
+  const { navigateUp, navigateDown, resetHistory } = useInputHistory({ workingDirectory, sessionId: currentSessionId, sends });
   // The recording itself belongs to DictationProvider, which sits above this
   // component: a recording has to outlive the composer, because an approval
   // prompt takes this slot and unmounts it mid-sentence (issue #409). What is
@@ -680,15 +681,7 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
         agentName: recipient.name,
         sessionDir: recipient.sessionDir,
       });
-      // The WRAPPED form goes to history, not the box's own text.
-      //
-      // Up walks two lists that have to look alike: prompts fetched from the
-      // transcript, which hold the tag, and prompts pushed here so Up finds the
-      // one just sent without a round trip. Pushing the bare text made those two
-      // disagree, so recalling a send that had just happened gave back a chip
-      // with no address behind it — the exact failure this tag exists to stop,
-      // reappearing for the one entry most likely to be recalled.
-      pushToHistory(shown);
+      resetHistory();
       sendToSession(recipient.name, shown, body, { inputMode: mode, sendMessage });
       onChange('');
       setRecipient(null);
@@ -696,7 +689,7 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
       return;
     }
 
-    pushToHistory(value);
+    resetHistory();
 
     const delivery = onSubmit(undefined, mode, attachments.length > 0 ? attachments : undefined, invertFollowUp, queueWhileWaiting, { pathTokens });
     // The message is handed to the CLI before the question it replaces is closed: the CLI then finds the message
@@ -711,7 +704,7 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
     pageElements,
     pendingReplies,
     uploads,
-    pushToHistory,
+    resetHistory,
     recipient,
     sendToSession,
     mode,
@@ -998,18 +991,6 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
     return () => window.removeEventListener('keydown', handleEscKey);
   }, [isInterruptible, onStop, textareaRef, showSchedulePopover, confirmStopBackgroundTasks]);
 
-  // The prompt history is no longer built from the loaded transcript. It cannot
-  // be: pagination hands the webview the newest 50 *entries*, and entries are
-  // dominated by tool_result plumbing, so a resumed session's typed prompts are
-  // almost entirely outside what `messages` holds. useInputHistory asks the
-  // backend, which has the whole active chain, instead.
-
-  // Abandon history navigation once the composer is empty again, so the next Up
-  // starts from the most recent prompt rather than resuming mid-walk.
-  useEffect(() => {
-    if (value === '') resetHistory();
-  }, [value, resetHistory]);
-
   // A prompt picked in the library modal lands at the END of whatever is already
   // in the composer, not at the caret: while the modal was open the composer had
   // no visible caret, so "where the caret was" is not a place the user chose.
@@ -1051,6 +1032,8 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
   useEffect(() => typedKeys.noteValue(value), [value]);
 
   const handleRichChange = useCallback((newValue: string) => {
+    // Emptying the box by hand ends a walk of the history, so the next Up starts from the newest send.
+    if (newValue === '') resetHistory();
     typedKeys.noteTyped(newValue);
     onChange(newValue);
     // The caret decides which of the two dropdowns owns the slot above the
@@ -1060,7 +1043,7 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
     mention.detectMention(newValue, caret);
     promptLibrary.detectPrompt(newValue, caret);
     agentMention.detectAgent(newValue, caret);
-  }, [onChange, palette, mention, promptLibrary, agentMention, textareaRef]);
+  }, [onChange, palette, mention, promptLibrary, agentMention, textareaRef, resetHistory]);
 
   // Right after `/rename ` the session's current title is previewed after the
   // caret, the way unsettled dictation is, and Tab turns it into real text.
@@ -1231,6 +1214,8 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
       const historyValue = navigateUp(value);
       if (historyValue === null) return;
       e.preventDefault();
+      // Still being read from the backend: the key is taken, and the next press finds it.
+      if (historyValue === undefined) return;
       applyHistoryValue(historyValue);
       // Land on the character the walk continues from, so holding Up keeps
       // moving through prompts instead of re-crossing the one just recalled.
@@ -1245,13 +1230,14 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
       const historyValue = navigateDown();
       if (historyValue === null) return;
       e.preventDefault();
+      if (historyValue === undefined) return;
       const applied = applyHistoryValue(historyValue);
       requestAnimationFrame(() => {
         const target = textareaRef.current;
         if (target) setCaretOffset(target, applied.length);
       });
     }
-  }, [disabled, value, attachments.length, submitComposer, onSubmit, pushToHistory, navigateUp, navigateDown, onChange, palette, mention, promptLibrary, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, appSettings.composerSendShortcut, appSettings.composerSendShortcutCustom, appSettings.composerNewlineShortcut, appSettings.composerNewlineShortcutCustom, ime, handleRichChange, textareaRef, renameGhost]);
+  }, [disabled, value, attachments.length, submitComposer, onSubmit, navigateUp, navigateDown, onChange, palette, mention, promptLibrary, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, appSettings.composerSendShortcut, appSettings.composerSendShortcutCustom, appSettings.composerNewlineShortcut, appSettings.composerNewlineShortcutCustom, ime, handleRichChange, textareaRef, renameGhost]);
 
   // Wrap the attachment paste handler so files keep their dedicated path while
   // text goes through the browser's own editing pipeline.

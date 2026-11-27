@@ -33,11 +33,13 @@ export interface SessionIndex {
   /** The active chain, in order. */
   entries: IndexedEntry[];
   /**
-   * The user entries and queue records of the active chain, which is all the prompt history and the send
-   * index read. The tool results among them (most of a long transcript) are reduced to what says they are
-   * tool results.
+   * The user entries, queue records and queued messages' attachments of the active chain, which is all the prompt
+   * history and the send index read. The tool results among them (most of a long transcript) are reduced to what
+   * says they are tool results.
    */
   promptChain: SessionMessage[];
+  /** Where in `entries` each queue record of `promptChain` is: they have no uuid to be found by. */
+  queueRecords: Map<SessionMessage, IndexedEntry>;
   /** What `reconstructWorkflowTasks` reads of the active chain. See `createWorkflowProjection`. */
   workflowChain: SessionMessage[];
   /** Whether the newest thing the active chain says about the mode is that plan mode was entered and not left. */
@@ -74,6 +76,7 @@ interface FileScan {
   callIndexByToolUse: Map<string, number>;
   workflow: WorkflowProjection;
   prompts: PromptCandidate[];
+  queueRecords: Map<SessionMessage, IndexedEntry>;
   /** The ids of the calls to ExitPlanMode, so that the answer to one that was approved can be told. */
   exitPlanCallIds: Set<string>;
   planModeMarkers: PlanModeMarker[];
@@ -92,6 +95,7 @@ function newFileScan(): FileScan {
     callIndexByToolUse: new Map(),
     workflow: createWorkflowProjection(),
     prompts: [],
+    queueRecords: new Map(),
     exitPlanCallIds: new Set(),
     planModeMarkers: [],
   };
@@ -135,13 +139,14 @@ function toolResultStub(entry: SessionMessage): SessionMessage {
 function takeLine(scan: FileScan, file: string, offset: number, length: number, entry: SessionMessage): void {
   const position = scan.entries.length;
   // The chain is decided by `uuid` and `parentUuid` exactly as the entry gives them.
-  scan.entries.push({
+  const indexed: IndexedEntry = {
     uuid: entry.uuid as string | undefined,
     parentUuid: entry.parentUuid as string | null | undefined,
     file,
     offset,
     length,
-  });
+  };
+  scan.entries.push(indexed);
 
   scan.workflow.add(entry);
 
@@ -151,6 +156,8 @@ function takeLine(scan: FileScan, file: string, offset: number, length: number, 
     if (attachment?.type === 'plan_mode' && attachment.isSubAgent !== true && entry.isSidechain !== true) {
       scan.planModeMarkers.push({ uuid, kind: 'entered' });
     }
+    // The message typed during a turn, with its pictures: the queue records have only its words.
+    if (attachment?.type === 'queued_command') scan.prompts.push({ uuid, entry });
     return;
   }
 
@@ -185,6 +192,7 @@ function takeLine(scan: FileScan, file: string, offset: number, length: number, 
 
   if (entry.type === 'queue-operation') {
     scan.prompts.push({ uuid: typeof entry.uuid === 'string' ? entry.uuid : undefined, entry });
+    scan.queueRecords.set(entry, indexed);
   }
 }
 
@@ -308,6 +316,7 @@ async function deriveIndex(scan: FileScan, subagentsDir: string, hasSubagents: b
   return {
     entries,
     promptChain: scan.prompts.filter(p => isActive(p.uuid)).map(p => p.entry),
+    queueRecords: scan.queueRecords,
     workflowChain: scan.workflow.entriesFor(isActive),
     inPlanMode: inPlanModeAt(scan.planModeMarkers.filter(marker => isActive(marker.uuid))),
   };

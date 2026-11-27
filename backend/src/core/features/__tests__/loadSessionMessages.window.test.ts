@@ -283,4 +283,25 @@ describe('loadSessionMessages: pages after and around an entry', () => {
       expect(labels(page.messages)).toEqual(['c8', 'c9', 'c10']);
     });
   });
+
+  it('centres a page on a message typed during a turn, named by its queue records (#735)', async () => {
+    const lines: string[] = [];
+    let parent: string | undefined;
+    for (let i = 1; i <= 12; i++) {
+      const uuid = `c${i}`;
+      lines.push(JSON.stringify({ type: i % 2 ? 'user' : 'assistant', uuid, parentUuid: parent }));
+      parent = uuid;
+      if (i === 3) {
+        lines.push(JSON.stringify({ type: 'queue-operation', operation: 'enqueue', content: 'typed mid-turn', timestamp: 't1' }));
+        lines.push(JSON.stringify({ type: 'queue-operation', operation: 'remove', content: 'typed mid-turn', timestamp: 't2' }));
+      }
+    }
+    await writeFile(join(tmpDir, 'sess.jsonl'), lines.join('\n'));
+
+    const page = await loadSessionMessages('/work', 'sess', undefined, 4, undefined, 'queued-t2-1');
+
+    expect(page.reset).toBe(false);
+    expect(page.messages.some(m => m.operation === 'remove')).toBe(true);
+    expect(page.messages.some(m => m.uuid === 'c12')).toBe(false);
+  });
 });

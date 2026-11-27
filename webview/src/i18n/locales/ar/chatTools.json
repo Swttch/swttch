@@ -372,7 +372,8 @@
     }
   },
   "sendIndex": {
-    "holdHint": "اضغط مطولًا لعرض كل الرسائل"
+    "holdHint": "اضغط مطولًا لعرض كل الرسائل",
+    "imageOnly": "صورة"
   },
   "sideSessionsEvent": {
     "title": "تحديث عن الجلسات التي بدأتها"
