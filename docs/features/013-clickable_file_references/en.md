@@ -2,7 +2,7 @@
 
 > Languages: **English** · [한국어](./ko.md)
 >
-> Related: [#183](https://github.com/Swttch/swttch/issues/183), [#209](https://github.com/Swttch/swttch/issues/209), [#210](https://github.com/Swttch/swttch/pull/210)
+> Related: [#183](https://github.com/Swttch/swttch/issues/183), [#209](https://github.com/Swttch/swttch/issues/209), [#210](https://github.com/Swttch/swttch/pull/210), [#708](https://github.com/Swttch/swttch/issues/708)
 
 ## What's new
 
@@ -38,6 +38,25 @@ is the operating system's default opener.
 Relative paths are resolved against the project's working directory, so
 `./src/x.ts` and `src/x.ts` both open the right file.
 
+## Every way a path is written
+
+A reference opens however Claude or the CLI happens to spell it:
+
+| Written as | Example |
+|------------|---------|
+| A link to a heading of a document, which opens at that heading's line | `[Index](docs/README.md#3-index)` |
+| Windows paths, with either separator | `C:\proj\src\app.ts:2`, `src\app.ts` |
+| Git Bash, Cygwin, WSL and WSL share paths | `/c/proj/a.ts`, `/mnt/c/proj/a.ts`, `\\wsl$\Ubuntu\home\me\a.ts` |
+| Home and `file:` paths, and `vscode://file/…` links | `~/notes/a.md` |
+| Folder names in any language | `数据中心/说明.md`, `문서/설계.md` |
+| Route folders in brackets or parentheses | `app/(group)/[id]/page.tsx` |
+| Names with spaces, in a link or an `@"…"` mention | `[notes](docs/my%20file.md)`, `@"docs/my file.md"` |
+| Positions and ranges | `a.ts:10`, `a.ts:10:5`, `a.ts:10-20`, `a.ts#L10C5` |
+
+What is on disk decides: a `#` or a `:` that is part of a file name is never cut off.
+
+A file Claude has just written opens in the IDE editor right away, before the IDE has noticed it on its own.
+
 If a clicked reference points at a path that isn't on disk (a stale or made-up
 path), the open no longer fails silently — a short toast tells you the file
 couldn't be opened.
@@ -47,12 +66,14 @@ couldn't be opened.
 Plain-text detection is intentionally conservative, so ordinary prose is never
 turned into a broken link:
 
-- A reference must contain a **path separator** (`/`). A bare `App.java:10` or a
-  host like `example.com:8080` is **not** linkified.
-- A **line locator** (`:line`, `:line:col`, or `#L…`) is required — a plain
-  `10:30` time, or a mention of `src/app.ts` with no line, is left as text.
-- Anything inside **inline code or a fenced code block**, inside an **existing
-  link**, or inside a **URL** is never rewritten — code samples stay verbatim.
+- A reference must contain a **path separator** (`/` or `\`) and end in a file
+  name with an extension. A bare `App.java:10` or a host like `example.com:8080`
+  is **not** linkified.
+- A name written with backslashes alone, such as `DOMAIN\john.doe`, is only taken
+  for a file when it starts like a path or names a line.
+- Anything inside a **fenced code block**, inside an **existing link**, or inside a
+  **URL** is never rewritten. Inline code becomes a link only when it holds nothing
+  but a path.
 
 ## How it works
 
@@ -71,5 +92,4 @@ turned into a broken link:
 - Windows drive paths (`C:\proj\File.java`) are carried safely through Markdown
   sanitization and restored when the file is opened.
 
-This is a webview-only change; the IDE already supported jump-to-line, so
-existing installs gain it purely by updating the plugin.
+Existing installs gain it by updating the plugin.
