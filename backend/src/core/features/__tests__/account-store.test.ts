@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mkdtemp, rm, stat, readFile, writeFile, chmod } from 'fs/promises';
+import { mkdtemp, rm, stat, readFile } from 'fs/promises';
+import { chmodSync, mkdirSync, readdirSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
-// Real fs throughout — only writeFile and chmod are wrapped, so the permission
+// Real fs throughout — only writeFileSync and chmodSync are wrapped, so the permission
 // the store asks for can be read back on a filesystem that does not keep it.
-vi.mock('fs/promises', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('fs/promises')>();
-  return { ...actual, writeFile: vi.fn(actual.writeFile), chmod: vi.fn(actual.chmod) };
+vi.mock('fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('fs')>();
+  return { ...actual, writeFileSync: vi.fn(actual.writeFileSync), chmodSync: vi.fn(actual.chmodSync) };
 });
 
 // account-store derives its base dir from os.homedir(). Point it at a throwaway
@@ -114,12 +115,12 @@ describe('account-store', () => {
     // Owner-only is asked for on every platform: the file is created with the
     // mode and the mode is reapplied to the destination after the rename.
     const snapshotPath = join(tempHome, '.claude-code-gui', 'accounts', `${id}.json`);
-    expect(vi.mocked(writeFile)).toHaveBeenCalledWith(
+    expect(vi.mocked(writeFileSync)).toHaveBeenCalledWith(
       expect.any(String),
       expect.any(String),
       expect.objectContaining({ mode: 0o600 }),
     );
-    expect(vi.mocked(chmod)).toHaveBeenCalledWith(snapshotPath, 0o600);
+    expect(vi.mocked(chmodSync)).toHaveBeenCalledWith(snapshotPath, 0o600);
 
     // Only a POSIX filesystem stores the bits; NTFS drops them and reports 0666,
     // which is why the request above — not the result — is the portable check.
@@ -220,6 +221,37 @@ describe('account-store', () => {
       await deleteAccountFiles(id2);
 
       expect((await readRegistry()).accountOrder).toEqual([id1]);
+    });
+  });
+
+  // The backend ends itself from the event loop (a signal handler, the idle timer, a restart request). A save
+  // that waits between creating its temp file and renaming it can be ended in that gap and leave the file behind.
+  describe('a save the event loop cannot interrupt', () => {
+    const storeDir = () => join(tempHome, '.claude-code-gui');
+
+    it('has the registry in place and no temp file the moment the call is made', async () => {
+      const saved = writeRegistry({ current: null, accounts: {}, accountPools: [], accountOrder: [] });
+
+      expect(readdirSync(storeDir())).toEqual(['accounts.json']);
+      await saved;
+    });
+
+    it('has a credential snapshot in place and no temp file the moment the call is made', async () => {
+      const id = newAccountId();
+      const saved = writeSnapshot(id, { credentials: 'x', oauthAccount: null });
+
+      expect(readdirSync(join(storeDir(), 'accounts'))).toEqual([`${id}.json`]);
+      await saved;
+    });
+
+    it('removes its temp file when the snapshot cannot be put in place', async () => {
+      const id = newAccountId();
+      // A folder where the file belongs makes the rename fail.
+      mkdirSync(join(storeDir(), 'accounts', `${id}.json`), { recursive: true });
+
+      await expect(writeSnapshot(id, { credentials: 'x', oauthAccount: null })).rejects.toThrow();
+
+      expect(readdirSync(join(storeDir(), 'accounts'))).toEqual([`${id}.json`]);
     });
   });
 

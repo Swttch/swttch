@@ -1,5 +1,5 @@
-import { readFile, writeFile, rename, unlink, mkdir, chmod } from 'fs/promises';
-import { existsSync } from 'fs';
+import { readFile, unlink } from 'fs/promises';
+import { existsSync, chmodSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'fs';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { join, dirname } from 'path';
@@ -71,20 +71,33 @@ function globalConfigFilePath(): string {
   return join(process.env.CLAUDE_CONFIG_DIR ?? homedir(), '.claude.json');
 }
 
-async function writeAtomic0600(target: string, content: string): Promise<void> {
+// Synchronous on purpose. The backend ends itself from the event loop (a signal
+// handler, the idle timer, a restart request), and with no `await` between creating
+// the temp file and renaming it, none of those can run in between and leave a copy of
+// the login token behind. Only a forced kill or a power cut still can.
+function writeAtomic0600(target: string, content: string): void {
   // NOTE: On Windows, POSIX mode 0o600 is not enforced by the filesystem (NTFS
   // ignores the mode bits). Security on Windows relies entirely on the user's ACL.
   // The CLI shares this same limitation and does not apply any Windows-specific ACL
   // hardening either, so our behaviour matches.
-  await mkdir(dirname(target), { recursive: true });
+  mkdirSync(dirname(target), { recursive: true });
   const temp = `${target}.${randomUUID()}.tmp`;
   try {
-    await writeFile(temp, content, { encoding: 'utf-8', mode: 0o600 });
-    await rename(temp, target);
+    writeFileSync(temp, content, { encoding: 'utf-8', mode: 0o600 });
+    renameSync(temp, target);
     // rename may keep the temp file's mode, but be explicit in case it already existed.
-    await chmod(target, 0o600).catch(() => undefined);
+    try {
+      chmodSync(target, 0o600);
+    } catch {
+      // The temp file was created 0600 and the rename carried that over.
+    }
   } finally {
-    if (existsSync(temp)) await unlink(temp).catch(() => undefined);
+    // Still there only when the write or the rename failed. `force` makes a missing file no error.
+    try {
+      rmSync(temp, { force: true });
+    } catch {
+      // Must not replace the reason the save failed.
+    }
   }
 }
 
@@ -126,7 +139,7 @@ export async function writeLiveCredentials(blob: string): Promise<void> {
     ]);
     return;
   }
-  await writeAtomic0600(liveCredentialsFilePath(), blob);
+  writeAtomic0600(liveCredentialsFilePath(), blob);
 }
 
 /** Remove the live credential blob (used when deleting the active account). */
@@ -174,7 +187,7 @@ export async function readLiveOauthAccount(): Promise<Record<string, unknown> | 
 export async function writeLiveOauthAccount(oauthAccount: Record<string, unknown>): Promise<void> {
   const root = await readGlobalConfig();
   root.oauthAccount = oauthAccount;
-  await writeAtomic0600(globalConfigFilePath(), JSON.stringify(root, null, 2) + '\n');
+  writeAtomic0600(globalConfigFilePath(), JSON.stringify(root, null, 2) + '\n');
 }
 
 /** Remove the live `oauthAccount` object, preserving every other config key. */
@@ -184,7 +197,7 @@ export async function removeLiveOauthAccount(): Promise<void> {
   const root = await readGlobalConfig();
   if (!('oauthAccount' in root)) return;
   delete root.oauthAccount;
-  await writeAtomic0600(path, JSON.stringify(root, null, 2) + '\n');
+  writeAtomic0600(path, JSON.stringify(root, null, 2) + '\n');
 }
 
 /**
