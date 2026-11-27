@@ -60,13 +60,13 @@ export function HistoryNotice(props: Props) {
             <button
               type="button"
               onClick={shown.onOpenHistory}
-              className={`inline-flex shrink-0 items-center gap-1 rounded border border-border-default ps-1 pe-0.5 text-[0.6875rem] leading-4 transition-colors hover:bg-surface-hover ${
+              className={`inline-flex shrink-0 items-center gap-1 rounded border border-border-default ps-1 pe-[3px] text-[0.6875rem] leading-4 transition-colors hover:bg-surface-hover ${
                 shown.modified ? 'text-text-primary' : 'text-text-tertiary'
               }`}
             >
               {t(shown.modified ? 'chatInput.history.modified' : 'chatInput.history.edits')}
               <span
-                className={`inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-accent-claude px-[3px] text-[0.625rem] font-semibold leading-none text-white ${
+                className={`inline-flex h-3 min-w-3 items-center justify-center rounded-full bg-accent-claude px-[2px] text-[0.5rem] font-semibold leading-none text-white ${
                   shown.modified ? '' : 'opacity-70'
                 }`}
               >
