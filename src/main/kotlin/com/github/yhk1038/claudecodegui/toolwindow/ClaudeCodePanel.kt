@@ -2662,12 +2662,19 @@ class ClaudeCodePanel(
                 // The backend names the file the way it sees it; a WSL backend speaks Linux
                 // paths the Windows IDE cannot look up as written (#567).
                 val spellings = OpenFileTargets.candidates(path, project.basePath, SystemInfo.isWindows)
-                val lookedUp = CompletableDeferred<VirtualFile?>()
+                // Off the UI thread: a file the IDE does not know yet is read from the disk.
+                val virtualFile = withContext(Dispatchers.IO) {
+                    val files = LocalFileSystem.getInstance()
+                    OpenFileTargets.find(
+                        spellings,
+                        known = files::findFileByPath,
+                        onDisk = { File(it).exists() },
+                        refresh = files::refreshAndFindFileByPath,
+                    )
+                }
+                val asked = CompletableDeferred<Boolean>()
                 ApplicationManager.getApplication().invokeLater {
                     try {
-                        val virtualFile = spellings.firstNotNullOfOrNull {
-                            LocalFileSystem.getInstance().findFileByPath(it)
-                        }
                         if (virtualFile != null) {
                             if (line != null && line > 0) {
                                 // line/column from tools are 1-based; OpenFileDescriptor is 0-based.
@@ -2679,17 +2686,16 @@ class ClaudeCodePanel(
                                 EditorOpener.requestOpenFile(FileEditorManager.getInstance(project), virtualFile)
                             }
                         }
-                        lookedUp.complete(virtualFile)
+                        asked.complete(true)
                     } catch (e: Exception) {
                         logger.error("Failed to open file: $path", e)
-                        lookedUp.complete(null)
+                        asked.complete(false)
                     }
                 }
 
-                val virtualFile = lookedUp.await()
                 // An editor that took the file shows it. Some files have none (a PNG when the
                 // image viewer is off, a folder), and the request then does nothing at all.
-                if (virtualFile != null && awaitEditorOpened(virtualFile)) {
+                if (asked.await() && virtualFile != null && awaitEditorOpened(virtualFile)) {
                     logger.info("Opened file: $path${if (line != null && line > 0) ":$line" else ""}")
                     return true
                 }

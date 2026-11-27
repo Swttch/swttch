@@ -6,8 +6,8 @@ package com.github.yhk1038.claudecodegui.bridge
  * The backend names a file the way it sees it. When the backend runs inside WSL while
  * the IDE runs on Windows, that is a Linux path (`/home/me/proj/x.png`, or `/mnt/c/Users/…`
  * for a Windows file), which the Windows IDE cannot look up as written. This object is
- * pure path math so it can be tested without the IntelliJ platform; the lookup itself
- * lives in the caller.
+ * pure path math so it can be tested without the IntelliJ platform; the lookups themselves
+ * are handed in by the caller.
  *
  * Background: issue #567.
  */
@@ -15,6 +15,19 @@ object OpenFileTargets {
 
     // `/mnt/c/Users/me/x.png` — WSL's mount of a Windows drive.
     private val MNT_DRIVE = Regex("^/mnt/([A-Za-z])/(.*)$")
+
+    /**
+     * What the IDE has for the first of [spellings] it can take: a file it [known]s already, or else one that is
+     * [onDisk] and has to be read from there ([refresh]). A file written a moment ago, which is what Claude's
+     * newest answer links to, is on the disk before the IDE's file list holds it; looked up only in that list it
+     * went to the system app instead of an editor (#708).
+     */
+    fun <T : Any> find(
+        spellings: List<String>,
+        known: (String) -> T?,
+        onDisk: (String) -> Boolean,
+        refresh: (String) -> T?,
+    ): T? = spellings.firstNotNullOfOrNull(known) ?: spellings.filter(onDisk).firstNotNullOfOrNull(refresh)
 
     /**
      * Every spelling of [path] worth looking up on the IDE side, best first. The first

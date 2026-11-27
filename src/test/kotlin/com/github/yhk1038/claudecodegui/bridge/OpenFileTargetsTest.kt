@@ -52,4 +52,39 @@ class OpenFileTargetsTest {
             OpenFileTargets.candidates("//wsl\$/Ubuntu/home/me/x.png", wslProject, true),
         )
     }
+
+    // #708: a file Claude has just written is on disk before the IDE's file list holds it.
+
+    @Test
+    fun `a file the IDE knows is taken as it is, without reading the disk again`() {
+        val refreshed = mutableListOf<String>()
+        val found = OpenFileTargets.find(listOf("C:/p/a.ts"), known = { "known" }, onDisk = { true }, refresh = { refreshed += it; "read" })
+        assertEquals("known", found)
+        assertEquals(emptyList<String>(), refreshed)
+    }
+
+    @Test
+    fun `a file the IDE does not know yet is read from the disk`() {
+        val found = OpenFileTargets.find(listOf("C:/p/fresh.ts"), known = { null as String? }, onDisk = { true }, refresh = { "read $it" })
+        assertEquals("read C:/p/fresh.ts", found)
+    }
+
+    @Test
+    fun `only a spelling that is on the disk is read`() {
+        val refreshed = mutableListOf<String>()
+        val found = OpenFileTargets.find(
+            listOf("/mnt/c/p/fresh.ts", "C:/p/fresh.ts"),
+            known = { null as String? },
+            onDisk = { it.startsWith("C:") },
+            refresh = { refreshed += it; it },
+        )
+        assertEquals("C:/p/fresh.ts", found)
+        assertEquals(listOf("C:/p/fresh.ts"), refreshed)
+    }
+
+    @Test
+    fun `nothing is found for a file that is nowhere`() {
+        val found = OpenFileTargets.find(listOf("C:/p/nope.ts"), known = { null as String? }, onDisk = { false }, refresh = { "read" })
+        assertEquals(null, found)
+    }
 }
