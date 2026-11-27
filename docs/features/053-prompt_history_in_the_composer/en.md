@@ -40,10 +40,11 @@ on screen is one of them, a dim **Edits** when it is not. The draft shows it too
 Press the mark to open **History**.
 
 - Every message you sent is listed in the order sent (1 at the top), with its number and one line of preview.
-- Changed ones carry an orange dot (**Edited** on hover) and start open.
+- Changed ones carry an orange dot and start open.
 - Pressing a row unfolds it in place to the whole message, pictures included. A changed one shows your change.
 - The arrow icon (**Load into input**) closes the window and puts that message in the box.
-- The undo icon (**Discard edit**) removes the change at once.
+- Under the pointer the dot turns into an X (**Discard edit**), which removes the change at once. A screen without a
+  pointer shows the X from the start.
 
 ## A message comes back as you sent it
 

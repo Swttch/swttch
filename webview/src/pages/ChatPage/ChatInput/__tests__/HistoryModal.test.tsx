@@ -34,10 +34,10 @@ describe('HistoryModal', () => {
     expect(rows().map((row) => header(row).textContent)).toEqual(['1oldest', '2middle, changed', '3Image']);
   });
 
-  it('puts a dot named "Edited" on the edited sends alone', () => {
+  it('puts a dot on the edited sends alone', () => {
     show();
 
-    expect(rows().map((row) => within(row).queryByRole('img', { name: 'Edited' }) !== null)).toEqual([false, true, false]);
+    expect(rows().map((row) => within(row).queryByTestId('history-edited-dot') !== null)).toEqual([false, true, false]);
   });
 
   it('starts with the edited sends open on their edit, and the rest folded', () => {

@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { ArrowRightIcon, ArrowUturnLeftIcon, PhotoIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ArrowRightIcon, PhotoIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '@/i18n';
 import { Portal } from '@/components/Portal';
 import { Tooltip } from '@/components/Tooltip';
@@ -156,19 +156,15 @@ function HistoryRow({ entry, number, numberWidth, isOpen, onToggle, edits, curre
         </button>
         <div className="mt-1 flex shrink-0 items-center gap-1">
           {!isOpen && pictures > 0 && <PhotoIcon className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />}
+          {/* The dot that marks the edit turns into the button that discards it under the pointer. A screen without a
+              pointer to hover with shows the button as it is, so a tap never discards what it did not show. */}
           {edit && (
-            <>
-              <Tooltip content={t('chatInput.history.modified')} desktop>
-                <span role="img" aria-label={t('chatInput.history.modified')} className="flex h-6 w-4 shrink-0 items-center justify-center">
-                  <span className="h-2 w-2 rounded-full bg-accent-claude" />
-                </span>
-              </Tooltip>
-              <Tooltip content={t('chatInput.history.modal.revert')} desktop>
-                <button type="button" aria-label={t('chatInput.history.modal.revert')} onClick={() => onRevert(entry.key)} className={ICON_BUTTON}>
-                  <ArrowUturnLeftIcon className="h-3.5 w-3.5" />
-                </button>
-              </Tooltip>
-            </>
+            <Tooltip content={t('chatInput.history.modal.revert')} desktop>
+              <button type="button" aria-label={t('chatInput.history.modal.revert')} onClick={() => onRevert(entry.key)} className={`group/revert ${ICON_BUTTON}`}>
+                <span data-testid="history-edited-dot" className="h-2 w-2 rounded-full bg-accent-claude group-hover/revert:hidden group-focus-visible/revert:hidden [@media(hover:none)]:hidden" />
+                <XMarkIcon className="hidden h-3.5 w-3.5 group-hover/revert:block group-focus-visible/revert:block [@media(hover:none)]:block" />
+              </button>
+            </Tooltip>
           )}
           <Tooltip content={t('chatInput.history.modal.recall')} desktop>
             <button type="button" aria-label={t('chatInput.history.modal.recall')} onClick={() => onRecall(entry.key)} className={ICON_BUTTON}>
