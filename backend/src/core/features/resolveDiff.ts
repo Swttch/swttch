@@ -15,8 +15,16 @@
  * they have typed over the proposal, no set of ranges into the original
  * proposal can describe what is now on screen — so the screen wins.
  */
+import { homedir } from 'os';
 import type { ConnectionManager } from '../../ws/connection-manager';
-import { MessageType, buildUserDeclinedContent, buildSessionPermissionUpdate } from '../../shared';
+import {
+  MessageType,
+  buildUserDeclinedContent,
+  buildSessionPermissionUpdate,
+  buildClaudeFolderPermissionUpdate,
+  claudeFolderOf,
+  type PermissionUpdate,
+} from '../../shared';
 import { takePreview, peekPreview, closeDiffTabForPermission, type StoredPreview } from './diffPreview';
 import { holdApprovalIfBaseMoved } from './reviewBase';
 import type { Bridge } from '../../bridge/bridge-interface';
@@ -206,7 +214,7 @@ export async function resolveDiffReview(
     // Built from the tool that asked, so the IDE's button and the chat's
     // "yes, allow all edits this session" install the very same rule.
     ...(params.allowAllEditsThisSession
-      ? { updatedPermissions: buildSessionPermissionUpdate(preview.toolName) }
+      ? { updatedPermissions: allEditsUpdate(connections, params.sessionId, preview) }
       : {}),
   });
   console.error(
@@ -341,3 +349,19 @@ function notifyResolved(connections: ConnectionManager, params: ResolveDiffParam
     controlRequestId: params.controlRequestId,
   });
 }
+
+/**
+ * "Allow all edits this session" from a review. For a file in a guarded `.claude` folder the edit tools' rule alone
+ * would leave the CLI asking about the very file that was reviewed, so the folder's own rule goes with it (#761).
+ */
+function allEditsUpdate(
+  connections: ConnectionManager,
+  sessionId: string,
+  preview: { toolName: string; input: Record<string, unknown> },
+): PermissionUpdate[] {
+  const all = buildSessionPermissionUpdate(preview.toolName);
+  const workingDir = connections.getSession?.(sessionId)?.workingDir;
+  const claudeFolder = claudeFolderOf(preview.toolName, preview.input, workingDir, process.env.HOME ?? process.env.USERPROFILE ?? homedir());
+  return claudeFolder ? [...all, ...buildClaudeFolderPermissionUpdate(claudeFolder)] : all;
+}
+

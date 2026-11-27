@@ -22,6 +22,7 @@ function settingsContext(spinnerVerbs: SpinnerVerbsConfig | null) {
     isLoading: false,
     overrides: [],
     unreadable: [],
+    homeDir: null,
     saveError: null,
     clearSaveError: vi.fn(),
     reportSaveError: vi.fn(),

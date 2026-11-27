@@ -482,9 +482,12 @@
         "bash": "本次工作階段允許所有 Bash 指令",
         "read": "本次工作階段允許所有讀取",
         "mcp": "本次工作階段允許所有 {{scope}}",
-        "default": "本次工作階段允許所有 {{tool}}"
+        "default": "本次工作階段允許所有 {{tool}}",
+        "claudeFolder": "本次工作階段允許編輯此專案的 .claude 資料夾",
+        "claudeUserFolder": "本次工作階段允許編輯 ~/.claude 資料夾"
       },
       "sessionAllowHint": "在本次工作階段結束前不再詢問",
+      "sessionAllowEditHint": "維持目前模式。在本次工作階段結束前不再詢問編輯",
       "sessionAllowEnableHint": "會先顯示警告",
       "moreAllowOptions": "更多允許選項",
       "scope": {
@@ -515,6 +518,8 @@
     "allowTool": "是否允許 {{tool}}？",
     "sessionLabel": {
       "edit": "是，本次工作階段允許所有編輯",
+      "claudeFolder": "是，本次工作階段允許編輯此專案的 .claude 資料夾",
+      "claudeUserFolder": "是，本次工作階段允許編輯 ~/.claude 資料夾",
       "bash": "是，本次工作階段允許所有指令",
       "delete": "是，本次工作階段允許所有刪除",
       "read": "是，本次工作階段允許所有讀取",

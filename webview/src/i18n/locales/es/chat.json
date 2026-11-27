@@ -483,9 +483,12 @@
         "bash": "Permitir todos los comandos de Bash en esta sesión",
         "read": "Permitir todas las lecturas en esta sesión",
         "mcp": "Permitir todo {{scope}} en esta sesión",
-        "default": "Permitir todo {{tool}} en esta sesión"
+        "default": "Permitir todo {{tool}} en esta sesión",
+        "claudeFolder": "Permitir ediciones en la carpeta .claude de este proyecto en esta sesión",
+        "claudeUserFolder": "Permitir ediciones en la carpeta ~/.claude en esta sesión"
       },
       "sessionAllowHint": "No vuelve a preguntar hasta que termine esta sesión",
+      "sessionAllowEditHint": "Mantiene el modo actual. No vuelve a preguntar por ediciones hasta que termine esta sesión",
       "sessionAllowEnableHint": "Muestra primero una advertencia",
       "moreAllowOptions": "Más opciones de permiso",
       "scope": {
@@ -516,6 +519,8 @@
     "allowTool": "¿Permitir {{tool}}?",
     "sessionLabel": {
       "edit": "Sí, permitir todas las ediciones en esta sesión",
+      "claudeFolder": "Sí, permitir ediciones en la carpeta .claude de este proyecto en esta sesión",
+      "claudeUserFolder": "Sí, permitir ediciones en la carpeta ~/.claude en esta sesión",
       "bash": "Sí, permitir todos los comandos en esta sesión",
       "delete": "Sí, permitir todas las eliminaciones en esta sesión",
       "read": "Sí, permitir todas las lecturas en esta sesión",

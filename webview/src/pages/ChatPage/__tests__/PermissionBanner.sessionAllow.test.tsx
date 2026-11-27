@@ -43,9 +43,17 @@ vi.mock('../../../hooks/useAutoOpenDiffReview', () => ({
   useAutoOpenDiffReview: () => undefined,
 }));
 
-// The card is drawn in the desktop-style views; here that is the Normal view.
+// The card is drawn in the desktop-style views; here that is the Normal view. `null` is the classic chat.
+let mockViewMode: string | null = 'normal';
 vi.mock('../message-renderers/transcriptViewMode', () => ({
-  useTranscriptViewMode: () => 'normal',
+  useTranscriptViewMode: () => mockViewMode,
+}));
+
+vi.mock('../../../contexts/WorkingDirContext', () => ({
+  useWorkingDirOrNull: () => ({ workingDirectory: '/repo' }),
+}));
+vi.mock('../../../contexts/ClaudeSettingsContext', () => ({
+  useClaudeHomeDir: () => '/home/me',
 }));
 
 const bash: PendingPermission = {
@@ -70,6 +78,7 @@ function renderBanner(permission: PendingPermission) {
 }
 
 beforeEach(() => {
+  mockViewMode = 'normal';
   mockInputMode = 'ask_before_edit';
   mockAllowAll = false;
   mockConfirmOpen = false;
@@ -158,5 +167,29 @@ describe('the new permission card — a request the CLI keeps no rule for', () =
 
     expect(h.onDeny).not.toHaveBeenCalled();
     expect(h.onApprove).not.toHaveBeenCalled();
+  });
+});
+
+// #761: a file in a guarded .claude folder, which a rule for the edit tools does not cover.
+describe('a file in a .claude folder', () => {
+  const write = (file_path: string): PendingPermission => ({ ...bash, toolName: 'Write', input: { file_path, content: 'x' } });
+
+  it('is offered the folder on the new card', () => {
+    renderBanner(write('/repo/.claude/notes.md'));
+    fireEvent.click(screen.getByTestId('permission-more'));
+    expect(screen.getByTestId('permission-menu-session')).toHaveTextContent('project’s .claude folder');
+  });
+
+  it('is offered the folder as the second line of the classic prompt, for both folders', () => {
+    mockViewMode = null;
+    renderBanner(write('/home/me/.claude/settings.json'));
+    expect(screen.getByText('Yes, allow edits in your ~/.claude folder this session')).toBeInTheDocument();
+    expect(screen.queryByText('Yes, allow all edits this session')).not.toBeInTheDocument();
+  });
+
+  it('keeps "all edits" for any other file', () => {
+    mockViewMode = null;
+    renderBanner(write('/repo/src/a.ts'));
+    expect(screen.getByText('Yes, allow all edits this session')).toBeInTheDocument();
   });
 });

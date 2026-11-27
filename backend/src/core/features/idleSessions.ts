@@ -19,10 +19,13 @@ export const IDLE_QUIET_MS = 60_000;
  * A session stays attached to its screens for as long as the screen exists, and a CLI per
  * attached screen is a process per open chat tab, which is what piles up on a host that many
  * people share (a Remote Development machine above all). A session is let go of when ALL hold:
- * every screen attached to it has been hidden for [IDLE_HIDDEN_MS]; its last turn ended and the
- * CLI has been silent for [IDLE_QUIET_MS]; it is not waiting for a person to answer (an open
- * permission, plan or question card); no message is queued for it; and no background work of its
- * own is running.
+ * every screen attached to it has been hidden for [IDLE_HIDDEN_MS]; no turn is waiting for its
+ * `result` and the CLI has been silent for [IDLE_QUIET_MS]; it is not waiting for a person to
+ * answer (an open permission, plan or question card); no message is queued for it; and no
+ * background work of its own is running or scheduled.
+ *
+ * What the user allowed for the session survives the stop: it is handed to the next CLI (see
+ * sessionGrants).
  *
  * Stopping is the same deliberate stop that precedes a settings change: no error and no
  * STREAM_END reaches the screens, and the next message respawns the CLI with `--resume`, so the

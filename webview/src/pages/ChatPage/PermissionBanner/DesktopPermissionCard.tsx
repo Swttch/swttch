@@ -5,11 +5,12 @@ import { useTranslation } from '@/i18n';
 import { Tooltip } from '@/components/Tooltip';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { InputModeValues } from '@/types/chatInput';
-import { alwaysAllowFromSuggestions, alwaysAllowScope } from '@/shared';
+import { alwaysAllowFromSuggestions, alwaysAllowScope, type ClaudeFolder } from '@/shared';
 import type { TranscriptViewMode } from '@/types/settings';
 import type { PendingPermission } from '../../../hooks/usePendingPermissions';
 import { getLastAllowChoice, setLastAllowChoice } from './lastAllowChoice';
 import { mcpToolSessionScopeLabel } from '../message-renderers/ToolRenderers/Mcp/humanize';
+import { TitleWithFileLink } from './TitleWithFileLink';
 
 /**
  * The tools whose permission prompt is drawn as the desktop app draws it, in the views that follow the
@@ -44,6 +45,18 @@ interface Props {
   /** Approve and install the narrow rule the CLI suggested, for this session. */
   onApproveAlways: () => void;
   /**
+   * Approve a file change as part of "switch to Accept edits", with whatever else that needs from the CLI (the folder
+   * a file outside the working directories is in). Plain approval when not given.
+   */
+  onApproveAcceptEdits?: () => void | Promise<void>;
+  /**
+   * The request is about a file in this guarded `.claude` folder: the session line then allows that folder (the only
+   * rule the CLI honours for it), and there is no "switch to Accept edits", which would not stop it asking.
+   */
+  claudeFolder?: ClaudeFolder;
+  /** Open the review of this file change again. The file name in the heading is the way to it. */
+  onOpenReview?: () => void;
+  /**
    * Approve and stop asking about this whole tool until the session ends (the classic prompt's "Yes, allow all … this
    * session"). Given only for a request the CLI will keep a rule for; without it the menu offers nothing of the kind.
    */
@@ -59,9 +72,22 @@ interface Props {
   onDeny: () => void;
 }
 
+/** Stands where the file name goes while the heading is translated; no translation can contain it. */
+const FILE_MARKER = '\u0000file\u0000';
+
+function fileNameOf(permission: PendingPermission): string {
+  const path = typeof permission.input.file_path === 'string' ? permission.input.file_path : '';
+  return path.split(/[\\/]/).filter(Boolean).pop() ?? path;
+}
+
 /** The menu line that says what "this session" allows: a tool's whole family, not only the request that asked. */
-function sessionAllowLabel(permission: PendingPermission, t: (key: string, values?: Record<string, unknown>) => string): string {
+function sessionAllowLabel(
+  permission: PendingPermission,
+  t: (key: string, values?: Record<string, unknown>) => string,
+  claudeFolder?: ClaudeFolder,
+): string {
   const { toolName } = permission;
+  if (claudeFolder) return t(`permissionBanner.card.sessionAllow.${claudeFolder === 'user' ? 'claudeUserFolder' : 'claudeFolder'}`);
   if (toolName === 'Edit' || toolName === 'Write') return t('permissionBanner.card.sessionAllow.edit');
   if (toolName === 'Bash') return t('permissionBanner.card.sessionAllow.bash');
   if (toolName === 'Read') return t('permissionBanner.card.sessionAllow.read');
@@ -71,17 +97,17 @@ function sessionAllowLabel(permission: PendingPermission, t: (key: string, value
   return t('permissionBanner.card.sessionAllow.default', { tool: toolName });
 }
 
+function fileChangeQuestionKey(toolName: string): string {
+  return toolName === 'Edit' ? 'permissionBanner.card.questionEdit' : 'permissionBanner.card.questionWrite';
+}
+
 /** The heading's question, in the words the desktop app asks it with for each kind of request. */
 function questionFor(permission: PendingPermission, t: (key: string, values?: Record<string, unknown>) => string): string {
   if (permission.toolName === 'Read') {
-    const path = typeof permission.input.file_path === 'string' ? permission.input.file_path : '';
-    const name = path.split(/[\\/]/).filter(Boolean).pop() ?? path;
-    return t('permissionBanner.card.questionRead', { file: name });
+    return t('permissionBanner.card.questionRead', { file: fileNameOf(permission) });
   }
   if (permission.toolName === 'Edit' || permission.toolName === 'Write') {
-    const path = typeof permission.input.file_path === 'string' ? permission.input.file_path : '';
-    const name = path.split(/[\\/]/).filter(Boolean).pop() ?? path;
-    return t(permission.toolName === 'Edit' ? 'permissionBanner.card.questionEdit' : 'permissionBanner.card.questionWrite', { file: name });
+    return t(fileChangeQuestionKey(permission.toolName), { file: fileNameOf(permission) });
   }
   if (permission.toolName === 'WebFetch') {
     const url = typeof permission.input.url === 'string' ? permission.input.url : '';
@@ -123,6 +149,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
  */
 export function DesktopPermissionCard(props: Props) {
   const { permission, subtitle, preview, onApprove, onApproveAlways, onApproveForSession, onEnableSessionAllow, keyboardPaused, onDeny } = props;
+  const { onApproveAcceptEdits = onApprove, claudeFolder, onOpenReview } = props;
   const { t } = useTranslation('chat');
   const { inputMode, availableModes, setInputMode } = useSessionContext();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -145,12 +172,13 @@ export function DesktopPermissionCard(props: Props) {
 
   // A file change offers "Always allow" as "switch this session to Accept edits" (the desktop app's menu for an edit says
   // so under it), where the CLI suggested no rule to keep. It answers this request first and changes the mode after.
+  // Not for a guarded .claude folder: the CLI keeps asking about it in that mode, and the terminal does not offer it.
   const isFileChange = permission.toolName === 'Edit' || permission.toolName === 'Write';
   const canAcceptEdits =
-    isFileChange && !alwaysAvailable && inputMode === InputModeValues.ASK_BEFORE_EDIT && availableModes.includes(InputModeValues.AUTO_EDIT);
+    isFileChange && !claudeFolder && !alwaysAvailable && inputMode === InputModeValues.ASK_BEFORE_EDIT && availableModes.includes(InputModeValues.AUTO_EDIT);
   const allowAndAcceptEdits = useCallback(() => {
-    void Promise.resolve(onApprove()).then(() => setInputMode(InputModeValues.AUTO_EDIT));
-  }, [setInputMode, onApprove]);
+    void Promise.resolve(onApproveAcceptEdits()).then(() => setInputMode(InputModeValues.AUTO_EDIT));
+  }, [setInputMode, onApproveAcceptEdits]);
 
   const alwaysLeads = alwaysAvailable && getLastAllowChoice() === 'always';
   const scope = alwaysAllowScope(permission.toolName, permission.suggestions);
@@ -188,30 +216,28 @@ export function DesktopPermissionCard(props: Props) {
       onSelect: allowAndAcceptEdits,
     });
   }
-  // "Allow all … this session": the tool's whole family until the session ends. A file change that can already be
-  // allowed by switching to Accept edits has that line above, which does the same thing, so it gets no second one.
-  if (!canAcceptEdits) {
-    if (onApproveForSession) {
-      menuItems.push({
-        key: 'session',
-        label: sessionAllowLabel(permission, t),
-        description: t('permissionBanner.card.sessionAllowHint'),
-        onSelect: onApproveForSession,
-      });
-    } else if (onEnableSessionAllow) {
-      // The CLI keeps no rule for this request, so the line is "turn the switch on" rather than a rule: it warns first, and
-      // only a turned-on switch answers this request and the ones after it.
-      menuItems.push({
-        key: 'enableSession',
-        label: sessionAllowLabel(permission, t),
-        description: t('permissionBanner.card.sessionAllowEnableHint'),
-        onSelect: () => {
-          void onEnableSessionAllow().then((turnedOn) => {
-            if (turnedOn) void onApprove();
-          });
-        },
-      });
-    }
+  // "Allow all … this session": the tool's whole family until the session ends, in whatever mode the session is in. On a
+  // file change it stands beside "Always allow", which is another answer: that one changes the mode (#761).
+  if (onApproveForSession) {
+    menuItems.push({
+      key: 'session',
+      label: sessionAllowLabel(permission, t, claudeFolder),
+      description: t(isFileChange && !claudeFolder ? 'permissionBanner.card.sessionAllowEditHint' : 'permissionBanner.card.sessionAllowHint'),
+      onSelect: onApproveForSession,
+    });
+  } else if (onEnableSessionAllow) {
+    // The CLI keeps no rule for this request, so the line is "turn the switch on" rather than a rule: it warns first, and
+    // only a turned-on switch answers this request and the ones after it.
+    menuItems.push({
+      key: 'enableSession',
+      label: sessionAllowLabel(permission, t),
+      description: t('permissionBanner.card.sessionAllowEnableHint'),
+      onSelect: () => {
+        void onEnableSessionAllow().then((turnedOn) => {
+          if (turnedOn) void onApprove();
+        });
+      },
+    });
   }
   if (canSwitchToAuto) {
     menuItems.push({
@@ -235,8 +261,8 @@ export function DesktopPermissionCard(props: Props) {
         onApprove();
       };
 
-  // Keys, as the desktop app binds them: Esc denies, Cmd/Ctrl+Enter allows once, and with Shift allows
-  // always. Never while the person is typing: Cmd+Enter there is "queue this message".
+  // Keys, as the desktop app binds them: Esc denies, Cmd/Ctrl+Enter allows once, and with Shift takes "Always
+  // allow" (on a file change, the one that switches to Accept edits). Never while the person is typing: Cmd+Enter there is "queue this message".
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented || keyboardPaused) return;
@@ -255,7 +281,9 @@ export function DesktopPermissionCard(props: Props) {
       }
       if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && !isTypingTarget(event.target)) {
         event.preventDefault();
-        if (event.shiftKey) (alwaysAvailable ? onApproveAlways : onApprove)();
+        if (!event.shiftKey) onApprove();
+        else if (alwaysAvailable) onApproveAlways();
+        else if (canAcceptEdits) allowAndAcceptEdits();
         else onApprove();
       }
     };
@@ -263,9 +291,20 @@ export function DesktopPermissionCard(props: Props) {
     // order the two were (re)subscribed in, so "handled" is visible to it.
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [menuOpen, onDeny, onApprove, onApproveAlways, alwaysAvailable, keyboardPaused]);
+  }, [menuOpen, onDeny, onApprove, onApproveAlways, alwaysAvailable, canAcceptEdits, allowAndAcceptEdits, keyboardPaused]);
 
-  const question = questionFor(permission, t);
+  const fileName = isFileChange ? fileNameOf(permission) : '';
+  const question =
+    onOpenReview && fileName ? (
+      <TitleWithFileLink
+        template={t(fileChangeQuestionKey(permission.toolName), { file: FILE_MARKER })}
+        marker={FILE_MARKER}
+        file={fileName}
+        onOpen={onOpenReview}
+      />
+    ) : (
+      questionFor(permission, t)
+    );
 
   return (
     <div className="w-full animate-[fadeIn_0.3s_ease-out] px-4 pb-2 pt-[0.375rem] shrink-0 flex flex-col">
@@ -275,8 +314,9 @@ export function DesktopPermissionCard(props: Props) {
         className="w-full max-w-[33.4375rem] overflow-hidden rounded-[0.8125rem] border border-text-primary/[0.05] flex flex-col"
       >
         {/* The heading band: 54px (49 on screen), one step lighter than the page, the text in one weight. */}
+        {/* The question is one flex item, so a link inside the sentence keeps the spaces around it. */}
         <div className="flex h-[3.375rem] shrink-0 items-center bg-text-primary/[0.04] px-[1.2188rem] text-[0.9rem] text-text-primary">
-          {question}
+          <span className="min-w-0">{question}</span>
         </div>
 
         <div
@@ -290,7 +330,12 @@ export function DesktopPermissionCard(props: Props) {
           }
         >
           {subtitle && <p className="pb-[0.625rem] text-[0.9rem] leading-[1.5] text-text-secondary">{subtitle}</p>}
-          {preview}
+          {/* A long file or command scrolls here, so the question, its description and the buttons stay on screen
+              (#761): 400px of the desktop app's, less in a short window. A block, not a flex column, which would squeeze
+              the content to fit instead of scrolling it. */}
+          <div data-testid="permission-preview-scroll" className="max-h-[min(27.7778rem,45vh)] overflow-y-auto">
+            {preview}
+          </div>
         </div>
 
         {/* 24px under a command's box; 5px more under the value box of a read or a web search (measured on the desktop app). */}

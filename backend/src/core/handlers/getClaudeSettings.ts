@@ -1,3 +1,4 @@
+import { homedir } from 'os';
 import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
@@ -44,5 +45,7 @@ export async function getClaudeSettingsHandler(
     settings,
     overrides,
     unreadable,
+    // Where `~` is for the CLI, so the chat can tell the user's own `.claude` folder from a project's.
+    homeDir: process.env.HOME ?? process.env.USERPROFILE ?? homedir(),
   });
 }

@@ -47,6 +47,7 @@ import { ClientEnv, MessageType, parseEditHistoryCommand, parseEmacsTextKeyPress
 import type { NativeDropEntry } from './core/types';
 import { drainMcpContainerReclaims, reclaimLiveMcpContainers } from './core/mcp-container-reclaimer';
 import { removeOwnSessionMcpConfigs, sweepStaleSessionMcpConfigs } from './core/claude-process';
+import { sweepStaleSessionGrantSettings } from './core/features/sessionGrants';
 
 /**
  * JetBrains 모드: JETBRAINS_MODE=true 환경변수로 감지
@@ -329,8 +330,9 @@ async function main() {
   // from the registry entries the sweep just retired (#363).
   const { mcpContainers } = await sweepOrphanCliProcesses();
   await removeContainersById(mcpContainers);
-  // The same backend never removed its session MCP config files either.
+  // The same backend never removed its session MCP config files either, or the permission files beside them.
   sweepStaleSessionMcpConfigs();
+  sweepStaleSessionGrantSettings();
 
   const bridges: BridgeMap = {
     [ClientEnv.BROWSER]: new BrowserBridge(),

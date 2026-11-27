@@ -482,9 +482,12 @@
         "bash": "本次会话中允许所有 Bash 命令",
         "read": "本次会话中允许所有读取",
         "mcp": "本次会话中允许所有 {{scope}}",
-        "default": "本次会话中允许所有 {{tool}}"
+        "default": "本次会话中允许所有 {{tool}}",
+        "claudeFolder": "本次会话中允许编辑此项目的 .claude 文件夹",
+        "claudeUserFolder": "本次会话中允许编辑 ~/.claude 文件夹"
       },
       "sessionAllowHint": "在本次会话结束前不再询问",
+      "sessionAllowEditHint": "保持当前模式。在本次会话结束前不再询问编辑",
       "sessionAllowEnableHint": "会先显示警告",
       "moreAllowOptions": "更多允许选项",
       "scope": {
@@ -515,6 +518,8 @@
     "allowTool": "允许 {{tool}}?",
     "sessionLabel": {
       "edit": "是,本次会话中允许所有编辑",
+      "claudeFolder": "是,本次会话中允许编辑此项目的 .claude 文件夹",
+      "claudeUserFolder": "是,本次会话中允许编辑 ~/.claude 文件夹",
       "bash": "是,本次会话中允许所有命令",
       "delete": "是,本次会话中允许所有删除",
       "read": "是,本次会话中允许所有读取",

@@ -80,6 +80,18 @@ interface SessionRecord {
    * finished turn as running to every page reloaded in the minutes after it.
    */
   turnStartedAt: number;
+  /**
+   * Whether a turn was started that has no `result` yet: a message was handed to the CLI, or the CLI began one by
+   * itself. What [stopIdleSessions] asks. Not [cliTurnOpen], which the notices trailing a `result` reopen
+   * (`command_lifecycle/completed`, a reply to a control request): they follow every answer, so by that flag a
+   * session that had answered once was never idle again (#761).
+   */
+  turnUnanswered: boolean;
+  /**
+   * The CLI scheduled work for itself (`CronCreate`, `ScheduleWakeup`). The schedule lives in the process, so it is
+   * kept until that process is gone.
+   */
+  holdsScheduledWork: boolean;
   /** When the CLI last emitted an event, for judging a turn that went quiet. */
   lastCliEventAt: number;
   /**
@@ -211,6 +223,27 @@ export interface ConnectionStats {
    * "reconnecting" banner, and the count alone cannot say whose it is.
    */
   panelIds: string[];
+}
+
+/**
+ * Whether a CLI event says a turn is under way: the `system/init` every turn begins with (also the ones the CLI starts
+ * itself), or the main conversation speaking. A sub-agent's messages carry `parent_tool_use_id` and are left out: one
+ * working on after the answer ended has no `result` of its own, and is counted as background work instead.
+ */
+function startsTurn(event: Record<string, unknown>): boolean {
+  if (event.parent_tool_use_id) return false;
+  if (event.type === 'system') return event.subtype === 'init';
+  return event.type === 'assistant' || event.type === 'stream_event' || event.type === 'user';
+}
+
+/** The tools that leave a timer inside the CLI process. */
+const SCHEDULING_TOOLS = new Set(['CronCreate', 'ScheduleWakeup']);
+
+function schedulesWork(event: Record<string, unknown>): boolean {
+  if (event.type !== 'assistant') return false;
+  const content = (event.message as { content?: unknown } | undefined)?.content;
+  if (!Array.isArray(content)) return false;
+  return content.some((block) => block?.type === 'tool_use' && SCHEDULING_TOOLS.has(block.name));
 }
 
 export class ConnectionManager {
@@ -727,6 +760,9 @@ export class ConnectionManager {
       else if ((payload.type === 'assistant' || payload.type === 'stream_event') && session.turnStartedAt === 0) {
         session.turnStartedAt = now;
       }
+      if (payload.type === 'result') session.turnUnanswered = false;
+      else if (startsTurn(payload)) session.turnUnanswered = true;
+      if (schedulesWork(payload)) session.holdsScheduledWork = true;
     }
 
     const message: IPCMessage = {
@@ -964,6 +1000,12 @@ export class ConnectionManager {
     this.cleanupTimers.set(sessionId, timer);
   }
 
+  /** A message was handed to this session's CLI: its turn is open from now, before the CLI has said a word. */
+  noteTurnStarted(sessionId: string): void {
+    const session = this.sessionRegistry.get(sessionId);
+    if (session) session.turnUnanswered = true;
+  }
+
   /**
    * A screen reporting whether it is showing. Only the first report of a hidden stretch is
    * kept, so the clock of "hidden for how long" is not restarted by a repeated report.
@@ -988,7 +1030,7 @@ export class ConnectionManager {
     const ids: string[] = [];
     for (const session of this.sessionRegistry.values()) {
       if (!session.process || session.subscribers.size === 0) continue;
-      if (session.cliTurnOpen || now - session.lastCliEventAt < quietMs) continue;
+      if (session.turnUnanswered || session.holdsScheduledWork || now - session.lastCliEventAt < quietMs) continue;
       if (session.openRequests.size > 0) continue;
       let everyScreenHidden = true;
       for (const connectionId of session.subscribers) {
@@ -1371,6 +1413,8 @@ export class ConnectionManager {
         thinkingDisplay: null,
         accountId: null,
         openRequests: new Map(),
+        turnUnanswered: false,
+        holdsScheduledWork: false,
       };
       this.sessionRegistry.set(sessionId, session);
     }
@@ -1389,6 +1433,8 @@ export class ConnectionManager {
       session.inputMode = null;
       session.cliTurnOpen = false;
       session.turnStartedAt = 0;
+      session.turnUnanswered = false;
+      session.holdsScheduledWork = false;
     }
     // Same for the pinned effort level: `--effort` pins the process it launched, so
     // once that process is gone nothing is pinned any more.

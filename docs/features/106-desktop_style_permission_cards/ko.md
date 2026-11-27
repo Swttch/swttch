@@ -2,7 +2,7 @@
 
 > Languages: [English](./en.md) · **한국어**
 >
-> Issue: [#673](https://github.com/Swttch/swttch/issues/673)
+> Issue: [#673](https://github.com/Swttch/swttch/issues/673), [#761](https://github.com/Swttch/swttch/issues/761)
 
 ## 새로 달라진 것
 
@@ -22,7 +22,31 @@ Claude가 사용자의 답이 필요할 때, 채팅이 Claude 데스크탑 앱�
 
 ![영어 화면: "Allow Claude to edit notes.txt?" 카드. 경로와 두 줄: 빨간색 "this is a draft"(draft가 강조됨)와 초록색 "this is a final"(final이 강조됨).](./assets/edit-card.png)
 
-**한 번만 허용** 옆의 **▾** 메뉴에 다른 허용 방법이 있습니다. **항상 허용**(프로젝트의 로컬 설정에 저장되며, 파일 변경이면 "이 세션을 편집 수락 모드로 전환")과 **허용하고 Auto 모드로 전환**입니다. 마지막에 고른 항목이 다음 카드의 첫 버튼이 되고, 채팅을 닫을 때까지 기억합니다.
+파일 변경 카드의 제목에 있는 **파일명**을 누르면 diff 검토가 다시 열립니다.
+
+파일이나 명령이 길면 **카드 안에서 스크롤합니다.** 질문과 설명, 버튼은 화면에 남습니다.
+
+![영어 화면: "Allow Claude to write checklist.md?" 카드. 번호가 붙은 긴 파일이 카드 안에서 잘려 있고, 버튼 Deny와 Allow once는 화면에 남아 있습니다.](./assets/long-file-card.png)
+
+## 허용하는 방법
+
+**한 번만 허용** 옆의 **▾** 메뉴에 다른 허용 방법이 있습니다.
+
+- **항상 허용.** CLI가 제안한 좁은 규칙을 저장하고, 줄 아래에 어디에 저장되는지 나옵니다. **Ask before edits**의 파일 변경에서는 "이 세션을 편집 수락 모드로 전환"이며, 작업 폴더 밖의 파일이면 그 폴더도 함께 허용합니다. 포커스가 메시지 입력창 밖에 있으면 `⌘⇧↵`(`Ctrl+Shift+Enter`)도 같습니다.
+- **이번 세션에서 모두 허용.** 그 도구를 세션이 끝날 때까지 묻지 않습니다. 파일 변경은 **모든 편집 허용**이고, **권한 모드는 바뀌지 않습니다.** 클래식 패널의 선택지와 같이 작업 폴더 밖의 파일도 포함합니다.
+- **허용하고 Auto 모드로 전환.**
+
+![영어 화면: 파일 변경 카드의 메뉴. Always allow(이 세션을 편집 수락 모드로 전환), Allow all edits this session(현재 모드 유지), Allow and switch to Auto.](./assets/session-allow-menu.png)
+
+마지막에 고른 **한 번만 허용** 또는 **항상 허용**이 다음 카드의 첫 버튼이 되고, 채팅을 닫을 때까지 기억합니다.
+
+**`.claude` 폴더의 파일**은 CLI가 따로 보호합니다. 이때는 **항상 허용**과 **모든 편집 허용** 대신, 터미널과 같이 **그 폴더의 편집을 이번 세션에서 허용**하는 줄이 나옵니다(프로젝트의 `.claude` 또는 `~/.claude`). 클래식 패널의 두 번째 선택지도 같습니다. `.git`, `.bashrc`, `.vscode`, `.mcp.json`처럼 CLI가 보호하는 다른 파일은 어떤 세션 허용을 골라도 CLI가 계속 묻습니다.
+
+![영어 화면: .claude 폴더 파일 카드의 메뉴. Allow edits in this project's .claude folder this session, Allow and switch to Auto.](./assets/claude-folder-menu.png)
+
+**세션 허용은 유지됩니다.** 플러그인이 같은 세션의 CLI를 다시 띄워도(설정 변경, 계정 전환, 화면을 닫았다가 다시 열기, 오래 가려 둔 세션) 남습니다. IDE(또는 백엔드)를 다시 켜면 처음부터 다시 묻습니다. 터미널에서 `claude`를 껐다 켠 것과 같습니다.
+
+## 카드가 뜨고 사라지는 방식
 
 - **요청이 연달아 올 때.** 카드는 하나씩 뜹니다. 하나에 답하면 그 카드가 사라지고, 다음 카드가 약 0.3초에 걸쳐 나타납니다.
 - **카드가 떠 있는 채로 새로고침.** 채팅이 다시 열리면 카드가 다시 뜹니다.

@@ -34,6 +34,13 @@ import { removeSessionTitleOverride } from './features/sessionTitleOverrides';
 import { renamedSessionTitle } from './features/sessionRenamedReply';
 import { announceSessionToolChanges } from './features/sessionToolAnnouncer';
 import { swttchEntrypointName } from './features/sessionEntrypoint';
+import {
+  claudeFolderGrantFor,
+  recordSessionGrants,
+  removeSessionGrantSettings,
+  writeSessionGrantSettings,
+} from './features/sessionGrants';
+import { homedir } from 'os';
 import { MessageType, SessionActivity, type WorkflowTask } from '../shared';
 import { ingestRateLimitWindows } from './handlers/getUsage';
 import { SESSION_MCP_AREAS, resolveInstalledSessionMcp, type InstalledSessionMcp } from './session-mcp';
@@ -292,6 +299,17 @@ export function buildClaudeArgs(
   }
 
   return args;
+}
+
+/**
+ * What the user allowed for this session, handed back to a new CLI process of it (#761, see sessionGrants). Nothing
+ * where the session granted nothing. Nothing either where the user's own command already names a settings file:
+ * the flag is not additive with itself, and theirs must win.
+ */
+export function buildSessionGrantArgs(env: NodeJS.ProcessEnv, sessionId: string, command: string): string[] {
+  if (/(^|\s)--settings(\s|=|$)/.test(command)) return [];
+  const file = writeSessionGrantSettings(env, sessionId);
+  return file ? ['--settings', file] : [];
 }
 
 /**
@@ -625,7 +643,11 @@ const sessionMcpOwners = new Map<string, symbol>();
  * cannot await.
  */
 export function removeOwnSessionMcpConfigs(): void {
-  for (const sessionId of sessionMcpOwners.keys()) removeSessionMcpConfig(process.env, sessionId);
+  for (const sessionId of sessionMcpOwners.keys()) {
+    removeSessionMcpConfig(process.env, sessionId);
+    // Written for the same CLI and owned by the same spawn (see sessionGrants).
+    removeSessionGrantSettings(process.env, sessionId);
+  }
   sessionMcpOwners.clear();
 }
 
@@ -1013,6 +1035,7 @@ export async function ensureClaudeProcess(
     ? null
     : await resolveInstalledSessionMcp(workingDir).catch(() => null);
   args.push(...buildSessionMcpArgs(process.env, targetSessionId, installedSessionMcp));
+  args.push(...buildSessionGrantArgs(process.env, targetSessionId, Claude.command));
   const mcpConfigOwner = Symbol(targetSessionId);
   sessionMcpOwners.set(targetSessionId, mcpConfigOwner);
 
@@ -1259,6 +1282,7 @@ export async function ensureClaudeProcess(
       if (sessionMcpOwners.get(targetSessionId) === mcpConfigOwner) {
         sessionMcpOwners.delete(targetSessionId);
         removeSessionMcpConfig(process.env, targetSessionId);
+        removeSessionGrantSettings(process.env, targetSessionId);
       }
     } catch (err) {
       reportBackendError(err instanceof Error ? err : new Error(String(err)), {
@@ -1341,6 +1365,7 @@ export function sendMessageToProcess(
     logDebug('[node-backend]', `stdin payload: ${logPreview}`);
   }
   session.process.stdin.write(stdinMessage);
+  connections.noteTurnStarted(sessionId);
   // The session's activity is NOT set here, though it used to be.
   //
   // Writing to stdin is us starting a turn, and a turn we start is only some of
@@ -1567,6 +1592,7 @@ export function sendControlResponseToProcess(
   console.error('[node-backend]', `Sending control_response to stdin: ${logPreview}`);
   session.process.stdin.write(stdinMessage);
   connections.forgetOpenRequest(sessionId, response.request_id);
+  recordSessionGrants(sessionId, response);
   return true;
 }
 
@@ -1742,7 +1768,10 @@ function handleStreamEvent(
   // prompt is up, so the user sees what they are approving rather than only the
   // file name (#41, #109). Fire-and-forget: the prompt itself is forwarded
   // below either way, and a diff we cannot open must not delay it.
-  maybeOpenPermissionDiff(targetSessionId, event, connections, bridge);
+  // A request about a `.claude` folder this session was already allowed is answered here (see answerGrantedRequest),
+  // so there is no review to open for it.
+  const grantedAnswer = grantedAnswerFor(targetSessionId, event, workingDir);
+  if (!grantedAnswer) maybeOpenPermissionDiff(targetSessionId, event, connections, bridge);
 
   // Keep the recorded permission mode in step with what the CLI says it is running
   // under. The CLI reports this on `system/init` (spawn) and again on `system/status`
@@ -1943,9 +1972,19 @@ function handleStreamEvent(
     });
   }
 
+  // A request the session already granted is answered now. The screens hear that it is settled BEFORE they get the
+  // event: a screen that saw the question first would put up a card and ring for an answer nobody has to give.
+  const answeredHere = grantedAnswer !== null && sendControlResponseToProcess(connections, targetSessionId, grantedAnswer.response);
+  if (grantedAnswer && answeredHere) {
+    connections.broadcastToSession(targetSessionId, MessageType.PERMISSION_RESOLVED, {
+      toolUseId: grantedAnswer.toolUseId,
+      controlRequestId: grantedAnswer.response.request_id,
+    });
+  }
+
   // Keep the CLI's open questions so a screen that attaches later can answer them
   // (see SessionRecord.openRequests). Read-only: the event is still forwarded below.
-  if (event.type === 'control_request') {
+  if (event.type === 'control_request' && !answeredHere) {
     connections.rememberOpenRequest(targetSessionId, event);
   } else if (event.type === 'control_cancel_request') {
     connections.forgetOpenRequest(targetSessionId, event.request_id);
@@ -1953,4 +1992,37 @@ function handleStreamEvent(
 
   // 모든 CLI 이벤트를 있는 그대로 전달 — 타입별 분기/가공 없음
   connections.broadcastToSession(targetSessionId, MessageType.CLI_EVENT, event);
+}
+
+/**
+ * The answer to a permission request the session already granted and the CLI process does not know about: a file in a
+ * `.claude` folder, whose rule no spawn flag brings back (#761). It carries the same rule again, so this process stops
+ * asking. Null for every other request, which goes to the user.
+ */
+function grantedAnswerFor(
+  sessionId: string,
+  event: Record<string, unknown>,
+  workingDir: string,
+): { toolUseId: unknown; response: Record<string, unknown> & { request_id: unknown } } | null {
+  if (event.type !== 'control_request') return null;
+  const request = event.request as Record<string, unknown> | undefined;
+  if (request?.subtype !== 'can_use_tool' || typeof request.tool_name !== 'string') return null;
+  const input = request.input;
+  if (typeof input !== 'object' || input === null) return null;
+  const updatedPermissions = claudeFolderGrantFor(
+    sessionId,
+    request.tool_name,
+    input as Record<string, unknown>,
+    workingDir,
+    process.env.HOME ?? process.env.USERPROFILE ?? homedir(),
+  );
+  if (!updatedPermissions) return null;
+  return {
+    toolUseId: request.tool_use_id,
+    response: {
+      subtype: 'success',
+      request_id: event.request_id,
+      response: { behavior: 'allow', updatedInput: input, updatedPermissions },
+    },
+  };
 }

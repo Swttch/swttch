@@ -16,7 +16,9 @@ import { useTranslation } from '@/i18n';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { useEnableAllowAllCommands } from '@/hooks/useEnableAllowAllCommands';
 import { InputModeValues } from '@/types/chatInput';
-import { FILE_EDIT_TOOLS } from '@/shared';
+import { FILE_EDIT_TOOLS, claudeFolderOf, type ClaudeFolder } from '@/shared';
+import { useWorkingDirOrNull } from '@/contexts/WorkingDirContext';
+import { useClaudeHomeDir } from '@/contexts/ClaudeSettingsContext';
 
 interface Props {
   permission: PendingPermission;
@@ -24,6 +26,8 @@ interface Props {
   onApproveForSession: () => void;
   /** Approve and install the narrow rule the CLI suggested, for this session (the desktop card's "Always allow"). */
   onApproveAlways?: () => void;
+  /** Approve a file change on its way to Accept edits, adding the folder the CLI suggested (the card's "Always allow"). */
+  onApproveAcceptEdits?: () => void;
   onDeny: (reason?: string) => void;
   /**
    * Show the review as an overlay over this screen.
@@ -72,7 +76,9 @@ interface TitleParts {
  * and a reader who then finds "allow all writes this session" on screen has
  * been sent to something they cannot recognise.
  */
-function getSessionLabel(t: TFunction, toolName: string): string {
+function getSessionLabel(t: TFunction, toolName: string, claudeFolder?: ClaudeFolder): string {
+  // A file in a guarded .claude folder: "all edits" would not stop the CLI asking, so the line names the folder.
+  if (claudeFolder) return t(`permissionBanner.sessionLabel.${claudeFolder === 'user' ? 'claudeUserFolder' : 'claudeFolder'}`);
   if ((FILE_EDIT_TOOLS as readonly string[]).includes(toolName)) {
     return t('permissionBanner.sessionLabel.edit');
   }
@@ -148,7 +154,10 @@ function titleParts(toolName: string, input: Record<string, unknown>): TitlePart
 }
 
 export function PermissionBanner(props: Props) {
-  const { permission, onApprove, onApproveForSession, onApproveAlways, onDeny, onOpenDiffOverlay } = props;
+  const { permission, onApprove, onApproveForSession, onApproveAlways, onApproveAcceptEdits, onDeny, onOpenDiffOverlay } = props;
+  const workingDir = useWorkingDirOrNull()?.workingDirectory;
+  const homeDir = useClaudeHomeDir();
+  const claudeFolder = claudeFolderOf(permission.toolName, permission.input, workingDir, homeDir);
   const viewMode = useTranscriptViewMode();
   const { stop } = useChatStreamContext();
   const openDiffReview = useOpenDiffReview();
@@ -233,7 +242,7 @@ export function PermissionBanner(props: Props) {
     const yes = { key: '1', label: t('permissionBanner.yes') };
     const no = (key: string) => ({ key, label: t('permissionBanner.no') });
     if (sessionOption === 'hidden') return [yes, no('2')];
-    const session = { key: '2', label: getSessionLabel(t, permission.toolName) };
+    const session = { key: '2', label: getSessionLabel(t, permission.toolName, claudeFolder) };
     if (sessionOption === 'enabled') return [yes, session, no('3')];
     return [
       yes,
@@ -253,7 +262,7 @@ export function PermissionBanner(props: Props) {
       no('3'),
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [t, permission.toolName, sessionOption, allowAll.enable]);
+  }, [t, permission.toolName, claudeFolder, sessionOption, allowAll.enable]);
 
   const handleOptionSelect = useCallback((index: number) => {
     const denyIndex = sessionOption === 'hidden' ? 1 : 2;
@@ -296,6 +305,9 @@ export function PermissionBanner(props: Props) {
         preview={desktopPreview}
         onApprove={onApprove}
         onApproveAlways={onApproveAlways ?? onApprove}
+        onApproveAcceptEdits={onApproveAcceptEdits}
+        claudeFolder={claudeFolder}
+        onOpenReview={openDiff}
         // The same three outcomes the classic prompt's session line has (sessionOption above): answerable, a link that turns
         // the "Allow all command" switch on, or nothing.
         onApproveForSession={sessionOption === 'enabled' ? onApproveForSession : undefined}

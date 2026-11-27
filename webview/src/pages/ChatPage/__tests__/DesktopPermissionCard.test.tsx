@@ -101,6 +101,16 @@ describe('DesktopPermissionCard — buttons', () => {
     expect(screen.getByTestId('permission-command')).toHaveTextContent('ls -la');
   });
 
+  it('keeps a long preview in its own scroll box, with the question and the description outside it (#761)', () => {
+    setup();
+    const box = screen.getByTestId('permission-preview-scroll');
+    expect(box).toContainElement(screen.getByTestId('permission-command'));
+    expect(box).not.toContainElement(screen.getByText('List files'));
+    expect(box).not.toContainElement(screen.getByText('Allow Claude to run this command?'));
+    expect(box.className).toContain('overflow-y-auto');
+    expect(box.className).toContain('max-h-');
+  });
+
   it('leads with "Always allow" when the CLI suggested a rule, and it sends the always answer', () => {
     const h = setup();
     const primary = screen.getByTestId('permission-primary');
@@ -288,14 +298,23 @@ describe('DesktopPermissionCard — allowing a tool for the session', () => {
     expect(screen.queryByTestId('permission-more')).not.toBeInTheDocument();
   });
 
-  it('is not a second line beside "Always allow" (Accept edits) on a file change, which does the same', () => {
-    setupWith(
+  // #761: "Always allow" on a file change switches the mode. Staying in Ask before edits is another answer.
+  it('is a second line beside "Always allow" (Accept edits) on a file change, saying the mode stays', () => {
+    const onApproveForSession = vi.fn();
+    const h = setupWith(
       permission({ toolName: 'Edit', input: { file_path: '/a/x.txt', old_string: 'a', new_string: 'b' }, suggestions: undefined }),
-      { onApproveForSession: vi.fn() },
+      { onApproveForSession },
     );
     fireEvent.click(screen.getByTestId('permission-more'));
     expect(screen.getByTestId('permission-menu-acceptEdits')).toBeInTheDocument();
-    expect(screen.queryByTestId('permission-menu-session')).not.toBeInTheDocument();
+    const item = screen.getByTestId('permission-menu-session');
+    expect(item).toHaveTextContent('Allow all edits this session');
+    expect(item).toHaveTextContent('Keeps the current mode');
+
+    fireEvent.click(item);
+    expect(onApproveForSession).toHaveBeenCalledTimes(1);
+    expect(h.onApprove).not.toHaveBeenCalled();
+    expect(session.setInputMode).not.toHaveBeenCalled();
   });
 
   it('is offered for a file change where Accept edits is not on offer', () => {
@@ -396,5 +415,79 @@ describe('DesktopPermissionCard — keys', () => {
     expect(screen.getByTestId('permission-menu-always')).toHaveTextContent('Always allow');
     fireEvent.click(screen.getByTestId('permission-menu-always'));
     expect(second.onApproveAlways).toHaveBeenCalledTimes(1);
+  });
+});
+
+// #761: what a file change offers beyond the session line.
+describe('DesktopPermissionCard — a file change, #761', () => {
+  const write = (overrides: Partial<PendingPermission> = {}) =>
+    permission({ toolName: 'Write', input: { file_path: '/repo/src/a.txt', content: 'b' }, suggestions: undefined, ...overrides });
+
+  function setupFile(p: PendingPermission, extra: Partial<Parameters<typeof DesktopPermissionCard>[0]> = {}) {
+    const handlers = {
+      onApprove: vi.fn(),
+      onApproveAlways: vi.fn(),
+      onApproveAcceptEdits: vi.fn().mockResolvedValue(undefined),
+      onApproveForSession: vi.fn(),
+      onOpenReview: vi.fn(),
+      onDeny: vi.fn(),
+    };
+    render(<DesktopPermissionCard permission={p} preview={<pre />} {...handlers} {...extra} />);
+    return handlers;
+  }
+
+  it('"Always allow" answers with its own call, which carries the folders the CLI suggested', async () => {
+    const h = setupFile(write());
+    fireEvent.click(screen.getByTestId('permission-more'));
+    fireEvent.click(screen.getByTestId('permission-menu-acceptEdits'));
+    await waitFor(() => expect(session.setInputMode).toHaveBeenCalledWith('auto_edit'));
+    expect(h.onApproveAcceptEdits).toHaveBeenCalledTimes(1);
+    expect(h.onApprove).not.toHaveBeenCalled();
+  });
+
+  it('Cmd+Shift+Enter takes "Always allow", as the desktop app binds it', async () => {
+    const h = setupFile(write());
+    fireEvent.keyDown(window, { key: 'Enter', metaKey: true, shiftKey: true });
+    await waitFor(() => expect(session.setInputMode).toHaveBeenCalledWith('auto_edit'));
+    expect(h.onApproveAcceptEdits).toHaveBeenCalledTimes(1);
+    expect(h.onApprove).not.toHaveBeenCalled();
+  });
+
+  it('Cmd+Shift+Enter allows once where there is no "Always allow"', () => {
+    session.inputMode = 'auto_edit';
+    const h = setupFile(write());
+    fireEvent.keyDown(window, { key: 'Enter', metaKey: true, shiftKey: true });
+    expect(h.onApprove).toHaveBeenCalledTimes(1);
+    expect(h.onApproveAcceptEdits).not.toHaveBeenCalled();
+  });
+
+  it('offers the .claude folder in place of the other two for a file in it, as the terminal does', () => {
+    const h = setupFile(write({ input: { file_path: '/repo/.claude/a.md', content: 'b' } }), { claudeFolder: 'project' });
+    fireEvent.click(screen.getByTestId('permission-more'));
+    expect(screen.queryByTestId('permission-menu-acceptEdits')).not.toBeInTheDocument();
+    const item = screen.getByTestId('permission-menu-session');
+    expect(item).toHaveTextContent('Allow edits in this project’s .claude folder this session');
+    fireEvent.click(item);
+    expect(h.onApproveForSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('names the user’s own .claude folder', () => {
+    setupFile(write({ input: { file_path: '/home/me/.claude/a.md', content: 'b' } }), { claudeFolder: 'user' });
+    fireEvent.click(screen.getByTestId('permission-more'));
+    expect(screen.getByTestId('permission-menu-session')).toHaveTextContent('Allow edits in your ~/.claude folder this session');
+  });
+
+  it('opens the review from the file name in its heading, without answering', () => {
+    const h = setupFile(write());
+    expect(screen.getByTestId('desktop-permission-card')).toHaveTextContent('Allow Claude to write a.txt?');
+    fireEvent.click(screen.getByRole('button', { name: 'a.txt' }));
+    expect(h.onOpenReview).toHaveBeenCalledTimes(1);
+    expect(h.onApprove).not.toHaveBeenCalled();
+    expect(h.onDeny).not.toHaveBeenCalled();
+  });
+
+  it('has no link for a read, which has nothing to review', () => {
+    setupFile(permission({ toolName: 'Read', input: { file_path: '/a/b.txt' }, suggestions: undefined }));
+    expect(screen.queryByRole('button', { name: 'b.txt' })).not.toBeInTheDocument();
   });
 });

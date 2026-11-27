@@ -483,9 +483,12 @@
         "bash": "Autoriser toutes les commandes Bash pour cette session",
         "read": "Autoriser toutes les lectures pour cette session",
         "mcp": "Autoriser tous les {{scope}} pour cette session",
-        "default": "Autoriser tous les {{tool}} pour cette session"
+        "default": "Autoriser tous les {{tool}} pour cette session",
+        "claudeFolder": "Autoriser les modifications dans le dossier .claude de ce projet pour cette session",
+        "claudeUserFolder": "Autoriser les modifications dans le dossier ~/.claude pour cette session"
       },
       "sessionAllowHint": "Ne redemande plus jusqu’à la fin de cette session",
+      "sessionAllowEditHint": "Conserve le mode actuel. Ne redemande plus pour les modifications jusqu’à la fin de cette session",
       "sessionAllowEnableHint": "Affiche d’abord un avertissement",
       "moreAllowOptions": "Plus d’options d’autorisation",
       "scope": {
@@ -516,6 +519,8 @@
     "allowTool": "Autoriser {{tool}} ?",
     "sessionLabel": {
       "edit": "Oui, autoriser toutes les modifications pour cette session",
+      "claudeFolder": "Oui, autoriser les modifications dans le dossier .claude de ce projet pour cette session",
+      "claudeUserFolder": "Oui, autoriser les modifications dans le dossier ~/.claude pour cette session",
       "bash": "Oui, autoriser toutes les commandes pour cette session",
       "delete": "Oui, autoriser toutes les suppressions pour cette session",
       "read": "Oui, autoriser toutes les lectures pour cette session",
