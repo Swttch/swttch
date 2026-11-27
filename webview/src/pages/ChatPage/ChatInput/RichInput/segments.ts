@@ -1,3 +1,5 @@
+import type { TextRange } from '@/utils/domSelection';
+
 /**
  * A contiguous run of the composer value, classified for the mirror overlay.
  * `isToken` runs are wrapped in highlight chips; plain runs render as text.
@@ -57,4 +59,13 @@ export function splitIntoSegments(
 
   flushPlain(value.length);
   return segments;
+}
+
+/** The part of the run starting at offset `from` that lies before, inside and after `range`. */
+export function splitAtRange(text: string, from: number, range: TextRange | null): [string, string, string] {
+  if (!range) return [text, '', ''];
+  const within = (offset: number) => Math.min(Math.max(offset - from, 0), text.length);
+  const start = within(range.start);
+  const end = within(range.end);
+  return [text.slice(0, start), text.slice(start, end), text.slice(end)];
 }

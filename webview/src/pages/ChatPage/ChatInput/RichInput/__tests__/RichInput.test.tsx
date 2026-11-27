@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { createRef } from 'react';
+import { createRef, useState } from 'react';
 import { render, fireEvent, cleanup } from '@testing-library/react';
 import { RichInput } from '../index';
 
@@ -288,6 +288,46 @@ describe('RichInput — IME composition guard', () => {
 
     expect(onLiveText).toHaveBeenLastCalledWith('ㅇ');
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  const underlined = (container: HTMLElement) => container.querySelector('[data-testid="richInputComposing"]')?.textContent ?? null;
+
+  /** Compose `data` at offset `at` of the box, as a browser tells it. */
+  const compose = (el: HTMLElement, before: string, at: number, data: string) => {
+    el.textContent = before;
+    window.getSelection()!.collapse(el.firstChild ?? el, at);
+    fireEvent.compositionStart(el);
+    el.textContent = before.slice(0, at) + data + before.slice(at);
+    fireEvent.compositionUpdate(el, { data });
+    fireEvent.input(el, { inputType: 'insertCompositionText', isComposing: true });
+  };
+
+  /** A box whose value follows what is typed, as the composer's does. */
+  function Followed({ initial }: { initial: string }) {
+    const [value, setValue] = useState(initial);
+    return <RichInput value={value} onChange={setValue} />;
+  }
+
+  it('underlines the characters being composed, wherever they are, and no longer once they are in', () => {
+    const { getByRole, container } = render(<Followed initial="ab cd" />);
+    const el = getByRole('textbox');
+
+    compose(el, 'ab cd', 3, 'にほん');
+    expect(underlined(container)).toBe('にほん');
+
+    fireEvent.compositionEnd(el);
+    expect(underlined(container)).toBeNull();
+  });
+
+  it('ends the underline of a composition left without a compositionend (#403)', () => {
+    const { getByRole, container } = render(<Followed initial="" />);
+    const el = getByRole('textbox');
+    compose(el, '', 0, '한');
+
+    el.textContent = '한a';
+    fireEvent.input(el, { inputType: 'insertText', isComposing: false });
+
+    expect(underlined(container)).toBeNull();
   });
 
   /**
