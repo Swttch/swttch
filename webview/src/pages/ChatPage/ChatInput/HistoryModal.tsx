@@ -134,16 +134,17 @@ function HistoryRow({ entry, number, numberWidth, isOpen, onToggle, edits, curre
   const preview = words !== '' ? words : pictures > 0 ? tt('sendIndex.imageOnly') : t('chatInput.history.modal.empty');
   const previewClass = words === '' ? 'text-text-tertiary' : '';
 
+  // An opened row stands out from the folded ones: a lighter ground, and its number and words at full strength.
   return (
-    <li data-send={entry.key} className={`rounded-lg ${entry.key === currentKey ? 'bg-surface-hover/50' : ''}`}>
-      <div className="flex items-start gap-1 rounded-lg pe-1 hover:bg-surface-hover">
+    <li data-send={entry.key} className={`rounded-lg ${isOpen ? 'my-0.5 bg-text-primary/[0.08]' : entry.key === currentKey ? 'bg-surface-hover/50' : ''}`}>
+      <div className={`flex items-start gap-1 rounded-lg pe-1 ${isOpen ? '' : 'hover:bg-surface-hover'}`}>
         <button
           type="button"
           aria-expanded={isOpen}
           onClick={onToggle}
           className="flex min-w-0 flex-1 items-baseline gap-2 px-2 py-1.5 text-start text-sm text-[var(--tr-text)]"
         >
-          <span className="shrink-0 text-end text-xs tabular-nums text-text-tertiary" style={{ minWidth: `${numberWidth}ch` }}>{number}</span>
+          <span className={`shrink-0 text-end text-xs tabular-nums ${isOpen ? 'text-[var(--tr-text)]' : 'text-text-tertiary'}`} style={{ minWidth: `${numberWidth}ch` }}>{number}</span>
           {isOpen ? (
             edit ? (
               <FullContent content={edit} pictureOf={pictureOf} fallback={preview} />
@@ -151,7 +152,7 @@ function HistoryRow({ entry, number, numberWidth, isOpen, onToggle, edits, curre
               <SentContent sendKey={entry.key} loadContent={loadContent} pictureOf={pictureOf} fallback={preview} />
             )
           ) : (
-            <span className={`min-w-0 flex-1 truncate ${previewClass}`}>{preview}</span>
+            <span className={`min-w-0 flex-1 truncate opacity-70 ${previewClass}`}>{preview}</span>
           )}
         </button>
         <div className="mt-1 flex shrink-0 items-center gap-1">
