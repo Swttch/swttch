@@ -1,7 +1,7 @@
 # Catalog
 
 Status: Implemented
-Last verified: 2026-11-11 on branch `feat/session-mcp-hook` (not yet merged)
+Last verified: 2026-11-27 on branch `fix/735-input-history` (not yet merged)
 
 The tables of the entity system. Each row of this index points at the code that owns the table. What a table's columns mean is in its entity class; how a feature uses it is in that feature's documentation.
 
@@ -14,6 +14,7 @@ The tables of the entity system. Each row of this index points at the code that 
 | `prompt_items` | `prompt` | Saved prompts of the prompt library | `prompt/PromptItem.entity.ts`; `docs/features/064-prompt_library/` |
 | `prompt_categories` | `prompt` | Prompt categories, shared by every project | `prompt/PromptCategory.entity.ts` |
 | `prompt_category_item_links` | `prompt` | Which prompt sits in which category, and its place there | `prompt/PromptCategoryItemLink.entity.ts` |
+| `composer_drafts` | `composer` | The composer draft of a session: the message being written and the edits made to sends recalled from the history. Pictures are files under `composer-drafts/<sessionId>/` | `composer/ComposerDraft.entity.ts`; `features/composerDrafts.ts` |
 
 When you add a table, add a row here.
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useSyncExternalStore } from 'react';
 import { emptyContent, emptyDraft, isEmptyContent, sameContent, type ComposerContent } from '@/shared';
-import { composerDraftStore, NEW_SESSION_DRAFT } from './composerDraftStore';
+import { composerDraftStore, NEW_SESSION_DRAFT, type DraftChannel } from './composerDraftStore';
 
 /** The send of the history the composer shows, with the send as it was sent; null while it shows the draft. */
 export interface HistorySlot {
@@ -10,6 +10,9 @@ export interface HistorySlot {
 
 interface Args {
   sessionId: string | null;
+  workingDirectory: string | null;
+  /** The way to the backend, which keeps the draft of every session. */
+  channel: DraftChannel;
   /** What the composer holds now. */
   content: ComposerContent;
   /** Put a content in the composer. */
@@ -28,7 +31,7 @@ const takenHandoffs = new Set<string>();
  * What the person does to the composer goes to the draft, or, while it shows a send of the history, to that send's own
  * edit. Whatever this hook puts in the composer itself changes nothing.
  */
-export function useComposerDraft({ sessionId, content, apply, slot, handoff }: Args) {
+export function useComposerDraft({ sessionId, workingDirectory, channel, content, apply, slot, handoff }: Args) {
   const key = sessionId ?? NEW_SESSION_DRAFT;
   const draft = useSyncExternalStore(composerDraftStore.subscribe, () => composerDraftStore.get(key));
 
@@ -95,6 +98,33 @@ export function useComposerDraft({ sessionId, content, apply, slot, handoff }: A
     else edits[at.key] = content;
     composerDraftStore.change(key, { ...current, edits });
   }, [key, content]);
+
+  // The backend's copy: asked for when the session is opened and when the window is come back to, and shown when it
+  // is the later one. What another window keeps arrives by itself.
+  useEffect(() => {
+    if (!workingDirectory) return;
+    composerDraftStore.connect(channel);
+    const open = () => void composerDraftStore.open(key, workingDirectory);
+    open();
+    const flush = () => composerDraftStore.flush();
+    window.addEventListener('focus', open);
+    window.addEventListener('pagehide', flush);
+    return () => {
+      window.removeEventListener('focus', open);
+      window.removeEventListener('pagehide', flush);
+    };
+  }, [key, workingDirectory, channel]);
+
+  useEffect(
+    () =>
+      composerDraftStore.onReplaced((replaced) => {
+        if (replaced !== key) return;
+        const current = composerDraftStore.get(key);
+        const at = slotRef.current;
+        put(at ? current.edits[at.key] ?? at.original : current.content);
+      }),
+    [key, put],
+  );
 
   /** Show a send of the history, as edited if it was, or the draft when `next` is null. */
   const show = useCallback((next: HistorySlot | null) => {

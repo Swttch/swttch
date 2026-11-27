@@ -590,8 +590,11 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
     };
   }, [handoffState, currentSessionId]);
 
+  const draftChannel = useMemo(() => ({ send: bridge.send, subscribe: bridge.subscribe }), [bridge.send, bridge.subscribe]);
   const { show: showSlot, sent: draftSent, isModified } = useComposerDraft({
     sessionId: currentSessionId,
+    workingDirectory,
+    channel: draftChannel,
     content,
     apply: applyContent,
     slot: historySlot,

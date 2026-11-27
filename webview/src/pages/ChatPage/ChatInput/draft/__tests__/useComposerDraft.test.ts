@@ -1,9 +1,50 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { useState } from 'react';
 import { emptyContent, type ComposerContent } from '@/shared';
 import { useComposerDraft, type HistorySlot } from '../useComposerDraft';
-import { composerDraftStore, NEW_SESSION_DRAFT } from '../composerDraftStore';
+import { composerDraftStore, NEW_SESSION_DRAFT, type DraftChannel } from '../composerDraftStore';
+import { MessageType, type ComposerDraft } from '@/shared';
+
+/** A backend that holds what it is sent and tells what the test says another window did. */
+class FakeBackend implements DraftChannel {
+  stored = new Map<string, { draft: ComposerDraft; editedAt: number }>();
+  pictures: Record<string, string> = {};
+  saves: Record<string, unknown>[] = [];
+  down = false;
+  private clock = 100;
+  private heard: ((message: { payload?: Record<string, unknown> }) => void)[] = [];
+
+  send = async <T,>(type: MessageType, payload: Record<string, unknown>): Promise<T> => {
+    if (this.down) throw new Error('not connected');
+    const sessionId = payload.sessionId as string;
+    if (type === MessageType.SAVE_COMPOSER_DRAFT) {
+      this.saves.push(payload);
+      const editedAt = ++this.clock;
+      const draft = payload.draft as ComposerDraft;
+      if (draft.content.text === '' && Object.keys(draft.edits).length === 0) this.stored.delete(sessionId);
+      else this.stored.set(sessionId, { draft, editedAt });
+      return { status: 'ok', editedAt } as T;
+    }
+    const stored = this.stored.get(sessionId);
+    return { status: 'ok', draft: stored?.draft ?? null, editedAt: stored?.editedAt ?? 0, blobs: this.pictures } as T;
+  };
+
+  subscribe = (_type: MessageType, handler: (message: { payload?: Record<string, unknown> }) => void) => {
+    this.heard.push(handler);
+    return () => { this.heard = this.heard.filter((h) => h !== handler); };
+  };
+
+  /** Another window kept this text. */
+  elsewhere(sessionId: string, text: string) {
+    const editedAt = ++this.clock;
+    const draft: ComposerDraft = { content: written(text), edits: {} };
+    this.stored.set(sessionId, { draft, editedAt });
+    this.heard.forEach((h) => h({ payload: { sessionId, draft, editedAt } }));
+  }
+}
+
+let backend = new FakeBackend();
 
 const written = (text: string): ComposerContent => ({ ...emptyContent(), text });
 const send = (key: string, text: string): HistorySlot => ({ key, original: written(text) });
@@ -15,7 +56,7 @@ function composer(initial: { sessionId?: string | null; text?: string; handoff?:
     ({ sessionId }: { sessionId: string | null }) => {
       const [content, setContent] = useState(written(initial.text ?? ''));
       const [slot, setSlot] = useState<HistorySlot | null>(null);
-      const draft = useComposerDraft({ sessionId, content, apply: setContent, slot, handoff });
+      const draft = useComposerDraft({ sessionId, workingDirectory: '/w', channel: backend, content, apply: setContent, slot, handoff });
       return {
         content,
         draft,
@@ -38,6 +79,7 @@ const draftOf = (sessionId: string) => composerDraftStore.get(sessionId);
 describe('useComposerDraft', () => {
   beforeEach(() => {
     composerDraftStore.clear();
+    backend = new FakeBackend();
     localStorage.clear();
     sessionStorage.clear();
   });
@@ -196,5 +238,121 @@ describe('useComposerDraft', () => {
     const { result } = composer({ sessionId: 's9' });
 
     expect(shown(result)).toBe('left behind');
+  });
+});
+
+describe('the draft the backend keeps', () => {
+  beforeEach(() => {
+    composerDraftStore.clear();
+    backend = new FakeBackend();
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+  afterEach(() => vi.useRealTimers());
+
+  /** Let the answers of the backend arrive, and the rest after typing pass. */
+  const settle = async (ms = 500) => {
+    await act(async () => { await vi.advanceTimersByTimeAsync(ms); });
+  };
+
+  it('is sent once the box rests, with the folder of the session', async () => {
+    vi.useFakeTimers();
+    const { result } = composer();
+    await settle();
+
+    type(result, 'a');
+    type(result, 'ab');
+    await settle();
+
+    expect(backend.saves).toHaveLength(1);
+    expect(backend.saves[0]).toMatchObject({ workingDir: '/w', sessionId: 's1', draft: { content: { text: 'ab' } } });
+  });
+
+  it('is shown when the session is opened with nothing held here', async () => {
+    vi.useFakeTimers();
+    backend.stored.set('s1', { draft: { content: written('from before the restart'), edits: {} }, editedAt: 50 });
+
+    const { result } = composer();
+    await settle();
+
+    expect(shown(result)).toBe('from before the restart');
+    expect(backend.saves).toEqual([]);
+  });
+
+  it('shows what another window keeps while this box rests', async () => {
+    vi.useFakeTimers();
+    const { result } = composer();
+    await settle();
+
+    act(() => backend.elsewhere('s1', 'typed in the other window'));
+
+    expect(shown(result)).toBe('typed in the other window');
+  });
+
+  it('never replaces what is being typed here and not yet sent', async () => {
+    vi.useFakeTimers();
+    const { result } = composer();
+    await settle();
+
+    type(result, 'being typed here');
+    act(() => backend.elsewhere('s1', 'older, from the other window'));
+
+    expect(shown(result)).toBe('being typed here');
+    await settle();
+    expect(backend.stored.get('s1')?.draft.content.text).toBe('being typed here');
+  });
+
+  it('waits behind the walk: another window\'s draft is shown on the way back down', async () => {
+    vi.useFakeTimers();
+    const { result } = composer();
+    await settle();
+    walk(result, send('u1', 'sent'));
+
+    act(() => backend.elsewhere('s1', 'newer draft'));
+    expect(shown(result)).toBe('sent');
+    walk(result, null);
+
+    expect(shown(result)).toBe('newer draft');
+  });
+
+  it('empties the box when the draft was sent from another window', async () => {
+    vi.useFakeTimers();
+    const view = composer();
+    await settle();
+    type(view.result, 'written here');
+    await settle();
+
+    backend.stored.delete('s1');
+    act(() => { window.dispatchEvent(new Event('focus')); });
+    await settle();
+
+    expect(shown(view.result)).toBe('');
+  });
+
+  it('keeps what was typed while the backend was away and sends it on coming back', async () => {
+    vi.useFakeTimers();
+    const { result } = composer();
+    await settle();
+    backend.down = true;
+
+    type(result, 'offline words');
+    await settle();
+    backend.down = false;
+    act(() => { window.dispatchEvent(new Event('focus')); });
+    await settle();
+
+    expect(shown(result)).toBe('offline words');
+    expect(backend.stored.get('s1')?.draft.content.text).toBe('offline words');
+  });
+
+  it('moves a draft an earlier version left in the browser to the backend, and forgets the old one', async () => {
+    vi.useFakeTimers();
+    localStorage.setItem('claude-gui:draft:s1', 'left behind');
+
+    composer();
+    await settle();
+
+    expect(backend.stored.get('s1')?.draft.content.text).toBe('left behind');
+    expect(localStorage.getItem('claude-gui:draft:s1')).toBeNull();
   });
 });

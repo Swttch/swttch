@@ -788,6 +788,18 @@ export enum MessageType {
   // -- Session sends --
   /** Ask for the index of every send the USER typed in one session, as {workingDir, sessionId}. The reply carries one row per send — uuid, timestamp and a truncated preview — so the send index can draw a tick for the whole session while the transcript itself is still paged. Never carries the entries: a prompt drags whatever was pasted into it, up to 21MB of base64 in the worst session measured here. inbound webview→backend */
   GET_SESSION_SENDS = 'GET_SESSION_SENDS',
+  /**
+   * Read a session's composer draft (`{ sessionId, have }`; `have` names the pictures the asker holds already).
+   * Resolves to `{ status, draft, editedAt, blobs }`, with `draft` null when there is none. inbound webview→backend
+   */
+  GET_COMPOSER_DRAFT = 'GET_COMPOSER_DRAFT',
+  /**
+   * Keep a session's composer draft (`{ workingDir, sessionId, draft, blobs }`). The backend stamps it with the time
+   * it received it and resolves to `{ status, editedAt }`. inbound webview→backend
+   */
+  SAVE_COMPOSER_DRAFT = 'SAVE_COMPOSER_DRAFT',
+  /** Another window kept a new composer draft (`{ sessionId, draft, editedAt }`, without picture bytes). outbound backend→webview */
+  COMPOSER_DRAFT_CHANGED = 'COMPOSER_DRAFT_CHANGED',
   /** Ask for the newest entries of one session without opening it, as {workingDir, sessionId, limit?}. The reply carries {messages}, the entries exactly as the session's record holds them, so the card of a session another session started can say what that session is doing or did last. It does not subscribe this connection to the session and does not mark it as spawned. inbound webview→backend */
   GET_SESSION_TAIL = 'GET_SESSION_TAIL',
   /** Ask for the title of the Claude Desktop session that started this one, as {sessionId} (the CLI session id). The reply is {title} when Desktop's own session files name a starter with a title, and carries no title otherwise. The first message of a session another session started shows it in the line over its Task and Context cards. inbound webview→backend */
