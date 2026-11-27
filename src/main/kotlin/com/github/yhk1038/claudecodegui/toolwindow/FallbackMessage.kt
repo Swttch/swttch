@@ -55,6 +55,17 @@ internal fun fallbackMessageWidth(panelWidth: Int, horizontalInsets: Int): Int {
         .coerceIn(FALLBACK_MESSAGE_MIN_WIDTH, FALLBACK_MESSAGE_MAX_WIDTH)
 }
 
+/**
+ * The markup width to ask for instead, after asking for [markupWidth] drew the
+ * text [drawnWidth] wide into [available] pixels.
+ *
+ * A pixel in Swing's HTML is not a pixel of the panel (the JDK draws it 1.3 times
+ * as wide), so the width is corrected by what was actually drawn rather than by a
+ * factor written down here.
+ */
+internal fun fittingMarkupWidth(markupWidth: Int, drawnWidth: Int, available: Int): Int =
+    (markupWidth * available / drawnWidth).coerceAtLeast(FALLBACK_MESSAGE_MIN_WIDTH)
+
 /** Wraps [bodyHtml] in the centred, width-constrained document both panels use. */
 internal fun fallbackMessageHtml(bodyHtml: String, widthPx: Int): String =
     "<html><div style='text-align:center; width: ${widthPx}px;'>$bodyHtml</div></html>"
@@ -81,17 +92,23 @@ internal fun fallbackMessageHtml(bodyHtml: String, widthPx: Int): String =
 internal fun JPanel.installReflowingMessage(label: JLabel, bodyHtml: String) {
     fun reflow() {
         val insets = this.insets
-        label.text = fallbackMessageHtml(
-            bodyHtml,
-            fallbackMessageWidth(width, insets.left + insets.right)
-        )
-
-        val available = width - insets.left - insets.right
-        if (available <= 0) return
+        val markupWidth = fallbackMessageWidth(width, insets.left + insets.right)
 
         label.minimumSize = null
         label.preferredSize = null
         label.maximumSize = null
+        label.text = fallbackMessageHtml(bodyHtml, markupWidth)
+
+        val available = width - insets.left - insets.right
+        if (available <= 0) return
+
+        val drawnWidth = label.preferredSize.width
+        if (drawnWidth > available) {
+            label.text = fallbackMessageHtml(
+                bodyHtml,
+                fittingMarkupWidth(markupWidth, drawnWidth, available)
+            )
+        }
 
         val pinned = Dimension(available, label.preferredSize.height)
         label.minimumSize = pinned
