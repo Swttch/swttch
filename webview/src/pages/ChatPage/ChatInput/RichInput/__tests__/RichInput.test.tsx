@@ -276,6 +276,20 @@ describe('RichInput — IME composition guard', () => {
     expect(onChange).toHaveBeenCalledWith('한');
   });
 
+  it('tells the text being composed apart from the value, mid-composition (#735)', () => {
+    const onChange = vi.fn();
+    const onLiveText = vi.fn();
+    const { getByRole } = render(<RichInput value="" onChange={onChange} onLiveText={onLiveText} />);
+    const el = getByRole('textbox');
+
+    fireEvent.compositionStart(el);
+    el.textContent = 'ㅇ';
+    fireEvent.input(el, { inputType: 'insertCompositionText', isComposing: true });
+
+    expect(onLiveText).toHaveBeenLastCalledWith('ㅇ');
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   /**
    * Issue #403. On Windows 11 the Hangul IME abandons its last composition
    * without firing compositionend: Backspace erases the in-progress syllable

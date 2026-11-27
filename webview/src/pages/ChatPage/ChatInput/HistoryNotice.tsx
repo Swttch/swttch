@@ -1,5 +1,6 @@
-import { useRef } from 'react';
+import { useRef, useSyncExternalStore } from 'react';
 import { Trans, useTranslation } from '@/i18n';
+import { LiveText } from './draft/liveText';
 
 interface Props {
   /** The send shown, counted from the oldest, or null while the box holds the draft. */
@@ -10,7 +11,13 @@ interface Props {
   guarded: boolean;
   /** Something is written in the draft, which the walk keeps. */
   hasDraft: boolean;
+  /** The text on screen while an IME composes it, ahead of what `modified` was worked out from. */
+  liveText?: LiveText;
+  /** Whether the send shown reads as changed with that text. */
+  isModifiedWith?: (text: string) => boolean;
 }
+
+const NO_LIVE_TEXT = new LiveText();
 
 /** A line as tall as the "Edited" mark, so the mark's arrival moves nothing. */
 const LINE = 'box-content flex h-[calc(1rem+2px)] min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap ps-3 pe-11 pb-1.5';
@@ -23,11 +30,14 @@ const LINE = 'box-content flex h-[calc(1rem+2px)] min-w-0 items-center gap-1.5 o
 export function HistoryNotice(props: Props) {
   const { t } = useTranslation('chat');
   const open = props.position !== null || props.guarded;
+  const liveText = props.liveText ?? NO_LIVE_TEXT;
+  const live = useSyncExternalStore(liveText.subscribe, liveText.get);
 
   // The line closes with the words it had: it would otherwise empty first and shrink after.
   const shownRef = useRef<Props | null>(null);
   if (open) shownRef.current = props;
   const shown = shownRef.current;
+  const modified = open && live !== null && props.isModifiedWith ? props.isModifiedWith(live) : shown?.modified;
 
   return (
     <div
@@ -44,7 +54,7 @@ export function HistoryNotice(props: Props) {
           {shown?.position && (
             <>
               <span className="shrink-0">{t('chatInput.history.position', shown.position)}</span>
-              {shown.modified && (
+              {modified && (
                 <span className="shrink-0 rounded border border-border-default px-1 text-[0.6875rem] leading-4 text-text-secondary">
                   {t('chatInput.history.modified')}
                 </span>

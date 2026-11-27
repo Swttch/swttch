@@ -56,6 +56,8 @@ interface Props {
    * Ignored when there is no `ghostText`.
    */
   ghostHint?: string | null;
+  /** The text in the box after every edit, composing text included, which `onChange` waits out. */
+  onLiveText?: (text: string) => void;
   /**
    * IME composition state, optionally owned by the parent (ChatInput) so its
    * keydown handler and this editor agree on a single source of truth. Under
@@ -125,6 +127,7 @@ export const RichInput = forwardRef<HTMLDivElement, Props>((props: Props, ref) =
     interimRange = null,
     ghostText = null,
     ghostHint = null,
+    onLiveText,
     ime: imeProp,
   } = props;
 
@@ -189,6 +192,7 @@ export const RichInput = forwardRef<HTMLDivElement, Props>((props: Props, ref) =
       const text = e.currentTarget.textContent ?? '';
       // Always repaint the mirror in real time, including mid-composition.
       setDisplayText(text);
+      onLiveText?.(text);
       // Report the input BEFORE the composing guard below reads the flag: an
       // edit that belongs to no composition is what lowers a flag an IME left
       // stuck by never firing compositionend (issue #403). Reporting after the
@@ -207,7 +211,7 @@ export const RichInput = forwardRef<HTMLDivElement, Props>((props: Props, ref) =
       if (isComposingRef.current) return;
       onChange(text);
     },
-    [onChange, ime, isComposingRef],
+    [onChange, onLiveText, ime, isComposingRef],
   );
 
   // beforeinput safety net (issue #215): under JCEF a non-English-layout Enter

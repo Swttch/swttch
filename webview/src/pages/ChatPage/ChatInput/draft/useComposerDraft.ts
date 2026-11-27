@@ -150,5 +150,7 @@ export function useComposerDraft({ sessionId, workingDirectory, channel, content
   }, [key, put]);
 
   const hasDraft = !isEmptyContent({ ...draft.content, text: draft.content.text.trim() });
-  return { show, sent, hasDraft, isModified: slot !== null && draft.edits[slot.key] !== undefined };
+  /** Whether the send shown reads as changed with `text` in the box, ahead of the composer's value. */
+  const isModifiedWith = (text: string) => slot !== null && !sameContent({ ...content, text }, slot.original);
+  return { show, sent, hasDraft, isModified: slot !== null && draft.edits[slot.key] !== undefined, isModifiedWith };
 }

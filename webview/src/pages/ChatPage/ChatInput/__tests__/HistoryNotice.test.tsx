@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import '@/i18n/config';
 import { HistoryNotice } from '../HistoryNotice';
+import { LiveText } from '../draft/liveText';
 
 const idle = { position: null, modified: false, guarded: false, hasDraft: false };
 const walking = { ...idle, position: { index: 5, total: 6 } };
@@ -27,6 +28,17 @@ describe('HistoryNotice', () => {
   it('says no way back when no draft waits', () => {
     render(<HistoryNotice {...walking} />);
 
+    expect(screen.getByRole('status').textContent).toBe('History 5/6');
+  });
+
+  it('marks a send as edited while the first syllable is still being composed', () => {
+    const liveText = new LiveText();
+    render(<HistoryNotice {...walking} liveText={liveText} isModifiedWith={(text) => text !== 'sent'} />);
+
+    act(() => liveText.set('sentㅇ'));
+    expect(screen.getByRole('status').textContent).toBe('History 5/6Edited');
+
+    act(() => liveText.set('sent'));
     expect(screen.getByRole('status').textContent).toBe('History 5/6');
   });
 

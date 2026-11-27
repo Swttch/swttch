@@ -95,6 +95,7 @@ import { FollowUpBehavior, SessionActivity, resolveFollowUpBehavior } from '@/sh
 import { useSessionActivity } from '@/hooks/useSessionActivity';
 import { ArrowMove, caretLength, historyArrow, readCaret } from './historyArrow';
 import { HistoryNotice } from './HistoryNotice';
+import { LiveText } from './draft/liveText';
 import { useComposerDraft } from './draft/useComposerDraft';
 import { composerDraftStore } from './draft/composerDraftStore';
 import { attachmentsOf, contentOfComposer, elementsOf } from './draft/composerContent';
@@ -591,7 +592,7 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
   }, [handoffState, currentSessionId]);
 
   const draftChannel = useMemo(() => ({ send: bridge.send, subscribe: bridge.subscribe }), [bridge.send, bridge.subscribe]);
-  const { show: showSlot, sent: draftSent, isModified, hasDraft } = useComposerDraft({
+  const { show: showSlot, sent: draftSent, isModified, isModifiedWith, hasDraft } = useComposerDraft({
     sessionId: currentSessionId,
     workingDirectory,
     channel: draftChannel,
@@ -600,6 +601,9 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
     slot: historySlot,
     handoff,
   });
+  // Declared after the draft, so that it has the value by the time the text on screen stops standing in for it.
+  const [liveText] = useState(() => new LiveText());
+  useEffect(() => liveText.set(null), [liveText, value]);
 
   const sendToSession = useSendToSession();
   const { sendMessage } = chatStream;
@@ -1525,7 +1529,14 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
         <DragOverlay visible={isDragOver} />
         </>}
         editor={<>
-          <HistoryNotice position={historyPosition} modified={isModified} guarded={isGuarded} hasDraft={hasDraft} />
+          <HistoryNotice
+            position={historyPosition}
+            modified={isModified}
+            guarded={isGuarded}
+            hasDraft={hasDraft}
+            liveText={liveText}
+            isModifiedWith={isModifiedWith}
+          />
           {/* A click puts the caret somewhere else, which stands the guard down too. */}
           <div onMouseDown={disarmGuard}>
           <RichInput
@@ -1533,6 +1544,7 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
             ime={ime}
             value={value}
             onChange={handleRichChange}
+            onLiveText={liveText.set}
             onKeyDown={handleKeyDown}
             onKeyUp={(e) => {
               if (promptLibrary.isActive) promptLibrary.handleKeyUp(e);
