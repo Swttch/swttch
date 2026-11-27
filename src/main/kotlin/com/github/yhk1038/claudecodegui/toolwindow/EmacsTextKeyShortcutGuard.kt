@@ -25,9 +25,14 @@ import javax.swing.JComponent
  * - The keymap's action for the same keystroke does not run. IntelliJ's macOS
  *   keymap binds Ctrl+T to "Refactor This" and Ctrl+V to the VCS popup, and
  *   those popups used to take focus away from the page.
- * - The key never reaches CEF, so no CEF keyboard handler can see it. The
- *   action itself is therefore what reports the key: the AWT event it receives
- *   carries the real letter and the real Shift state (see [EmacsTextKey]).
+ * - Under off-screen rendering the key never reaches CEF, so no CEF keyboard
+ *   handler can see it. The action itself is therefore what reports the key: the
+ *   AWT event it receives carries the real letter and the real Shift state (see
+ *   [EmacsTextKey]).
+ *
+ * Where the browser renders natively (IDE 2024.2), the page receives the press
+ * as well. It prevents the default there, so this report stays the one thing
+ * that acts on the key (#753).
  *
  * ## One registration per browser component
  *

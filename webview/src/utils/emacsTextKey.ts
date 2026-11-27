@@ -124,11 +124,24 @@ const LETTER_CODE = /^Key([A-Z])$/;
  * is a different key and also returns null.
  */
 export function emacsTextKeyFromKeydown(event: EmacsTextKeydown): EmacsTextKeyPress | null {
+  if (ASCII_LETTER.test(event.key)) return null;
+  return emacsTextKeyPressOf(event);
+}
+
+/**
+ * The Emacs text key a keydown stands for under any layout, or null. The letter
+ * is the one the layout types when that is a Latin letter, and the physical key
+ * otherwise. Says nothing about who performs it.
+ */
+export function emacsTextKeyPressOf(event: EmacsTextKeydown): EmacsTextKeyPress | null {
   if (!event.ctrlKey || event.metaKey || event.altKey) return null;
   if (event.isComposing) return null;
-  if (ASCII_LETTER.test(event.key)) return null;
 
-  const letter = event.code ? LETTER_CODE.exec(event.code)?.[1] : undefined;
+  const letter = ASCII_LETTER.test(event.key)
+    ? event.key
+    : event.code
+      ? LETTER_CODE.exec(event.code)?.[1]
+      : undefined;
   if (!letter) return null;
 
   const key = parseEmacsTextKey(letter.toLowerCase());

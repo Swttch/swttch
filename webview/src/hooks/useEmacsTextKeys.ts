@@ -1,18 +1,17 @@
 import { useEffect } from 'react';
 import { getBridge } from '@/api/bridge/Bridge';
-import { isMac } from '@/config/environment';
+import { isJetBrains, isMac } from '@/config/environment';
 import { MessageType, parseEmacsTextKey } from '@/shared';
 import { typingTargetOf } from '@/utils/typingTarget';
 import { focusedTypingTarget } from '@/utils/focusedTypingTarget';
 import { applyEmacsTextKey } from '@/utils/emacsTextEdit';
-import { emacsTextKeyFromKeydown } from '@/utils/emacsTextKey';
+import { emacsTextKeyFromKeydown, emacsTextKeyPressOf } from '@/utils/emacsTextKey';
 
 /**
  * The macOS Emacs-style text keys (Ctrl+A/B/D/E/F/H/K/L/N/O/P/T/V/Y) for every
  * text field in the app (issue #506).
  *
- * There are two entry points, one per environment where the keys would
- * otherwise do nothing:
+ * Each environment has one entry point that performs the key:
  *
  * The IDE, over the bridge (EMACS_TEXT_KEY_PRESSED). Under JCEF's off-screen rendering, the default since IDE 2025.1, these keys do
  * nothing on their own: macOS delivers them as NSResponder selectors
@@ -20,11 +19,16 @@ import { emacsTextKeyFromKeydown } from '@/utils/emacsTextKey';
  * receives. Unlike Cmd+Arrow they cannot be restored from a DOM keydown either,
  * because OSR reports every Ctrl+letter to the page as Ctrl+A (`key: 'a'`,
  * `code: 'KeyA'`). The IDE still sees the real key event, so it consumes the
- * keystroke before the page ever receives it and names the letter over the
- * bridge; this hook performs the binding (see applyEmacsTextKey). Because the
- * IDE consumes the keystroke, the page never also sees a keydown for it there.
+ * keystroke and names the letter over the bridge; this hook performs the
+ * binding (see applyEmacsTextKey).
  *
- * A browser keydown, under a non-Latin input source. Chrome on macOS performs
+ * Where the IDE renders the chat natively (2024.2), the page receives the same
+ * press as a keydown too, and the browser would perform it as well: one Ctrl+F
+ * moved the caret two characters (#753). So in the IDE the page only prevents
+ * the default of such a keydown, under any layout, and leaves the work to the
+ * bridge.
+ *
+ * A browser keydown, under a non-Latin input source (standalone only). Chrome on macOS performs
  * these keys natively while the layout is Latin, but under a non-Latin one
  * (Korean 2-set, for instance) the keydown carries the layout's character in
  * `key` (the Hangul jamo U+3160 for Ctrl+B), the physical key in `code` (`'KeyB'`), and Chrome
@@ -63,6 +67,12 @@ export function useEmacsTextKeys(): void {
     });
 
     const onKeyDown = (event: KeyboardEvent) => {
+      // In the IDE the key has one road, the bridge: stop the browser's own answer to it.
+      if (isJetBrains()) {
+        if (emacsTextKeyPressOf(event) && typingTargetOf(event)) event.preventDefault();
+        return;
+      }
+
       const press = emacsTextKeyFromKeydown(event);
       if (!press) return;
 
