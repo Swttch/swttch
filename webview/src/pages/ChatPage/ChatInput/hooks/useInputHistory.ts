@@ -5,6 +5,7 @@ import type { LoadedMessageDto } from '@/types';
 import { isUserSend } from '@/pages/ChatPage/paging';
 import type { SendIndexEntry } from '@/pages/ChatPage/sendList';
 import { sendContent } from '../draft/sendContent';
+import { composerDraftStore } from '../draft/composerDraftStore';
 import type { HistorySlot } from '../draft/useComposerDraft';
 
 /**
@@ -77,7 +78,7 @@ export function useInputHistory({ workingDirectory, sessionId, sends }: UseInput
   const sessionRef = useRef<string | null>(sessionId);
 
   const contentFor = useCallback(
-    (entry: SendIndexEntry) => (entry.message ? sendContent(entry.message) : contentsRef.current.get(entry.key)),
+    (entry: SendIndexEntry) => (entry.message ? sendContent(entry.message, composerDraftStore) : contentsRef.current.get(entry.key)),
     [],
   );
 
@@ -96,7 +97,7 @@ export function useInputHistory({ workingDirectory, sessionId, sends }: UseInput
       // The records arrive as the session file has them, and are read here the way the transcript reads them.
       for (const { entry } of restoreQueuedEntries(res.entries ?? [])) {
         const message = entry as unknown as LoadedMessageDto;
-        if (message.uuid && isUserSend(message)) contentsRef.current.set(message.uuid, sendContent(message));
+        if (message.uuid && isUserSend(message)) contentsRef.current.set(message.uuid, sendContent(message, composerDraftStore));
       }
     } catch {
       // A failed page leaves the history at what already loaded; the next press asks again.
