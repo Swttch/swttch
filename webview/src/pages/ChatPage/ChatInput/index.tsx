@@ -593,7 +593,7 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
   }, [handoffState, currentSessionId]);
 
   const draftChannel = useMemo(() => ({ send: bridge.send, subscribe: bridge.subscribe }), [bridge.send, bridge.subscribe]);
-  const { show: showSlot, sent: draftSent, revert: revertEdit, edits, isModified, isModifiedWith, hasDraft } = useComposerDraft({
+  const { show: showSlot, sent: draftSent, revert: revertEdit, adopt: adoptEdit, edits, isModified, isModifiedWith, hasDraft } = useComposerDraft({
     sessionId: currentSessionId,
     workingDirectory,
     channel: draftChannel,
@@ -606,11 +606,16 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
   const [liveText] = useState(() => new LiveText());
   useEffect(() => liveText.set(null), [liveText, value]);
 
+  // An edit made before the record's id of its send arrived moves under that id.
+  useEffect(() => {
+    for (const entry of sends) if (entry.recordId !== entry.key) adoptEdit(entry.key, entry.recordId);
+  }, [sends, edits, adoptEdit]);
+
   // The history modal (#735). Only edits of sends the history still holds are counted.
   const [isHistoryOpen, setHistoryOpen] = useState(false);
   useEffect(() => setHistoryOpen(false), [currentSessionId]);
   const otherEdits = useMemo(
-    () => sends.filter((entry) => entry.key !== historySlot?.key && edits[entry.key] !== undefined).length,
+    () => sends.filter((entry) => entry.recordId !== historySlot?.key && edits[entry.recordId] !== undefined).length,
     [sends, edits, historySlot?.key],
   );
   const openHistory = useCallback(() => {

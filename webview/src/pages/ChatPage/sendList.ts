@@ -2,12 +2,18 @@ import { type SessionSend } from '@/shared';
 import { type LoadedMessageDto } from '@/types';
 import type { SendSection } from './groupIntoSendSections';
 import { isUserSend } from './paging';
+import { recordedUuidOf } from './rewindTargets';
 import { composeSendText, sendText } from './sendText';
 
 /** One send of the session: a tick of the send index, and one step of the composer's history. */
 export interface SendIndexEntry {
   /** The section this send opens, which is also how a jump finds it. */
   key: string;
+  /**
+   * The id the session's record knows this send by, which is what an edit of it is kept under: a send made in this
+   * view goes by a local `key` that a reload does not bring back. The `key` while the record's id is not known.
+   */
+  recordId: string;
   /** What the tick's preview card shows. For a send that is not loaded, the cut copy the backend keeps. */
   text: string;
   /** How many pictures the send holds. A send of pictures alone has no text. */
@@ -32,6 +38,7 @@ const imagesIn = (message: LoadedMessageDto): number => {
 
 const notLoaded = (send: SessionSend): SendIndexEntry => ({
   key: send.uuid,
+  recordId: send.uuid,
   text: composeSendText(send.preview),
   images: send.images ?? 0,
   loaded: false,
@@ -56,6 +63,7 @@ export function buildEntries(
     .filter(section => section.head !== null && isUserSend(section.head))
     .map(section => ({
       key: section.key,
+      recordId: recordedUuidOf(section.head!) ?? section.key,
       text: sendText(section.head!),
       images: imagesIn(section.head!),
       message: section.head!,

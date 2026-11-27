@@ -11,9 +11,9 @@ import type { SendIndexEntry } from '../sendList';
 interface Props {
   /** Every send of the session, oldest first: the list the send index and the arrow keys walk. */
   entries: SendIndexEntry[];
-  /** The edits kept, by send key. */
+  /** The edits kept, by the record id of the send. */
   edits: Record<string, ComposerContent>;
-  /** The send the composer shows, or null while it shows the draft. */
+  /** The record id of the send the composer shows, or null while it shows the draft. */
   currentKey: string | null;
   /** A send as it was sent; undefined when it cannot be read. */
   loadContent: (key: string) => Promise<ComposerContent | undefined>;
@@ -21,7 +21,7 @@ interface Props {
   pictureOf: (id: string) => string | undefined;
   /** Put a send in the composer. */
   onRecall: (key: string) => void;
-  /** Give up the edit of a send. */
+  /** Give up the edit of a send, named by its record id. */
   onRevert: (key: string) => void;
   onClose: () => void;
 }
@@ -39,7 +39,7 @@ export function HistoryModal(props: Props) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLOListElement>(null);
 
-  const [opened, setOpened] = useState(() => new Set(entries.filter((e) => edits[e.key] !== undefined).map((e) => e.key)));
+  const [opened, setOpened] = useState(() => new Set(entries.filter((e) => edits[e.recordId] !== undefined).map((e) => e.key)));
   const toggle = (key: string) =>
     setOpened((was) => {
       const next = new Set(was);
@@ -49,8 +49,9 @@ export function HistoryModal(props: Props) {
 
   // Open on what the mark was about: the edited send in the composer, or the newest edited one.
   const [firstInView] = useState(() => {
-    if (currentKey !== null && edits[currentKey] !== undefined) return currentKey;
-    return [...entries].reverse().find((e) => edits[e.key] !== undefined)?.key;
+    const current = entries.find((e) => e.recordId === currentKey);
+    if (current && edits[current.recordId] !== undefined) return current.key;
+    return [...entries].reverse().find((e) => edits[e.recordId] !== undefined)?.key;
   });
   useEffect(() => {
     const row = Array.from(listRef.current?.children ?? []).find((li) => li.getAttribute('data-send') === firstInView);
@@ -129,7 +130,7 @@ const ICON_BUTTON = 'flex h-6 w-6 shrink-0 items-center justify-center rounded t
 function HistoryRow({ entry, number, numberWidth, isOpen, onToggle, edits, currentKey, loadContent, pictureOf, onRecall, onRevert }: RowProps) {
   const { t } = useTranslation('chat');
   const { t: tt } = useTranslation('chatTools');
-  const edit = edits[entry.key];
+  const edit = edits[entry.recordId];
   const pictures = edit ? edit.attachments.filter((a) => a.type === 'image').length : entry.images;
   const words = (edit ? edit.text : entry.text).trim();
   const preview = words !== '' ? words : pictures > 0 ? tt('sendIndex.imageOnly') : t('chatInput.history.modal.empty');
@@ -137,7 +138,7 @@ function HistoryRow({ entry, number, numberWidth, isOpen, onToggle, edits, curre
 
   // An opened row stands out from the folded ones: a lighter ground, and its number and words at full strength.
   return (
-    <li data-send={entry.key} className={`rounded-lg ${isOpen ? 'my-0.5 bg-text-primary/[0.08]' : entry.key === currentKey ? 'bg-surface-hover/50' : ''}`}>
+    <li data-send={entry.key} className={`rounded-lg ${isOpen ? 'my-0.5 bg-text-primary/[0.08]' : entry.recordId === currentKey ? 'bg-surface-hover/50' : ''}`}>
       <div className={`flex items-start gap-1 rounded-lg pe-1 ${isOpen ? '' : 'hover:bg-surface-hover'}`}>
         <button
           type="button"
@@ -163,7 +164,7 @@ function HistoryRow({ entry, number, numberWidth, isOpen, onToggle, edits, curre
               `isMobile`, not by `(hover: none)`: the IDE's browser answers that on a Windows laptop with a mouse. */}
           {edit && (
             <Tooltip content={t('chatInput.history.modal.revert')} desktop>
-              <button type="button" aria-label={t('chatInput.history.modal.revert')} onClick={() => onRevert(entry.key)} className={`group/revert ${ICON_BUTTON}`}>
+              <button type="button" aria-label={t('chatInput.history.modal.revert')} onClick={() => onRevert(entry.recordId)} className={`group/revert ${ICON_BUTTON}`}>
                 <span data-testid="history-edited-dot" className={`h-2 w-2 rounded-full bg-accent-claude group-hover/revert:hidden group-focus-visible/revert:hidden ${isMobile() ? 'hidden' : ''}`} />
                 <XMarkIcon className={`h-3.5 w-3.5 group-hover/revert:block group-focus-visible/revert:block ${isMobile() ? 'block' : 'hidden'}`} />
               </button>

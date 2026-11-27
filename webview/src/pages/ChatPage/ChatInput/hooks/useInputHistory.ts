@@ -163,7 +163,7 @@ export function useInputHistory({ workingDirectory, sessionId, sends }: UseInput
     }
     setGuarded(false);
     setShownKey(sends[target].key);
-    return { slot: { key: sends[target].key, original } };
+    return { slot: { key: sends[target].recordId, original } };
   }, [sends, contentFor, ensure]);
 
   const navigateUp = useCallback((): HistoryStep => {
@@ -194,10 +194,10 @@ export function useInputHistory({ workingDirectory, sessionId, sends }: UseInput
   const shown = index < sends.length ? sends[index] : null;
   const original = shown ? contentFor(shown) : undefined;
   const slot = useMemo(
-    () => (shown && original ? { key: shown.key, original } : null),
+    () => (shown && original ? { key: shown.recordId, original } : null),
     // The send as it was sent does not change while it is shown; its text names it well enough.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [shown?.key, original?.text],
+    [shown?.recordId, original?.text],
   );
   const position = shown ? { index: index + 1, total: sends.length } : null;
 

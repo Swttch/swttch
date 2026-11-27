@@ -148,6 +148,19 @@ describe('useComposerDraft', () => {
     expect(shown(result)).toBe('second');
   });
 
+  it('moves an edit under the record id of its send, once that is known', () => {
+    const { result } = composer();
+    walk(result, send('msg-1', 'sent'));
+    type(result, 'sent, changed');
+    walk(result, null);
+
+    act(() => result.current.draft.adopt('msg-1', 'uuid-1'));
+
+    expect(Object.keys(draftOf('s1').edits)).toEqual(['uuid-1']);
+    walk(result, send('uuid-1', 'sent'));
+    expect(shown(result)).toBe('sent, changed');
+  });
+
   it('keeps an edit that emptied the send', () => {
     const { result } = composer();
     walk(result, send('u1', 'sent'));

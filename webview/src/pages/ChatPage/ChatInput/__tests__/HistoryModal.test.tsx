@@ -6,7 +6,7 @@ import { HistoryModal } from '../HistoryModal';
 import type { SendIndexEntry } from '../../sendList';
 
 const written = (text: string): ComposerContent => ({ ...emptyContent(), text });
-const entry = (key: string, text: string, images = 0): SendIndexEntry => ({ key, text, images, loaded: false });
+const entry = (key: string, text: string, images = 0): SendIndexEntry => ({ key, recordId: key, text, images, loaded: false });
 
 function show(props: Partial<React.ComponentProps<typeof HistoryModal>> = {}) {
   const calls = { onRecall: vi.fn(), onRevert: vi.fn(), onClose: vi.fn(), loadContent: vi.fn(async (key: string) => written(`all of ${key}`)) };

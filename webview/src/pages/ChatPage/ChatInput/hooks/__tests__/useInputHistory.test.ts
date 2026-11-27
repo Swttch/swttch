@@ -21,12 +21,12 @@ function record(uuid: string, text: string) {
 
 /** A send the transcript holds. */
 function loaded(key: string, text: string): SendIndexEntry {
-  return { key, text, images: 0, loaded: true, message: record(key, text) as unknown as LoadedMessageDto };
+  return { key, recordId: key, text, images: 0, loaded: true, message: record(key, text) as unknown as LoadedMessageDto };
 }
 
 /** A send known only by its name. */
 function unloaded(key: string): SendIndexEntry {
-  return { key, text: '', images: 0, loaded: false };
+  return { key, recordId: key, text: '', images: 0, loaded: false };
 }
 
 function render(sends: SendIndexEntry[], sessionId: string | null = 's1') {
@@ -102,6 +102,14 @@ describe('useInputHistory', () => {
     act(() => { step = result.current.recall('u1'); });
     expect(said(step)).toBe('far back');
     expect(result.current.position).toEqual({ index: 1, total: 6 });
+  });
+
+  it('names a recalled send by the id the record knows it by', () => {
+    const { result } = render([{ ...loaded('msg-1', 'just sent'), recordId: 'uuid-1' }]);
+
+    up(result);
+
+    expect(result.current.slot?.key).toBe('uuid-1');
   });
 
   it('says what the next press does before it leaves the draft', () => {

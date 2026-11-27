@@ -149,6 +149,16 @@ export function useComposerDraft({ sessionId, workingDirectory, channel, content
     else heldRef.current = kept;
   }, [key, put]);
 
+  /** Keep under `to` the edit kept under `from`: the same send, once its record's id is known. */
+  const adopt = useCallback((from: string, to: string) => {
+    const current = composerDraftStore.get(key);
+    const edit = current.edits[from];
+    if (edit === undefined) return;
+    const edits = { ...current.edits, [to]: current.edits[to] ?? edit };
+    delete edits[from];
+    composerDraftStore.change(key, { ...current, edits });
+  }, [key]);
+
   /** Give up the edit of the send `sendKey`, which shows as it was sent again. */
   const revert = useCallback((sendKey: string) => {
     const current = composerDraftStore.get(key);
@@ -164,5 +174,5 @@ export function useComposerDraft({ sessionId, workingDirectory, channel, content
   /** Whether the send shown reads as changed with `text` in the box, ahead of the composer's value. */
   const isModifiedWith = (text: string) => slot !== null && !sameContent({ ...content, text }, slot.original);
   const isModified = slot !== null && draft.edits[slot.key] !== undefined;
-  return { show, sent, revert, edits: draft.edits, hasDraft, isModified, isModifiedWith };
+  return { show, sent, revert, adopt, edits: draft.edits, hasDraft, isModified, isModifiedWith };
 }
