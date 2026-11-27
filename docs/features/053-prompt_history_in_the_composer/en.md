@@ -49,8 +49,8 @@ Press the mark to open **History**.
 - Changed ones carry an orange dot and start open.
 - Pressing a row unfolds it in place to the whole message, pictures included. A changed one shows your change.
 - The arrow icon (**Load into input**) closes the window and puts that message in the box.
-- Under the pointer the dot turns into an X (**Discard edit**), which removes the change at once. A screen without a
-  pointer shows the X from the start.
+- Under the pointer the dot turns into an X (**Discard edit**), which removes the change at once. A phone shows the X
+  from the start.
 
 ![The “History” window: three sent messages with their numbers; message 2, changed and carrying an orange dot, and message 3, opened by a press, stand out, and each row ends in an arrow button](assets/history-modal.png)
 
