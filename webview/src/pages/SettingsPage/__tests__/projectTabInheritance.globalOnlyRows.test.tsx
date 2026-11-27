@@ -89,9 +89,9 @@ interface GlobalOnlyRow {
 const GLOBAL_ONLY_ROWS: GlobalOnlyRow[] = [
   {
     name: 'ChatLoading page size row',
-    Row: () => <ChatLoadingNumberRow settingKey={SettingKey.CHAT_PAGE_SIZE} textKey="pageSize" min={50} max={1000} />,
+    Row: () => <ChatLoadingNumberRow settingKey={SettingKey.CHAT_PAGE_SIZE} textKey="pageSize" min={10} max={1000} />,
     control: () => screen.getByRole('spinbutton', { name: label('general.chatLoading.pageSize.label') }),
-    key: 'chatPageSize',
+    key: 'chatMessagesPerPage',
     value: 120,
     expectShows: (c) => expect(c).toHaveValue(120),
   },

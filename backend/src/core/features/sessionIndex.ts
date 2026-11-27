@@ -3,6 +3,7 @@ import { join } from 'path';
 import { filterActiveChain } from './activeChain';
 import { scanJsonlLines } from './scanJsonl';
 import { createWorkflowProjection, type WorkflowProjection } from './workflow-tracker';
+import { countsTowardPage } from '../../shared';
 
 // Raw JSONL entry - passed through as-is to match Kotlin backend
 export type SessionMessage = Record<string, unknown>;
@@ -21,6 +22,8 @@ export interface IndexedEntry {
   file: string;
   offset: number;
   length: number;
+  /** Set for an entry of the conversation, which is what a page is counted in. See `countsTowardPage`. */
+  counted?: true;
   /**
    * Set for an entry of a subagent's own transcript, which the chain shows as a progress record of the call
    * that ran it. The record is made from the entry when it is read.
@@ -145,6 +148,7 @@ function takeLine(scan: FileScan, file: string, offset: number, length: number, 
     file,
     offset,
     length,
+    ...(countsTowardPage(entry) ? { counted: true as const } : {}),
   };
   scan.entries.push(indexed);
 

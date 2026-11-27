@@ -182,7 +182,7 @@ describe('SessionsApi', () => {
       expect(mockBridge.request).toHaveBeenCalledWith(MessageType.LOAD_SESSION, {
         sessionId: 'session-1',
         workingDir: '/test/path',
-        limit: 50,
+        limit: 20,
       });
     });
   });
@@ -196,7 +196,7 @@ describe('SessionsApi', () => {
         sessionId: 'session-1',
         workingDir: '/test/path',
         beforeUuid: 'u9',
-        limit: 50,
+        limit: 20,
       });
     });
 
@@ -207,18 +207,19 @@ describe('SessionsApi', () => {
         sessionId: 'session-1',
         workingDir: '/test/path',
         afterUuid: 'u9',
-        limit: 50,
+        limit: 20,
       });
     });
 
-    it('asks for the page around an entry', async () => {
+    // #708. The whole of what the window keeps around the reader comes at once, not a page at a time after the jump.
+    it('asks for as many pages around an entry as the window keeps around the reader', async () => {
       mockBridge.request.mockResolvedValueOnce(undefined);
       await api.loadAround('session-1', 'u9');
       expect(mockBridge.request).toHaveBeenCalledWith(MessageType.LOAD_MESSAGES_AROUND, {
         sessionId: 'session-1',
         workingDir: '/test/path',
         aroundUuid: 'u9',
-        limit: 50,
+        limit: 100,
       });
     });
   });

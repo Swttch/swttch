@@ -94,7 +94,7 @@ export enum SettingKey {
   // Whether the window lets go of pages the reader is far from (on) or keeps
   // everything it has loaded, as the chat did before (off).
   CHAT_WINDOWING = 'chatWindowing',
-  CHAT_PAGE_SIZE = 'chatPageSize',
+  CHAT_PAGE_SIZE = 'chatMessagesPerPage',
   CHAT_LATEST_PAGES = 'chatLatestPages',
   CHAT_HISTORY_PAGES = 'chatHistoryPages',
 
@@ -337,7 +337,7 @@ export interface DockLayout {
  * and flagged as not recommended: a bigger page means a bigger share of the
  * transcript in memory at once.
  */
-export const CHAT_PAGE_SIZE_RANGE = { min: 50, max: 1000, recommendedMax: 200 } as const;
+export const CHAT_PAGE_SIZE_RANGE = { min: 10, max: 1000, recommendedMax: 50 } as const;
 export const CHAT_PAGES_RANGE = { min: 2, max: 20 } as const;
 
 /**
@@ -601,7 +601,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.HOST_MODE]: HostMode.EDITOR_TAB,
   [SettingKey.OPEN_SETTINGS_AS]: OpenSettingsMode.OVERLAY,
   [SettingKey.CHAT_WINDOWING]: true,
-  [SettingKey.CHAT_PAGE_SIZE]: 50,
+  [SettingKey.CHAT_PAGE_SIZE]: 20,
   [SettingKey.CHAT_LATEST_PAGES]: 5,
   [SettingKey.CHAT_HISTORY_PAGES]: 5,
   [SettingKey.HIDE_TOOL_CALLS]: false,

@@ -3,7 +3,7 @@ import { BridgeClient } from '../bridge/BridgeClient';
 import { SessionMetaDto } from '../../dto';
 import type { ApiConfig } from '../ClaudeCodeApi';
 import { MessageType, type SessionSearchHit } from '@/shared';
-import { resolveMessagePageSize } from '@/utils/urlOverrides';
+import { resolveHistoryPages, resolveMessagePageSize } from '@/utils/urlOverrides';
 
 /** What a session search found: coordinates and counts, never the entries. */
 export interface SessionSearchResult {
@@ -205,7 +205,9 @@ export class SessionsApi {
    */
   async loadAround(sessionId: string, aroundUuid: string, workingDir?: string): Promise<void> {
     const dir = workingDir ?? this.getConfig().workingDir;
-    await this.bridge.request(MessageType.LOAD_MESSAGES_AROUND, { sessionId, workingDir: dir, aroundUuid, limit: resolveMessagePageSize() });
+    // All the window keeps around the reader at once, so that a jump does not land beside what is still to come.
+    const limit = resolveMessagePageSize() * resolveHistoryPages();
+    await this.bridge.request(MessageType.LOAD_MESSAGES_AROUND, { sessionId, workingDir: dir, aroundUuid, limit });
   }
 
   /**

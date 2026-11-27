@@ -457,6 +457,35 @@ describe('the stream keeps adding to the newest page', () => {
   });
 });
 
+describe('pages are counted in entries of the conversation (#708)', () => {
+  /** Entry `n` of the conversation (m<n>), followed by two records that draw nothing. */
+  const turn = (n: number): WindowEntry[] => [
+    { uuid: `m${n}`, type: 'assistant' },
+    { uuid: `m${n}-a`, type: 'attachment' },
+    { type: 'queue-operation' },
+  ];
+  const turns = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => turn(from + i)).flat();
+
+  it('cuts the newest page after pageSize entries of the conversation, however many records they come with', () => {
+    const spans = pageSpans(turns(1, 12), { gap: null, hasOlder: false, starts: ['m1'] }, config);
+    expect(spans.map(s => s.start)).toEqual(['m1', 'm4-a', 'm8-a']);
+  });
+
+  it('cuts a stretch that hardly holds any of the conversation by its records', () => {
+    const noise: WindowEntry[] = Array.from({ length: 200 }, (_, i) => ({ uuid: `n${i}`, type: 'attachment' }));
+    const spans = pageSpans(noise, { gap: null, hasOlder: false, starts: ['n0'] }, config);
+    expect(spans.length).toBeGreaterThan(1);
+    expect(Math.max(...spans.slice(0, -1).map(s => s.to - s.from))).toBeLessThanOrEqual(config.pageSize * 20);
+  });
+
+  it('holds a jump that brought several pages as that many pages, so that they are let go of one at a time', () => {
+    const latest = loadInitial(range('t', 1, 4), true);
+    const result = jumpTo(latest.messages, latest.state, range('j', 1, 12), true, config);
+    expect(result.state.starts).toEqual(['j1', 'j5', 'j9', 't1']);
+    expect(result.state.gap).toEqual({ afterUuid: 'j12', beforeUuid: 't1' });
+  });
+});
+
 describe('with window sliding off (recycle: false)', () => {
   const off: WindowConfig = { ...five, recycle: false };
   const total = 400;
