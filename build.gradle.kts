@@ -195,6 +195,24 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.38.4 - Various bug fixes, big and small</h3>
+            <ul>
+                <li>Fix every message failing to send on Windows when the session manager MCP is installed (#756 by @LiMuhua)</li>
+                <li>Fix scrolling jumping or stalling in long conversations (#758, reported by @TobbeLino)</li>
+                <li>Fix the iPhone keyboard covering the chat input (#742 by @TobbeLino)</li>
+                <li>Fix dialogs and images running off screen when the UI zoom is not 100% (#744 by @TobbeLino)</li>
+                <li>Fix an error page when opened over plain HTTP on the same network (#743 by @TobbeLino)</li>
+                <li>Fix the remote tunnel not starting on Windows with more than one cloudflared installed (#745 by @TobbeLino)</li>
+                <li>Fix IDE commands such as Ctrl+Z and dropped files not arriving in split chat tabs (#767, reported by @ShiroeS45)</li>
+                <li>Fix line breaks being lost when pasting several lines (#757, reported by @ShiroeS45)</li>
+                <li>Fix pasting not working in text fields such as the session search box (#757, reported by @ShiroeS45)</li>
+                <li>Fix middle click pasting the clipboard instead of the selected text (#757, reported by @apastushenka)</li>
+                <li>Fix dropped files being attached with a path that does not exist in IntelliJ IDEA 2024.2 on macOS (#767)</li>
+                <li>Fix Control keys running twice per press in IntelliJ IDEA 2024.2 on macOS (#767)</li>
+                <li>Fix text overflowing the token usage tooltip (#765, reported by @deniskrizanovic)</li>
+                <li>Fix Docker MCP containers being left behind after the plugin backend exits (#762)</li>
+                <li>Fix one chat ending and removing another chat's Docker MCP containers (#764)</li>
+            </ul>
             <h3>0.38.3 - Pick your chat fonts and scroll speed, and messages no longer get stuck between IDE windows</h3>
             <ul>
                 <li>Add a setting to choose the chat and code font families (#733, reported by @Oubi256)</li>
