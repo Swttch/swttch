@@ -11,7 +11,6 @@ import { commandSendText, typedSendText } from './sendText';
 import { parseUserContent } from './message-renderers/utils/parseUserContent';
 import { parseReplyBlocks, type ReplyCard } from './message-renderers/utils/replyBlocks';
 import { hasVisibleGlyph } from './message-renderers/components/IfVisible';
-import { addReplyToComposer } from '@/utils/composerReplies';
 
 /** What a fork puts back for a send: the words for the composer, and the cards for the row above it. */
 interface Retyped {
@@ -155,11 +154,12 @@ export function useSendActions(messages: LoadedMessageDto[]): SendActionsValue {
          * system tag — that name comes out as "No title".
          */
         const originTitle = sessionsRef.current.find((s) => s.id === currentSessionId)?.title ?? promptText;
-        // The cards go back only now: with no branch made there is nowhere for them to go, and they would be left in
-        // the row of the session the user is still looking at.
-        retyped?.replies.forEach((card) => addReplyToComposer(card.quote, card.comment));
-        retyped?.excerpts.forEach((quote) => addReplyToComposer(quote, ''));
-        addNewSession(response.sessionId, originTitle, { promptText, hasTranscript: true });
+        // The send goes to the composer of the branch, cards and all, not to the box of the session still on screen.
+        const cards = [
+          ...(retyped?.replies ?? []),
+          ...(retyped?.excerpts ?? []).map((quote) => ({ quote, comment: '' })),
+        ];
+        addNewSession(response.sessionId, originTitle, { promptText, ...(cards.length > 0 ? { cards } : {}), hasTranscript: true });
         toast.success(t('sendActions.forkDone'));
       } catch (error) {
         toast.error(error instanceof Error ? error.message : t('sendActions.forkFailed'));

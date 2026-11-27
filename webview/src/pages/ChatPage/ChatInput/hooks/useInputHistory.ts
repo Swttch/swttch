@@ -1,10 +1,11 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useBridge } from '@/hooks/useBridge';
-import { MessageType, restoreQueuedEntries } from '@/shared';
+import { MessageType, restoreQueuedEntries, type ComposerContent } from '@/shared';
 import type { LoadedMessageDto } from '@/types';
 import { isUserSend } from '@/pages/ChatPage/paging';
-import { recalledText } from '@/pages/ChatPage/sendText';
 import type { SendIndexEntry } from '@/pages/ChatPage/sendList';
+import { sendContent } from '../draft/sendContent';
+import type { HistorySlot } from '../draft/useComposerDraft';
 
 /**
  * How many sends beyond the one shown are kept ready. Small, because a page is 20: the fetch starts while there are
@@ -26,8 +27,8 @@ interface UseInputHistoryArgs {
 
 /** What a step of the walk did. */
 export type HistoryStep =
-  /** The text to put in the composer: a send's, or the draft's. */
-  | { text: string }
+  /** The send to show, or the draft when `slot` is null. */
+  | { slot: HistorySlot | null }
   /** The first press out of the draft only says what the next one does. */
   | 'guard'
   /** The send is still being read from the backend; the next press finds it. */
@@ -37,12 +38,13 @@ export type HistoryStep =
 
 interface UseInputHistoryReturn {
   /** One send back. From the draft, the first press arms the guard and the second one goes. */
-  navigateUp: (currentValue: string) => HistoryStep;
-  /** One send forward, or back to the draft that was being written when the walk began. */
+  navigateUp: () => HistoryStep;
+  /** One send forward, or back to the draft. */
   navigateDown: () => HistoryStep;
-  /** Leave the history and forget the saved draft. */
+  /** Leave the history. */
   resetHistory: () => void;
-  isNavigating: boolean;
+  /** The send shown, with what it held as sent, or null while the composer holds the draft. */
+  slot: HistorySlot | null;
   /**
    * Where the walk stands, counted over the sends alone: the newest is `total`, the oldest 1, and the draft has no
    * number. `total` is the number of ticks of the send index. Null while the composer holds the draft.
@@ -67,16 +69,15 @@ export function useInputHistory({ workingDirectory, sessionId, sends }: UseInput
   /** The key of the send shown in the composer, or null while the composer holds the draft. */
   const [shownKey, setShownKey] = useState<string | null>(null);
   const [isGuarded, setGuarded] = useState(false);
-  const draftRef = useRef('');
 
   // What has been read from the backend, by send key. In refs: pages land without re-rendering the composer.
-  const textsRef = useRef(new Map<string, string>());
+  const contentsRef = useRef(new Map<string, ComposerContent>());
   const askedRef = useRef(new Set<string>());
   // Guards against a page of a session the user has left being applied to the one they moved to.
   const sessionRef = useRef<string | null>(sessionId);
 
-  const textFor = useCallback(
-    (entry: SendIndexEntry) => (entry.message ? recalledText(entry.message) : textsRef.current.get(entry.key)),
+  const contentFor = useCallback(
+    (entry: SendIndexEntry) => (entry.message ? sendContent(entry.message) : contentsRef.current.get(entry.key)),
     [],
   );
 
@@ -95,7 +96,7 @@ export function useInputHistory({ workingDirectory, sessionId, sends }: UseInput
       // The records arrive as the session file has them, and are read here the way the transcript reads them.
       for (const { entry } of restoreQueuedEntries(res.entries ?? [])) {
         const message = entry as unknown as LoadedMessageDto;
-        if (message.uuid && isUserSend(message)) textsRef.current.set(message.uuid, recalledText(message));
+        if (message.uuid && isUserSend(message)) contentsRef.current.set(message.uuid, sendContent(message));
       }
     } catch {
       // A failed page leaves the history at what already loaded; the next press asks again.
@@ -107,18 +108,17 @@ export function useInputHistory({ workingDirectory, sessionId, sends }: UseInput
   /** Read what is missing of the sends at `from` and the few before it. */
   const ensure = useCallback((from: number) => {
     for (let i = from; i >= 0 && i > from - PREFETCH_MARGIN; i--) {
-      if (textFor(sends[i]) !== undefined) continue;
+      if (contentFor(sends[i]) !== undefined) continue;
       // A page ends just before its cursor, so the send after the missing one asks for it and the ones before it.
       void readPage(sends[i + 1]?.key);
       return;
     }
-  }, [sends, textFor, readPage]);
+  }, [sends, contentFor, readPage]);
 
   useEffect(() => {
     sessionRef.current = sessionId;
-    textsRef.current = new Map();
+    contentsRef.current = new Map();
     askedRef.current = new Set();
-    draftRef.current = '';
     setShownKey(null);
     setGuarded(false);
   }, [sessionId]);
@@ -132,50 +132,53 @@ export function useInputHistory({ workingDirectory, sessionId, sends }: UseInput
   }, [sends, index, ensure]);
 
   const resetHistory = useCallback(() => {
-    draftRef.current = '';
     setShownKey(null);
     setGuarded(false);
   }, []);
 
   const disarmGuard = useCallback(() => setGuarded(false), []);
 
-  const navigateUp = useCallback((currentValue: string): HistoryStep => {
-    const target = index - 1;
-    if (target < 0) return null;
-    const fromDraft = index === sends.length;
-    if (fromDraft && !isGuarded) {
-      setGuarded(true);
-      return 'guard';
-    }
-    const text = textFor(sends[target]);
-    if (text === undefined) {
+  /** Show the send at `target`, or say that it is still being read. */
+  const stepTo = useCallback((target: number): HistoryStep => {
+    const original = contentFor(sends[target]);
+    if (original === undefined) {
       ensure(target);
       return 'reading';
     }
-    if (fromDraft) draftRef.current = currentValue;
     setGuarded(false);
     setShownKey(sends[target].key);
-    return { text };
-  }, [sends, index, isGuarded, textFor, ensure]);
+    return { slot: { key: sends[target].key, original } };
+  }, [sends, contentFor, ensure]);
+
+  const navigateUp = useCallback((): HistoryStep => {
+    const target = index - 1;
+    if (target < 0) return null;
+    if (index === sends.length && !isGuarded) {
+      setGuarded(true);
+      return 'guard';
+    }
+    return stepTo(target);
+  }, [sends, index, isGuarded, stepTo]);
 
   const navigateDown = useCallback((): HistoryStep => {
     if (index === sends.length) return null;
     const target = index + 1;
     if (target === sends.length) {
       setShownKey(null);
-      return { text: draftRef.current };
+      return { slot: null };
     }
-    const text = textFor(sends[target]);
-    if (text === undefined) {
-      ensure(target);
-      return 'reading';
-    }
-    setShownKey(sends[target].key);
-    return { text };
-  }, [sends, index, textFor, ensure]);
+    return stepTo(target);
+  }, [sends, index, stepTo]);
 
-  const isNavigating = index < sends.length;
-  const position = isNavigating ? { index: index + 1, total: sends.length } : null;
+  const shown = index < sends.length ? sends[index] : null;
+  const original = shown ? contentFor(shown) : undefined;
+  const slot = useMemo(
+    () => (shown && original ? { key: shown.key, original } : null),
+    // The send as it was sent does not change while it is shown; its text names it well enough.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [shown?.key, original?.text],
+  );
+  const position = shown ? { index: index + 1, total: sends.length } : null;
 
-  return { navigateUp, navigateDown, resetHistory, isNavigating, position, isGuarded, disarmGuard };
+  return { navigateUp, navigateDown, resetHistory, slot, position, isGuarded, disarmGuard };
 }

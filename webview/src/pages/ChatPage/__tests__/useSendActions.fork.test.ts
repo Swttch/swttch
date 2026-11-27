@@ -163,16 +163,18 @@ describe('forking from a card (#719)', () => {
     expect(composerText()).toBe('change this Element button#ok');
   });
 
-  it('puts the reply cards back above the composer and leaves only the typed words in it', async () => {
+  it('hands the reply cards to the branch\'s composer and leaves only the typed words in its text', async () => {
     const raw = `${formatReplyBlocks([{ quote: 'quoted words', comment: 'my comment' }], ['an excerpt'])}the typed words`;
 
     await fork([userEntry('u-7', raw)], 'u-7');
 
     expect(composerText()).toBe('the typed words');
-    expect(getPendingReplies().map(({ quote, comment }) => ({ quote, comment }))).toEqual([
+    expect(session.addNewSession.mock.calls[0]?.[2]?.cards).toEqual([
       { quote: 'quoted words', comment: 'my comment' },
       { quote: 'an excerpt', comment: '' },
     ]);
+    // Not in the box of the session still on screen.
+    expect(getPendingReplies()).toEqual([]);
   });
 
   it('opens the branch as a session that already has its transcript, and leaves the reading to SessionLoader', async () => {

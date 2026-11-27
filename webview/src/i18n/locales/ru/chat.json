@@ -148,7 +148,8 @@
     "history": {
       "guard": "Нажмите ↑ ещё раз, чтобы открыть историю",
       "guardKeepsDraft": "Нажмите ↑ ещё раз, чтобы открыть историю (черновик сохранится)",
-      "position": "История {{index}}/{{total}}"
+      "position": "История {{index}}/{{total}}",
+      "modified": "Изменено"
     },
     "renameSuggestion": {
       "hint": "(Tab: принять)"

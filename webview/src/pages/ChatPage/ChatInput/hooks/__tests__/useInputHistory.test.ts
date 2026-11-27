@@ -38,17 +38,17 @@ function render(sends: SendIndexEntry[], sessionId: string | null = 's1') {
 }
 
 type History = ReturnType<typeof render>['result'];
-/** What a step did, with a recalled text given as the text itself. */
-const said = (step: HistoryStep) => (step && typeof step === 'object' ? step.text : step);
-function press(result: History, current = 'draft') {
+/** What a step did: a recalled send by its text, the draft as `draft`. */
+const said = (step: HistoryStep) => (step && typeof step === 'object' ? (step.slot ? step.slot.original.text : 'draft') : step);
+function press(result: History) {
   let step: HistoryStep = null;
-  act(() => { step = result.current.navigateUp(current); });
+  act(() => { step = result.current.navigateUp(); });
   return said(step);
 }
 /** Up, passing the guard that stands between the draft and the history. */
-function up(result: History, current = 'draft') {
-  const first = press(result, current);
-  return first === 'guard' ? press(result, current) : first;
+function up(result: History) {
+  const first = press(result);
+  return first === 'guard' ? press(result) : first;
 }
 function down(result: History) {
   let step: HistoryStep = null;
@@ -77,7 +77,7 @@ describe('useInputHistory', () => {
 
     up(result);
     expect(result.current.position).toEqual({ index: 2, total: 2 });
-    up(result, 'c');
+    up(result);
     expect(result.current.position).toEqual({ index: 1, total: 2 });
 
     // The count follows the list, which is the send index's own.
@@ -92,14 +92,14 @@ describe('useInputHistory', () => {
   it('says what the next press does before it leaves the draft', () => {
     const { result } = render([loaded('u1', 'older'), loaded('u2', 'newer')]);
 
-    expect(press(result, 'half-typed')).toBe('guard');
+    expect(press(result)).toBe('guard');
     expect(result.current.isGuarded).toBe(true);
-    expect(result.current.isNavigating).toBe(false);
+    expect(result.current.slot).toBeNull();
 
-    expect(press(result, 'half-typed')).toBe('newer');
+    expect(press(result)).toBe('newer');
     expect(result.current.isGuarded).toBe(false);
     // Inside the history there is no guard between one send and the next.
-    expect(press(result, 'newer')).toBe('older');
+    expect(press(result)).toBe('older');
   });
 
   it('asks again after the guard was stood down', () => {
@@ -114,11 +114,11 @@ describe('useInputHistory', () => {
   it('walks back down to the draft that was being written', () => {
     const { result } = render([loaded('u1', 'older'), loaded('u2', 'newer')]);
 
-    up(result, 'half-typed');
-    up(result, 'newer');
+    up(result);
+    up(result);
     expect(down(result)).toBe('newer');
-    expect(down(result)).toBe('half-typed');
-    expect(result.current.isNavigating).toBe(false);
+    expect(down(result)).toBe('draft');
+    expect(result.current.slot).toBeNull();
     expect(down(result)).toBeNull();
   });
 
@@ -151,7 +151,7 @@ describe('useInputHistory', () => {
       beforeUuid: 'u1',
     }));
     up(result);
-    expect(up(result, 'near')).toBe('far back');
+    expect(up(result)).toBe('far back');
   });
 
   it('holds the walk while a send is still being read', () => {
@@ -159,7 +159,7 @@ describe('useInputHistory', () => {
     const { result } = render([unloaded('u0')]);
 
     expect(up(result)).toBe('reading');
-    expect(result.current.isNavigating).toBe(false);
+    expect(result.current.slot).toBeNull();
   });
 
   it('reads a message typed during a turn out of its queue records', async () => {
@@ -189,7 +189,7 @@ describe('useInputHistory', () => {
 
     rerender({ sends: [loaded('u1', 'a'), loaded('u2', 'b'), loaded('u3', 'c')], sessionId: 's1' });
 
-    expect(up(result, 'c')).toBe('b');
+    expect(up(result)).toBe('b');
   });
 
   it('starts from the newest again after a reset', () => {
@@ -199,17 +199,17 @@ describe('useInputHistory', () => {
 
     act(() => { result.current.resetHistory(); });
 
-    expect(result.current.isNavigating).toBe(false);
-    expect(up(result, '')).toBe('b');
+    expect(result.current.slot).toBeNull();
+    expect(up(result)).toBe('b');
   });
 
   it('leaves the walk when the session changes', () => {
     const { result, rerender } = render([loaded('u1', 'a')]);
-    up(result, 'draft of one');
+    up(result);
 
     rerender({ sends: [loaded('x1', 'other')], sessionId: 's2' });
 
-    expect(result.current.isNavigating).toBe(false);
+    expect(result.current.slot).toBeNull();
   });
 
   it('survives a rejected request', async () => {

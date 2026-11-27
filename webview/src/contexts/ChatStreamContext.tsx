@@ -1,7 +1,6 @@
 import { expandElementTokens, getPendingElements, restorePendingElements, type PendingElement } from '@/utils/composerElements';
 import { expandReplyCards, getPendingReplies, restorePendingReplies, type PendingReply } from '@/utils/composerReplies';
 import { createContext, useContext, ReactNode, useEffect, useCallback, useState, useRef, useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
 import { useChatStream } from '../hooks/useChatStream';
 import { useDiffs } from '../hooks/useDiffs';
 import { useTools } from '../hooks/useTools';
@@ -9,7 +8,7 @@ import { useBridgeContext } from './BridgeContext';
 import { takePendingTranscriptView } from '@/utils/pendingTranscriptView';
 import { findLastRecordedRun } from '@/utils/lastRecordedRun';
 import { SettingKey } from '@/types/settings';
-import { useSessionContext, type SessionHandoff } from './SessionContext';
+import { useSessionContext } from './SessionContext';
 import { useOptionalAllowAllCommands } from './AllowAllCommandsContext';
 import { useCliConfig } from './CliConfigContext';
 import { useClaudeSettings } from './ClaudeSettingsContext';
@@ -487,31 +486,11 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     }
   }, [chatStream.systemInit, session.syncEffectiveMode, session.notifyAutoFallback]);
 
-  // The fork note a send action left on the navigation to this new session
-  // (issue #356). Read through a ref so `sendMessage` does not have to list the
-  // location among its dependencies and be rebuilt on every navigation.
-  const location = useLocation();
-  const forkHandoff = location.state as SessionHandoff | null;
 
   // 모든 세션별 상태를 한 번에 리셋하는 통합 함수
   const resetForSessionSwitch = useCallback(() => {
     chatStreamClearMessages();
     chatStreamResetStreamState();
-    // Restore draft input from cache (tab move/split restoration)
-    let draft: string | null = null;
-    try {
-      draft = session.currentSessionId
-        ? localStorage.getItem(`claude-gui:draft:${session.currentSessionId}`)
-        : null;
-    } catch {
-      // localStorage may be unavailable in some environments (e.g., tests)
-    }
-    // A fork excludes the send it branched from, so that text is handed over and
-    // put back in the composer — otherwise the user would have to retype from
-    // memory the message they opened the fork to reword. It wins over a stored
-    // draft: they asked for this text a moment ago, and a session that does not
-    // exist yet has no draft of its own.
-    setInput(forkHandoff?.promptText || draft || '');
     setIsThinkingExpanded(false);
     setSessionModel(null);
     tools.clearToolUses();
@@ -520,7 +499,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     // The queue belongs to the session being left, not the one arriving — the
     // GET_QUEUED_MESSAGES fetch below fills in whatever the new session already has.
     setQueuedMessages([]);
-  }, [chatStreamClearMessages, chatStreamResetStreamState, setInput, tools.clearToolUses, diffs.clearDiffs, session.currentSessionId, forkHandoff?.promptText]);
+  }, [chatStreamClearMessages, chatStreamResetStreamState, tools.clearToolUses, diffs.clearDiffs]);
 
   // resetForSessionSwitch is called directly by SessionLoader
   // when currentSessionId changes (URL-driven reactive pattern)
@@ -682,17 +661,6 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   }, [bridge.isConnected, bridge, session.currentSessionId]);
 
   // sendMessage: add to local state + send to backend (or queue if streaming)
-  /*
-   * Put the forked send back in the composer.
-   *
-   * Separate from the session-switch reset even though that also seeds the
-   * composer: the reset runs off `currentSessionId`, and a fork changes the id
-   * and the navigation state in the same commit, so which of the two the reset
-   * sees is a race. This runs off the state alone and wins it either way.
-   */
-  useEffect(() => {
-    if (forkHandoff?.promptText) setInput(forkHandoff.promptText);
-  }, [forkHandoff?.promptText, setInput]);
 
   // Sessions whose CLI the backend of another IDE window holds: this screen does not run their turns. Read when a
   // message is sent, so it is kept in a ref: a change of it draws nothing.

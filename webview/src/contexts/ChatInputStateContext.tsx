@@ -1,5 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
-import { useSessionContext } from './SessionContext';
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 
 interface ChatInputStateContextType {
   input: string;
@@ -34,7 +33,6 @@ export function ChatInputStateProvider(props: Props) {
   const { children, inputRef, setInputCallbackRef } = props;
   const [input, setInputRaw] = useState('');
   const [composerHasContent, setComposerHasContent] = useState(false);
-  const session = useSessionContext();
 
   // Keep shared ref in sync so sibling providers (ChatStreamProvider) can read
   // the latest input without subscribing to this context.
@@ -52,28 +50,6 @@ export function ChatInputStateProvider(props: Props) {
   useEffect(() => {
     if (setInputCallbackRef) setInputCallbackRef.current = setInput;
   }, [setInput, setInputCallbackRef]);
-
-  // Save input draft to localStorage for tab move/split restoration.
-  // Skip the first mount to prevent the initial empty input from clearing
-  // a saved draft (JCEF may reload the page on browser component reattach).
-  const draftInitializedRef = useRef(false);
-  useEffect(() => {
-    if (!session.currentSessionId) return;
-    if (!draftInitializedRef.current) {
-      draftInitializedRef.current = true;
-      return;
-    }
-    const key = `claude-gui:draft:${session.currentSessionId}`;
-    try {
-      if (input) {
-        localStorage.setItem(key, input);
-      } else {
-        localStorage.removeItem(key);
-      }
-    } catch {
-      // localStorage may be unavailable in some environments (e.g., tests)
-    }
-  }, [input, session.currentSessionId]);
 
   return (
     <ChatInputStateContext.Provider value={{ input, setInput, composerHasContent, setComposerHasContent }}>

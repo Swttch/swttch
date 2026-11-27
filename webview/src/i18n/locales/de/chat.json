@@ -148,7 +148,8 @@
     "history": {
       "guard": "Noch einmal ↑ drücken, um den Verlauf zu durchsuchen",
       "guardKeepsDraft": "Noch einmal ↑ drücken, um den Verlauf zu durchsuchen (dein Entwurf bleibt erhalten)",
-      "position": "Verlauf {{index}}/{{total}}"
+      "position": "Verlauf {{index}}/{{total}}",
+      "modified": "Bearbeitet"
     },
     "renameSuggestion": {
       "hint": "(Tab zum Übernehmen)"

@@ -1,7 +1,7 @@
-import { getPendingReplies, removePendingReply, subscribePendingReplies, takeSendRequest, updatePendingReply } from '@/utils/composerReplies';
-import { getPendingElements, pngFromBase64, removePendingElement, subscribeComposerElements, subscribeComposerFiles, subscribeComposerImages, subscribePendingElements } from '@/utils/composerElements';
+import { getPendingReplies, removePendingReply, replacePendingReplies, subscribePendingReplies, takeSendRequest, updatePendingReply } from '@/utils/composerReplies';
+import { getPendingElements, pngFromBase64, removePendingElement, replacePendingElements, subscribeComposerElements, subscribeComposerFiles, subscribeComposerImages, subscribePendingElements } from '@/utils/composerElements';
 import toast from 'react-hot-toast';
-import { useCallback, useContext, useEffect, useLayoutEffect, useRef, KeyboardEvent, useState, useSyncExternalStore, type ClipboardEvent as ReactClipboardEvent, type DragEvent as ReactDragEvent } from 'react';
+import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, KeyboardEvent, useState, useSyncExternalStore, type ClipboardEvent as ReactClipboardEvent, type DragEvent as ReactDragEvent } from 'react';
 import { CommandPalettePanel } from '@/commandPalette/ui/CommandPalettePanel';
 import { useCommandPalette } from '@/commandPalette/hooks/useCommandPalette';
 import { PanelSectionId, PanelItemType, CommandItem } from '@/types/commandPalette';
@@ -21,7 +21,7 @@ import { useConfirmDialog } from '@/components/ConfirmDialog/useConfirmDialog';
 import { useChatInputFocus } from '../../../contexts/ChatInputFocusContext';
 import { useInputHistory } from './hooks/useInputHistory';
 import { SendListContext } from '../SendListContext';
-import { useSessionContext } from '@/contexts/SessionContext';
+import { useSessionContext, type SessionHandoff } from '@/contexts/SessionContext';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { useChatInputState } from '@/contexts/ChatInputStateContext';
 import { useBackgroundTaskActions } from '@/hooks/useBackgroundTaskActions';
@@ -81,10 +81,7 @@ import { renameSuggestion } from './renameSuggestion';
 import { typedKeys } from '@/commandPalette/typedKeys';
 import {
   wrapChipForTranscript,
-  readFirstSessionMention,
-  stripSessionMentionTags,
 } from './sessionMentionTag';
-import { AGENT_TRIGGER } from '@/utils/findAgentToken';
 import { isMobile, isBrowser } from '@/config/environment';
 import { featureDocUrl } from '@/config/app';
 import {
@@ -98,6 +95,11 @@ import { FollowUpBehavior, SessionActivity, resolveFollowUpBehavior } from '@/sh
 import { useSessionActivity } from '@/hooks/useSessionActivity';
 import { ArrowMove, caretLength, historyArrow, readCaret } from './historyArrow';
 import { HistoryNotice } from './HistoryNotice';
+import { useComposerDraft } from './draft/useComposerDraft';
+import { composerDraftStore } from './draft/composerDraftStore';
+import { attachmentsOf, contentOfComposer, elementsOf } from './draft/composerContent';
+import { useLocation } from 'react-router-dom';
+import type { ComposerContent } from '@/shared';
 import { basename } from './basename';
 import {
   findChipRange,
@@ -124,15 +126,6 @@ import { getCaretOffset, setCaretOffset, CaretDirection } from '@/utils/domSelec
 import { MessageType } from '@/shared';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useTranslation } from '@/i18n';
-
-/**
- * Where a composer's recipient is kept while its session is not on screen.
- *
- * Sits beside `claude-gui:draft:<id>`, which holds the words, because the two
- * are one draft: restoring the text without the address gives back a chip that
- * looks addressed and is not.
- */
-const RECIPIENT_DRAFT_PREFIX = 'claude-gui:draft-recipient:';
 
 interface NativeDropEntry {
   path: string;
@@ -167,7 +160,7 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
   const queueWhileWaiting = cardWaiting && runningActivity(chatStream.messages) !== null;
   const { input: value, setInput: onChange, setComposerHasContent } = useChatInputState();
   const sends = useContext(SendListContext);
-  const { navigateUp, navigateDown, resetHistory, position: historyPosition, isGuarded, disarmGuard } = useInputHistory({ workingDirectory, sessionId: currentSessionId, sends });
+  const { navigateUp, navigateDown, resetHistory, slot: historySlot, position: historyPosition, isGuarded, disarmGuard } = useInputHistory({ workingDirectory, sessionId: currentSessionId, sends });
   /** Where the caret goes once a recalled text is in the box. A new object for every recall. */
   const [caretRequest, setCaretRequest] = useState<{ at: 'start' | 'end' } | null>(null);
   // Runs after the editor has written the text into the page, which also moves the caret: the request wins.
@@ -217,6 +210,7 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
     cancelUpload,
     clearAttachments,
     restoreAttachments,
+    replaceAttachments,
     error: attachmentError,
     isDragOver,
     handlePaste,
@@ -539,58 +533,6 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
   }, [value, recipient]);
 
   /**
-   * Carry the recipient across a session switch, beside the draft.
-   *
-   * The draft is a plain string in localStorage, so switching away and back
-   * restored the words and lost the address: the chip came back as dead text
-   * that still read as addressed, and the next Enter sent it here instead.
-   *
-   * Keyed off the TEXT rather than restored on its own, which is what keeps the
-   * two in step without either having to land first. The recipient re-attaches
-   * only while its chip is actually standing in the composer, so a draft the
-   * user has since edited past the chip does not get an address back.
-   */
-  useEffect(() => {
-    if (!currentSessionId || recipient) return;
-    try {
-      const stored = localStorage.getItem(`${RECIPIENT_DRAFT_PREFIX}${currentSessionId}`);
-      if (!stored) return;
-      const parsed = JSON.parse(stored) as AgentRecipient;
-      if (parsed?.token && value.includes(parsed.token)) setRecipient(parsed);
-    } catch {
-      // localStorage may be unavailable, and a draft we cannot read is a draft
-      // with no recipient — the same state as never having had one.
-    }
-  }, [currentSessionId, value, recipient]);
-
-  /**
-   * The session the save below last ran for.
-   *
-   * Arriving at a session, this composer has no recipient yet and no text yet —
-   * the draft lands a commit later. Measured: the save read that as "the user
-   * took the chip off" and deleted the stored address before the restore above
-   * had any text to match it against, so the chip came back dead every time.
-   */
-  const savedRecipientSessionRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!currentSessionId) return;
-    const key = `${RECIPIENT_DRAFT_PREFIX}${currentSessionId}`;
-    const sameSession = savedRecipientSessionRef.current === currentSessionId;
-    savedRecipientSessionRef.current = currentSessionId;
-    try {
-      if (recipient) localStorage.setItem(key, JSON.stringify(recipient));
-      // Only a clear that happens WHILE staying on one session is the user
-      // clearing it. Being slow to delete costs nothing: the next real clear
-      // removes it, and a stored address only reattaches to a draft whose chip
-      // is still standing.
-      else if (sameSession) localStorage.removeItem(key);
-    } catch {
-      // As above: losing the stored address costs the chip, not the message.
-    }
-  }, [recipient, currentSessionId]);
-
-  /**
    * Keep the caret out of the middle of the recipient chip.
    *
    * The arrow keys are handled in keydown, but they are not the only way in: a
@@ -617,42 +559,44 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
     return () => document.removeEventListener('selectionchange', onSelectionChange);
   }, [recipient, value, textareaRef]);
 
-  /**
-   * Put a recalled prompt back in the composer, chip and all.
-   *
-   * A prompt that addressed another session comes back carrying its
-   * `<session-mention>` tag. Dropping the tag and keeping the words would leave
-   * `@@some title` sitting there looking addressed while the next Enter sent it
-   * to THIS session with a stray mention at the front — the worst of the three
-   * possible outcomes, because it looks right.
-   *
-   * So the tag is read back into the recipient and only its label goes into the
-   * text, which is exactly the state the composer was in before the send.
-   */
-  const applyHistoryValue = useCallback(
-    (raw: string) => {
-      const mention = readFirstSessionMention(raw);
-      setRecipient(
-        mention
-          ? {
-              name: mention.agentName,
-              sessionId: mention.sessionId,
-              sessionDir: mention.sessionDir,
-              label: mention.label.startsWith(AGENT_TRIGGER)
-                ? mention.label.slice(AGENT_TRIGGER.length)
-                : mention.label,
-              token: mention.label,
-            }
-          : null,
-      );
-      const applied = stripSessionMentionTags(raw);
-      onChange(applied);
-      // Answered so the caller can place the caret against what actually landed:
-      // the tag is longer than the chip it becomes, so the raw length overshoots.
-      return applied;
-    },
-    [onChange],
+  /** Put a whole content in the composer: the session's draft, or a send recalled from its history. */
+  const applyContent = useCallback((next: ComposerContent) => {
+    onChange(next.text);
+    setRecipient(next.recipient);
+    setPathTokens(next.pathTokens);
+    replaceAttachments(attachmentsOf(next, composerDraftStore));
+    replacePendingReplies(next.replies);
+    replacePendingElements(elementsOf(next));
+  }, [onChange, replaceAttachments]);
+
+  const content = useMemo(
+    () => contentOfComposer({ text: value, recipient, pathTokens, attachments, replies: pendingReplies, elements: pageElements }, composerDraftStore),
+    [value, recipient, pathTokens, attachments, pendingReplies, pageElements],
   );
+
+  // A fork opens a session that has no draft yet and hands over the send it was made before.
+  const location = useLocation();
+  const handoffState = location.state as SessionHandoff | null;
+  const handoff = useMemo<ComposerContent | null>(() => {
+    const cards = handoffState?.cards ?? [];
+    if (!handoffState?.promptText && cards.length === 0) return null;
+    return {
+      text: handoffState?.promptText ?? '',
+      recipient: null,
+      pathTokens: [],
+      attachments: [],
+      replies: cards.map((card, i) => ({ id: `handoff-${currentSessionId}-${i}`, ...card })),
+      elements: [],
+    };
+  }, [handoffState, currentSessionId]);
+
+  const { show: showSlot, sent: draftSent, isModified } = useComposerDraft({
+    sessionId: currentSessionId,
+    content,
+    apply: applyContent,
+    slot: historySlot,
+    handoff,
+  });
 
   const sendToSession = useSendToSession();
   const { sendMessage } = chatStream;
@@ -689,15 +633,14 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
         agentName: recipient.name,
         sessionDir: recipient.sessionDir,
       });
-      resetHistory();
       sendToSession(recipient.name, shown, body, { inputMode: mode, sendMessage });
       onChange('');
       setRecipient(null);
       setPathTokens([]);
+      resetHistory();
+      draftSent(historySlot !== null);
       return;
     }
-
-    resetHistory();
 
     const delivery = onSubmit(undefined, mode, attachments.length > 0 ? attachments : undefined, invertFollowUp, queueWhileWaiting, { pathTokens });
     // The message is handed to the CLI before the question it replaces is closed: the CLI then finds the message
@@ -705,6 +648,9 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
     if (onQuestionReplied) Promise.resolve(delivery).finally(onQuestionReplied);
     clearAttachments();
     setPathTokens([]);
+    resetHistory();
+    // Last: after a send of the history, the draft that waited behind it comes back into the box.
+    draftSent(historySlot !== null);
   }, [
     disabled,
     value,
@@ -713,6 +659,8 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
     pendingReplies,
     uploads,
     resetHistory,
+    draftSent,
+    historySlot,
     recipient,
     sendToSession,
     mode,
@@ -919,14 +867,11 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
     const prev = prevChatInputSessionRef.current;
     prevChatInputSessionRef.current = currentSessionId;
     if (prev !== null && prev !== currentSessionId) {
-      clearAttachments();
-      setPathTokens([]);
-      // The prompt history resets itself on the session change — it owns its own
-      // fetch for the new session, so nothing to clear here.
+      // What the composer holds is the draft hook's to change.
       // 새 세션에서는 동의 배너를 다시 노출한다(미응답 상태인 경우).
       setConsentDismissed(false);
     }
-  }, [currentSessionId, clearAttachments]);
+  }, [currentSessionId]);
 
   // A session another IDE window's backend runs: this tab only watches it (its stream is the transcript), so nothing
   // here says it is working. The backends say so through the session activity, and the stop button follows it: the stop
@@ -1040,8 +985,6 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
   useEffect(() => typedKeys.noteValue(value), [value]);
 
   const handleRichChange = useCallback((newValue: string) => {
-    // Emptying the box by hand ends a walk of the history, so the next Up starts from the newest send.
-    if (newValue === '') resetHistory();
     typedKeys.noteTyped(newValue);
     onChange(newValue);
     // The caret decides which of the two dropdowns owns the slot above the
@@ -1051,7 +994,7 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
     mention.detectMention(newValue, caret);
     promptLibrary.detectPrompt(newValue, caret);
     agentMention.detectAgent(newValue, caret);
-  }, [onChange, palette, mention, promptLibrary, agentMention, textareaRef, resetHistory]);
+  }, [onChange, palette, mention, promptLibrary, agentMention, textareaRef]);
 
   // Right after `/rename ` the session's current title is previewed after the
   // caret, the way unsettled dictation is, and Tab turns it into real text.
@@ -1222,15 +1165,15 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
         return;
       }
 
-      const step = up ? navigateUp(value) : navigateDown();
+      const step = up ? navigateUp() : navigateDown();
       if (step === null) return;
       e.preventDefault();
       if (step === 'guard' || step === 'reading') return;
-      applyHistoryValue(step.text);
+      showSlot(step.slot);
       // Land on the edge the walk goes on from, so the same arrow keeps stepping through the sends.
       setCaretRequest({ at: up ? 'start' : 'end' });
     }
-  }, [disabled, value, attachments.length, submitComposer, onSubmit, navigateUp, navigateDown, disarmGuard, applyHistoryValue, onChange, palette, mention, promptLibrary, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, appSettings.composerSendShortcut, appSettings.composerSendShortcutCustom, appSettings.composerNewlineShortcut, appSettings.composerNewlineShortcutCustom, ime, handleRichChange, textareaRef, renameGhost]);
+  }, [disabled, value, attachments.length, submitComposer, onSubmit, navigateUp, navigateDown, disarmGuard, showSlot, onChange, palette, mention, promptLibrary, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, appSettings.composerSendShortcut, appSettings.composerSendShortcutCustom, appSettings.composerNewlineShortcut, appSettings.composerNewlineShortcutCustom, ime, handleRichChange, textareaRef, renameGhost]);
 
   // Wrap the attachment paste handler so files keep their dedicated path while
   // text goes through the browser's own editing pipeline.
@@ -1579,7 +1522,7 @@ export function ChatInput({ cardWaiting = false, onQuestionReplied }: ChatInputP
         <DragOverlay visible={isDragOver} />
         </>}
         editor={<>
-          <HistoryNotice position={historyPosition} guarded={isGuarded} hasDraft={value.trim() !== ''} />
+          <HistoryNotice position={historyPosition} modified={isModified} guarded={isGuarded} hasDraft={value.trim() !== '' || attachments.length > 0 || pendingReplies.length > 0 || pageElements.length > 0} />
           {/* A click puts the caret somewhere else, which stands the guard down too. */}
           <div onMouseDown={disarmGuard}>
           <RichInput

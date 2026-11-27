@@ -35,3 +35,4 @@ export * from './app-event';
 export * from './cross-session';
 export * from './session-brief';
 export * from './user-send';
+export * from './composer-draft';

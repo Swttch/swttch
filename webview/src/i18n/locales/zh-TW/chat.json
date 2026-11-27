@@ -148,7 +148,8 @@
     "history": {
       "guard": "再按一次向上鍵瀏覽歷史記錄",
       "guardKeepsDraft": "再按一次向上鍵瀏覽歷史記錄（草稿會保留）",
-      "position": "歷史記錄 {{index}}/{{total}}"
+      "position": "歷史記錄 {{index}}/{{total}}",
+      "modified": "已編輯"
     },
     "renameSuggestion": {
       "hint": "(按 Tab 補全)"

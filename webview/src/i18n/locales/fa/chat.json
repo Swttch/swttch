@@ -148,7 +148,8 @@
     "history": {
       "guard": "برای مرور تاریخچه دوباره ↑ را بزنید",
       "guardKeepsDraft": "برای مرور تاریخچه دوباره ↑ را بزنید (پیش‌نویس شما حفظ می‌شود)",
-      "position": "تاریخچه {{index}}/{{total}}"
+      "position": "تاریخچه {{index}}/{{total}}",
+      "modified": "ویرایش‌شده"
     },
     "renameSuggestion": {
       "hint": "(Tab برای تکمیل)"

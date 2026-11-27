@@ -148,7 +148,8 @@
     "history": {
       "guard": "اضغط ↑ مرة أخرى لتصفح السجل",
       "guardKeepsDraft": "اضغط ↑ مرة أخرى لتصفح السجل (ستبقى مسودتك)",
-      "position": "السجل {{index}}/{{total}}"
+      "position": "السجل {{index}}/{{total}}",
+      "modified": "معدّل"
     },
     "renameSuggestion": {
       "hint": "(Tab للإكمال)"

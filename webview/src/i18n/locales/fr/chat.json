@@ -148,7 +148,8 @@
     "history": {
       "guard": "Appuyez encore sur ↑ pour parcourir l’historique",
       "guardKeepsDraft": "Appuyez encore sur ↑ pour parcourir l’historique (votre brouillon est conservé)",
-      "position": "Historique {{index}}/{{total}}"
+      "position": "Historique {{index}}/{{total}}",
+      "modified": "Modifié"
     },
     "renameSuggestion": {
       "hint": "(Tab pour valider)"

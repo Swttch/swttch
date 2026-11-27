@@ -148,7 +148,8 @@
     "history": {
       "guard": "もう一度↑で履歴を表示",
       "guardKeepsDraft": "もう一度↑で履歴を表示（下書きは保持されます）",
-      "position": "履歴 {{index}}/{{total}}"
+      "position": "履歴 {{index}}/{{total}}",
+      "modified": "編集済み"
     },
     "renameSuggestion": {
       "hint": "(Tabで補完)"

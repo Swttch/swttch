@@ -87,6 +87,8 @@ export interface UseAttachmentsReturn {
   clearAttachments: () => void;
   /** Put attachments back as they were (a message taken back from the line of unsent ones), ahead of any already there. */
   restoreAttachments: (restored: Attachment[]) => void;
+  /** Put exactly these in the row, in place of whatever is there. */
+  replaceAttachments: (next: Attachment[]) => void;
   error: string | null;
   isDragOver: boolean;
   setIsDragOver: (v: boolean) => void;
@@ -184,6 +186,11 @@ export function useAttachments(): UseAttachmentsReturn {
 
   const restoreAttachments = useCallback((restored: Attachment[]) => {
     setAttachments((prev) => [...restored.filter((back) => !prev.some((att) => att.id === back.id)), ...prev]);
+  }, []);
+
+  const replaceAttachments = useCallback((next: Attachment[]) => {
+    setAttachments(next);
+    setError(null);
   }, []);
 
   /**
@@ -300,10 +307,11 @@ export function useAttachments(): UseAttachmentsReturn {
     cancelUpload,
     clearAttachments,
     restoreAttachments,
+    replaceAttachments,
     error,
     isDragOver,
     setIsDragOver,
     handlePaste,
     handleDrop,
-  }), [attachments, uploads, addImageAttachment, addFileAttachment, addFolderAttachment, removeAttachment, reorderAttachments, cancelUpload, clearAttachments, restoreAttachments, error, isDragOver, setIsDragOver, handlePaste, handleDrop]);
+  }), [attachments, uploads, addImageAttachment, addFileAttachment, addFolderAttachment, removeAttachment, reorderAttachments, cancelUpload, clearAttachments, restoreAttachments, replaceAttachments, error, isDragOver, setIsDragOver, handlePaste, handleDrop]);
 }
