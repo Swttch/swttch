@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { ArrowUturnLeftIcon, ChevronDownIcon, PhotoIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ArrowRightIcon, ArrowUturnLeftIcon, PhotoIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '@/i18n';
 import { Portal } from '@/components/Portal';
 import { Tooltip } from '@/components/Tooltip';
@@ -26,9 +26,9 @@ interface Props {
 }
 
 /**
- * The history of the composer in one list (#735): every send of the session in the order sent, folded to a line each.
- * A send with an edit kept carries a dot, starts open, and shows the edit. From here one puts a send in the composer,
- * or gives up its edit.
+ * The history of the composer in one list (#735): every send of the session in the order sent, folded to a line each
+ * that unfolds in place. A send with an edit kept carries a dot, starts open, and shows the edit. From here one puts a
+ * send in the composer, or gives up its edit.
  */
 export function HistoryModal(props: Props) {
   const { entries, edits, currentKey, onClose } = props;
@@ -109,6 +109,7 @@ export function HistoryModal(props: Props) {
                 {...props}
                 entry={entry}
                 number={at + 1}
+                numberWidth={String(entries.length).length}
                 isOpen={opened.has(entry.key)}
                 onToggle={() => toggle(entry.key)}
               />
@@ -120,80 +121,68 @@ export function HistoryModal(props: Props) {
   );
 }
 
-type RowProps = Props & { entry: SendIndexEntry; number: number; isOpen: boolean; onToggle: () => void };
+type RowProps = Props & { entry: SendIndexEntry; number: number; numberWidth: number; isOpen: boolean; onToggle: () => void };
 
-function HistoryRow({ entry, number, isOpen, onToggle, edits, currentKey, loadContent, pictureOf, onRecall, onRevert }: RowProps) {
+const ICON_BUTTON = 'flex h-6 w-6 shrink-0 items-center justify-center rounded text-text-secondary hover:bg-surface-tooltip hover:text-text-primary';
+
+function HistoryRow({ entry, number, numberWidth, isOpen, onToggle, edits, currentKey, loadContent, pictureOf, onRecall, onRevert }: RowProps) {
   const { t } = useTranslation('chat');
   const { t: tt } = useTranslation('chatTools');
-  const bodyId = useId();
   const edit = edits[entry.key];
   const pictures = edit ? edit.attachments.filter((a) => a.type === 'image').length : entry.images;
   const words = (edit ? edit.text : entry.text).trim();
   const preview = words !== '' ? words : pictures > 0 ? tt('sendIndex.imageOnly') : t('chatInput.history.modal.empty');
+  const previewClass = words === '' ? 'text-text-tertiary' : '';
 
   return (
     <li data-send={entry.key} className={`rounded-lg ${entry.key === currentKey ? 'bg-surface-hover/50' : ''}`}>
-      <div className="flex items-center gap-1 rounded-lg pe-1 hover:bg-surface-hover">
+      <div className="flex items-start gap-1 rounded-lg pe-1 hover:bg-surface-hover">
         <button
           type="button"
           aria-expanded={isOpen}
-          aria-controls={bodyId}
           onClick={onToggle}
-          className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-start text-sm text-[var(--tr-text)]"
+          className="flex min-w-0 flex-1 items-baseline gap-2 px-2 py-1.5 text-start text-sm text-[var(--tr-text)]"
         >
-          <span className="w-7 shrink-0 text-end text-xs tabular-nums text-text-tertiary">{number}</span>
-          <span className={`min-w-0 flex-1 truncate ${words === '' ? 'text-text-tertiary' : ''}`}>{preview}</span>
-          {pictures > 0 && <PhotoIcon className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />}
+          <span className="shrink-0 text-end text-xs tabular-nums text-text-tertiary" style={{ minWidth: `${numberWidth}ch` }}>{number}</span>
+          {isOpen ? (
+            edit ? (
+              <FullContent content={edit} pictureOf={pictureOf} fallback={preview} />
+            ) : (
+              <SentContent sendKey={entry.key} loadContent={loadContent} pictureOf={pictureOf} fallback={preview} />
+            )
+          ) : (
+            <span className={`min-w-0 flex-1 truncate ${previewClass}`}>{preview}</span>
+          )}
         </button>
-        {edit && (
-          <>
-            <Tooltip content={t('chatInput.history.modified')} desktop>
-              <span role="img" aria-label={t('chatInput.history.modified')} className="flex h-6 w-4 shrink-0 items-center justify-center">
-                <span className="h-2 w-2 rounded-full bg-accent-claude" />
-              </span>
-            </Tooltip>
-            <Tooltip content={t('chatInput.history.modal.revert')} desktop>
-              <button
-                type="button"
-                aria-label={t('chatInput.history.modal.revert')}
-                onClick={() => onRevert(entry.key)}
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-text-secondary hover:bg-surface-tooltip hover:text-text-primary"
-              >
-                <ArrowUturnLeftIcon className="h-3.5 w-3.5" />
-              </button>
-            </Tooltip>
-          </>
-        )}
-        <button
-          type="button"
-          onClick={() => onRecall(entry.key)}
-          className="shrink-0 rounded px-2 py-1 text-xs text-text-secondary hover:bg-surface-tooltip hover:text-text-primary"
-        >
-          {t('chatInput.history.modal.recall')}
-        </button>
-        {/* The row's own button already folds and unfolds for keyboard and screen readers; this is its pointer handle. */}
-        <button
-          type="button"
-          tabIndex={-1}
-          aria-hidden="true"
-          data-testid="history-chevron"
-          onClick={onToggle}
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-text-tertiary hover:text-text-primary"
-        >
-          <ChevronDownIcon className={`h-3.5 w-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-        </button>
-      </div>
-      {isOpen && (
-        <div id={bodyId} className="ms-[2.75rem] me-2 pb-2">
-          {edit ? <ContentView content={edit} pictureOf={pictureOf} /> : <SentView sendKey={entry.key} loadContent={loadContent} pictureOf={pictureOf} />}
+        <div className="mt-1 flex shrink-0 items-center gap-1">
+          {!isOpen && pictures > 0 && <PhotoIcon className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />}
+          {edit && (
+            <>
+              <Tooltip content={t('chatInput.history.modified')} desktop>
+                <span role="img" aria-label={t('chatInput.history.modified')} className="flex h-6 w-4 shrink-0 items-center justify-center">
+                  <span className="h-2 w-2 rounded-full bg-accent-claude" />
+                </span>
+              </Tooltip>
+              <Tooltip content={t('chatInput.history.modal.revert')} desktop>
+                <button type="button" aria-label={t('chatInput.history.modal.revert')} onClick={() => onRevert(entry.key)} className={ICON_BUTTON}>
+                  <ArrowUturnLeftIcon className="h-3.5 w-3.5" />
+                </button>
+              </Tooltip>
+            </>
+          )}
+          <Tooltip content={t('chatInput.history.modal.recall')} desktop>
+            <button type="button" aria-label={t('chatInput.history.modal.recall')} onClick={() => onRecall(entry.key)} className={ICON_BUTTON}>
+              <ArrowRightIcon className="h-3.5 w-3.5" />
+            </button>
+          </Tooltip>
         </div>
-      )}
+      </div>
     </li>
   );
 }
 
-/** A send as it was sent, read when its row is opened. */
-function SentView({ sendKey, loadContent, pictureOf }: { sendKey: string } & Pick<Props, 'loadContent' | 'pictureOf'>) {
+/** A send as it was sent, read when its row is opened. Until it is here the row's own line stands, unfolded. */
+function SentContent({ sendKey, loadContent, pictureOf, fallback }: { sendKey: string; fallback: string } & Pick<Props, 'loadContent' | 'pictureOf'>) {
   const { t } = useTranslation('chat');
   const [read, setRead] = useState<{ content: ComposerContent | undefined } | null>(null);
   const loadRef = useRef(loadContent);
@@ -207,28 +196,35 @@ function SentView({ sendKey, loadContent, pictureOf }: { sendKey: string } & Pic
     return () => { gone = true; };
   }, [sendKey]);
 
-  if (read?.content) return <ContentView content={read.content} pictureOf={pictureOf} />;
-  return <p className="text-xs text-text-tertiary">{t(read ? 'chatInput.history.modal.unavailable' : 'chatInput.history.modal.loading')}</p>;
+  if (read?.content) return <FullContent content={read.content} pictureOf={pictureOf} fallback={fallback} />;
+  return (
+    <span className="min-w-0 flex-1 whitespace-pre-wrap break-words">
+      {fallback}
+      {read && <span className="block text-xs text-text-tertiary">{t('chatInput.history.modal.unavailable')}</span>}
+    </span>
+  );
 }
 
-/** What a composer content holds: its cards, its words, its pictures and files. */
-function ContentView({ content, pictureOf }: { content: ComposerContent } & Pick<Props, 'pictureOf'>) {
-  const { t } = useTranslation('chat');
+/** All a composer content holds, in the place of the row's line: its cards, its words, its pictures and files. */
+function FullContent({ content, pictureOf, fallback }: { content: ComposerContent; fallback: string } & Pick<Props, 'pictureOf'>) {
   const pictures = content.attachments.filter((a) => a.type === 'image');
   const files = content.attachments.filter((a) => a.type !== 'image');
-  const isEmpty = content.text === '' && content.attachments.length === 0 && content.replies.length === 0;
 
   return (
-    <div className="flex flex-col gap-1.5 rounded-md border border-border-subtle px-2.5 py-2 text-sm text-[var(--tr-text)]">
+    <span className="flex min-w-0 flex-1 flex-col gap-1.5">
       {content.replies.map((reply) => (
-        <div key={reply.id} className="border-s-2 border-border-default ps-2">
-          <p className="line-clamp-3 whitespace-pre-wrap break-words text-xs text-text-tertiary">{reply.quote}</p>
-          {reply.comment !== '' && <p className="whitespace-pre-wrap break-words">{reply.comment}</p>}
-        </div>
+        <span key={reply.id} className="block border-s-2 border-border-default ps-2">
+          <span className="line-clamp-3 whitespace-pre-wrap break-words text-xs text-text-tertiary">{reply.quote}</span>
+          {reply.comment !== '' && <span className="block whitespace-pre-wrap break-words">{reply.comment}</span>}
+        </span>
       ))}
-      {content.text !== '' && <p className="whitespace-pre-wrap break-words">{content.text}</p>}
+      {content.text.trim() !== '' ? (
+        <span className="whitespace-pre-wrap break-words">{content.text}</span>
+      ) : (
+        content.replies.length === 0 && <span className="text-text-tertiary">{fallback}</span>
+      )}
       {pictures.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
+        <span className="flex flex-wrap gap-1.5">
           {pictures.map((picture) => {
             const data = pictureOf(picture.id);
             return data === undefined ? (
@@ -237,12 +233,11 @@ function ContentView({ content, pictureOf }: { content: ComposerContent } & Pick
               <img key={picture.id} src={`data:${picture.mimeType ?? 'image/png'};base64,${data}`} alt={picture.name} className="max-h-24 rounded border border-border-subtle" />
             );
           })}
-        </div>
+        </span>
       )}
       {files.map((file) => (
         <span key={file.id} className="text-xs text-text-secondary">{file.name}</span>
       ))}
-      {isEmpty && <p className="text-text-tertiary">{t('chatInput.history.modal.empty')}</p>}
-    </div>
+    </span>
   );
 }

@@ -40,19 +40,11 @@ describe('HistoryModal', () => {
     expect(rows().map((row) => within(row).queryByRole('img', { name: 'Edited' }) !== null)).toEqual([false, true, false]);
   });
 
-  it('unfolds from the arrow at the end of the row too', () => {
-    show();
-
-    fireEvent.click(within(rows()[0]).getByTestId('history-chevron'));
-
-    expect(header(rows()[0]).getAttribute('aria-expanded')).toBe('true');
-  });
-
   it('starts with the edited sends open on their edit, and the rest folded', () => {
     const { loadContent } = show();
 
     expect(rows().map((row) => header(row).getAttribute('aria-expanded'))).toEqual(['false', 'true', 'false']);
-    expect(within(rows()[1]).getAllByText('middle, changed')).toHaveLength(2);
+    expect(within(rows()[1]).getAllByText('middle, changed')).toHaveLength(1);
     expect(loadContent).not.toHaveBeenCalled();
   });
 

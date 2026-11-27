@@ -156,7 +156,6 @@
         "title": "History",
         "recall": "Load into input",
         "revert": "Discard edit",
-        "loading": "Loading…",
         "unavailable": "This message could not be read.",
         "empty": "(empty)"
       }

@@ -156,7 +156,6 @@
         "title": "历史记录",
         "recall": "载入输入框",
         "revert": "撤销修改",
-        "loading": "加载中…",
         "unavailable": "无法读取这条消息。",
         "empty": "（空）"
       }

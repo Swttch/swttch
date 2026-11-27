@@ -156,7 +156,6 @@
         "title": "Historique",
         "recall": "Charger dans la saisie",
         "revert": "Annuler la modification",
-        "loading": "Chargement…",
         "unavailable": "Impossible de lire ce message.",
         "empty": "(vide)"
       }

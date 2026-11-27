@@ -156,7 +156,6 @@
         "title": "Historial",
         "recall": "Cargar en el campo",
         "revert": "Descartar cambios",
-        "loading": "Cargando…",
         "unavailable": "No se pudo leer este mensaje.",
         "empty": "(vacío)"
       }
