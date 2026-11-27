@@ -165,4 +165,40 @@ describe('restoreQueuedMessages', () => {
     const restored = result.find(m => m.uuid?.startsWith('queued-'));
     expect(restored?.message?.content).toEqual(blocks);
   });
+
+  /** The `attachment` entry of a typed message that holds words only: the CLI writes its prompt as a string (#708). */
+  const textAttachment = (commandMode: string, prompt: string) => ({
+    type: 'attachment',
+    uuid: 'att-1',
+    attachment: { type: 'queued_command', commandMode, prompt, source_uuid: 'cmd-1', origin: { kind: 'human' } },
+  } as unknown as LoadedMessageDto);
+  const removeOf = (content: string) =>
+    ({ ...queueOp('remove', content, '2026-11-22T16:07:27.582Z'), commandUuid: 'cmd-1' }) as unknown as LoadedMessageDto;
+
+  it('restores a message of words alone on a page that begins after its enqueue, from its attachment (#708)', () => {
+    const result = restoreQueuedMessages([textAttachment('prompt', 'add 595'), removeOf('add 595'), assistant('a1', 'ok')]);
+
+    expect(result.map(m => m.uuid)).toEqual(['att-1', 'queued-cmd-1', 'a1']);
+    expect(result[1].message?.content).toBe('add 595');
+  });
+
+  it('draws the message once when two pages joined hold its queue record twice (#708)', () => {
+    const result = restoreQueuedMessages([
+      textAttachment('prompt', 'add 595'),
+      removeOf('add 595'),
+      assistant('a1', 'ok'),
+      removeOf('add 595'),
+    ]);
+
+    expect(result.filter(m => m.uuid === 'queued-cmd-1')).toHaveLength(1);
+  });
+
+  it('does not take the attachment of a notice for something the user typed (#708)', () => {
+    const result = restoreQueuedMessages([
+      textAttachment('task-notification', 'a background task is over'),
+      removeOf('a background task is over'),
+    ]);
+
+    expect(result.map(m => m.uuid)).toEqual(['att-1']);
+  });
 });
