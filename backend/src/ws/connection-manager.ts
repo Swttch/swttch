@@ -151,6 +151,12 @@ interface SessionRecord {
 }
 
 interface ClientRecord {
+  /**
+   * Which view of the panel this connection is, as the IDE named it on the page URL
+   * (`viewId`). A split tab shows one panelId in two views, and a key or a drop belongs
+   * to one of them. Null for a browser client, or a page that did not say.
+   */
+  viewId: string | null;
   subscribedSessionId: string | null;
   /**
    * The effort level picked on this connection while its chat had no session yet (nothing sent), waiting
@@ -284,10 +290,11 @@ export class ConnectionManager {
     env: ClientEnv = ClientEnv.BROWSER,
     panelId: string | null = null,
     origin: string | null = null,
+    viewId: string | null = null,
   ): string {
     const connectionId = `conn-${++this.nextId}-${Date.now()}`;
     this.connectionMap.set(connectionId, ws);
-    this.clientMap.set(connectionId, { subscribedSessionId: null, env, panelId, nativeDropStash: null, origin, hiddenSince: null });
+    this.clientMap.set(connectionId, { subscribedSessionId: null, env, panelId, viewId, nativeDropStash: null, origin, hiddenSince: null });
     if (panelId) {
       this.panelIdIndex.set(panelId, [...(this.panelIdIndex.get(panelId) ?? []), connectionId]);
     }
@@ -441,8 +448,8 @@ export class ConnectionManager {
     this.broadcastToAll(type, payload);
   }
 
-  setNativeDropStash(panelId: string, entries: NativeDropEntry[]): boolean {
-    const connectionId = this.getConnectionIdByPanelId(panelId);
+  setNativeDropStash(panelId: string, entries: NativeDropEntry[], viewId?: string): boolean {
+    const connectionId = this.getConnectionIdByPanelId(panelId, viewId);
     if (!connectionId) return false;
     const record = this.clientMap.get(connectionId);
     if (!record) return false;
@@ -472,8 +479,8 @@ export class ConnectionManager {
    * the same drop would attach the file twice — once from here and once when
    * the page's flush replays what CEF left behind.
    */
-  deliverNativeDrop(panelId: string, entries: NativeDropEntry[]): boolean {
-    const connectionId = this.getConnectionIdByPanelId(panelId);
+  deliverNativeDrop(panelId: string, entries: NativeDropEntry[], viewId?: string): boolean {
+    const connectionId = this.getConnectionIdByPanelId(panelId, viewId);
     if (!connectionId) return false;
     const record = this.clientMap.get(connectionId);
     if (!record) return false;
@@ -485,10 +492,17 @@ export class ConnectionManager {
   /**
    * Resolve a panelId (assigned by Kotlin on JCEF browser creation) back to a
    * webview connection. A split editor tab has several, see [panelIdIndex].
+   *
+   * Without [viewId] this is the view that connected or was focused last. With it, the
+   * newest connection of that view; failing that, a connection that never said which view
+   * it is. Another named view is never answered, so a key or a drop meant for one split
+   * does not act in the other.
    */
-  getConnectionIdByPanelId(panelId: string): string | null {
-    const connectionIds = this.panelIdIndex.get(panelId);
-    return connectionIds?.[connectionIds.length - 1] ?? null;
+  getConnectionIdByPanelId(panelId: string, viewId?: string): string | null {
+    const newestFirst = [...(this.panelIdIndex.get(panelId) ?? [])].reverse();
+    if (!viewId) return newestFirst[0] ?? null;
+    const viewOf = (id: string) => this.clientMap.get(id)?.viewId ?? null;
+    return newestFirst.find((id) => viewOf(id) === viewId) ?? newestFirst.find((id) => viewOf(id) === null) ?? null;
   }
 
   /**

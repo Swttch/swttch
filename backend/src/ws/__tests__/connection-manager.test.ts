@@ -1466,6 +1466,68 @@ describe('ConnectionManager', () => {
     });
   });
 
+  // #753: a key or a file drop belongs to one view of a split tab, whichever was focused last, so the
+  // IDE names the view and each view says which one it is when it connects.
+  describe('a command that names its view', () => {
+    const entries = [{ path: '/tmp/a.txt', type: 'file' as const }];
+
+    function view(viewId: string | null) {
+      const ws = createMockWs();
+      const id = cm.addConnection(ws, ClientEnv.JETBRAINS, 'panel-1', null, viewId);
+      return { id, ws };
+    }
+
+    it('goes to that view even when the other one was focused last', () => {
+      const left = view('view-left');
+      const right = view('view-right');
+      cm.setLastFocusedPanelId('panel-1', left.id);
+
+      expect(cm.getConnectionIdByPanelId('panel-1', 'view-right')).toBe(right.id);
+    });
+
+    it('drops a file on that view, not on the focused one', () => {
+      const left = view('view-left');
+      const right = view('view-right');
+      cm.setLastFocusedPanelId('panel-1', left.id);
+
+      expect(cm.deliverNativeDrop('panel-1', entries, 'view-right')).toBe(true);
+
+      expect(right.ws.send).toHaveBeenCalledTimes(1);
+      expect(left.ws.send).not.toHaveBeenCalled();
+    });
+
+    it('holds a dragged file for that view to flush', () => {
+      const left = view('view-left');
+      const right = view('view-right');
+      cm.setLastFocusedPanelId('panel-1', left.id);
+
+      expect(cm.setNativeDropStash('panel-1', entries, 'view-right')).toBe(true);
+
+      expect(cm.takeNativeDropStash(right.id)).toEqual(entries);
+      expect(cm.takeNativeDropStash(left.id)).toBeNull();
+    });
+
+    it('goes to the newest connection of that view after it reconnects', () => {
+      view('view-left');
+      const again = view('view-left');
+
+      expect(cm.getConnectionIdByPanelId('panel-1', 'view-left')).toBe(again.id);
+    });
+
+    it('is not handed to another view when the named one is not connected', () => {
+      view('view-left');
+
+      expect(cm.getConnectionIdByPanelId('panel-1', 'view-right')).toBeNull();
+      expect(cm.deliverNativeDrop('panel-1', entries, 'view-right')).toBe(false);
+    });
+
+    it('may go to a connection that never said which view it is', () => {
+      const unnamed = view(null);
+
+      expect(cm.getConnectionIdByPanelId('panel-1', 'view-left')).toBe(unnamed.id);
+    });
+  });
+
   describe('pickScheduledDeliveryTarget', () => {
     it('1: delivers through a live tab already subscribed to the session (no switch)', () => {
       const conn = cm.addConnection(createMockWs(), ClientEnv.JETBRAINS, 'panel-1');

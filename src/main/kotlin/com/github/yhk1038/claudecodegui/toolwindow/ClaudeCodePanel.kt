@@ -82,6 +82,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
@@ -2112,6 +2113,15 @@ class ClaudeCodePanel(
     }
 
     /**
+     * Address a command to this panel's own view. A split tab has a second view under the
+     * same panelId, and a key or a drop belongs to the one it happened in (#753).
+     */
+    private fun JsonObjectBuilder.putViewAddress() {
+        put("panelId", JsonPrimitive(panelId))
+        holder?.let { put("viewId", JsonPrimitive(it.viewId)) }
+    }
+
+    /**
      * Hand dropped paths to the backend.
      *
      * [alreadyDropped] separates the two moments this is called from. CEF tells
@@ -2125,7 +2135,7 @@ class ClaudeCodePanel(
         logger.debug("[NativeDrop] dispatchNativeDrop panelId=$panelId, alreadyDropped=$alreadyDropped, ${files.size} files: ${files.map { it.path }}")
         if (files.isEmpty()) return
         val params = buildJsonObject {
-            put("panelId", JsonPrimitive(panelId))
+            putViewAddress()
             putJsonArray("entries") {
                 files.forEach { file ->
                     add(buildJsonObject {
@@ -2144,7 +2154,7 @@ class ClaudeCodePanel(
      * the chat can say so instead of leaving the drop with no chip and no message.
      */
     private fun notifyNativeDropFailed() {
-        val params = buildJsonObject { put("panelId", JsonPrimitive(panelId)) }
+        val params = buildJsonObject { putViewAddress() }
         backendService.sendNotification(project.basePath ?: "", "NATIVE_DROP_FAILED", params)
     }
 
@@ -2162,7 +2172,7 @@ class ClaudeCodePanel(
     private fun sendEmacsTextKey(letter: String, shift: Boolean) {
         try {
             val params = buildJsonObject {
-                put("panelId", JsonPrimitive(panelId))
+                putViewAddress()
                 put("key", JsonPrimitive(letter))
                 put("shift", JsonPrimitive(shift))
             }
@@ -2183,7 +2193,7 @@ class ClaudeCodePanel(
      */
     private fun sendCycleTranscriptView() {
         try {
-            val params = buildJsonObject { put("panelId", JsonPrimitive(panelId)) }
+            val params = buildJsonObject { putViewAddress() }
             backendService.sendNotification(project.basePath ?: "", "CYCLE_TRANSCRIPT_VIEW", params)
         } catch (e: Exception) {
             logger.warn("CYCLE_TRANSCRIPT_VIEW not sent (panelId=$panelId)", e)
@@ -2202,7 +2212,7 @@ class ClaudeCodePanel(
     private fun sendEditHistoryCommand(command: EditHistoryCommand) {
         try {
             val params = buildJsonObject {
-                put("panelId", JsonPrimitive(panelId))
+                putViewAddress()
                 put("command", JsonPrimitive(command.wire))
             }
             backendService.sendNotification(project.basePath ?: "", "EDIT_HISTORY_COMMAND_REQUESTED", params)
@@ -2271,6 +2281,7 @@ class ClaudeCodePanel(
             pathSegment = shownPath ?: initialPath ?: "/sessions/new",
             workingDir = project.basePath,
             panelId = panelId,
+            viewId = holder?.viewId,
             isBright = com.intellij.ui.JBColor.isBright(),
             // Deliver the single-use pairing code to the webview out-of-band via the load
             // URL. The webview reads it once, strips it from the address bar, and redeems
@@ -3652,6 +3663,9 @@ class ClaudeCodePanel(
  *   - `workingDir` — IDE project base path (omitted when null)
  *   - `panelId`    — forwarded to /ws so the backend can route panel-scoped
  *                    notifications (NATIVE_DROP, etc.) back to this exact webview
+ *   - `viewId`     — which view of that panel this is (omitted when null). A split
+ *                    editor tab shows one panelId in two browsers; forwarded to /ws
+ *                    so a key or a drop reaches the one it happened in (#753)
  *   - `theme`      — `light` | `dark`, derived from the IDE LAF ([isBright]).
  *                    Consumed by the FOUC guard in webview/index.html to paint
  *                    the right surface color before CSS/React load.
@@ -3674,6 +3688,7 @@ internal fun buildWebViewUrl(
     isBright: Boolean,
     pairCode: String? = null,
     forwardFallback: com.github.yhk1038.claudecodegui.remotedev.ForwardFallback? = null,
+    viewId: String? = null,
 ): String {
     // A path that already names a working directory keeps it, and a path that
     // already carries a query is continued with `&`.
@@ -3697,7 +3712,8 @@ internal fun buildWebViewUrl(
         "pair=${java.net.URLEncoder.encode(it, "UTF-8")}"
     }
     val forwardingParam = forwardFallback?.let { "forwarding=${it.wire}" }
-    val query = listOfNotNull(workingDirParam, panelParam, themeParam, pairParam, forwardingParam).joinToString("&")
+    val viewParam = viewId?.let { "viewId=${java.net.URLEncoder.encode(it, "UTF-8")}" }
+    val query = listOfNotNull(workingDirParam, panelParam, viewParam, themeParam, pairParam, forwardingParam).joinToString("&")
     val separator = if (pathSegment.contains('?')) "&" else "?"
     return "http://localhost:$port$pathSegment$separator$query"
 }
@@ -3705,7 +3721,7 @@ internal fun buildWebViewUrl(
 /**
  * The address to return to when the page is loaded again: its path, plus the two query
  * parameters that say which folder it works in (`workingDir`, `rootUp`). Everything else in
- * the query (`panelId`, `theme`, `pair`, `forwarding`) belongs to one load and is rebuilt by
+ * the query (`panelId`, `viewId`, `theme`, `pair`, `forwarding`) belongs to one load and is rebuilt by
  * [buildWebViewUrl], so it is left out. Values stay percent-encoded as the page had them.
  */
 internal fun pathToReturnTo(uri: java.net.URI): String {

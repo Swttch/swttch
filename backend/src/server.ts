@@ -210,6 +210,14 @@ async function startServerWithRetry(
 }
 
 /**
+ * The view a panel-scoped command from the IDE names. A split tab shows one panel in two
+ * views, and this says which of them the key was pressed in or the file was dropped on.
+ */
+function parseViewId(raw: unknown): string | undefined {
+  return typeof raw === 'string' && raw ? raw : undefined;
+}
+
+/**
  * Validate NATIVE_DROP `params.entries` arriving over JSON-RPC. Kotlin builds
  * each entry as `{ path: string; type: "file" | "folder" }`, but the value lands
  * here as `unknown`, so we narrow it explicitly. Malformed elements are dropped
@@ -402,9 +410,10 @@ async function main() {
 
   (bridges[ClientEnv.JETBRAINS] as JetBrainsBridge).onNotification(MessageType.NATIVE_DROP, (_method, params) => {
     const panelId = typeof params.panelId === 'string' ? params.panelId : '';
+    const viewId = parseViewId(params.viewId);
     const entries = parseNativeDropEntries(params.entries);
     if (!panelId || entries.length === 0) return;
-    const stashed = connections.setNativeDropStash(panelId, entries);
+    const stashed = connections.setNativeDropStash(panelId, entries, viewId);
     if (!stashed) {
       console.error('[node-backend]', `[NATIVE_DROP] stash failed — no connection for panelId=${panelId}`);
     }
@@ -415,9 +424,10 @@ async function main() {
   // page's own drop handler, and on Windows that handler never runs (#481).
   (bridges[ClientEnv.JETBRAINS] as JetBrainsBridge).onNotification(MessageType.NATIVE_DROP_DELIVER, (_method, params) => {
     const panelId = typeof params.panelId === 'string' ? params.panelId : '';
+    const viewId = parseViewId(params.viewId);
     const entries = parseNativeDropEntries(params.entries);
     if (!panelId || entries.length === 0) return;
-    const delivered = connections.deliverNativeDrop(panelId, entries);
+    const delivered = connections.deliverNativeDrop(panelId, entries, viewId);
     if (!delivered) {
       console.error('[node-backend]', `[NATIVE_DROP_DELIVER] no connection for panelId=${panelId}`);
     }
@@ -428,8 +438,9 @@ async function main() {
   // payload: the webview owns the sentence, and the IDE's own reason is in its log.
   (bridges[ClientEnv.JETBRAINS] as JetBrainsBridge).onNotification(MessageType.NATIVE_DROP_FAILED, (_method, params) => {
     const panelId = typeof params.panelId === 'string' ? params.panelId : '';
+    const viewId = parseViewId(params.viewId);
     if (!panelId) return;
-    const connectionId = connections.getConnectionIdByPanelId(panelId);
+    const connectionId = connections.getConnectionIdByPanelId(panelId, viewId);
     if (!connectionId) {
       console.error('[node-backend]', `[NATIVE_DROP_FAILED] no connection for panelId=${panelId}`);
       return;
@@ -468,13 +479,14 @@ async function main() {
   // press nobody is looking at must not replay into a field later.
   (bridges[ClientEnv.JETBRAINS] as JetBrainsBridge).onNotification(MessageType.EMACS_TEXT_KEY_PRESSED, (_method, params) => {
     const panelId = typeof params.panelId === 'string' ? params.panelId : '';
+    const viewId = parseViewId(params.viewId);
     if (!panelId) return;
     const press = parseEmacsTextKeyPress(params);
     if (!press) {
       console.error('[node-backend]', `[EMACS_TEXT_KEY_PRESSED] dropped: unknown key=${String(params.key)}`);
       return;
     }
-    const connectionId = connections.getConnectionIdByPanelId(panelId);
+    const connectionId = connections.getConnectionIdByPanelId(panelId, viewId);
     if (!connectionId) {
       console.error('[node-backend]', `[EMACS_TEXT_KEY_PRESSED] no connection for panelId=${panelId}`);
       return;
@@ -490,13 +502,14 @@ async function main() {
   // replay into a field later.
   (bridges[ClientEnv.JETBRAINS] as JetBrainsBridge).onNotification(MessageType.EDIT_HISTORY_COMMAND_REQUESTED, (_method, params) => {
     const panelId = typeof params.panelId === 'string' ? params.panelId : '';
+    const viewId = parseViewId(params.viewId);
     if (!panelId) return;
     const command = parseEditHistoryCommand(params.command);
     if (!command) {
       console.error('[node-backend]', `[EDIT_HISTORY_COMMAND_REQUESTED] dropped: unknown command=${String(params.command)}`);
       return;
     }
-    const connectionId = connections.getConnectionIdByPanelId(panelId);
+    const connectionId = connections.getConnectionIdByPanelId(panelId, viewId);
     if (!connectionId) {
       console.error('[node-backend]', `[EDIT_HISTORY_COMMAND_REQUESTED] no connection for panelId=${panelId}`);
       return;
@@ -512,8 +525,9 @@ async function main() {
   // looking at must not cycle a view later.
   (bridges[ClientEnv.JETBRAINS] as JetBrainsBridge).onNotification(MessageType.CYCLE_TRANSCRIPT_VIEW, (_method, params) => {
     const panelId = typeof params.panelId === 'string' ? params.panelId : '';
+    const viewId = parseViewId(params.viewId);
     if (!panelId) return;
-    const connectionId = connections.getConnectionIdByPanelId(panelId);
+    const connectionId = connections.getConnectionIdByPanelId(panelId, viewId);
     if (!connectionId) {
       console.error('[node-backend]', `[CYCLE_TRANSCRIPT_VIEW] no connection for panelId=${panelId}`);
       return;
