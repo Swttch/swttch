@@ -40,12 +40,24 @@ function createMockBridge() {
 const mockDeny = vi.fn().mockResolvedValue(undefined);
 const mockApprove = vi.fn().mockResolvedValue(undefined);
 
+const mockApproveForSession = vi.fn().mockResolvedValue(undefined);
+const mockApproveWithRules = vi.fn().mockResolvedValue(undefined);
+
 const mockApi = {
   tools: {
     deny: mockDeny,
     approve: mockApprove,
+    approveForSession: mockApproveForSession,
+    approveWithRules: mockApproveWithRules,
   },
 };
+
+vi.mock('@/contexts/WorkingDirContext', () => ({
+  useWorkingDirOrNull: () => ({ workingDirectory: '/repo' }),
+}));
+vi.mock('@/contexts/ClaudeSettingsContext', () => ({
+  useClaudeHomeDir: () => '/home/me',
+}));
 
 vi.mock('@/contexts/ApiContext', () => ({
   useApi: () => mockApi,
@@ -136,6 +148,22 @@ describe('usePendingPermissions', () => {
     mockBridge = mock.bridge;
     mockEmit = mock.emit;
     mockAllowAll = false;
+  });
+
+  describe('a request the backend answered by itself (#761)', () => {
+    it('never becomes pending when "settled" arrives before the question, so nothing rings for it', () => {
+      const seen: Array<string | null> = [];
+      renderHook(() => {
+        const state = usePendingPermissions();
+        seen.push(state.pending?.controlRequestId ?? null);
+        return state;
+      });
+
+      act(() => mockEmit(MessageType.PERMISSION_RESOLVED, { toolUseId: 'tool-1', controlRequestId: 'ctrl-1' }));
+      act(() => emitBashRequest(mockEmit));
+
+      expect(seen.every((id) => id === null)).toBe(true);
+    });
   });
 
   describe('requests the CLI will not keep a rule for', () => {
@@ -404,3 +432,66 @@ describe('usePendingPermissions', () => {
     });
   });
 });
+
+// #761: what goes to the CLI with each allow answer on a file change.
+describe('usePendingPermissions — answers that carry permissions', () => {
+  function ask(input: Record<string, unknown>, suggestions?: unknown) {
+    const view = renderHook(() => usePendingPermissions());
+    act(() => {
+      mockEmit(MessageType.CLI_EVENT, {
+        type: 'control_request',
+        request_id: 'ctrl-file',
+        request: { subtype: 'can_use_tool', tool_name: 'Write', tool_use_id: 'tool-file', input, permission_suggestions: suggestions },
+      });
+    });
+    return view;
+  }
+
+  beforeEach(() => {
+    ({ bridge: mockBridge, emit: mockEmit } = createMockBridge());
+    mockApprove.mockClear();
+    mockApproveForSession.mockClear();
+    mockApproveWithRules.mockClear();
+  });
+
+  it('allows the edit tools for the session on an ordinary file', () => {
+    const { result } = ask({ file_path: '/repo/src/a.ts' });
+    act(() => result.current.approveForSession('ctrl-file'));
+    expect(mockApproveForSession).toHaveBeenCalledWith('tool-file', 'Write', 'ctrl-file', { file_path: '/repo/src/a.ts' });
+    expect(mockApproveWithRules).not.toHaveBeenCalled();
+  });
+
+  it('allows the .claude folder instead for a file in it', () => {
+    const { result } = ask({ file_path: '/repo/.claude/a.md' });
+    act(() => result.current.approveForSession('ctrl-file'));
+    expect(mockApproveWithRules).toHaveBeenCalledWith(
+      'tool-file',
+      [{ type: 'addRules', rules: [{ toolName: 'Edit', ruleContent: '/.claude/**' }], behavior: 'allow', destination: 'session' }],
+      'ctrl-file',
+      { file_path: '/repo/.claude/a.md' },
+    );
+    expect(mockApproveForSession).not.toHaveBeenCalled();
+  });
+
+  it('sends the suggested folder with "accept edits", and only that', () => {
+    const { result } = ask({ file_path: '/outside/a.md' }, [
+      { type: 'setMode', mode: 'acceptEdits', destination: 'session' },
+      { type: 'addDirectories', directories: ['/outside'], destination: 'session' },
+    ]);
+    act(() => result.current.approveAcceptEdits('ctrl-file'));
+    expect(mockApproveWithRules).toHaveBeenCalledWith(
+      'tool-file',
+      [{ type: 'addDirectories', directories: ['/outside'], destination: 'session' }],
+      'ctrl-file',
+      { file_path: '/outside/a.md' },
+    );
+  });
+
+  it('is a plain approval for "accept edits" where the CLI suggested no folder', () => {
+    const { result } = ask({ file_path: '/repo/src/a.ts' }, [{ type: 'setMode', mode: 'acceptEdits', destination: 'session' }]);
+    act(() => result.current.approveAcceptEdits('ctrl-file'));
+    expect(mockApprove).toHaveBeenCalledWith('tool-file', 'ctrl-file', { file_path: '/repo/src/a.ts' });
+    expect(mockApproveWithRules).not.toHaveBeenCalled();
+  });
+});
+

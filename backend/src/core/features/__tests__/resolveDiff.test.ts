@@ -5,7 +5,7 @@
  * as "the review surface reported them" rather than as anything IDE-specific.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mkdtemp, writeFile, rm } from 'fs/promises';
+import { mkdtemp, mkdir, writeFile, rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
@@ -32,7 +32,7 @@ function noticesFor(sessionId: string): string[] {
   return takeMessagesForFinishedTurn(sessionId);
 }
 import { computeHunks, type AcceptedRange } from '../hunks';
-import { USER_DECLINED_PREFIX } from '../../../shared';
+import { USER_DECLINED_PREFIX, buildSessionPermissionUpdate, buildClaudeFolderPermissionUpdate } from '../../../shared';
 
 const original = ['debug: false', ...Array.from({ length: 8 }, (_, i) => `pad-${i}`), 'timeout: 30'].join('\n') + '\n';
 const proposed = original.replace('debug: false', 'debug: true').replace('timeout: 30', 'timeout: 60');
@@ -479,3 +479,32 @@ describe('several files under review at once', () => {
     expect(payload).toMatchObject({ toolUseId: 't-a', controlRequestId: 'ctrl-a' });
   });
 });
+
+// #761: the CLI keeps asking about a project's .claude folder whatever edit tools were allowed.
+describe('"Allow all edits" from the review, on a file in the project\'s .claude folder', () => {
+  it('adds the folder\'s own rule, so the file it was asked about is covered too', async () => {
+    const file = join(dir, '.claude', 'notes.md');
+    await mkdir(join(dir, '.claude'), { recursive: true });
+    await writeFile(file, original, 'utf8');
+    rememberPreview('t-claude', {
+      filePath: file,
+      oldContent: original,
+      newContent: proposed,
+      hunks: computeHunks(original, proposed)!,
+      input: { file_path: file, old_string: 'x', new_string: 'y' },
+      toolName: 'Edit',
+    });
+
+    await resolveDiffReview(
+      { broadcastToSession: vi.fn(), getSession: () => ({ workingDir: dir }) } as never,
+      { toolUseId: 't-claude', controlRequestId: 'ctrl-1', sessionId: 'sess-1', acceptedRanges: [R_DEBUG, R_TIMEOUT], allowAllEditsThisSession: true },
+    );
+
+    const [, , response] = sendControlResponseToProcess.mock.calls[0];
+    expect(response.response.updatedPermissions).toEqual([
+      ...buildSessionPermissionUpdate('Edit'),
+      ...buildClaudeFolderPermissionUpdate('project'),
+    ]);
+  });
+});
+

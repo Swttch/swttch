@@ -482,9 +482,12 @@
         "bash": "이번 세션에서 모든 Bash 명령어 허용",
         "read": "이번 세션에서 모든 읽기 허용",
         "mcp": "이번 세션에서 모든 {{scope}} 허용",
-        "default": "이번 세션에서 모든 {{tool}} 허용"
+        "default": "이번 세션에서 모든 {{tool}} 허용",
+        "claudeFolder": "이번 세션에서 이 프로젝트의 .claude 폴더 편집 허용",
+        "claudeUserFolder": "이번 세션에서 ~/.claude 폴더 편집 허용"
       },
       "sessionAllowHint": "이 세션이 끝날 때까지 다시 묻지 않습니다",
+      "sessionAllowEditHint": "현재 모드는 그대로 둡니다. 이 세션이 끝날 때까지 편집을 다시 묻지 않습니다",
       "sessionAllowEnableHint": "먼저 경고가 표시됩니다",
       "moreAllowOptions": "더 많은 허용 옵션",
       "scope": {
@@ -515,6 +518,8 @@
     "allowTool": "{{tool}}을(를) 허용하시겠습니까?",
     "sessionLabel": {
       "edit": "예, 이번 세션에서 모든 편집 허용",
+      "claudeFolder": "예, 이번 세션에서 이 프로젝트의 .claude 폴더 편집 허용",
+      "claudeUserFolder": "예, 이번 세션에서 ~/.claude 폴더 편집 허용",
       "bash": "예, 이번 세션에서 모든 명령어 허용",
       "delete": "예, 이번 세션에서 모든 삭제 허용",
       "read": "예, 이번 세션에서 모든 읽기 허용",

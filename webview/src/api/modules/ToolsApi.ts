@@ -1,6 +1,6 @@
 import { BridgeClient } from '../bridge/BridgeClient';
 import { PermissionType, RiskLevel, FileOperation } from '../../dto/common';
-import { MessageType, buildSessionPermissionUpdate, type Hunk, type AcceptedRange, type PermissionUpdate } from '@/shared';
+import { MessageType, buildSessionPermissionUpdate, type Hunk, type AcceptedRange, type AnyPermissionUpdate } from '@/shared';
 
 interface DiffAvailablePayload {
   toolUseId: string;
@@ -94,7 +94,7 @@ export class ToolsApi {
    */
   async approveWithRules(
     toolUseId: string,
-    updatedPermissions: PermissionUpdate[],
+    updatedPermissions: AnyPermissionUpdate[],
     controlRequestId?: string,
     updatedInput?: Record<string, unknown>,
   ): Promise<void> {

@@ -15,6 +15,8 @@
  * made the remaining three writes without asking.
  */
 
+import { isInsideWorkingDir, normalizeWorkingDirPath } from './working-dir-path';
+
 /**
  * The tools Claude writes files with.
  *
@@ -52,6 +54,16 @@ export type PermissionDestination = 'session' | 'localSettings' | 'projectSettin
 
 const PERMISSION_DESTINATIONS: readonly string[] = ['session', 'localSettings', 'projectSettings', 'userSettings'];
 
+/** An `updatedPermissions` entry that lets the CLI work in more folders. */
+export interface DirectoryPermissionUpdate {
+  type: 'addDirectories';
+  directories: string[];
+  destination: PermissionDestination;
+}
+
+/** Anything this app puts into `updatedPermissions`. */
+export type AnyPermissionUpdate = PermissionUpdate | DirectoryPermissionUpdate;
+
 /**
  * The words the desktop app uses for where an "always allow" is kept (its own names for the destinations):
  * this session only, the project's settings, the project's local settings, the user's settings.
@@ -86,6 +98,66 @@ export function buildSessionPermissionUpdate(toolName: string): PermissionUpdate
     : [{ toolName }];
 
   return [{ type: 'addRules', rules, behavior: 'allow', destination: 'session' }];
+}
+
+/**
+ * A `.claude` folder the CLI guards: the project's, or the user's own. A rule for the edit tools does not stop the
+ * CLI asking about files in it; the terminal offers a rule for the folder in its place.
+ */
+export type ClaudeFolder = 'project' | 'user';
+
+/** What the terminal installs for "allow Claude to edit files in … .claude folder for this session". */
+export const CLAUDE_FOLDER_RULE: Record<ClaudeFolder, string> = {
+  project: '/.claude/**',
+  user: '~/.claude/**',
+};
+
+/**
+ * The guarded `.claude` folder an edit request is about, or undefined. Judged as the CLI does: only for the tools
+ * that write files, ignoring letter case, and with the user's folder winning when it is also the project's.
+ *
+ * [homeDir] is the home folder of the machine the CLI runs on, which only the backend knows; without it the
+ * user's folder cannot be told apart and is not reported.
+ */
+export function claudeFolderOf(
+  toolName: string,
+  input: Record<string, unknown>,
+  workingDir: string | null | undefined,
+  homeDir: string | null | undefined,
+): ClaudeFolder | undefined {
+  if (!(FILE_EDIT_TOOLS as readonly string[]).includes(toolName)) return undefined;
+  const path = input.file_path ?? input.notebook_path;
+  // A path that climbs with `..` is not judged by how it begins.
+  if (typeof path !== 'string' || path.split(/[\\/]/).includes('..')) return undefined;
+  const inClaudeFolderOf = (base: string | null | undefined): boolean =>
+    !!base && isInsideWorkingDir(path.toLowerCase(), `${normalizeWorkingDirPath(base)}/.claude`.toLowerCase());
+  if (inClaudeFolderOf(homeDir)) return 'user';
+  if (inClaudeFolderOf(workingDir)) return 'project';
+  return undefined;
+}
+
+/** The terminal's answer for a file in a guarded `.claude` folder: that folder, until the session ends. */
+export function buildClaudeFolderPermissionUpdate(folder: ClaudeFolder): PermissionUpdate[] {
+  return [
+    { type: 'addRules', rules: [{ toolName: 'Edit', ruleContent: CLAUDE_FOLDER_RULE[folder] }], behavior: 'allow', destination: 'session' },
+  ];
+}
+
+/**
+ * The folders the CLI suggested adding (`permission_suggestions`), to be sent with an "accept edits" answer: the
+ * mode alone does not reach a file outside the working directories, and the terminal sends both. Always for this
+ * session only.
+ */
+export function directoryUpdatesFromSuggestions(suggestions: unknown): DirectoryPermissionUpdate[] {
+  if (!Array.isArray(suggestions)) return [];
+  const directories: string[] = [];
+  for (const suggestion of suggestions) {
+    if (!isRecord(suggestion) || suggestion.type !== 'addDirectories' || !Array.isArray(suggestion.directories)) continue;
+    for (const directory of suggestion.directories) {
+      if (typeof directory === 'string' && directory !== '' && !directories.includes(directory)) directories.push(directory);
+    }
+  }
+  return directories.length > 0 ? [{ type: 'addDirectories', directories, destination: 'session' }] : [];
 }
 
 /** How long, and of what, a suggested rule's content may be: printable ASCII, so nothing odd rides along. */

@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { alwaysAllowFromSuggestions, alwaysAllowScope, buildSessionPermissionUpdate, FILE_EDIT_TOOLS } from '../permission-rules';
+import {
+  alwaysAllowFromSuggestions,
+  alwaysAllowScope,
+  buildClaudeFolderPermissionUpdate,
+  buildSessionPermissionUpdate,
+  claudeFolderOf,
+  directoryUpdatesFromSuggestions,
+  FILE_EDIT_TOOLS,
+} from '../permission-rules';
 
 /**
  * What "yes, and stop asking this session" installs (#393).
@@ -144,5 +152,70 @@ describe('alwaysAllowScope', () => {
   it('is undefined when there is no always-allow to offer', () => {
     expect(alwaysAllowScope('Bash', undefined)).toBeUndefined();
     expect(alwaysAllowScope('Bash', [])).toBeUndefined();
+  });
+});
+
+/**
+ * The CLI's `.claude` folder grant (#761). A session rule for the edit tools does not stop the CLI asking about
+ * these files; the terminal offers `Edit(/.claude/**)` (or `Edit(~/.claude/**)`) in its place.
+ */
+describe('claudeFolderOf', () => {
+  const at = (file_path: string, workingDir = '/repo', homeDir: string | null = '/home/me') =>
+    claudeFolderOf('Write', { file_path }, workingDir, homeDir);
+
+  it('names the project folder for a file under the project\'s .claude', () => {
+    expect(at('/repo/.claude/notes.md')).toBe('project');
+    expect(at('/repo/.claude/skills/a/SKILL.md')).toBe('project');
+  });
+
+  it('names the user folder for a file under the home .claude, which also wins when the two are one folder', () => {
+    expect(at('/home/me/.claude/settings.json')).toBe('user');
+    expect(at('/home/me/.claude/x.md', '/home/me')).toBe('user');
+  });
+
+  it('ignores letter case, as the CLI does, and takes Windows separators', () => {
+    expect(at('/Repo/.Claude/notes.md')).toBe('project');
+    expect(at('C:\\repo\\.claude\\notes.md', 'C:\\repo', 'C:\\Users\\me')).toBe('project');
+  });
+
+  it('reads the notebook path of a notebook edit', () => {
+    expect(claudeFolderOf('NotebookEdit', { notebook_path: '/repo/.claude/a.ipynb' }, '/repo', null)).toBe('project');
+  });
+
+  it('is nothing for a file elsewhere, a look-alike name, a path that climbs out, or a tool that does not edit', () => {
+    expect(at('/repo/src/a.ts')).toBeUndefined();
+    expect(at('/repo/.claude-worktrees/a.ts')).toBeUndefined();
+    expect(at('/other/.claude/a.ts')).toBeUndefined();
+    expect(at('/repo/.claude/../src/a.ts')).toBeUndefined();
+    expect(at('/home/me/.claude/a.md', '/repo', null)).toBeUndefined();
+    expect(claudeFolderOf('Read', { file_path: '/repo/.claude/a.md' }, '/repo', null)).toBeUndefined();
+    expect(claudeFolderOf('Write', {}, '/repo', null)).toBeUndefined();
+    expect(claudeFolderOf('Write', { file_path: '/repo/.claude/a.md' }, null, null)).toBeUndefined();
+  });
+
+  it('installs the terminal\'s rule for each folder, for this session only', () => {
+    expect(buildClaudeFolderPermissionUpdate('project')).toEqual([
+      { type: 'addRules', rules: [{ toolName: 'Edit', ruleContent: '/.claude/**' }], behavior: 'allow', destination: 'session' },
+    ]);
+    expect(buildClaudeFolderPermissionUpdate('user')[0].rules[0].ruleContent).toBe('~/.claude/**');
+  });
+});
+
+describe('directoryUpdatesFromSuggestions', () => {
+  it('takes the folders the CLI suggested adding, for this session whatever it said', () => {
+    const suggestions = [
+      { type: 'setMode', mode: 'acceptEdits', destination: 'session' },
+      { type: 'addDirectories', directories: ['/outside/notes'], destination: 'localSettings' },
+    ];
+    expect(directoryUpdatesFromSuggestions(suggestions)).toEqual([
+      { type: 'addDirectories', directories: ['/outside/notes'], destination: 'session' },
+    ]);
+  });
+
+  it('is empty when there is nothing usable', () => {
+    expect(directoryUpdatesFromSuggestions(undefined)).toEqual([]);
+    expect(directoryUpdatesFromSuggestions([{ type: 'addDirectories', directories: [] }])).toEqual([]);
+    expect(directoryUpdatesFromSuggestions([{ type: 'addDirectories', directories: [1, ''] }])).toEqual([]);
+    expect(directoryUpdatesFromSuggestions([{ type: 'addRules', rules: [], behavior: 'allow' }])).toEqual([]);
   });
 });

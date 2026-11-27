@@ -2,7 +2,7 @@
 
 > Languages: **English** · [한국어](./ko.md)
 >
-> Issue: [#673](https://github.com/Swttch/swttch/issues/673)
+> Issue: [#673](https://github.com/Swttch/swttch/issues/673), [#761](https://github.com/Swttch/swttch/issues/761)
 
 ## What changed
 
@@ -22,7 +22,31 @@ For **Edit** and **Write**, the card shows what would change right inside it. Re
 
 ![A card asking "Allow Claude to edit notes.txt?" with the path and two lines: "this is a draft" in red with "draft" highlighted, and "this is a final" in green with "final" highlighted.](./assets/edit-card.png)
 
-The **▾** menu next to **Allow once** has the other ways to say yes: **Always allow** (saved in the project's local settings, or, for a file change, "switch this session to accept edits") and **Allow and switch to Auto mode**. Whichever one you picked last becomes the first button of the next card, until you close the chat.
+On a file change, click the **file name** in the title to open the diff review again.
+
+A long file or command **scrolls inside the card**. The question, its description and the buttons stay on screen.
+
+![A card asking "Allow Claude to write checklist.md?" with a long numbered file that is cut off inside the card, and the buttons Deny and Allow once still on screen.](./assets/long-file-card.png)
+
+## Ways to allow
+
+The **▾** menu next to **Allow once** has the other ways to say yes.
+
+- **Always allow.** Saves the narrow rule the CLI suggests, and the line under it says where. For a file change in **Ask before edits** it means "switch this session to Accept edits", and for a file outside the working folder it allows that folder too. `⌘⇧↵` (`Ctrl+Shift+Enter`) does the same while the focus is outside the message box.
+- **Allow all … this session.** Stops asking about that tool until the session ends. On a file change it is **Allow all edits**, and **the permission mode does not change.** It covers files outside the working folder too, as the Classic panel's choice does.
+- **Allow and switch to Auto mode.**
+
+![The menu of a file change card: Always allow (switches this session to Accept edits), Allow all edits this session (keeps the current mode), and Allow and switch to Auto.](./assets/session-allow-menu.png)
+
+Whichever of **Allow once** and **Always allow** you picked last becomes the first button of the next card, until you close the chat.
+
+**Files in a `.claude` folder** are guarded by the CLI separately. There, instead of **Always allow** and **Allow all edits**, the menu offers to **allow edits in that folder for this session**, as the terminal does (the project's `.claude`, or `~/.claude`). The second choice of the Classic panel is the same. Other files the CLI guards, such as `.git`, `.bashrc`, `.vscode` and `.mcp.json`, are asked about again whatever you allowed for the session.
+
+![The menu of a card for a file in the .claude folder: Allow edits in this project's .claude folder this session, and Allow and switch to Auto.](./assets/claude-folder-menu.png)
+
+**What you allow for a session stays.** It is kept when the plugin starts the session's CLI again (a setting change, an account switch, a closed and reopened screen, a session left hidden for a while). Restarting the IDE (or the backend) asks from the beginning again, as quitting and starting `claude` in a terminal does.
+
+## How cards come and go
 
 - **Several requests in a row.** The cards come one at a time. When you answer one, it disappears, and the next one fades in over about a third of a second.
 - **Reloading with a card up.** The card comes back after the chat reloads.

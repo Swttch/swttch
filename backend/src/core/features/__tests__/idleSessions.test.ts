@@ -32,7 +32,7 @@ describe('stopIdleSessions', () => {
     cm.subscribe(connId, 'sess-1');
     cm.setProcess('sess-1', { pid: 1, once: vi.fn() } as never);
     cm.getOrCreateSession('sess-1').lastCliEventAt = T0;
-    cm.getOrCreateSession('sess-1').cliTurnOpen = false;
+    cm.getOrCreateSession('sess-1').turnUnanswered = false;
     cm.setPanelVisibility(connId, false, T0);
   });
 
@@ -71,8 +71,68 @@ describe('stopIdleSessions', () => {
   });
 
   it('leaves it while the turn is still open', async () => {
-    cm.getOrCreateSession('sess-1').cliTurnOpen = true;
+    cm.getOrCreateSession('sess-1').turnUnanswered = true;
     expect(await stopIdleSessions(cm, later)).toEqual([]);
+  });
+
+  // #761: the lines a real CLI prints, in the order measured on 2.1.332. Judged from the events themselves, so that
+  // what keeps a session from being stopped is what the CLI actually said.
+  describe('read from the CLI’s own events', () => {
+    const emit = (...events: Array<Record<string, unknown>>) => {
+      for (const event of events) cm.broadcastToSession('sess-1', MessageType.CLI_EVENT, event);
+      cm.getOrCreateSession('sess-1').lastCliEventAt = T0;
+    };
+    const turn = [
+      { type: 'system', subtype: 'init' },
+      { type: 'stream_event' },
+      { type: 'assistant', message: { content: [{ type: 'text', text: 'ok' }] } },
+      { type: 'result' },
+    ];
+    const stopped = async () => (await stopIdleSessions(cm, later)).length === 1;
+
+    it('stops a session whose answer ended, whatever notices trail the result', async () => {
+      emit(
+        ...turn,
+        { type: 'command_lifecycle', state: 'completed' },
+        { type: 'system', subtype: 'task_summary' },
+        { type: 'control_response', response: {} },
+        { type: 'rate_limit_event' },
+      );
+      expect(await stopped()).toBe(true);
+    });
+
+    it('leaves it from the moment a message is handed to the CLI until the result', async () => {
+      emit(...turn);
+      cm.noteTurnStarted('sess-1');
+      expect(await stopped()).toBe(false);
+      emit({ type: 'result' });
+      expect(await stopped()).toBe(true);
+    });
+
+    it('leaves it during a turn the CLI started by itself', async () => {
+      emit(...turn, { type: 'system', subtype: 'task_notification' }, { type: 'system', subtype: 'init' });
+      expect(await stopped()).toBe(false);
+    });
+
+    it('is not held by what a sub-agent says after the answer ended', async () => {
+      emit(...turn, { type: 'assistant', parent_tool_use_id: 'agent-1', message: { content: [] } }, { type: 'user', parent_tool_use_id: 'agent-1' });
+      expect(await stopped()).toBe(true);
+    });
+
+    for (const tool of ['CronCreate', 'ScheduleWakeup']) {
+      it(`never stops a CLI that scheduled work with ${tool}, which lives in that process`, async () => {
+        emit({ type: 'system', subtype: 'init' }, { type: 'assistant', message: { content: [{ type: 'tool_use', name: tool, input: {} }] } }, { type: 'result' });
+        expect(await stopped()).toBe(false);
+      });
+    }
+
+    it('forgets the scheduled work with the process that held it', async () => {
+      emit({ type: 'assistant', message: { content: [{ type: 'tool_use', name: 'CronCreate', input: {} }] } }, { type: 'result' });
+      cm.setProcess('sess-1', null);
+      cm.setProcess('sess-1', { pid: 2, once: vi.fn() } as never);
+      emit(...turn);
+      expect(await stopped()).toBe(true);
+    });
   });
 
   it('leaves it when the CLI spoke within the quiet period', async () => {

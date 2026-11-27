@@ -487,9 +487,12 @@
         "bash": "Allow all Bash commands this session",
         "read": "Allow all reads this session",
         "mcp": "Allow all {{scope}} this session",
-        "default": "Allow all {{tool}} this session"
+        "default": "Allow all {{tool}} this session",
+        "claudeFolder": "Allow edits in this project’s .claude folder this session",
+        "claudeUserFolder": "Allow edits in your ~/.claude folder this session"
       },
       "sessionAllowHint": "Doesn’t ask again until this session ends",
+      "sessionAllowEditHint": "Keeps the current mode. Doesn’t ask about edits again until this session ends",
       "sessionAllowEnableHint": "Shows a warning first",
       "moreAllowOptions": "More allow options",
       "scope": {
@@ -520,6 +523,8 @@
     "allowTool": "Allow {{tool}}?",
     "sessionLabel": {
       "edit": "Yes, allow all edits this session",
+      "claudeFolder": "Yes, allow edits in this project’s .claude folder this session",
+      "claudeUserFolder": "Yes, allow edits in your ~/.claude folder this session",
       "bash": "Yes, allow all commands this session",
       "delete": "Yes, allow all deletions this session",
       "read": "Yes, allow all reads this session",

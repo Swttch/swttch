@@ -19,6 +19,8 @@ interface ClaudeSettingsContextValue {
   overrides: string[];
   /** Settings files that exist but could not be read. While any is listed, every setting looks unset. */
   unreadable: UnreadableSettingsFile[];
+  /** The home folder of the machine the CLI runs on, as the backend reports it; null until it has. */
+  homeDir: string | null;
   /** Why the last save was refused or failed; null once a later save went through. */
   saveError: string | null;
   clearSaveError: () => void;
@@ -40,6 +42,7 @@ interface ClaudeSettingsResponse {
   settings?: ClaudeSettingsState;
   overrides?: string[];
   unreadable?: UnreadableSettingsFile[];
+  homeDir?: string;
   error?: string;
 }
 
@@ -216,6 +219,7 @@ export function ClaudeSettingsProvider({ children }: ClaudeSettingsProviderProps
       isLoading,
       overrides,
       unreadable,
+      homeDir: mergedQuery.data?.homeDir ?? null,
       saveError,
       clearSaveError,
       reportSaveError,
@@ -252,3 +256,11 @@ export function useClaudeSettingsOrNull(): ClaudeSettingsContextValue | null {
 }
 
 export { ClaudeSettingsContext };
+
+/**
+ * The home folder of the machine the CLI runs on, or null while unknown or outside the provider. The page cannot
+ * read it itself: in a tunnel session it runs on another machine.
+ */
+export function useClaudeHomeDir(): string | null {
+  return useContext(ClaudeSettingsContext)?.homeDir ?? null;
+}

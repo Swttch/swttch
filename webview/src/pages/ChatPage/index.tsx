@@ -201,7 +201,7 @@ function ChatPageContent() {
   // send them through the normal composer path (independent of any limit banner).
   useScheduledDelivery();
   const { pending: pendingUserAnswer, dismiss } = usePendingAskUserQuestion(messages, isStreaming);
-  const { pending: pendingPermission, approve: approvePermission, approveForSession, approveAlways, deny: denyPermission } = usePendingPermissions();
+  const { pending: pendingPermission, approve: approvePermission, approveForSession, approveAlways, approveAcceptEdits, deny: denyPermission } = usePendingPermissions();
   const { pending: pendingPlan, approve: approvePlan, deny: denyPlan } = usePendingPlanApproval();
   /**
    * The CLI has stopped and is waiting for this user to answer something.
@@ -762,6 +762,7 @@ function ChatPageContent() {
                   onApprove={() => answerAfterHeld(() => approvePermission(pendingPermission.controlRequestId))}
                   onApproveForSession={() => answerAfterHeld(() => approveForSession(pendingPermission.controlRequestId))}
                   onApproveAlways={() => answerAfterHeld(() => approveAlways(pendingPermission.controlRequestId))}
+                  onApproveAcceptEdits={() => answerAfterHeld(() => approveAcceptEdits(pendingPermission.controlRequestId))}
                   onDeny={(reason) => answerAfterHeld(() => denyPermission(pendingPermission.controlRequestId, reason), true)}
                   onOpenDiffOverlay={setDiffOverlayToolUseId}
                 />
@@ -878,6 +879,7 @@ function ChatPageContent() {
                     onApprove={() => approvePermission(pendingPermission.controlRequestId)}
                     onApproveForSession={() => approveForSession(pendingPermission.controlRequestId)}
                     onApproveAlways={() => approveAlways(pendingPermission.controlRequestId)}
+                    onApproveAcceptEdits={() => approveAcceptEdits(pendingPermission.controlRequestId)}
                     onDeny={(reason) => denyPermission(pendingPermission.controlRequestId, reason)}
                     onOpenDiffOverlay={setDiffOverlayToolUseId}
                 />

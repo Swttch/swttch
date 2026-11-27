@@ -483,9 +483,12 @@
         "bash": "Alle Bash-Befehle in dieser Sitzung erlauben",
         "read": "Alle Lesevorgänge in dieser Sitzung erlauben",
         "mcp": "Alle {{scope}} in dieser Sitzung erlauben",
-        "default": "Alle {{tool}} in dieser Sitzung erlauben"
+        "default": "Alle {{tool}} in dieser Sitzung erlauben",
+        "claudeFolder": "Änderungen im .claude-Ordner dieses Projekts in dieser Sitzung erlauben",
+        "claudeUserFolder": "Änderungen im Ordner ~/.claude in dieser Sitzung erlauben"
       },
       "sessionAllowHint": "Fragt bis zum Ende dieser Sitzung nicht mehr nach",
+      "sessionAllowEditHint": "Behält den aktuellen Modus bei. Fragt bis zum Ende dieser Sitzung nicht mehr nach Änderungen",
       "sessionAllowEnableHint": "Zeigt zuerst eine Warnung",
       "moreAllowOptions": "Weitere Zulassungsoptionen",
       "scope": {
@@ -516,6 +519,8 @@
     "allowTool": "{{tool}} erlauben?",
     "sessionLabel": {
       "edit": "Ja, alle Änderungen in dieser Sitzung erlauben",
+      "claudeFolder": "Ja, Änderungen im .claude-Ordner dieses Projekts in dieser Sitzung erlauben",
+      "claudeUserFolder": "Ja, Änderungen im Ordner ~/.claude in dieser Sitzung erlauben",
       "bash": "Ja, alle Befehle in dieser Sitzung erlauben",
       "delete": "Ja, alle Löschvorgänge in dieser Sitzung erlauben",
       "read": "Ja, alle Lesevorgänge in dieser Sitzung erlauben",

@@ -2,7 +2,15 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useApi } from '@/contexts/ApiContext';
 import { getBridgeClient } from '@/api/bridge/BridgeClient';
 import type { CliControlRequestEvent } from '@/types';
-import { MessageType, alwaysAllowFromSuggestions } from '@/shared';
+import {
+  MessageType,
+  alwaysAllowFromSuggestions,
+  buildClaudeFolderPermissionUpdate,
+  claudeFolderOf,
+  directoryUpdatesFromSuggestions,
+} from '@/shared';
+import { useWorkingDirOrNull } from '@/contexts/WorkingDirContext';
+import { useClaudeHomeDir } from '@/contexts/ClaudeSettingsContext';
 import { useAllowAllCommands } from '@/contexts/AllowAllCommandsContext';
 import { useSessionContext } from '@/contexts/SessionContext';
 
@@ -79,6 +87,11 @@ interface UsePendingPermissionsReturn {
    * session. Approves just this once when there is no such rule, so an answer is never lost to a missing one.
    */
   approveAlways: (controlRequestId: string) => void;
+  /**
+   * Approve a file change on its way to "Accept edits": the mode is switched by the caller, and the folder the CLI
+   * suggested adding goes with the approval, since the mode alone does not reach a file outside the working directories.
+   */
+  approveAcceptEdits: (controlRequestId: string) => void;
   deny: (controlRequestId: string, reason?: string) => void;
 }
 
@@ -92,6 +105,8 @@ export function usePendingPermissions(): UsePendingPermissionsReturn {
   // that gap would be missed by both the old and the new subscriber.
   const { currentSessionId } = useSessionContext();
   const { isEnabled: isAllowAllCommandsEnabled } = useAllowAllCommands();
+  const workingDir = useWorkingDirOrNull()?.workingDirectory;
+  const homeDir = useClaudeHomeDir();
   const autoAnswerRef = useRef(false);
   autoAnswerRef.current = isAllowAllCommandsEnabled(currentSessionId);
 
@@ -203,7 +218,21 @@ export function usePendingPermissions(): UsePendingPermissionsReturn {
     processedIdsRef.current.add(controlRequestId);
     // The rule travels with the approval, so the CLI is the one that stops
     // asking. Nothing is remembered here.
-    api.tools.approveForSession(req.toolUseId, req.toolName, controlRequestId, req.input);
+    // For a file in a guarded .claude folder the rule is the folder's, the only one the CLI honours for it.
+    const claudeFolder = claudeFolderOf(req.toolName, req.input, workingDir, homeDir);
+    if (claudeFolder) api.tools.approveWithRules(req.toolUseId, buildClaudeFolderPermissionUpdate(claudeFolder), controlRequestId, req.input);
+    else api.tools.approveForSession(req.toolUseId, req.toolName, controlRequestId, req.input);
+    setRequests(prev => prev.filter(r => r.controlRequestId !== controlRequestId));
+  }, [requests, api.tools, workingDir, homeDir]);
+
+  const approveAcceptEdits = useCallback((controlRequestId: string) => {
+    const req = requests.find(r => r.controlRequestId === controlRequestId);
+    if (!req) return;
+
+    processedIdsRef.current.add(controlRequestId);
+    const folders = directoryUpdatesFromSuggestions(req.suggestions);
+    if (folders.length > 0) api.tools.approveWithRules(req.toolUseId, folders, controlRequestId, req.input);
+    else api.tools.approve(req.toolUseId, controlRequestId, req.input);
     setRequests(prev => prev.filter(r => r.controlRequestId !== controlRequestId));
   }, [requests, api.tools]);
 
@@ -230,5 +259,5 @@ export function usePendingPermissions(): UsePendingPermissionsReturn {
   // Return the first pending request (FIFO)
   const pending = requests.length > 0 ? requests[0] : null;
 
-  return { pending, approve, approveForSession, approveAlways, deny };
+  return { pending, approve, approveForSession, approveAlways, approveAcceptEdits, deny };
 }
