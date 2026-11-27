@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdtempSync, readFileSync, rmSync } from 'fs';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { lastReadAt, recordSessionRead, resetSessionReadLedger } from '../sessionReadLedger';
@@ -56,5 +56,14 @@ describe('sessionReadLedger', () => {
     resetSessionReadLedger();
 
     expect(lastReadAt('x')).toBe(first);
+  });
+
+  it('removes its temp file when the record cannot be put in place', () => {
+    // A folder where the file belongs makes the rename fail.
+    mkdirSync(join(home, 'session-read.json'));
+
+    recordSessionRead('child', Date.now() + 10_000);
+
+    expect(readdirSync(home)).toEqual(['session-read.json']);
   });
 });

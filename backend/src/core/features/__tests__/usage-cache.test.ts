@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -53,6 +53,21 @@ describe('usage store', () => {
 
       expect(stored?.usage.five_hour).toEqual({ utilization: 42, resets_at: expect.any(String) });
       expect(stored?.stale).toBe(false);
+    });
+
+    it('removes its temp file when the snapshot cannot be put in place', () => {
+      const dir = join(CCG_HOME, 'usage');
+      // A folder where the file belongs makes the rename fail.
+      const blocker = join(dir, `${LIVE_ACCOUNT_ID}.snapshot.json`);
+      mkdirSync(blocker, { recursive: true });
+
+      try {
+        writeUsageSnapshot(LIVE_ACCOUNT_ID, usageWith(new Date(Date.now() + HOUR).toISOString()));
+
+        expect(readdirSync(dir)).toEqual([`${LIVE_ACCOUNT_ID}.snapshot.json`]);
+      } finally {
+        rmSync(blocker, { recursive: true, force: true });
+      }
     });
 
     // The question a caller has before spending a request is "can I skip it", which is
