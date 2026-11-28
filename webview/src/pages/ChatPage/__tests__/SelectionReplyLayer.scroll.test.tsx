@@ -55,9 +55,9 @@ describe('SelectionReplyLayer follows the text while the chat scrolls (#645)', (
   }
 
   it('measures the selection once for a burst of scroll events in one frame', () => {
-    const { view, textNode } = mount();
+    const { textNode } = mount();
     selectTranscriptText(textNode);
-    expect(view.container.querySelector('[role="toolbar"]')).not.toBeNull();
+    expect(document.querySelector('[role="toolbar"]')).not.toBeNull();
     measured.mockClear();
 
     act(() => {
@@ -69,22 +69,22 @@ describe('SelectionReplyLayer follows the text while the chat scrolls (#645)', (
   });
 
   it('keeps the bar in place and does not render again when the text has not moved', () => {
-    const { view, textNode } = mount();
+    const { textNode } = mount();
     selectTranscriptText(textNode);
-    const bar = view.container.querySelector('[role="toolbar"]')!;
+    const bar = document.querySelector('[role="toolbar"]')!;
 
     act(() => {
       window.dispatchEvent(new Event('scroll'));
       vi.advanceTimersByTime(20);
     });
 
-    expect(view.container.querySelector('[role="toolbar"]')).toBe(bar);
+    expect(document.querySelector('[role="toolbar"]')).toBe(bar);
   });
 
   it('moves the bar when the text moved', () => {
-    const { view, textNode } = mount();
+    const { textNode } = mount();
     selectTranscriptText(textNode);
-    const before = (view.container.querySelector('[role="toolbar"]') as HTMLElement).style.top;
+    const before = (document.querySelector('[role="toolbar"]') as HTMLElement).style.top;
 
     measured.mockImplementation(() => ({ top: 300, bottom: 320, left: 10, right: 110, width: 100, height: 20, x: 10, y: 300 }));
     act(() => {
@@ -92,11 +92,11 @@ describe('SelectionReplyLayer follows the text while the chat scrolls (#645)', (
       vi.advanceTimersByTime(20);
     });
 
-    expect((view.container.querySelector('[role="toolbar"]') as HTMLElement).style.top).not.toBe(before);
+    expect((document.querySelector('[role="toolbar"]') as HTMLElement).style.top).not.toBe(before);
   });
 
   it('ignores the scroll of something that does not hold the selected text', () => {
-    const { view, textNode } = mount();
+    const { textNode } = mount();
     selectTranscriptText(textNode);
     const elsewhere = document.createElement('div');
     document.body.appendChild(elsewhere);
@@ -105,7 +105,7 @@ describe('SelectionReplyLayer follows the text while the chat scrolls (#645)', (
     act(() => {
       // Scroll does not bubble, but a capture listener on the window still sees it.
       elsewhere.dispatchEvent(new Event('scroll'));
-      view.container.querySelector('[role="toolbar"]')!.dispatchEvent(new Event('scroll'));
+      document.querySelector('[role="toolbar"]')!.dispatchEvent(new Event('scroll'));
       vi.advanceTimersByTime(20);
     });
     elsewhere.remove();
@@ -130,13 +130,13 @@ describe('SelectionReplyLayer follows the text while the chat scrolls (#645)', (
     document.documentElement.style.zoom = '1.25';
     const computed = vi.spyOn(window, 'getComputedStyle');
     try {
-      const { view, textNode } = mount();
+      const { textNode } = mount();
       selectTranscriptText(textNode);
       act(() => {
         window.dispatchEvent(new Event('scroll'));
         vi.advanceTimersByTime(20);
       });
-      const bar = view.container.querySelector('[role="toolbar"]') as HTMLElement;
+      const bar = document.querySelector('[role="toolbar"]') as HTMLElement;
       // top 100 / 1.25, minus the bar's height and gap: the placement is divided by the zoom
       expect(bar.style.top).toBe(`${100 / 1.25 - 36 - 8}px`);
       expect(computed).not.toHaveBeenCalled();
@@ -144,6 +144,16 @@ describe('SelectionReplyLayer follows the text while the chat scrolls (#645)', (
       computed.mockRestore();
       document.documentElement.style.zoom = '';
     }
+  });
+
+  // The chat's scroll area is a layer of its own under the top bar, so nothing drawn inside it can come above that bar.
+  it('draws the bar at the top of the page, outside the chat area', () => {
+    const { view, textNode } = mount();
+    selectTranscriptText(textNode);
+
+    const bar = document.querySelector('[role="toolbar"]')!;
+    expect(view.container.contains(bar)).toBe(false);
+    expect(bar.parentElement).toBe(document.body);
   });
 
   it('stops following once the layer is gone', () => {

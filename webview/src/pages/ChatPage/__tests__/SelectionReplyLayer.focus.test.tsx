@@ -60,13 +60,13 @@ describe('SelectionReplyLayer hands the focus back to the message box after a co
   }
 
   it('focuses the message box once the card has left, not while it is still there', () => {
-    const view = open();
-    const box = view.container.querySelector('textarea')!;
+    open();
+    const box = document.querySelector('textarea')!;
     fireEvent.change(box, { target: { value: 'my comment' } });
     fireEvent.keyDown(box, { key: 'Enter' });
 
     expect(addReplyToComposer).toHaveBeenCalledWith('hello selected world', 'my comment', false);
-    expect(view.container.querySelector('textarea')).toBeNull();
+    expect(document.querySelector('textarea')).toBeNull();
     expect(focusComposer).not.toHaveBeenCalled();
 
     act(() => {
@@ -75,9 +75,15 @@ describe('SelectionReplyLayer hands the focus back to the message box after a co
     expect(focusComposer).toHaveBeenCalledTimes(1);
   });
 
-  it('does not take the focus when the card is cancelled', () => {
+  it('draws the card at the top of the page too', () => {
     const view = open();
-    const box = view.container.querySelector('textarea')!;
+
+    expect(view.container.contains(document.querySelector('textarea'))).toBe(false);
+  });
+
+  it('does not take the focus when the card is cancelled', () => {
+    open();
+    const box = document.querySelector('textarea')!;
     fireEvent.keyDown(box, { key: 'Escape' });
     act(() => {
       vi.advanceTimersByTime(5);
