@@ -375,6 +375,7 @@
       "clearConversation": "Clear the conversation",
       "archiveConversation": "Archive the conversation, or bring it back",
       "openInDesktop": "Open the session in Claude Desktop",
+      "downloadFrontendLog": "Save the front-end log to a file",
       "openDevTools": "Open developer tools",
       "openSideQuestion": "Ask a side question (/btw)",
       "cycleTranscriptView": "Switch the transcript view (Normal, Thinking, Verbose, Classic)",

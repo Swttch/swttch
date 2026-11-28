@@ -375,6 +375,7 @@
       "clearConversation": "清除對話",
       "archiveConversation": "封存對話，或取消封存",
       "openInDesktop": "在 Claude 桌面版中開啟工作階段",
+      "downloadFrontendLog": "將前端記錄儲存為檔案",
       "openDevTools": "開啟開發人員工具",
       "openSideQuestion": "提一個旁支問題 (/btw)",
       "cycleTranscriptView": "切換對話記錄檢視（一般、思考、詳細、經典）",

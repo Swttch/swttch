@@ -1385,5 +1385,9 @@
   },
   "messageNotDelivered": {
     "heldElsewhere": "此工作階段由另一個後端執行，該後端未接收你的訊息。請重新傳送，或接管此工作階段。"
+  },
+  "transcriptMenu": {
+    "copy": "複製",
+    "downloadLog": "下載外掛前端記錄"
   }
 }

@@ -495,7 +495,7 @@ if ($dialog.ShowDialog() -eq 'OK') {
       const script =
         'on run argv\n' +
         '  set defaultName to item 1 of argv\n' +
-        '  set chosen to choose file name with prompt "Save prompts" default name defaultName\n' +
+        '  set chosen to choose file name with prompt "Save File" default name defaultName\n' +
         '  return POSIX path of chosen\n' +
         'end run';
       execFile('osascript', ['-e', script, suggestedName], (err, stdout) => {
@@ -514,11 +514,15 @@ if ($dialog.ShowDialog() -eq 'OK') {
         reject(err);
         return;
       }
+      // A JSON file is offered as one; anything else is not filtered to a kind it is not.
+      const filter = suggestedName.toLowerCase().endsWith('.json')
+        ? 'JSON (*.json)|*.json|All files (*.*)|*.*'
+        : 'All files (*.*)|*.*';
       const script = [
         'Add-Type -AssemblyName System.Windows.Forms',
         '$dialog = New-Object System.Windows.Forms.SaveFileDialog',
         '$dialog.FileName = $args[0]',
-        "$dialog.Filter = 'JSON (*.json)|*.json|All files (*.*)|*.*'",
+        `$dialog.Filter = '${filter}'`,
         'if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $dialog.FileName }',
       ].join('; ');
       execFile(

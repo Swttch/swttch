@@ -375,6 +375,7 @@
       "clearConversation": "پاک کردن گفتگو",
       "archiveConversation": "بایگانی گفتگو یا بازگرداندن آن",
       "openInDesktop": "باز کردن نشست در Claude Desktop",
+      "downloadFrontendLog": "ذخیرهٔ گزارش فرانت‌اند در فایل",
       "openDevTools": "باز کردن ابزارهای توسعه‌دهنده",
       "openSideQuestion": "پرسیدن سؤال جانبی (/btw)",
       "cycleTranscriptView": "تغییر نمای رونوشت (عادی، تفکر، مفصل، کلاسیک)",

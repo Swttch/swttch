@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from '@/i18n';
 import { useOptionalSideQuestions } from '@/contexts/SideQuestionContext';
 import { useChatInputFocus } from '@/contexts/ChatInputFocusContext';
@@ -220,7 +221,7 @@ export function SelectionReplyLayer({ containerRef }: Props) {
     const style: CSSProperties = cardAbove
       ? { left: cardLeft, width: cardWidth, bottom: viewport.height - anchor.top + EDGE }
       : { left: cardLeft, width: cardWidth, top: anchor.bottom + EDGE };
-    return (
+    return createPortal(
       <ReplyComposerCard
         quote={picked.text}
         style={style}
@@ -233,7 +234,8 @@ export function SelectionReplyLayer({ containerRef }: Props) {
           // the reply now stands. After the card has left, or the focus falls to the page and stays there.
           window.setTimeout(focusComposer, 0);
         }}
-      />
+      />,
+      document.body,
     );
   }
 
@@ -246,7 +248,9 @@ export function SelectionReplyLayer({ containerRef }: Props) {
   // selection near the right edge made "Start side chat" wrap onto two lines.
   const buttonClass = 'whitespace-nowrap px-3 text-[0.9231rem] text-text-primary hover:bg-surface-hover transition-colors';
 
-  return (
+  // Drawn into <body>, as the card is: the chat's scroll area is a layer of its own under the top bar, so a bar
+  // drawn inside it went behind that bar however high its z-index.
+  return createPortal(
     // Pressing a button must not move focus or the selection away before the click lands.
     <div
       role="toolbar"
@@ -269,6 +273,7 @@ export function SelectionReplyLayer({ containerRef }: Props) {
       <button type="button" className={buttonClass} onClick={() => setComposing(true)}>
         {t('selectionReply.reply')}
       </button>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -33,6 +33,8 @@ import { isOpenDevToolsShortcut } from './devToolsShortcut';
 import { ClientEnv } from '@/shared';
 import { confirmAndOpenSessionInDesktop } from '@/hooks/useOpenSessionInDesktop';
 import { isArchiveShortcut, canToggleArchive, toggleArchiveOfOpenSession } from './archiveShortcut';
+import { isDownloadLogShortcut } from './downloadLogShortcut';
+import { downloadFrontendLogs } from '@/utils/downloadFrontendLogs';
 import {
   ContextSection,
   ModelSection,
@@ -271,6 +273,18 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
       match: (e: KeyboardEvent) => isArchiveShortcut(e) && canToggleArchive(servicesRef.current),
       execute: async () => {
         await toggleArchiveOfOpenSession(servicesRef.current);
+      },
+    });
+
+    // Cmd/Ctrl+Option/Alt+Shift+G saves this tab's front log to a file.
+    keyboardReg.register({
+      id: 'download-front-log',
+      match: isDownloadLogShortcut,
+      execute: async () => {
+        await downloadFrontendLogs({
+          messages: servicesRef.current.chatStream.messages,
+          sessionId: servicesRef.current.session.currentSessionId,
+        });
       },
     });
 

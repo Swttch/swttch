@@ -4,6 +4,7 @@ import { StaticItem } from '../../../types';
 import type { CommandPaletteServices } from '../../../types';
 import * as Adapters from '@/adapters';
 import * as CopyLogs from '@/utils/copyFrontendLogs';
+import * as DownloadLogs from '@/utils/downloadFrontendLogs';
 import toast from 'react-hot-toast';
 
 const supportItems = getSupportItems();
@@ -53,6 +54,20 @@ describe('supportItems', () => {
 
     const ids = supportItems.map(item => item.id);
     expect(ids.indexOf('copy-front-log')).toBeLessThan(ids.indexOf('help-docs'));
+  });
+
+  // Issue #714: what is too long to log is had as a file, so the item is listed without searching for it.
+  it('lists a "Download plugin front log" item that saves this tab\'s messages and session', async () => {
+    const download = vi.spyOn(DownloadLogs, 'downloadFrontendLogs').mockResolvedValue(undefined);
+    const item = byId('download-front-log');
+    expect(item.label).toBe('Download plugin front log');
+    expect(item.searchOnly).toBeFalsy();
+    const messages = [{ uuid: 'a' }];
+    item._bind(() => ({ chatStream: { messages }, session: { currentSessionId: 's1' } }) as unknown as CommandPaletteServices);
+
+    await item.execute();
+
+    expect(download).toHaveBeenCalledWith({ messages, sessionId: 's1' });
   });
 
   it('does not restart the backend when the user cancels', async () => {

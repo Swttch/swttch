@@ -1385,5 +1385,9 @@
   },
   "messageNotDelivered": {
     "heldElsewhere": "此会话由另一个后端运行，该后端未接收你的消息。请重新发送，或接管此会话。"
+  },
+  "transcriptMenu": {
+    "copy": "复制",
+    "downloadLog": "下载插件前端日志"
   }
 }
