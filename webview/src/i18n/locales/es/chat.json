@@ -1414,5 +1414,9 @@
   },
   "messageNotDelivered": {
     "heldElsewhere": "Esta sesión la ejecuta otro backend y no aceptó tu mensaje. Envíalo de nuevo o toma el control de la sesión."
+  },
+  "transcriptMenu": {
+    "copy": "Copiar",
+    "downloadLog": "Descargar el registro frontal del plugin"
   }
 }

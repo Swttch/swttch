@@ -377,6 +377,7 @@
       "clearConversation": "Очистить беседу",
       "archiveConversation": "Архивировать разговор или вернуть из архива",
       "openInDesktop": "Открыть сеанс в Claude Desktop",
+      "downloadFrontendLog": "Сохранить фронтенд-лог в файл",
       "openDevTools": "Открыть инструменты разработчика",
       "openSideQuestion": "Задать побочный вопрос (/btw)",
       "cycleTranscriptView": "Переключить вид переписки (обычный, размышления, подробный, классический)",

@@ -31,6 +31,28 @@ export async function copyWithProgress(source: string, target: string, onProgres
 }
 
 /**
+ * Copy `source` where the person chooses in the host's own save dialog, offered under `suggestedName`. Answers where
+ * it was saved, or null when they cancelled.
+ */
+export async function saveCopyWhereChosen(
+  bridge: Bridge,
+  source: string,
+  suggestedName: string,
+  onProgress: (loaded: number) => void,
+): Promise<string | null> {
+  const { path: chosen } = await bridge.saveFile({ suggestedName, contents: '' });
+  if (chosen === null) return null;
+  // The IDE's dialog can hand back the name without the extension it was offered with; the file is then saved
+  // with its own extension, unless that would write over a file of that name.
+  const extension = extname(suggestedName);
+  const named = extname(basename(chosen)) !== '' || extension === '' || existsSync(`${chosen}${extension}`) ? chosen : `${chosen}${extension}`;
+  await copyWithProgress(source, named, onProgress);
+  // The dialog's own empty file of the name without the extension is left behind otherwise.
+  if (named !== chosen && (await stat(chosen).catch(() => null))?.size === 0) await unlink(chosen).catch(() => undefined);
+  return named;
+}
+
+/**
  * SAVE_SENT_FILE: save a file Claude sent where the person chooses, `{ path, suggestedName }`. ACKed with
  * `{ path }` (where it was saved), `{ path: null }` when they cancelled, or `{ error }`.
  *
@@ -54,18 +76,9 @@ export async function saveSentFileHandler(
     const info = await stat(source).catch(() => null);
     if (!info?.isFile()) return reply({ error: 'unreadable' });
     if (info.size > FILE_BYTES_MAX_BYTES) return reply({ error: 'tooLarge' });
-    const { path: chosen } = await bridge.saveFile({ suggestedName, contents: '' });
-    if (chosen === null) return reply({ path: null });
-    // The IDE's dialog can hand back the name without the extension it was offered with; the file is then saved
-    // with its own extension, unless that would write over a file of that name.
-    const extension = extname(suggestedName);
-    const named = extname(basename(chosen)) !== '' || extension === '' || existsSync(`${chosen}${extension}`) ? chosen : `${chosen}${extension}`;
     // What the file card draws as its background while this runs: how much of the file is written, as {path, loaded, size}.
     const progress = (loaded: number) => connections.sendTo(connectionId, MessageType.SAVE_SENT_FILE_PROGRESS, { path, loaded, size: info.size });
-    await copyWithProgress(source, named, progress);
-    // The dialog's own empty file of the name without the extension is left behind otherwise.
-    if (named !== chosen && (await stat(chosen).catch(() => null))?.size === 0) await unlink(chosen).catch(() => undefined);
-    reply({ path: named });
+    reply({ path: await saveCopyWhereChosen(bridge, source, suggestedName, progress) });
   } catch (err) {
     console.error('[node-backend]', 'SAVE_SENT_FILE failed:', err);
     reply({ error: err instanceof Error ? err.message : String(err) });

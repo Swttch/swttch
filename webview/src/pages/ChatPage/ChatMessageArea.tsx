@@ -24,6 +24,7 @@ import { CollapsedReplyNotice } from './CollapsedReplyNotice';
 import { useTranslation } from '@/i18n';
 import { ChatSearchBar } from './chatSearch/ChatSearchBar';
 import { SelectionReplyLayer } from './SelectionReply/SelectionReplyLayer';
+import { useMessageAreaMenu } from './useMessageAreaMenu';
 import { useChatSearch, type ChatSearchSource } from './chatSearch/useChatSearch';
 import { WindowGapRow } from './WindowGapRow';
 import { entryMarker } from './useScrollAnchor';
@@ -212,6 +213,7 @@ export function ChatMessageArea(props: Props) {
 
   // Above the early returns below: hooks cannot run conditionally.
   const fold = useSectionFold();
+  const areaMenu = useMessageAreaMenu();
   // Rewind and fork are answered from the whole transcript, so they are worked
   // out here and handed down rather than recomputed inside each send's menu.
   const sendActions = useSendActions(mergedMessages);
@@ -248,7 +250,8 @@ export function ChatMessageArea(props: Props) {
 
   // Render messages with widgets
   return (
-    <div ref={containerRef} className="flex-1 text-xs">
+    <div ref={containerRef} className="flex-1 text-xs" onContextMenu={areaMenu.onContextMenu}>
+      {areaMenu.menu}
       <ChatSearchBar search={search} />
       <SelectionReplyLayer containerRef={containerRef} />
       {(isLoadingMore || hasMore) && (

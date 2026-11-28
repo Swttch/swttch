@@ -20,6 +20,7 @@ export enum ShortcutId {
   ClearConversation = 'clearConversation',
   ArchiveConversation = 'archiveConversation',
   OpenInDesktop = 'openInDesktop',
+  DownloadFrontendLog = 'downloadFrontendLog',
   OpenDevTools = 'openDevTools',
   OpenSideQuestion = 'openSideQuestion',
   CycleTranscriptView = 'cycleTranscriptView',
@@ -143,6 +144,7 @@ export const SHORTCUT_CATALOG: readonly ShortcutEntry[] = [
   { id: ShortcutId.ClearConversation, group: ShortcutGroup.General, descriptionKey: k('clearConversation'), keys: fixed('Mod+Shift+C') },
   { id: ShortcutId.ArchiveConversation, group: ShortcutGroup.General, descriptionKey: k('archiveConversation'), keys: fixed('Mod+Alt+A') },
   { id: ShortcutId.OpenInDesktop, group: ShortcutGroup.General, descriptionKey: k('openInDesktop'), keys: fixed('Mod+Alt+Shift+O') },
+  { id: ShortcutId.DownloadFrontendLog, group: ShortcutGroup.General, descriptionKey: k('downloadFrontendLog'), keys: fixed('Mod+Alt+Shift+G') },
   // Only listed on a Mac inside an IDE: elsewhere the key does nothing (see devToolsShortcut).
   { id: ShortcutId.OpenDevTools, group: ShortcutGroup.General, descriptionKey: k('openDevTools'), keys: fixed('Mod+Alt+I'), macOnly: true, ideOnly: true },
   { id: ShortcutId.OpenSideQuestion, group: ShortcutGroup.General, descriptionKey: k('openSideQuestion'), keys: fixed('Mod+Shift+B') },

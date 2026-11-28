@@ -62,8 +62,72 @@ const MAX_QUEUE_SIZE = 500;
  * that report, while still capping what a long-lived tab can retain.
  */
 const MAX_HISTORY_BYTES = 32 * 1024 * 1024;
+/**
+ * What is left once the budget has been passed, so that room is made for many lines at once. Making it for one line
+ * at a time moves every line left behind, once for every line taken: with hundreds of thousands of short lines, one
+ * long line held the page for a minute (#714).
+ */
+const HISTORY_BYTES_AFTER_EVICTION = MAX_HISTORY_BYTES * 0.9;
 const FLUSH_INTERVAL_MS = 500;
 const RECONNECT_DELAY_MS = 2000;
+
+/**
+ * How long one argument of a console call may be once written out. A click on a chat entry, which is also how a drag
+ * over its text ends, logs every loaded message: one line of several megabytes (#714).
+ *
+ * Up to MAX_ARGUMENT_CHARS it is written in full; past that only its beginning is kept; past OMITTED_ARGUMENT_CHARS
+ * it is not written at all, and a warning says where the whole of it can be had. The browser console is handed the
+ * value itself either way.
+ */
+const MAX_ARGUMENT_CHARS = 32 * 1024;
+export const OMITTED_ARGUMENT_CHARS = 1024 * 1024;
+const TRUNCATED_MARK = '… [truncated]';
+export const OMITTED_MARK = `[omitted: over ${OMITTED_ARGUMENT_CHARS} characters]`;
+export const OMITTED_NOTICE =
+  `[LogForwarder] A value over ${OMITTED_ARGUMENT_CHARS} characters was left out of the log. ` +
+  'To get the whole of it, use "Download plugin front log": in the command panel, in the right-click menu of the ' +
+  'message area, or with Cmd/Ctrl+Option/Alt+Shift+G.';
+
+/**
+ * One console argument as text.
+ *
+ * A value is not walked into past OMITTED_ARGUMENT_CHARS: writing all of it out to find how long it is would cost the
+ * page as much as keeping all of it. Once that much has been read, what is left is handed to `JSON.stringify` as
+ * `undefined`, so nothing under it is read.
+ */
+function describeArgument(value: unknown): string {
+  if (typeof value === 'string') return fitToLine(value);
+
+  let room = OMITTED_ARGUMENT_CHARS;
+  let over = false;
+  try {
+    const json: string | undefined = JSON.stringify(value, (key, item: unknown) => {
+      // Nothing is written for these, so they use no room.
+      if (item === undefined || typeof item === 'function') return item;
+      if (over) return undefined;
+      room -= key.length + 2 + (typeof item === 'string' ? item.length : 0);
+      // A list longer than the room left would be gone through to its end, one `null` per item.
+      if (room < 0 || (Array.isArray(item) && item.length > room)) {
+        over = true;
+        return undefined;
+      }
+      return item;
+    });
+    if (over) return OMITTED_MARK;
+    return json === undefined ? '' : fitToLine(json);
+  } catch {
+    return fitToLine(String(value));
+  }
+}
+
+function fitToLine(text: string): string {
+  if (text.length <= MAX_ARGUMENT_CHARS) return text;
+  if (text.length > OMITTED_ARGUMENT_CHARS) return OMITTED_MARK;
+  // A plain `slice` keeps the whole of the long string alive behind the short one, which the history would then hold
+  // on to. Writing it out as JSON and reading it back makes a string of its own.
+  const head = JSON.parse(JSON.stringify(text.slice(0, MAX_ARGUMENT_CHARS))) as string;
+  return head + TRUNCATED_MARK;
+}
 
 export class LogForwarder {
   private ws: WebSocket | null = null;
@@ -251,16 +315,8 @@ export class LogForwarder {
           original(...args);
         }
 
-        const message = args
-          .map((a) => {
-            if (typeof a === 'string') return a;
-            try {
-              return JSON.stringify(a);
-            } catch {
-              return String(a);
-            }
-          })
-          .join(' ');
+        const described = args.map(describeArgument);
+        const message = described.join(' ');
         // Below the floor the line stays local: it is still in the history for
         // `ccgLogs`, but it is never sent to the backend and so never written to
         // the log file.
@@ -286,15 +342,21 @@ export class LogForwarder {
           timestamp: Date.now(),
         });
         this.historyBytes += message.length;
-        // Drop from the front until back under budget. Shifting one entry at a
-        // time keeps this O(1) amortised — the alternative, re-measuring the
-        // whole history on every console call, is O(n) per line.
-        while (this.historyBytes > MAX_HISTORY_BYTES && this.history.length > 1) {
-          const dropped = this.history.shift();
-          if (dropped) this.historyBytes -= dropped.message.length;
-        }
+        if (this.historyBytes > MAX_HISTORY_BYTES) this.evictOldest();
+        // Said after the line it is about. The notice carries no omitted mark, so it does not call for itself again.
+        if (described.includes(OMITTED_MARK)) console.warn(OMITTED_NOTICE);
       };
     }
+  }
+
+  /** Drop the oldest lines, all in one move, and never the newest one. */
+  private evictOldest(): void {
+    let count = 0;
+    while (this.historyBytes > HISTORY_BYTES_AFTER_EVICTION && count < this.history.length - 1) {
+      this.historyBytes -= this.history[count].message.length;
+      count++;
+    }
+    this.history.splice(0, count);
   }
 
   private flush(): void {

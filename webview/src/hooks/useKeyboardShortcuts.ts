@@ -12,6 +12,7 @@ import { useCommandPaletteRegistry } from '@/commandPalette/CommandPaletteProvid
  * - Cmd+Option+I (Mac, in an IDE): Open the IDE's DevTools for this chat (see devToolsShortcut)
  * - Cmd+Option+Shift+O (Mac) / Ctrl+Alt+Shift+O (Windows/Linux): Open the session in the Claude Desktop app, after a confirmation (see openInDesktopShortcut)
  * - Cmd+Option+A (Mac) / Ctrl+Alt+A (Windows/Linux): Archive the open session, or bring it back (see archiveShortcut)
+ * - Cmd+Option+Shift+G (Mac) / Ctrl+Alt+Shift+G (Windows/Linux): Save the front log to a file (see downloadLogShortcut)
  */
 export function useKeyboardShortcuts() {
   const { keyboardRegistry } = useCommandPaletteRegistry();

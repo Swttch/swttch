@@ -379,6 +379,7 @@
       "clearConversation": "مسح المحادثة",
       "archiveConversation": "أرشفة المحادثة أو استعادتها",
       "openInDesktop": "فتح الجلسة في Claude Desktop",
+      "downloadFrontendLog": "حفظ سجل الواجهة الأمامية في ملف",
       "openDevTools": "فتح أدوات المطورين",
       "openSideQuestion": "طرح سؤال جانبي (/btw)",
       "cycleTranscriptView": "تبديل عرض النص (عادي، التفكير، مفصّل، كلاسيكي)",

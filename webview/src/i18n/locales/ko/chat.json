@@ -1385,5 +1385,9 @@
   },
   "messageNotDelivered": {
     "heldElsewhere": "이 세션은 다른 백엔드가 실행 중인데 그 백엔드가 메시지를 받지 않았어요. 다시 보내거나 이 세션을 가져오세요."
+  },
+  "transcriptMenu": {
+    "copy": "복사",
+    "downloadLog": "플러그인 프론트 로그 다운로드"
   }
 }

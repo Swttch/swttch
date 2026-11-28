@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState, type ComponentType, type ReactNode, type SVGProps} from "react";
+import {useRef, useState} from "react";
 import Tippy from "@tippyjs/react/headless";
 import type {Instance} from "tippy.js";
 import toast from "react-hot-toast";
@@ -7,6 +7,7 @@ import {getAdapter} from "@/adapters";
 import {useTranslation} from "@/i18n";
 import {addFileToComposer} from "@/utils/composerElements";
 import {cn} from "@/utils/cn";
+import {MenuPanel, MenuRow as Row, PointMenu, type MenuPoint} from "@/components/PointMenu";
 import {downloadSentFileTargets} from "./sendUserFile";
 
 /** A file a menu acts on: where it is and what it is called. */
@@ -14,19 +15,6 @@ export interface SentFileTarget {
     path: string;
     name: string;
     size?: number;
-}
-
-type Icon = ComponentType<SVGProps<SVGSVGElement>>;
-
-const rowClass = "flex w-full items-center gap-2 px-3 py-2 text-start text-xs text-text-primary transition-colors hover:bg-surface-hover cursor-pointer";
-
-function Row({icon: Glyph, onSelect, children}: {icon: Icon; onSelect: () => void; children: ReactNode}) {
-    return (
-        <button type="button" role="menuitem" onClick={onSelect} className={rowClass}>
-            <Glyph className="h-4 w-4 shrink-0 text-text-secondary"/>
-            <span className="min-w-0 truncate">{children}</span>
-        </button>
-    );
 }
 
 /** Copies text and says whether it worked: a clipboard write can fail, and a silent failure leaves the wrong thing pasted later. */
@@ -53,18 +41,7 @@ export function SentFileMenuItems({files, onDone}: {files: SentFileTarget[]; onD
     const count = files.length;
     const [file] = files;
     return (
-        <div
-            role="menu"
-            className="w-max min-w-[12rem] max-w-[18rem] overflow-hidden rounded-md border border-border-default bg-surface-raised py-1 shadow-xl"
-            // The menu is drawn into <body>, but a click still bubbles to the React tree it belongs to, where the card's
-            // ancestors act on clicks (opening the file, logging the entry). Opening a menu asked for neither.
-            onClick={(event) => event.stopPropagation()}
-            // A right click on the menu itself must not open another one on the card underneath it.
-            onContextMenu={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-            }}
-        >
+        <MenuPanel>
             {count > 1 && (
                 <div className="px-3 pb-1 pt-1.5 text-[0.6875rem] text-text-tertiary">{t('sentFiles.selectedHeading', {count})}</div>
             )}
@@ -89,59 +66,21 @@ export function SentFileMenuItems({files, onDone}: {files: SentFileTarget[]; onD
                     ? copy(files.map((target) => target.path).join('\n'), t('sentFiles.pathsCopiedMany', {count}), t('fileLink.copyFailed'))
                     : copy(file.path, t('fileLink.copyDone'), t('fileLink.copyFailed')),
             )}>{count > 1 ? t('sentFiles.copyPathsMany', {count}) : t('fileLink.copyPath')}</Row>
-        </div>
+        </MenuPanel>
     );
 }
 
-/** Where a context menu was asked for: the pointer, in the window's own coordinates. */
-export interface MenuPoint {
-    x: number;
-    y: number;
-}
+export type {MenuPoint};
 
 /**
  * The file's menu opened where the pointer was when the card was right-clicked. It is the same list as the more
  * button's, drawn at a different place, and closes on a click outside it, on Escape, and when an entry is chosen.
  */
 export function SentFileContextMenu({files, point, onClose}: {files: SentFileTarget[]; point: MenuPoint; onClose: () => void}) {
-    useEffect(() => {
-        const onKey = (event: KeyboardEvent) => {
-            if (event.key === "Escape") onClose();
-        };
-        document.addEventListener("keydown", onKey);
-        return () => document.removeEventListener("keydown", onKey);
-    }, [onClose]);
     return (
-        <Tippy
-            visible
-            interactive
-            placement="bottom-start"
-            offset={[0, 2]}
-            appendTo={() => document.body}
-            onClickOutside={onClose}
-            render={(attrs) => (
-                <div {...attrs}>
-                    <SentFileMenuItems files={files} onDone={onClose}/>
-                </div>
-            )}
-        >
-            {/*
-              The point the menu hangs from: nothing to see, only a place for Tippy to measure. The pointer's position is
-              in screen pixels, and `<html>` carries CSS `zoom` (`--ui-zoom`), which scales a `fixed` length a second
-              time: at 90% the point, and the menu with it, landed a tenth of its distance from the corner up and to the
-              left of the click. Dividing by the zoom puts the point back under the pointer.
-            */}
-            <span
-                aria-hidden
-                style={{
-                    position: "fixed",
-                    left: `calc(${point.x}px / var(--ui-zoom, 1))`,
-                    top: `calc(${point.y}px / var(--ui-zoom, 1))`,
-                    width: 0,
-                    height: 0,
-                }}
-            />
-        </Tippy>
+        <PointMenu point={point} onClose={onClose}>
+            <SentFileMenuItems files={files} onDone={onClose}/>
+        </PointMenu>
     );
 }
 

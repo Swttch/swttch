@@ -375,6 +375,7 @@
       "clearConversation": "Effacer la conversation",
       "archiveConversation": "Archiver la conversation ou la désarchiver",
       "openInDesktop": "Ouvrir la session dans Claude Desktop",
+      "downloadFrontendLog": "Enregistrer le journal front dans un fichier",
       "openDevTools": "Ouvrir les outils de développement",
       "openSideQuestion": "Poser une question en aparté (/btw)",
       "cycleTranscriptView": "Changer la vue de la transcription (Normale, Réflexion, Détaillée, Classique)",

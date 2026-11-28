@@ -2,6 +2,7 @@ import toast from 'react-hot-toast';
 import { getAdapter } from '@/adapters';
 import { i18n } from '@/i18n';
 import { copyFrontendLogs } from '@/utils/copyFrontendLogs';
+import { downloadFrontendLogs } from '@/utils/downloadFrontendLogs';
 import { HelpShortcutHint } from '@/components/HelpModal/HelpShortcutHint';
 import { OPEN_HELP_EVENT } from '@/components/HelpModal/events';
 import { StaticItem } from '../../types';
@@ -27,6 +28,18 @@ export const getSupportItems = (): StaticItem[] => [
       } else {
         toast.error(i18n.t('commandPalette:support.copyFrontLogFailed'));
       }
+    },
+  }),
+  // The same log as a file, with every loaded message in full: what the clipboard copy leaves out because it is too
+  // long to log (#714). Listed, not search-only, so a reporter can be pointed at it.
+  new StaticItem('download-front-log', i18n.t('commandPalette:support.downloadFrontLog'), {
+    disabled: false,
+    keywords: [enKeyword('commandPalette:support.downloadFrontLog'), 'log'],
+    serviceAction: async (services) => {
+      await downloadFrontendLogs({
+        messages: services.chatStream.messages,
+        sessionId: services.session.currentSessionId,
+      });
     },
   }),
   new StaticItem('keyboard-shortcuts', i18n.t('commandPalette:support.keyboardShortcuts'), {

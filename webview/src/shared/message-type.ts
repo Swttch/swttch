@@ -527,6 +527,12 @@ export enum MessageType {
    */
   SAVE_SENT_FILES = 'SAVE_SENT_FILES',
   /**
+   * Save the front log file the webview has just sent up with UPLOAD_FILE_CHUNK where the person chooses (the host's own
+   * save dialog), `{ path, suggestedName }`. The uploaded copy is removed whatever the answer.
+   * Inbound webview->backend; ACKed with `{ path }` (null when cancelled) or `{ error }`.
+   */
+  SAVE_FRONTEND_LOG = 'SAVE_FRONTEND_LOG',
+  /**
    * Show a file in the system's file manager with the file selected. Inbound
    * webview→backend, then sent on to the IDE (Node→Kotlin) in JetBrains mode, or
    * done by the backend itself in a browser.

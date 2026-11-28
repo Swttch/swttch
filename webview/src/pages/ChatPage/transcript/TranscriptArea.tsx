@@ -28,6 +28,7 @@ import { useSectionFold } from '../useSectionFold';
 import { useTranslation } from '@/i18n';
 import { ChatSearchBar } from '../chatSearch/ChatSearchBar';
 import { SelectionReplyLayer } from '../SelectionReply/SelectionReplyLayer';
+import { useMessageAreaMenu } from '../useMessageAreaMenu';
 import { useChatSearch, type ChatSearchSource } from '../chatSearch/useChatSearch';
 import { SEND_JUMP_SCROLL_MARGIN } from '../SendIndex/scrollToSend';
 import { TranscriptUserMessage } from './TranscriptUserMessage';
@@ -239,6 +240,7 @@ export function TranscriptArea(props: TranscriptAreaProps) {
   });
 
   const fold = useSectionFold();
+  const areaMenu = useMessageAreaMenu();
   const sendActions = useSendActions(mergedMessages);
   const isEmpty = mergedMessages.length === 0;
 
@@ -264,7 +266,8 @@ export function TranscriptArea(props: TranscriptAreaProps) {
   if (isEmpty) return <EmptyState />;
 
   return (
-    <div ref={containerRef} className="flex-1 w-full max-w-[calc(var(--chat-column-max,70rem)_-_var(--chat-column-px,2rem))] mx-auto sm:px-4 antialiased">
+    <div ref={containerRef} onContextMenu={areaMenu.onContextMenu} className="flex-1 w-full max-w-[calc(var(--chat-column-max,70rem)_-_var(--chat-column-px,2rem))] mx-auto sm:px-4 antialiased">
+      {areaMenu.menu}
       <ChatSearchBar search={search} />
       <SelectionReplyLayer containerRef={containerRef} />
       {(isLoadingMore || hasMore) && (

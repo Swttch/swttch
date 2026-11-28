@@ -1409,5 +1409,9 @@
   },
   "messageNotDelivered": {
     "heldElsewhere": "Another backend is running this session, and it did not take your message. Send it again, or take the session over."
+  },
+  "transcriptMenu": {
+    "copy": "Copy",
+    "downloadLog": "Download plugin front log"
   }
 }

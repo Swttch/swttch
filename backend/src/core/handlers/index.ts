@@ -84,6 +84,7 @@ import { getDefaultBrowserHandler } from './defaultBrowser';
 import { getFaviconHandler, getPageUrlHandler } from './pageUrl';
 import { saveImageHandler } from './saveImage';
 import { saveSentFileHandler } from './saveSentFile';
+import { saveFrontendLogHandler } from './saveFrontendLog';
 import { saveSentFilesHandler } from './saveSentFiles';
 import { openDiffHandler } from './openDiff';
 import { openDiffTabHandler } from './openDiffTab';
@@ -449,6 +450,10 @@ export async function handleMessage(
     case MessageType.SAVE_IMAGE:
       await saveImageHandler(connectionId, message, connections, bridge);
       break;
+    case MessageType.SAVE_FRONTEND_LOG:
+      await saveFrontendLogHandler(connectionId, message, connections, bridge);
+      break;
+
     case MessageType.SAVE_SENT_FILE:
       await saveSentFileHandler(connectionId, message, connections, bridge);
       break;
